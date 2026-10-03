@@ -97,10 +97,10 @@ integer cents, dates epoch milliseconds.
 | `sponsorships.checkout` | Turnstile, `RL_SPONSOR` | `checkoutInputSchema` | `{ paymentId, checkoutUrl }` (phase 6 task 4) |
 | `sponsorships.uploadLogo` | `RL_SPONSOR` | `{ contentType: image/png \| image/jpeg \| image/webp, size ≤ 2 MiB }` | `{ key, uploadUrl, headers, expiresAt }` (task 4) |
 | `sponsorships.paymentStatus` | `RL_API` | `{ payment: uuid \| tr_… }` | `{ status, kind, totalCents, displayName, items, renewedUntil? }`, no PII (task 4) |
-| `sponsorships.reedit.get` | `RL_API` | `{ token }` | `{ displayName, expiresAt, gesture, hasLogo }` (task 5) |
-| `sponsorships.reedit.submit` | Turnstile, `RL_SPONSOR` | `{ token, displayName, logoKey? }` | `{ submitted: true }` (task 5) |
-| `sponsorships.renewal.get` | `RL_API` | `{ token }` | `{ gesture, displayName, endsAt, hasLogo, amountCents }` (task 5) |
-| `sponsorships.renewal.checkout` | Turnstile, `RL_SPONSOR` | `{ token, checkoutId }` | `{ paymentId, checkoutUrl }` (task 5) |
+| `sponsorships.reedit.get` | `RL_API` | `{ token }` | `{ displayName, expiresAt, gesture: { name, slug }, hasLogo }`. `TOKEN_INVALID` for an unknown or used link, a renewal link, or a sponsorship no longer in `changes_requested`; `TOKEN_EXPIRED { expiresAt }` |
+| `sponsorships.reedit.submit` | Turnstile, `RL_SPONSOR` | `{ token, displayName, logoKey? }` | `{ submitted: true }`. One D1 batch: the token used, `changes_requested → rendering` (`resubmitted { displayNameChanged, logoChanged }`) with the new name and logo, the next `render_job` and `render_started`; then `render.requested`. `INVALID_STATE noLogo` (a logo for a sponsorship without one), `logoInvalid` (missing, over 2 MiB, wrong type or signature), `stale`; the token errors as `get` (a second submit is `TOKEN_INVALID`) |
+| `sponsorships.renewal.get` | `RL_API` | `{ token }` | `{ gesture: { name, slug }, displayName, endsAt, hasLogo, amountCents }` (one more year: 5000, or 6000 with a logo). Token errors as above; `INVALID_STATE notRenewable` once the sponsorship is no longer `live`/`expiring` |
+| `sponsorships.renewal.checkout` | Turnstile, `RL_SPONSOR` | `{ token, checkoutId }` | `{ paymentId, checkoutUrl }`. A `renewal` payment (one item, `includes_logo` from `logo_key`) and its Mollie checkout. The same `checkoutId` answers its open payment again (`alreadySettled` once it is not open); another id while one renewal payment is open answers that one. The token is used only when the payment settles paid, so a failed payment is retried with the same link and a new `checkoutId`. `INVALID_STATE paymentsUnavailable` (no Mollie key, nothing read or written), `notRenewable`, `paymentProvider` (Mollie failed: the payment is `failed`) |
 
 Until their task lands, the procedures marked with a task answer
 `INTERNAL_SERVER_ERROR` ("not implemented") after their guards.

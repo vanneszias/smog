@@ -15,5 +15,8 @@
   ],
   "kv_namespaces": [
     { "binding": "KV", "id": "00000000000000000000000000000000" }
-  ]
+  ],
+  // The logo bucket (phase 6 task 5: the re-edit's logo check and the
+  // retention purge's logo sweep).
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "smog-test-media" }]
 }

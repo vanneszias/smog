@@ -221,6 +221,39 @@ describe("the retention purges (ruling 9)", () => {
     }
   });
 
+  it("counts without deleting in a dry run, each row once", async () => {
+    const old = new Date(NOW.getTime() - AUDIT_RETENTION_MS - 1);
+    await addAudit(old, 3);
+    await addAudit(new Date(NOW.getTime() - AUDIT_RETENTION_MS + 1));
+    const gone = new Date(NOW.getTime() - SPONSORSHIP_TOKEN_GRACE_MS - 1);
+    // Used and expired more than 30 days ago: two purges match, one row.
+    await addToken({ expiresAt: gone, usedAt: gone });
+    await addToken({ expiresAt: new Date(NOW.getTime() + DAY) });
+    const user = await makeUser(db);
+    await db.insert(session).values({
+      expiresAt: new Date(NOW.getTime() - 1),
+      id: "s-gone",
+      token: newId(),
+      userId: user.id,
+    });
+
+    const dry = await runRetentionPurges(db, NOW, { dryRun: true });
+
+    expect(dry).toEqual({
+      audit_log: 3,
+      session: 1,
+      sponsorship_token: 1,
+      verification: 0,
+    });
+    expect(await count("audit_log")).toBe(4);
+    expect(await count("session")).toBe(1);
+    expect(await count("sponsorship_token")).toBe(2);
+
+    // The real run deletes exactly what the dry run counted.
+    expect(await runRetentionPurges(db, NOW)).toEqual(dry);
+    expect(await count("audit_log")).toBe(1);
+  });
+
   it("deletes nothing the second time", async () => {
     await addAudit(new Date(NOW.getTime() - AUDIT_RETENTION_MS - 1), 3);
     expect((await runRetentionPurges(db, NOW)).audit_log).toBe(3);

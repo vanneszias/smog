@@ -25,6 +25,7 @@
     "@smog/render": "workspace:*",
     "@smog/rpc": "workspace:*",
     "@smog/utils": "workspace:*",
+    "@smog/video": "workspace:*",
     "drizzle-orm": "catalog:",
     "zod": "catalog:"
   },

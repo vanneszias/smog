@@ -13,6 +13,7 @@ import {
   type SponsorshipGuard,
   sponsorshipsContract,
 } from "../contract";
+import type { SponsorshipBindings } from "./bindings";
 
 /** The guards of the procedure at `path` (with or without the mount). */
 function guardAt(
@@ -82,6 +83,11 @@ export type SponsorshipsImplementer = typeof sponsorshipProcedure;
 
 /** What `@smog/api` (and the tests) inject. */
 export interface SponsorshipsDeps {
+  /**
+   * The queue and bucket bindings (`./bindings`). Unset in the Worker (its
+   * own, from `cloudflare:workers`); the tests inject recording fakes.
+   */
+  bindings?: () => SponsorshipBindings;
   /**
    * The `fetch` the Mollie client uses. Unset in production (the Worker's
    * `fetch`, to `api.mollie.com`); the tests inject the Mollie fake.

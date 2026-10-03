@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type Mux, muxRequest } from "./client";
+import { type Mux, MuxApiError, muxRequest } from "./client";
 import {
   ASSET_STATUSES,
   type AssetStatus,
@@ -74,6 +74,40 @@ export async function getAsset(mux: Mux, id: string): Promise<MuxAsset | null> {
     { nullOn404: true, schema: muxAssetDataSchema }
   );
   return data ? toMuxAsset(data) : null;
+}
+
+/**
+ * `DELETE /video/v1/assets/:id` (phase 6 task 5, J-01: the expiry sweep
+ * deletes a sponsored video). `true` when Mux deleted it, `false` when Mux
+ * no longer knows it (404 counts as done, so a re-run is harmless). Any
+ * other answer or a network failure throws (`MuxApiError` for an answer),
+ * logged with `[video]`; the sweep logs and swallows it.
+ */
+export async function deleteAsset(mux: Mux, id: string): Promise<boolean> {
+  const path = `/video/v1/assets/${encodeURIComponent(id)}`;
+  let response: Response;
+  try {
+    response = await mux.fetch(`${mux.apiUrl}${path}`, {
+      headers: { accept: "application/json", authorization: mux.authorization },
+      method: "DELETE",
+    });
+  } catch (error) {
+    console.error(`[video] Failed to reach Mux (DELETE ${path}):`, error);
+    throw error;
+  }
+  await response.body?.cancel();
+  if (response.status === 404) {
+    return false;
+  }
+  if (!response.ok) {
+    const error = new MuxApiError(
+      `[video] Mux answered ${response.status} to DELETE ${path}`,
+      response.status
+    );
+    console.error(error.message);
+    throw error;
+  }
+  return true;
 }
 
 /** An asset in the picker: only ones with a public playback id. */
