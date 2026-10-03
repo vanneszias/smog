@@ -22,10 +22,10 @@ import { eq, type SQL, sql } from "drizzle-orm";
  * spare. Every real retry (the events DLQ after about 4 h, Mollie's
  * retries for about a day) falls well inside it (fix round 1, I-1).
  */
-export const EMAIL_WINDOW_MS = EMAIL_SENT_TTL_SECONDS * 1000 - DAY_MS;
+const EMAIL_WINDOW_MS = EMAIL_SENT_TTL_SECONDS * 1000 - DAY_MS;
 
 /** The events that mean a payment's money was applied. */
-export const SETTLING_EVENTS = [
+const SETTLING_EVENTS = [
   "payment_paid",
   "revived",
   "renewed",
@@ -40,7 +40,7 @@ const SETTLING_LIST = sql.raw(
  * The `created_at` (ms) of the first settling event of the payment whose
  * id is `paymentId` (a value, or a column of the outer query), or NULL.
  */
-export function firstSettledAtSql(paymentId: SQL | string): SQL<number | null> {
+function firstSettledAtSql(paymentId: SQL | string): SQL<number | null> {
   return sql<
     number | null
   >`(SELECT min(${ref("se", sponsorshipEvent.createdAt)}) FROM ${paymentItem} AS ${sql.raw("pi")} INNER JOIN ${sponsorshipEvent} AS ${sql.raw("se")} ON ${ref("se", sponsorshipEvent.sponsorshipId)} = ${ref("pi", paymentItem.sponsorshipId)} WHERE ${ref("pi", paymentItem.paymentId)} = ${paymentId} AND ${ref("se", sponsorshipEvent.type)} IN (${SETTLING_LIST}) AND json_extract(${ref("se", sponsorshipEvent.data)}, '$.paymentId') = ${paymentId})`;

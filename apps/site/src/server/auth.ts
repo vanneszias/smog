@@ -22,7 +22,7 @@ import {
 } from "@smog/rpc";
 
 /** The queue and R2 bindings, validated (`parseWorkerBindings`). */
-export type SiteBindings = ReturnType<typeof parseWorkerBindings<Env>>;
+type SiteBindings = ReturnType<typeof parseWorkerBindings<Env>>;
 
 export interface SiteEnv {
   auth: AuthEnv;
