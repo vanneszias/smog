@@ -23,7 +23,6 @@ import {
   waitForApp,
 } from "./helpers";
 import { signInAsAdmin } from "./maintenance";
-import { PHASE6_PENDING, type Phase6Pending } from "./phase6";
 
 const NAAM_IN_DE_VIDEO = /^Naam in de video/;
 const LOGO_TOEVOEGEN = /^Logo toevoegen/;
@@ -39,15 +38,9 @@ const P_120_00 = /120,00/;
  * gesture CTA (phase 6 task 8), against the Mollie fake
  * (`@smog/payments/testing/server`, playwright.config.ts).
  *
- * Some parts need the server procedures of later tasks, flagged in
- * `PHASE6_PENDING` (`./phase6.ts`, review I-6). A flagged test skips only
- * while its procedure answers the task 3 stub ("not implemented"); once
- * the procedure is real it fails until the merging task removes its flag,
- * and any other 500 fails it outright:
- * - `checkout` (task 4): the paid and the failed checkout.
- * - `reedit` (task 5): the re-edit link flow.
- * The paid test checks the admin review queue (`admin.sponsorships.list`,
- * task 6) until both sponsorships are `in_review`.
+ * The paid test checks the admin review queue (`admin.sponsorships.list`)
+ * until both sponsorships are `in_review`, which proves the webhook, the
+ * `payment.settled` fan-out and the fake render.
  *
  * Run alone with a dev server you started yourself (`reuseExistingServer`),
  * that server needs the Mollie fake's `SMOG_DEV_MOLLIE_*` env (see
@@ -85,54 +78,6 @@ const PNG = Buffer.from(
 );
 const SUCCESS_URL = /\/sponsor\/success\?payment=/;
 const CHECKOUT_URL = new RegExp(`^${MOLLIE_FAKE}/checkout/`);
-/** The probe of each flagged part: a read the stub answers "not implemented". */
-const PROBES: Record<Phase6Pending, { input: unknown; path: string }> = {
-  checkout: {
-    input: { payment: "8c3c5a52-7a0c-4d9b-9d65-1f1d7f0c2a11" },
-    path: "sponsorships/paymentStatus",
-  },
-  reedit: { input: { token: "x".repeat(43) }, path: "sponsorships/reedit/get" },
-};
-
-/** Whether the procedure still answers the task 3 stub, and nothing else. */
-async function isStub(
-  request: APIRequestContext,
-  part: keyof typeof PROBES
-): Promise<boolean> {
-  const { input, path } = PROBES[part];
-  const response = await request.post(`/api/rpc/${path}`, {
-    data: { json: input },
-    headers: { origin: ORIGIN },
-  });
-  if (response.status() !== 500) {
-    return false;
-  }
-  const body = (await response.json()) as {
-    json?: { code?: string; message?: string };
-  };
-  return (
-    body.json?.code === "INTERNAL_SERVER_ERROR" &&
-    body.json.message === "not implemented"
-  );
-}
-
-/**
- * Skips while `part` is flagged and still the stub; a flagged part that is
- * implemented fails, so its flag is removed when it merges (review I-6).
- */
-async function skipWhilePending(
-  request: APIRequestContext,
-  part: keyof typeof PROBES
-): Promise<void> {
-  const stub = await isStub(request, part);
-  if (PHASE6_PENDING[part] && !stub) {
-    throw new Error(
-      `sponsorships.${PROBES[part].path} is implemented: remove PHASE6_PENDING.${part} (e2e/phase6.ts)`
-    );
-  }
-  test.skip(stub, `waits for phase 6 (PHASE6_PENDING.${part})`);
-}
-
 /**
  * The admin review queue (`admin.sponsorships.list`, status `in_review`)
  * as `slug:status`, for these gestures, read with an admin session.
@@ -376,7 +321,6 @@ test("pays for 2 gestures with a logo and an invoice; the success page shows pai
   page,
   request,
 }) => {
-  await skipWhilePending(page.request, "checkout");
   await openWizard(page);
   await choose(page, ["Broer", "Zus"]);
   await fillDetails(page, { invoice: true, logo: true });
@@ -399,7 +343,6 @@ test("pays for 2 gestures with a logo and an invoice; the success page shows pai
 test("a failed payment frees the gestures, and Try again keeps the selection", async ({
   page,
 }) => {
-  await skipWhilePending(page.request, "checkout");
   await openWizard(page);
   await choose(page, ["Mama", "Papa"]);
   await fillDetails(page);
@@ -417,7 +360,6 @@ test("a failed payment frees the gestures, and Try again keeps the selection", a
 });
 
 test("the re-edit link: a new name, sent for review", async ({ page }) => {
-  await skipWhilePending(page.request, "reedit");
   await stubMux(page);
   await page.goto(`/sponsor/edit?token=${REEDIT_TOKEN}`);
   await waitForApp(page);
