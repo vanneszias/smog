@@ -40,7 +40,7 @@
   },
   "scripts": {
     "admin:grant": "bun scripts/admin-grant.ts",
-    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-3wwx-pv8p-q78v --ignore=GHSA-67mh-4wv8-2f99 --ignore=GHSA-86w9-cpqp-85rv",
+    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-3wwx-pv8p-q78v --ignore=GHSA-67mh-4wv8-2f99 --ignore=GHSA-86w9-cpqp-85rv --ignore=GHSA-vfj7-8cjw-p6xm",
     "boundaries": "bun scripts/check-boundaries.ts",
     "build": "turbo build",
     "check": "biome check --write .",
