@@ -8,7 +8,6 @@ export {
 export {
   type AdminAfterCommit,
   type AdminDeps,
-  type AdminQueues,
   type AdminSponsorshipServices,
   adminProcedure,
   type SponsorshipLinkPlan,

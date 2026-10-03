@@ -17,7 +17,7 @@ import {
   user,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
-import { enqueueEmail, enqueueEvent } from "@smog/jobs";
+import { enqueueOutputs, type JobQueues, type Outputs } from "@smog/jobs";
 import {
   cancelPayment,
   createMollie,
@@ -606,41 +606,52 @@ async function commit(db: Db, statements: Statement[]): Promise<void> {
   await db.batch([first, ...rest]);
 }
 
+/** The rpc env's queue bindings, the one way in (task 4's `RpcEnv`). */
+function queuesOf(context: RpcContext): JobQueues {
+  return {
+    email: context.env.EMAIL_QUEUE as JobQueues["email"],
+    events: context.env.EVENTS_QUEUE as JobQueues["events"],
+  };
+}
+
+/** A plan's `after` as `enqueueOutputs` takes it. */
+function outputsOf(after: readonly AdminAfterCommit[]): Outputs {
+  return {
+    events: after.flatMap((item) =>
+      item.kind === "event" ? [item.event] : []
+    ),
+    notify: after.flatMap((item) =>
+      item.kind === "email" ? [item.email] : []
+    ),
+  };
+}
+
 /**
- * Enqueues what a committed change asks for (ruling 8): a failed send is
- * retried, then logged and swallowed by the producer, so the admin's
- * committed change stands. A missing binding is logged.
+ * Enqueues what a committed change asks for (ruling 8). By default a
+ * failed send is retried, then logged and swallowed, so the committed
+ * change stands. `loud` (mark paid: its `payment.settled` starts the
+ * render) throws instead: the admin sees the failure, and task 5's
+ * reconciliation sweep re-sends `payment.settled` for a paid payment with
+ * an item in `rendering` and no job.
  */
 async function enqueueAfter(
-  deps: AdminDeps,
-  after: readonly AdminAfterCommit[]
+  context: RpcContext,
+  outputs: Outputs,
+  loud = false
 ): Promise<void> {
-  if (after.length === 0) {
-    return;
-  }
-  const queues = deps.queues();
-  for (const item of after) {
-    try {
-      if (item.kind === "email") {
-        if (queues.email) {
-          // biome-ignore lint/performance/noAwaitInLoops: in order, each with its own retries.
-          await enqueueEmail(queues.email, item.email);
-        } else {
-          console.error(
-            `[admin] Failed to enqueue ${item.email.template}: no EMAIL_QUEUE binding`
-          );
-        }
-      } else if (queues.events) {
-        await enqueueEvent(queues.events, item.event);
-      } else {
-        console.error(
-          `[admin] Failed to enqueue ${item.event.type}: no EVENTS_QUEUE binding`
-        );
-      }
-    } catch (error) {
-      // An invalid message (a bug, logged by the producer): the change is
-      // committed, so the action still answers what it did.
-      console.error("[admin] Failed to enqueue after the commit:", error);
+  try {
+    await enqueueOutputs(
+      queuesOf(context),
+      outputs,
+      loud ? { onFailure: "throw" } : {}
+    );
+  } catch (error) {
+    console.error(
+      "[admin] Failed to enqueue after the commit (a missed payment.settled is re-sent by the stale sweep):",
+      error
+    );
+    if (loud) {
+      throw error;
     }
   }
 }
@@ -661,10 +672,10 @@ class StaleError extends Error {
  */
 async function settleAndEnqueue(
   deps: AdminDeps,
-  db: Db,
+  context: RpcContext,
   input: { audits: Statement[]; fetched: MolliePayment; now: Date }
 ): Promise<string> {
-  const result = await deps.sponsorships.settle(db, {
+  const result = await deps.sponsorships.settle(context.db, {
     extra: input.audits,
     now: input.now,
     payment: input.fetched,
@@ -672,10 +683,8 @@ async function settleAndEnqueue(
   if (!result) {
     throw new StaleError("the payment is not ours");
   }
-  await enqueueAfter(deps, [
-    ...result.events.map((event) => ({ event, kind: "event" as const })),
-    ...result.notify.map((email) => ({ email, kind: "email" as const })),
-  ]);
+  // Loud: the fan-out of a payment the admin acted on starts its render.
+  await enqueueAfter(context, result, true);
   return result.outcome;
 }
 
@@ -835,12 +844,12 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
 
   /** One action on one sponsorship: its plan plus one audit entry, one batch. */
   async function run(
-    db: Db,
+    context: RpcContext,
     plan: SponsorshipPlan,
     audit: Statement
   ): Promise<void> {
-    await commit(db, [...plan.statements, audit]);
-    await enqueueAfter(deps, plan.after);
+    await commit(context.db, [...plan.statements, audit]);
+    await enqueueAfter(context, outputsOf(plan.after));
   }
 
   return {
@@ -855,7 +864,7 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
             sponsorshipId: input.id,
           });
           await run(
-            context.db,
+            context,
             plan,
             auditStatement(context.db, {
               action: "sponsorship.approve",
@@ -889,7 +898,7 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
             if (view?.fetched.status === "paid") {
               // The money arrived: settle it as the webhook would, with the
               // refused cancel audited in the settlement's batch, and refuse.
-              await settleAndEnqueue(deps, context.db, {
+              await settleAndEnqueue(deps, context, {
                 audits: brief.sponsorshipIds.map((id) =>
                   auditStatement(context.db, {
                     action: "sponsorship.cancel",
@@ -922,7 +931,7 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
               ),
             ]);
             await cancelAtMollie(view);
-            await enqueueAfter(deps, plan.after);
+            await enqueueAfter(context, outputsOf(plan.after));
             return {
               paymentId: input.paymentId,
               result: "canceled" as const,
@@ -952,7 +961,7 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
               sponsorshipId: input.id,
             });
             await run(
-              context.db,
+              context,
               plan,
               auditStatement(context.db, {
                 action: "sponsorship.force_expire",
@@ -1009,7 +1018,7 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
             if (view?.fetched.status === "paid") {
               // Mollie has the money: settled normally (ruling 14), with
               // the admin's entries in the settlement's batch (I1).
-              const outcome = await settleAndEnqueue(deps, context.db, {
+              const outcome = await settleAndEnqueue(deps, context, {
                 audits: brief.sponsorshipIds.map((id) =>
                   auditStatement(context.db, {
                     action: "sponsorship.mark_paid",
@@ -1057,7 +1066,8 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
               ),
             ]);
             await cancelAtMollie(view);
-            await enqueueAfter(deps, plan.after);
+            // Loud: `payment.settled` starts the render (the sweep is the backstop).
+            await enqueueAfter(context, outputsOf(plan.after), true);
             return {
               paymentId: input.paymentId,
               result: "marked_paid" as const,
@@ -1095,7 +1105,7 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
                 paymentId: input.paymentId,
               });
               await run(
-                context.db,
+                context,
                 plan,
                 auditStatement(context.db, {
                   action: "payment.refund",
@@ -1132,7 +1142,7 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
               });
               // Only the expiry: the link (its raw token) is never stored.
               await run(
-                context.db,
+                context,
                 plan,
                 auditStatement(context.db, {
                   action: "sponsorship.regenerate_token",
@@ -1158,7 +1168,7 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
             sponsorshipId: input.id,
           });
           await run(
-            context.db,
+            context,
             plan,
             auditStatement(context.db, {
               action: "sponsorship.reject",
@@ -1186,7 +1196,7 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
               });
               // Only the expiry: the link (its raw token) is never stored.
               await run(
-                context.db,
+                context,
                 plan,
                 auditStatement(context.db, {
                   action: "sponsorship.request_changes",

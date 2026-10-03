@@ -23,7 +23,6 @@ import { roleSchema } from "@smog/rpc/contract";
 import { createSponsorshipsRouter } from "@smog/sponsorships/server";
 import { adminSponsorshipServices } from "./admin-deps";
 import { appContract } from "./contract";
-import { workerQueues } from "./queues";
 
 const os = implementRpc(appContract);
 
@@ -65,11 +64,10 @@ export const appRouter = os.router({
   }),
   // Admin catalogue writes start a new catalogue version (the gestures
   // cache); the sponsorship actions run the sponsorship batches and enqueue
-  // on the Worker's queues after the commit. Every admin procedure is
+  // on the rpc env's queues after the commit. Every admin procedure is
   // `requireAdmin`.
   admin: createAdminRouter({
     bumpCatalogVersion,
-    queues: workerQueues,
     sponsorships: adminSponsorshipServices,
   }),
   // Favorites and lists resolve summaries with the gestures query (a

@@ -34,7 +34,7 @@ export function createSponsorshipsRouter(deps: SponsorshipsDeps = {}) {
   return os.router({
     ...publicProcedures(os),
     ...checkoutProcedures(os, deps),
-    ...logoProcedures(os, deps),
+    ...logoProcedures(os),
     ...statusProcedures(os, deps),
     ...reeditProcedures(os, deps),
     ...renewalProcedures(os, deps),

@@ -109,9 +109,9 @@ describe("the sponsorships contract and its guards (ruling 5)", () => {
     });
   }
 
-  it("the slices tasks 4 and 5 fill answer INTERNAL_SERVER_ERROR until then", async () => {
+  it("the slices task 5 fills answer INTERNAL_SERVER_ERROR until then", async () => {
     await expect(
-      callAt("checkout", await inputFor("checkout"))
+      callAt("reedit.get", await inputFor("reedit.get"))
     ).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
       message: "not implemented",

@@ -19,12 +19,15 @@ import { auditDataSchema, type WritableAuditAction } from "../src/schema";
 import { createAdminRouter } from "../src/server";
 import { adminDeps } from "./deps";
 import { TEST_MUX_ENV } from "./mux-fake";
-import { TEST_MOLLIE_ENV } from "./sponsorship-fakes";
+import { RECORDING_QUEUES, TEST_MOLLIE_ENV } from "./sponsorship-fakes";
 
 export const SITE_URL = "http://localhost:5173";
 
-/** The rpc env: the Mux and Mollie fakes' URLs and credentials. */
-const TEST_ENV = { ...TEST_MUX_ENV, ...TEST_MOLLIE_ENV };
+/**
+ * The rpc env: the Mux and Mollie fakes' URLs and credentials, and queues
+ * that record what was enqueued.
+ */
+const TEST_ENV = { ...TEST_MUX_ENV, ...TEST_MOLLIE_ENV, ...RECORDING_QUEUES };
 const PASSWORD = "correct horse battery";
 
 export function testDb(): Db {

@@ -8,7 +8,6 @@ import type { EmailMessage, EventMessage } from "@smog/jobs";
 import type { MollieFetch } from "@smog/payments";
 import { createFakeMollie, FAKE_MOLLIE_API_KEY } from "@smog/payments/testing";
 import type { MuxFetch } from "@smog/video";
-import type { AdminQueues } from "../src/server";
 import { testMux } from "./mux-fake";
 
 export const testMollie = createFakeMollie({
@@ -46,20 +45,30 @@ export function clearQueues(): void {
   enqueued.events.length = 0;
 }
 
-export const recordingQueues = (): AdminQueues => ({
-  email: {
-    send: (body) => {
+/** Set to make every `EVENTS_QUEUE` send fail (a queue outage). */
+export const queueFaults: { events: boolean } = { events: false };
+
+/**
+ * The rpc env's `EMAIL_QUEUE` and `EVENTS_QUEUE` (task 4's `RpcEnv`):
+ * they record what was sent (`enqueued`).
+ */
+export const RECORDING_QUEUES = {
+  EMAIL_QUEUE: {
+    send: (body: EmailMessage) => {
       enqueued.emails.push(body);
       return Promise.resolve();
     },
-  },
-  events: {
-    send: (body) => {
+  } as unknown as Queue,
+  EVENTS_QUEUE: {
+    send: (body: EventMessage) => {
+      if (queueFaults.events) {
+        return Promise.reject(new Error("EVENTS_QUEUE is down"));
+      }
       enqueued.events.push(body);
       return Promise.resolve();
     },
-  },
-});
+  } as unknown as Queue,
+};
 
 /** The Mux asset ids the admin asked Mux to delete, in order. */
 export const deletedAssets: string[] = [];

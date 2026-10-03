@@ -31,6 +31,7 @@ import {
   deletedAssets,
   enqueued,
   mollieFaults,
+  queueFaults,
   testMollie,
 } from "./sponsorship-fakes";
 import {
@@ -99,6 +100,27 @@ async function callWithoutMollie<T>(path: string, input: unknown): Promise<T> {
     },
     path: ["admin", ...path.split(".")],
   })) as T;
+}
+
+/** Calls `admin.<path>` as `admin` with no queue bindings (a broken config). */
+async function callWithoutQueues<T>(path: string, input: unknown): Promise<T> {
+  const context = await contextAs(admin);
+  const logged = quietErrors();
+  try {
+    return (await call(procedureAt(path), input, {
+      context: {
+        ...context,
+        env: {
+          ...context.env,
+          EMAIL_QUEUE: undefined,
+          EVENTS_QUEUE: undefined,
+        },
+      },
+      path: ["admin", ...path.split(".")],
+    })) as T;
+  } finally {
+    logged.mockRestore();
+  }
 }
 
 /** A D1 that refuses the `audit_log` insert (the batch then fails whole). */
@@ -1095,6 +1117,55 @@ describe("settle paths audit in the settlement's batch (I1)", () => {
         refused: "paid",
       });
     }
+  });
+});
+
+describe("mark paid fails loudly when payment.settled cannot be enqueued", () => {
+  it("by hand and when Mollie had the money: the call fails, the payment stays paid", async () => {
+    const manual = await seedCheckout({ count: 2 });
+    const settled = await seedCheckout({ mollie: true });
+    testMollie.setStatus(settled.mollieId as string, "paid");
+    queueFaults.events = true;
+    const logged = quietErrors();
+    try {
+      const outcomes = await Promise.all(
+        [manual.paymentId, settled.paymentId].map(async (paymentId) => ({
+          code: (
+            await failure(callAs(admin, "sponsorships.markPaid", { paymentId }))
+          ).code,
+          // Committed: the stale sweep re-sends `payment.settled` (task 5).
+          status: (await paymentRow(paymentId)).status,
+        }))
+      );
+      expect(outcomes).toEqual([
+        { code: "INTERNAL_SERVER_ERROR", status: "paid" },
+        { code: "INTERNAL_SERVER_ERROR", status: "paid" },
+      ]);
+      expect(
+        logged.mock.calls.some(([message]) =>
+          String(message).startsWith(
+            "[admin] Failed to enqueue after the commit"
+          )
+        )
+      ).toBe(true);
+    } finally {
+      queueFaults.events = false;
+      logged.mockRestore();
+    }
+    expect(enqueued.events).toEqual([]);
+  });
+
+  it("other actions log a failed enqueue and still answer", async () => {
+    const seeded = await seedCheckout({
+      paymentStatus: "paid",
+      status: "in_review",
+      videoPlaybackId: "rendered",
+    });
+    const id = seeded.sponsorshipIds[0] as string;
+    await expect(
+      callWithoutQueues("sponsorships.approve", { id })
+    ).resolves.toEqual({ id, status: "live" });
+    expect((await sponsorshipRow(id)).status).toBe("live");
   });
 });
 

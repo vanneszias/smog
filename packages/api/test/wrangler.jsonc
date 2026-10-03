@@ -1,15 +1,8 @@
 {
   // Test-only Worker config: the router tests use fake rate-limit
-  // bindings and an in-process handler. The queue producers type the
-  // bindings `src/queues.ts` reads (the admin enqueues on them).
+  // bindings and an in-process handler, so no bindings are declared here.
   "$schema": "../../../node_modules/wrangler/config-schema.json",
   "name": "smog-api-test",
   "compatibility_date": "2026-09-29",
-  "compatibility_flags": ["nodejs_compat"],
-  "queues": {
-    "producers": [
-      { "binding": "EMAIL_QUEUE", "queue": "smog-test-email" },
-      { "binding": "EVENTS_QUEUE", "queue": "smog-test-sponsorship-events" }
-    ]
-  }
+  "compatibility_flags": ["nodejs_compat"]
 }

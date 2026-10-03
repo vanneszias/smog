@@ -8,18 +8,14 @@
 import { adminSponsorshipServices } from "../../../api/src/admin-deps";
 import { bumpCatalogVersion } from "../../gestures/src/server/catalog-cache";
 import type { AdminDeps } from "../src/server";
-import {
-  mollieWithFaults,
-  muxWithDeletes,
-  recordingQueues,
-} from "./sponsorship-fakes";
+import { mollieWithFaults, muxWithDeletes } from "./sponsorship-fakes";
 
 export const adminDeps: AdminDeps = {
   bumpCatalogVersion,
   // Production leaves the fetches unset (the Worker's fetch, to
-  // MOLLIE_API_URL and MUX_API_URL) and reads the Worker's queues.
+  // MOLLIE_API_URL and MUX_API_URL); the queues are the rpc env's
+  // (`test/helpers.ts` gives it recording ones).
   mollieFetch: mollieWithFaults,
   muxFetch: muxWithDeletes,
-  queues: recordingQueues,
   sponsorships: adminSponsorshipServices,
 };

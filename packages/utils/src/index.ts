@@ -1,4 +1,5 @@
 // biome-ignore lint/performance/noBarrelFile: the package entry point (`@smog/utils`); the modules are small and all side-effect free.
+export { type CappedBody, readCappedBody } from "./body";
 export {
   type CursorKey,
   decodeCursor,

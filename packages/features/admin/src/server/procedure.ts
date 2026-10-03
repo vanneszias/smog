@@ -1,7 +1,7 @@
 import type { SponsorshipTokenPurpose, Statement } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import type { OutboxEmail } from "@smog/email";
-import type { EmailMessage, EventMessage, QueueProducer } from "@smog/jobs";
+import type { EventMessage } from "@smog/jobs";
 import type { MollieFetch, MolliePayment } from "@smog/payments";
 import { implementRpc, requireAdmin } from "@smog/rpc";
 import type { InvalidStateReason } from "@smog/sponsorships/schema";
@@ -125,12 +125,6 @@ export interface AdminSponsorshipServices {
   } | null>;
 }
 
-/** The queue bindings the admin enqueues on (after a commit). */
-export interface AdminQueues {
-  email?: QueueProducer<EmailMessage> | undefined;
-  events?: QueueProducer<EventMessage> | undefined;
-}
-
 /**
  * What `@smog/api` injects: logic from other features' servers (a feature
  * never imports another feature's `./server`).
@@ -150,11 +144,6 @@ export interface AdminDeps {
    * Mux fake (`@smog/video/testing`).
    */
   muxFetch?: MuxFetch;
-  /**
-   * The `EMAIL_QUEUE` and `EVENTS_QUEUE` bindings, read when a committed
-   * action enqueues (the Worker's env; the tests record the messages).
-   */
-  queues: () => AdminQueues;
   /** `@smog/sponsorships/server` (phase 6 task 6). */
   sponsorships: AdminSponsorshipServices;
 }
