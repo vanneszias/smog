@@ -5,8 +5,11 @@
  * file never passes through a procedure. The checkout verifies the object
  * before anything is written (`verifyLogoObject`, bug 23).
  */
+import { sponsorship } from "@smog/db";
+import type { Db } from "@smog/db/client";
 import { newId } from "@smog/utils";
 import { AwsClient } from "aws4fetch";
+import { eq } from "drizzle-orm";
 import {
   LOGO_CONTENT_TYPES,
   LOGO_MAX_BYTES,
@@ -305,6 +308,20 @@ export async function claimLogo(
     httpMetadata: { contentType: logo.contentType },
   });
   return claimed;
+}
+
+/**
+ * Whether a sponsorship already stores `key` (a claimed copy). Such a key
+ * is never claimed or deleted for another checkout or re-edit (Phase 6 fix
+ * wave, payments M-4): only an upload nobody references is.
+ */
+export async function isLogoInUse(db: Db, key: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: sponsorship.id })
+    .from(sponsorship)
+    .where(eq(sponsorship.logoKey, key))
+    .limit(1);
+  return row !== undefined;
 }
 
 /** `sponsorships.uploadLogo` (ruling 10): `RL_SPONSOR` only (the guards). */

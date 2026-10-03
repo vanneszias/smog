@@ -59,6 +59,7 @@ import {
   orphanLogoSweep,
   releaseTerminalLogos,
 } from "./orphan-logos";
+import { SETTLED_AT_SQL } from "./email-window";
 import { settlePayment } from "./settle";
 import {
   isStalePayment,
@@ -667,12 +668,14 @@ function waitingForRender(): SQL {
   ) as SQL;
 }
 
-const PAID_AT = sql<number>`coalesce(${payment.paidAt}, ${payment.updatedAt})`;
+/** When the payment was first applied (fix wave, jobs I-1; see `email-window.ts`). */
+const PAID_AT = SETTLED_AT_SQL;
 
 /**
  * The reconciliation step of the hourly sweep (task 4 review): every paid
  * payment with an item in `rendering` and no `queued`/`running` render
- * job, paid between 7 days and 5 minutes ago, gets `payment.settled`
+ * job, applied by us (its first settling event, else `paid_at`; fix
+ * wave, jobs I-1) between 7 days and 5 minutes ago, gets `payment.settled`
  * again, oldest first, at most `RECONCILE_MAX_PAYMENTS` per run, so a
  * fan-out lost after the commit (a crash, a queue outage past the
  * retries, a dead-lettered message) is resumed. Idempotent: the consumer

@@ -1,5 +1,11 @@
-import { invoiceRequest, payment, renderJob, sponsorship } from "@smog/db";
-import { DAY_MS } from "@smog/utils";
+import {
+  invoiceRequest,
+  payment,
+  renderJob,
+  sponsorship,
+  sponsorshipEvent,
+} from "@smog/db";
+import { DAY_MS, newId } from "@smog/utils";
 import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { handlePaymentSettled, queuedRenderJob } from "../src/server/settled";
@@ -214,5 +220,39 @@ describe("handlePaymentSettled (the payment.settled fan-out)", () => {
       .where(eq(renderJob.id, renderJobId));
     expect(await queuedRenderJob(db, renderJobId)).toBeNull();
     expect(await queuedRenderJob(db, "missing")).toBeNull();
+  });
+
+  it("measures the 6-day window from our first settling event, not Mollie's paidAt (fix wave, jobs I-1)", async () => {
+    await makeAdmin(db);
+    const seeded = await seedCheckout(db, {
+      count: 1,
+      paymentStatus: "paid",
+      status: "rendering",
+    });
+    // Mollie took the money 8 days ago; we learned of it an hour ago.
+    await db
+      .update(payment)
+      .set({ paidAt: new Date(NOW.getTime() - 8 * DAY_MS) })
+      .where(eq(payment.id, seeded.paymentId));
+    // A fixture: the trail the settle left (an insert).
+    await db.insert(sponsorshipEvent).values({
+      createdAt: new Date(NOW.getTime() - 60 * 60_000),
+      data: { paymentId: seeded.paymentId },
+      id: newId(),
+      sponsorshipId: seeded.sponsorshipIds[0] as string,
+      type: "payment_paid",
+    });
+    const out = await settled(seeded.paymentId);
+    const templates = out.notify.map((email) => email.template);
+    expect(templates).toContain("transactional/sponsorship-received");
+    expect(templates).toContain("transactional/payment-confirmed");
+    expect(templates).toContain("transactional/admin-new-sponsorship");
+    // Six days after our settle, the emails stop.
+    const later = await handlePaymentSettled(db, {
+      now: new Date(NOW.getTime() + 6 * DAY_MS),
+      paymentId: seeded.paymentId,
+      siteUrl: SITE_URL,
+    });
+    expect(later.notify).toEqual([]);
   });
 });

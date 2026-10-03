@@ -14,13 +14,14 @@ import type { OutboxEmail } from "@smog/email";
 import type { EmailMessage, EventMessage, JobQueues } from "@smog/jobs";
 import type { MollieClient } from "@smog/payments";
 import { createFakeMollie, type FakeMollie } from "@smog/payments/testing";
-import { DAY_MS } from "@smog/utils";
+import { DAY_MS, newId } from "@smog/utils";
 import { createFakeMux, type FakeMux } from "@smog/video/testing";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { hashSponsorshipToken } from "../src/schema";
 import { createRenderJob } from "../src/server/render";
 import { settleFromMollie } from "../src/server/settle";
+import { handlePaymentSettled } from "../src/server/settled";
 import {
   RECONCILE_GRACE_MS,
   RECONCILE_MAX_PAYMENTS,
@@ -497,6 +498,43 @@ describe("runStaleSweep (J-03)", () => {
     expect(fake.requests.some((r) => r.method === "DELETE")).toBe(false);
   });
 
+  it("a payment paid at Mollie 8 days ago and settled now still gets its jobs and every email (fix wave, jobs I-1)", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    await makeAdmin(db);
+    const seeded = await staleCheckout();
+    const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 10_000);
+    fake.setStatus(mollieId, "paid");
+    const stored = fake.payments.get(mollieId);
+    if (!stored) {
+      throw new Error("[test] No fake payment");
+    }
+    stored.paidAt = new Date(NOW.getTime() - 8 * DAY_MS);
+    const { events, queues } = recordingQueues();
+
+    expect(await sweep(queues)).toMatchObject({ settled: 1, stuck: 0 });
+    expect(events[0]).toEqual({
+      paymentId: seeded.paymentId,
+      type: "payment.settled",
+    });
+    // The events consumer drains the queue.
+    const out = await handlePaymentSettled(db, {
+      now: NOW,
+      paymentId: seeded.paymentId,
+      siteUrl: SITE_URL,
+    });
+    expect(
+      out.events.filter((event) => event.type === "render.requested")
+    ).toHaveLength(2);
+    const templates = out.notify.map((email) => email.template);
+    expect(
+      templates.filter((t) => t === "transactional/sponsorship-received")
+    ).toHaveLength(2);
+    expect(
+      templates.filter((t) => t === "transactional/payment-confirmed")
+    ).toHaveLength(2);
+    expect(templates).toContain("transactional/admin-new-sponsorship");
+  });
+
   it("cancels a cancelable payment in Mollie and frees the gestures", async () => {
     const seeded = await staleCheckout();
     const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 10_000);
@@ -798,6 +836,29 @@ describe("runStaleSweep's reconciliation (task 4 review)", () => {
       String(line).includes("no longer re-sent")
     );
     expect(stuckLogs).toHaveLength(1);
+  });
+
+  it("measures the window from our first settling event, not Mollie's paidAt (fix wave, jobs I-1)", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const seeded = await paidRendering(
+      {},
+      new Date(NOW.getTime() - 8 * DAY_MS)
+    );
+    await db.insert(sponsorshipEvent).values({
+      createdAt: new Date(NOW.getTime() - 60 * 60_000),
+      data: { paymentId: seeded.paymentId },
+      id: newId(),
+      sponsorshipId: seeded.sponsorshipIds[0] as string,
+      type: "payment_paid",
+    });
+    const { events, queues } = recordingQueues();
+
+    const result = await sweepOnce(queues);
+
+    expect(result).toMatchObject({ resent: 1, stuck: 0 });
+    expect(events).toEqual([
+      { paymentId: seeded.paymentId, type: "payment.settled" },
+    ]);
   });
 
   it("logs and sends nothing without the EVENTS_QUEUE binding", async () => {

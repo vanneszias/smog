@@ -38,7 +38,7 @@ import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { priceSponsorship } from "../schema/pricing";
 import type { CheckoutInput, CheckoutResult } from "../schema/wizard";
 import { getAvailability } from "./availability";
-import { claimLogo, deleteLogo } from "./logo";
+import { claimLogo, deleteLogo, isLogoInUse } from "./logo";
 import {
   allowFakeWebhook,
   isPaymentIdTaken,
@@ -334,8 +334,20 @@ async function runCheckout(
       );
       throw invalidState("logoInvalid");
     }
+    if (await isLogoInUse(db, input.logoKey)) {
+      console.warn(
+        `[sponsorships] Refused the logo ${input.logoKey} for a checkout: a sponsorship uses it`
+      );
+      throw invalidState("logoInvalid");
+    }
     logoKey = await claimLogo(media, input.logoKey);
     if (!logoKey) {
+      // A double click whose twin committed first removed the upload: its
+      // payment is the answer (fix wave, payments M-7).
+      const twin = await existingPayment(db, paymentId);
+      if (twin) {
+        return await replay(run, input, twin);
+      }
       throw invalidState("logoInvalid");
     }
   }
