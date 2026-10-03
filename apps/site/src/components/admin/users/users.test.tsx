@@ -22,6 +22,7 @@ const MEMBER: AdminUserDetail = {
   name: "Mia Member",
   role: "user",
   sessions: 2,
+  sponsorships: [],
 };
 
 const ADMIN_ID = "u-admin";
