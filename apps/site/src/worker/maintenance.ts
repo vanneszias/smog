@@ -18,7 +18,8 @@ import { maintenanceResponse } from "./maintenance-page";
  * `admin.maintenance.set` (the admin settings page) and `bun run
  * maintenance` write it. While it is enabled,
  * the Worker answers every request with a 503, except:
- * - `/api/webhooks/*`, `/api/health`, `/.well-known/*` and `/api/analytics`;
+ * - `/api/webhooks/*`, the legacy `/webhooks/mollie`, `/api/health`,
+ *   `/.well-known/*` and `/api/analytics`;
  * - the `/sign-in` page and `AUTH_SIGN_IN_ROUTES`, so an existing admin
  *   can sign in (served by a sign-in-only Better Auth: no sign-up, no
  *   reset, no email to an unknown address);
@@ -107,6 +108,8 @@ const EXEMPT_PATHS = new Set([
   // It only forwards consented events; without it the sign-in page's
   // screen views would fail (and log) through the window.
   "/api/analytics",
+  // The legacy Mollie webhook (spec §15): a payment must settle in a window.
+  "/webhooks/mollie",
 ]);
 const EXEMPT_PREFIXES = ["/api/webhooks/", "/.well-known/"];
 

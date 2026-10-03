@@ -23,6 +23,14 @@ export {
   type TokenPlan,
 } from "./lifecycle";
 export {
+  isLogoContentType,
+  LOGO_KEY_PREFIX,
+  r2Origin,
+  signLogoUpload,
+  sniffLogoType,
+  verifyLogoUpload,
+} from "./logo";
+export {
   PaymentProviderError,
   type StartMolliePaymentInput,
   startMolliePayment,
@@ -54,6 +62,7 @@ export {
   settleFromMollie,
   settlePayment,
 } from "./settle";
+export { handlePaymentSettled, queuedRenderJob } from "./settled";
 export {
   type IssuedToken,
   isGestureTaken,

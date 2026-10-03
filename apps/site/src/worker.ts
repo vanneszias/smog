@@ -3,7 +3,11 @@ import handler from "@tanstack/react-start/server-entry";
 import { legacyRedirect } from "@/lib/legacy-redirects";
 import { handleAuthRequest } from "@/server/auth-handler";
 import { loadCategorySlugs } from "@/server/legacy-categories";
-import { devConnectSources, respondSecurely } from "@/worker/headers";
+import {
+  devConnectSources,
+  r2ConnectSources,
+  respondSecurely,
+} from "@/worker/headers";
 import {
   BYPASS_PATH,
   handleBypass,
@@ -48,7 +52,10 @@ export default {
     // The e2e's Mux fake (dev only); `MUX_API_URL` is not in wrangler.jsonc.
     const muxApiUrl = (env as { MUX_API_URL?: unknown }).MUX_API_URL;
     return respondSecurely(environment, (nonce) => route(request, nonce), {
-      connectSrc: devConnectSources(environment, muxApiUrl),
+      connectSrc: [
+        ...devConnectSources(environment, muxApiUrl),
+        ...r2ConnectSources(env.R2_ACCOUNT_ID),
+      ],
     });
   },
 
