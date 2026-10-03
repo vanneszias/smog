@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import {
   forEachThemeAndWidth,
   launchReviewBrowser,
@@ -44,19 +44,21 @@ async function visitScreens(
   { dialogs, settle }: Visit,
   stop: (name: string, overlay: boolean) => Promise<void>
 ): Promise<void> {
+  // Its own locator: mux-player's error overlay is a `dialog` too.
+  const alert = page.getByRole("alertdialog");
   const dialog = async (
     name: string,
+    overlay: Locator,
     open: () => Promise<void>
   ): Promise<void> => {
     if (!dialogs) {
       return;
     }
     await open();
+    await overlay.waitFor();
     await stop(name, true);
     await page.keyboard.press("Escape");
-    await page.getByRole("alertdialog").or(page.getByRole("dialog")).waitFor({
-      state: "hidden",
-    });
+    await overlay.waitFor({ state: "hidden" });
   };
   const table = page.getByRole("table", { name: "Sponsorings" });
 
@@ -69,40 +71,37 @@ async function visitScreens(
   await openAdmin(page, "/admin/sponsorships?tab=refund");
   await table.getByText("E2E Bang").waitFor();
   await stop("sponsorships-refund", false);
-  await dialog("sponsorships-export", async () => {
-    await page.getByRole("button", { name: "CSV exporteren" }).click();
-    await page.getByRole("dialog", { name: "CSV exporteren" }).waitFor();
-  });
+  await dialog(
+    "sponsorships-export",
+    page.getByRole("dialog", { name: "CSV exporteren" }),
+    () => page.getByRole("button", { name: "CSV exporteren" }).click()
+  );
 
   await openDetail(page, VIEW_IDS.hallo, { settle });
   await page.getByRole("img", { name: "Logo van Bakkerij Hallo" }).waitFor();
   await stop("sponsorship-review", false);
-  await dialog("sponsorship-approve", async () => {
-    await page.getByRole("button", { name: "Goedkeuren" }).click();
-    await page.getByRole("alertdialog").waitFor();
-  });
-  await dialog("sponsorship-reject", async () => {
+  await dialog("sponsorship-approve", alert, () =>
+    page.getByRole("button", { name: "Goedkeuren" }).click()
+  );
+  await dialog("sponsorship-reject", alert, async () => {
     await page.getByRole("button", { name: "Afwijzen" }).click();
-    await page.getByRole("alertdialog").getByRole("textbox").fill("Onleesbaar");
+    await alert.getByRole("textbox").fill("Onleesbaar");
   });
 
   await openDetail(page, VIEW_IDS.dag, { settle });
   await stop("sponsorship-awaiting", false);
-  await dialog("sponsorship-mark-paid", async () => {
-    await page.getByRole("button", { name: "Als betaald markeren" }).click();
-    await page.getByRole("alertdialog").waitFor();
-  });
-  await dialog("sponsorship-cancel", async () => {
-    await page.getByRole("button", { name: "Betaling annuleren" }).click();
-    await page.getByRole("alertdialog").waitFor();
-  });
+  await dialog("sponsorship-mark-paid", alert, () =>
+    page.getByRole("button", { name: "Als betaald markeren" }).click()
+  );
+  await dialog("sponsorship-cancel", alert, () =>
+    page.getByRole("button", { name: "Betaling annuleren" }).click()
+  );
 
   await openDetail(page, VIEW_IDS.appel, { settle });
   await stop("sponsorship-live", false);
-  await dialog("sponsorship-force-expire", async () => {
-    await page.getByRole("button", { name: "Nu beëindigen" }).click();
-    await page.getByRole("alertdialog").waitFor();
-  });
+  await dialog("sponsorship-force-expire", alert, () =>
+    page.getByRole("button", { name: "Nu beëindigen" }).click()
+  );
 
   await openDetail(page, VIEW_IDS.bang, { settle });
   await stop("sponsorship-refund", false);
