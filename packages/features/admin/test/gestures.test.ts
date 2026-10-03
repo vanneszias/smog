@@ -19,6 +19,7 @@ import {
   ftsRows,
   storedGesture,
 } from "./catalog-helpers";
+import { adminDeps } from "./deps";
 import {
   type Authed,
   auditMark,
@@ -184,6 +185,7 @@ describe("admin.gestures.create", () => {
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
     const router = createAdminRouter({
+      ...adminDeps,
       bumpCatalogVersion: () => Promise.reject(new Error("KV is down")),
     });
     const category = await addCategory();

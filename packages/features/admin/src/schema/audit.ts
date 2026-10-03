@@ -8,7 +8,13 @@ import {
   AUDIT_TARGET_TYPES,
   type AuditAction,
   ROLES,
+  SPONSORSHIP_STATUSES,
+  SPONSORSHIP_TOKEN_PURPOSES,
 } from "@smog/db/enums";
+import {
+  MARK_PAID_NOTE_MAX,
+  REJECTION_REASON_MAX,
+} from "@smog/sponsorships/schema";
 import { z } from "zod";
 import { GESTURE_PATCH_FIELDS } from "./catalog";
 
@@ -117,16 +123,81 @@ const MAINTENANCE_AUDIT_SCHEMAS = {
   "maintenance.enable": maintenanceWindow,
 } satisfies AuditSchemaBlock;
 
+const isoDate = z.iso.datetime();
+const paymentRef = z.object({ paymentId: z.string().min(1) });
+const sponsorshipStatusFilter = z.array(z.enum(SPONSORSHIP_STATUSES));
+
+/**
+ * Phase 6 task 6: `sponsorship.*`, `payment.refund` and
+ * `export.sponsorships_csv`.
+ * - A moderation action writes one entry per sponsorship (`target_type`
+ *   `sponsorship`); mark paid and cancel act on the whole payment and
+ *   write one entry per sponsorship in it, each `{ paymentId }` (ruling 14).
+ * - `payment.refund` targets the payment.
+ * - The export is `system` with no target.
+ * A re-edit or renewal link's token is never in an entry (ruling 11): only
+ * its expiry. No sponsor contact data either (data minimisation; the
+ * target id links to the sponsorship while it exists).
+ * `sponsorship.retry_render` stays unmapped until phase 7 (A-27).
+ */
+const SPONSORSHIP_AUDIT_SCHEMAS = {
+  "export.sponsorships_csv": z.object({
+    filters: z.object({
+      from: z.number().int().optional(),
+      status: sponsorshipStatusFilter.optional(),
+      to: z.number().int().optional(),
+    }),
+    rows: z.number().int().nonnegative(),
+  }),
+  "payment.refund": z.object({
+    amountCents: z.number().int().nonnegative(),
+    refundedCents: z.number().int().positive(),
+  }),
+  "sponsorship.approve": z.object({ endsAt: isoDate, startsAt: isoDate }),
+  "sponsorship.cancel": paymentRef.extend({
+    /**
+     * Set when Mollie already had the money: the payment was settled as
+     * the webhook does, in the same batch as this entry, and the cancel
+     * refused (`INVALID_STATE paid`).
+     */
+    refused: z.literal("paid").optional(),
+  }),
+  "sponsorship.force_expire": z.object({
+    /** Whether a sponsored Mux asset was to be deleted (not the gesture's own). */
+    deletesAsset: z.boolean(),
+    from: z.enum(["live", "expiring"]),
+  }),
+  "sponsorship.mark_paid": paymentRef.extend({
+    /** `false` for an item of the payment that was not moved (already past payment). */
+    changed: z.literal(false).optional(),
+    /** The admin's note (a bank transfer reference). */
+    note: z.string().min(1).max(MARK_PAID_NOTE_MAX).optional(),
+    /**
+     * `manual`: marked paid by hand; `mollie`: Mollie already reported the
+     * payment paid, so it was settled as the webhook does.
+     */
+    source: z.enum(["manual", "mollie"]),
+  }),
+  "sponsorship.regenerate_token": z.object({
+    expiresAt: isoDate,
+    purpose: z.enum(SPONSORSHIP_TOKEN_PURPOSES),
+  }),
+  "sponsorship.reject": z.object({
+    reason: z.string().min(1).max(REJECTION_REASON_MAX),
+  }),
+  "sponsorship.request_changes": z.object({ expiresAt: isoDate }),
+} satisfies AuditSchemaBlock;
+
 /**
  * `audit_log.data` per action. The writer validates `data` with it before
- * any write, and `admin.audit.list` parses stored rows with it. Phase 6
- * adds the sponsorship, payment and export actions.
+ * any write, and `admin.audit.list` parses stored rows with it.
  */
 export const AUDIT_DATA_SCHEMAS = {
   ...LEGACY_AUDIT_SCHEMAS,
   ...CATALOG_AUDIT_SCHEMAS,
   ...USER_AUDIT_SCHEMAS,
   ...MAINTENANCE_AUDIT_SCHEMAS,
+  ...SPONSORSHIP_AUDIT_SCHEMAS,
 } satisfies AuditSchemaBlock;
 
 /** Actions that are parsed on read but never written. */
