@@ -352,7 +352,11 @@ function checkMutation(
  *   (`{ audit: [A, B] }`: each entry `A` or `B`), and D1 must have run
  *   each of them (counted per executed `audit_log` insert)
  *   (checked when the handler succeeded; a handler that throws changed
- *   nothing, since the entry shares the change's batch);
+ *   nothing it should have audited, since the entry shares the change's
+ *   batch. One exception writes and then throws: cancel on a payment
+ *   Mollie reports paid settles it, with its `sponsorship.cancel`
+ *   `{ refused: "paid" }` entries in the settlement's batch, and then
+ *   answers `INVALID_STATE paid`);
  * - `{ exempt }` may build and run none;
  * - `{ audit, noop }` may instead call `markUnchanged(db)` before writing
  *   anything (a no-op leaves nothing to audit); the rest of the call is

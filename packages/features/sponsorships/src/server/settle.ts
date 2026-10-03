@@ -78,6 +78,14 @@ export interface SettleResult {
 }
 
 export interface SettleInput {
+  /**
+   * Statements the caller needs in the same batch as the settlement, such
+   * as the admin's audit entries for a mark paid that found the payment
+   * paid at Mollie. Every path writes them with its final batch: alone when
+   * nothing else changes (`noop`, `already`). A lost race reuses them in
+   * the retry.
+   */
+  extra?: Statement[];
   now: Date;
   /** Mollie's payment, just re-fetched. */
   payment: MolliePayment;
@@ -264,7 +272,10 @@ export function isRenewable(status: SponsorshipStatus): boolean {
 }
 
 interface Context {
-  /** `mollie_id` and the refunded amount, written with any batch. */
+  /**
+   * `mollie_id`, the refunded amount, a new chargeback and the caller's
+   * `extra`: written with the final batch of every path.
+   */
   extra: Statement[];
   items: ItemRow[];
   mollie: MolliePayment;
@@ -648,7 +659,7 @@ async function settleEnded(
 
 async function settleOnce(
   db: Db,
-  { now, payment: mollie }: SettleInput
+  { extra: callerExtra = [], now, payment: mollie }: SettleInput
 ): Promise<SettleResult | null> {
   const row = await findPayment(db, mollie);
   if (!row) {
@@ -674,6 +685,7 @@ async function settleOnce(
   }
   const items = await loadItems(db, row.id);
   extra.push(...chargebackStatements(db, { items, mollie, now, row }));
+  extra.push(...callerExtra);
   const context: Context = { extra, items, mollie, now, row };
   const outcome = await settleStatus(db, context);
   if (mollie.amountChargedBackCents > 0) {

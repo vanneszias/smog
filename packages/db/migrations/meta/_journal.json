@@ -71,6 +71,13 @@
       "when": 1791028307851,
       "tag": "0009_payment_chargebacks",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1791035030351,
+      "tag": "0010_sponsorship_admin_order",
+      "breakpoints": true
     }
   ]
 }

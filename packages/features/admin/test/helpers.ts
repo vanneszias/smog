@@ -19,8 +19,15 @@ import { auditDataSchema, type WritableAuditAction } from "../src/schema";
 import { createAdminRouter } from "../src/server";
 import { adminDeps } from "./deps";
 import { TEST_MUX_ENV } from "./mux-fake";
+import { RECORDING_QUEUES, TEST_MOLLIE_ENV } from "./sponsorship-fakes";
 
-const SITE_URL = "http://localhost:5173";
+export const SITE_URL = "http://localhost:5173";
+
+/**
+ * The rpc env: the Mux and Mollie fakes' URLs and credentials, and queues
+ * that record what was enqueued.
+ */
+const TEST_ENV = { ...TEST_MUX_ENV, ...TEST_MOLLIE_ENV, ...RECORDING_QUEUES };
 const PASSWORD = "correct horse battery";
 
 export function testDb(): Db {
@@ -93,14 +100,15 @@ export async function signedUp(
  */
 export async function contextAs(as: Authed | null) {
   if (!as) {
-    return makeRpcContext({ db: testDb(), env: TEST_MUX_ENV, kv: env.KV });
+    return makeRpcContext({ db: testDb(), env: TEST_ENV, kv: env.KV });
   }
   const headers = new Headers({ cookie: as.cookie, origin: SITE_URL });
   return makeRpcContext({
     auth: as.auth,
     db: testDb(),
-    // The Mux fake (`test/mux-fake.ts`); `test/deps.ts` injects its fetch.
-    env: TEST_MUX_ENV,
+    // The Mux and Mollie fakes (`test/mux-fake.ts`,
+    // `test/sponsorship-fakes.ts`); `test/deps.ts` injects their fetches.
+    env: TEST_ENV,
     kv: env.KV,
     request: new Request(`${SITE_URL}/api/rpc/admin`, {
       headers,

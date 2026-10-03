@@ -48,6 +48,9 @@ export const sponsor = sqliteTable(
     check("sponsor_company_length_check", lengthBetween(t.company, 0, 120)),
     check("sponsor_locale_check", inValues(t.locale, LOCALES)),
     index("sponsor_email_idx").on(t.email),
+    // The admin user panel and the account export match sponsors to an
+    // account by `lower(email)`: migration 0010, phase 6 task 6.
+    index("sponsor_email_lower_idx").on(sql`lower(${t.email})`),
   ]
 );
 
@@ -105,6 +108,9 @@ export const sponsorship = sqliteTable(
     index("sponsorship_gesture_status_idx").on(t.gestureId, t.status),
     index("sponsorship_status_ends_at_idx").on(t.status, t.endsAt),
     index("sponsorship_sponsor_id_idx").on(t.sponsorId),
+    // The admin list and the CSV export (`created_at, id` keyset, newest
+    // first and oldest first): migration 0010, phase 6 task 6.
+    index("sponsorship_created_id_idx").on(t.createdAt, t.id),
   ]
 );
 

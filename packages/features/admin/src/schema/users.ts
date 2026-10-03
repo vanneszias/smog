@@ -6,6 +6,7 @@
  */
 import { ROLES } from "@smog/db/enums";
 import { z } from "zod";
+import { adminUserSponsorshipSchema } from "./sponsorships";
 
 export const USERS_PAGE_MAX = 100;
 export const USERS_PAGE_DEFAULT = 50;
@@ -70,8 +71,8 @@ export const adminUserPageSchema = z.object({
 export type AdminUserPage = z.infer<typeof adminUserPageSchema>;
 
 /**
- * One account with how it signs in and what it holds. Phase 6 adds the
- * sponsorships by email.
+ * One account with how it signs in and what it holds, with the
+ * sponsorships by its email.
  */
 export const adminUserDetailSchema = adminUserSchema.extend({
   favorites: z.number().int().nonnegative(),
@@ -84,6 +85,12 @@ export const adminUserDetailSchema = adminUserSchema.extend({
   methods: z.array(z.string()),
   /** Sessions that have not expired. */
   sessions: z.number().int().nonnegative(),
+  /**
+   * The sponsorships whose sponsor email is this account's, only once the
+   * account's email is verified (the account export's rule), newest
+   * first, at most `USER_SPONSORSHIPS_MAX`.
+   */
+  sponsorships: z.array(adminUserSponsorshipSchema),
 });
 
 export type AdminUserDetail = z.infer<typeof adminUserDetailSchema>;
