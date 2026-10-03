@@ -86,6 +86,26 @@ export const INVALID_STATE_REASONS = [
 export type InvalidStateReason = (typeof INVALID_STATE_REASONS)[number];
 
 /**
+ * Each `INVALID_STATE` reason's copy (`sponsorship.errors.*`): the sponsor
+ * pages and the admin screens both read this one map (review M-7).
+ */
+export const INVALID_STATE_REASON_KEYS = {
+  alreadySettled: "sponsorship.errors.alreadySettled",
+  gestureTaken: "sponsorship.errors.gestureTaken",
+  logoExpired: "sponsorship.errors.logoExpired",
+  logoInvalid: "sponsorship.errors.logoInvalid",
+  noLogo: "sponsorship.errors.noLogo",
+  notRefunded: "sponsorship.errors.notRefunded",
+  notRenewable: "sponsorship.errors.notRenewable",
+  noVideo: "sponsorship.errors.noVideo",
+  paid: "sponsorship.errors.paid",
+  paymentProvider: "sponsorship.errors.paymentProvider",
+  paymentsUnavailable: "sponsorship.errors.paymentsUnavailable",
+  stale: "sponsorship.errors.stale",
+  tooMany: "sponsorship.errors.tooMany",
+} as const satisfies Record<InvalidStateReason, TranslationKey>;
+
+/**
  * The sponsorship errors with their data, on top of the shared map
  * (`baseContract.errors(SPONSORSHIP_ERRORS)`).
  */
@@ -131,3 +151,12 @@ export const paymentStatusSchema = z.object({
   totalCents: z.number().int(),
 });
 export type PaymentStatusView = z.infer<typeof paymentStatusSchema>;
+
+/**
+ * The reason in an `INVALID_STATE` error's `data`, else `null` (a missing
+ * or unknown reason). The callers check the code first.
+ */
+export function invalidStateReasonOf(data: unknown): InvalidStateReason | null {
+  const parsed = SPONSORSHIP_ERRORS.INVALID_STATE.data.safeParse(data);
+  return parsed.success ? parsed.data.reason : null;
+}

@@ -15,7 +15,7 @@ import {
   type TranslationKey,
 } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
-import type { InvalidStateReason } from "@smog/sponsorships/schema";
+import { INVALID_STATE_REASON_KEYS } from "@smog/sponsorships/schema";
 import { formatMoney } from "@smog/utils";
 import { useCallback } from "react";
 
@@ -27,22 +27,6 @@ import { useCallback } from "react";
  * (ruling 15); these are the admin's own.
  */
 
-const REFUSAL_KEYS = {
-  alreadySettled: "sponsorship.errors.alreadySettled",
-  gestureTaken: "sponsorship.errors.gestureTaken",
-  logoExpired: "sponsorship.errors.logoExpired",
-  logoInvalid: "sponsorship.errors.logoInvalid",
-  noLogo: "sponsorship.errors.noLogo",
-  notRefunded: "sponsorship.errors.notRefunded",
-  notRenewable: "sponsorship.errors.notRenewable",
-  noVideo: "sponsorship.errors.noVideo",
-  paid: "sponsorship.errors.paid",
-  paymentProvider: "sponsorship.errors.paymentProvider",
-  paymentsUnavailable: "sponsorship.errors.paymentsUnavailable",
-  stale: "sponsorship.errors.stale",
-  tooMany: "sponsorship.errors.tooMany",
-} as const satisfies Record<InvalidStateReason, TranslationKey>;
-
 /**
  * What a refused or failed sponsorship action shows: the typed reason
  * (`sponsorship.errors.*`), a missing row, a mismatched confirmation, or
@@ -51,7 +35,7 @@ const REFUSAL_KEYS = {
 export function sponsorshipActionError(t: Translate, error: unknown): string {
   const reason = sponsorshipRefusalOf(error);
   if (reason) {
-    return t(REFUSAL_KEYS[reason]);
+    return t(INVALID_STATE_REASON_KEYS[reason]);
   }
   const code = (error as { code?: unknown } | null)?.code;
   if (code === "NOT_FOUND") {

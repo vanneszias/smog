@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { SPONSORSHIP_STATUSES } from "@smog/db/enums";
 import { resources } from "@smog/i18n";
 import {
+  INVALID_STATE_REASON_KEYS,
   INVALID_STATE_REASONS,
+  invalidStateReasonOf,
   SPONSORSHIP_STATUS_LABEL_KEYS,
   SPONSORSHIP_STATUS_TONES,
 } from "./index";
@@ -41,13 +43,25 @@ describe("status presentation (ruling 15)", () => {
     });
   });
 
-  test("every INVALID_STATE reason has its copy", () => {
+  test("every INVALID_STATE reason has its copy (one map, review M-7)", () => {
     for (const reason of INVALID_STATE_REASONS) {
+      expect(INVALID_STATE_REASON_KEYS[reason]).toBe(
+        `sponsorship.errors.${reason}`
+      );
       for (const locale of ["nl", "en", "fr"] as const) {
-        expect(typeof lookup(locale, `sponsorship.errors.${reason}`)).toBe(
+        expect(typeof lookup(locale, INVALID_STATE_REASON_KEYS[reason])).toBe(
           "string"
         );
       }
     }
+  });
+
+  test("invalidStateReasonOf reads a known reason from INVALID_STATE data", () => {
+    expect(invalidStateReasonOf({ reason: "notRenewable" })).toBe(
+      "notRenewable"
+    );
+    expect(invalidStateReasonOf({ reason: "unknown" })).toBeNull();
+    expect(invalidStateReasonOf(undefined)).toBeNull();
+    expect(invalidStateReasonOf("stale")).toBeNull();
   });
 });

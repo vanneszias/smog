@@ -6,12 +6,12 @@
  * and force expire change the sponsor credit) when it settles, so a
  * refused action (another admin acted first) shows the current state too.
  */
-import type { InvalidStateReason } from "@smog/sponsorships/schema";
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import {
-  type AdminSponsorshipListInput,
-  sponsorshipInvalidStateDataSchema,
-} from "../schema";
+  type InvalidStateReason,
+  invalidStateReasonOf,
+} from "@smog/sponsorships/schema";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import type { AdminSponsorshipListInput } from "../schema";
 import {
   ADMIN_STALE_TIME,
   useAdminKey,
@@ -34,8 +34,7 @@ export function sponsorshipRefusalOf(
   if (code !== "INVALID_STATE") {
     return null;
   }
-  const parsed = sponsorshipInvalidStateDataSchema.safeParse(data);
-  return parsed.success ? parsed.data.reason : null;
+  return invalidStateReasonOf(data);
 }
 
 /**
