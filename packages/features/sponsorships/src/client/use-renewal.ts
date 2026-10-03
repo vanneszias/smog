@@ -7,11 +7,7 @@
 import { isDefinedError } from "@orpc/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  sponsorshipError,
-  useSponsorshipsClient,
-  useSponsorshipsRpc,
-} from "./slice";
+import { useSponsorshipsClient, useSponsorshipsRpc } from "./slice";
 import { useRedirecting } from "./use-checkout";
 
 /** The link's sponsorship; `TOKEN_INVALID` / `TOKEN_EXPIRED` are final. */
@@ -34,10 +30,9 @@ export interface RenewalRequest {
 }
 
 /**
- * "Pay": one `checkoutId` per page visit, so a double click or a retry
- * after a timeout answers the same open payment (ruling 5); `onRedirect`
- * sends the browser to Mollie. An `INVALID_STATE` answer (a settled or
- * failed attempt) takes a new id for the next try.
+ * "Pay": one `checkoutId` per attempt (a double click is held off by
+ * `isPending` and `redirecting`); `onRedirect` sends the browser to Mollie. Any failed attempt takes a new id for the
+ * next try (task 5 settles a failed renewal attempt for good).
  */
 export function useRenewalCheckout({
   onRedirect,
@@ -53,10 +48,10 @@ export function useRenewalCheckout({
         { checkoutId, token },
         { context: { turnstileToken: turnstileToken ?? undefined } }
       ),
-    onError: (error: unknown) => {
-      if (sponsorshipError(error)?.code === "INVALID_STATE") {
-        setCheckoutId(crypto.randomUUID());
-      }
+    // Every failed attempt is final for its id (task 5: a retry is a new
+    // renewal payment), so the next attempt takes a new one.
+    onError: () => {
+      setCheckoutId(crypto.randomUUID());
     },
     onSuccess: (result) => {
       setRedirecting(true);

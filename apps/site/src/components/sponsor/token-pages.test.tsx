@@ -160,6 +160,37 @@ describe("the renewal page (S-20)", () => {
     ).toMatchObject({ token: TOKEN });
   });
 
+  test("a retry after any failed attempt is a new checkout id (task 5)", async () => {
+    let answer: unknown = rpcError("INTERNAL_SERVER_ERROR", 500);
+    const { calls } = await renderSite(() => <Renew />, {
+      api: {
+        "sponsorships/renewal/checkout": () => answer,
+        "sponsorships/renewal/get": {
+          amountCents: 5000,
+          displayName: "Bakkerij Jansen",
+          endsAt: Date.now() + DAY,
+          gesture: { name: "Broer", slug: "broer" },
+          hasLogo: false,
+        },
+      },
+    });
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Renew and pay" })
+    );
+    await screen.findByText("The payment could not start. Please try again.");
+    answer = {
+      checkoutUrl: "https://mollie.test/checkout/tr_9",
+      paymentId: "8c3c5a52-7a0c-4d9b-9d65-1f1d7f0c2a11",
+    };
+    fireEvent.click(screen.getByRole("button", { name: "Renew and pay" }));
+    await waitFor(() => expect(redirects).toHaveLength(1));
+    const ids = calls
+      .filter((call) => call.path === "sponsorships/renewal/checkout")
+      .map((call) => (call.input as { checkoutId: string }).checkoutId);
+    expect(ids).toHaveLength(2);
+    expect(ids[1]).not.toBe(ids[0]);
+  });
+
   test("a sponsorship that can no longer be renewed says so", async () => {
     await renderSite(() => <Renew />, {
       api: {
