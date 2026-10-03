@@ -163,6 +163,43 @@ describe("the wizard reducer (S-01, S-03)", () => {
     expect(fresh.selected).toEqual([]);
   });
 
+  test("any edit after an attempt takes a new checkout id (review I-2)", () => {
+    const NEXT = "1b8c7f0e-2d3a-4c5b-8e9f-0a1b2c3d4e5f";
+    const before = withSelection(2);
+    // Edits before any attempt keep the id.
+    const edited = wizardReducer(before, {
+      patch: { displayName: "x" },
+      type: "details",
+    });
+    expect(edited.checkoutId).toBe(CHECKOUT_ID);
+
+    const attempted = wizardReducer(edited, {
+      nextCheckoutId: NEXT,
+      type: "attempt",
+    });
+    // The attempt itself (a retry, a double click) keeps the id.
+    expect(attempted.checkoutId).toBe(CHECKOUT_ID);
+    for (const action of [
+      { gesture: gesture(5), type: "toggle" } as const,
+      { patch: { displayName: "y" }, type: "details" } as const,
+      { logo: png(), type: "logo" } as const,
+      { gestureIds: [gesture(0).id], type: "unavailable" } as const,
+    ]) {
+      const next = wizardReducer(attempted, action);
+      expect(next.checkoutId, action.type).toBe(NEXT);
+      // Only once: the next edit before another attempt keeps it.
+      const again = wizardReducer(next, {
+        patch: { displayName: "z" },
+        type: "details",
+      });
+      expect(again.checkoutId, action.type).toBe(NEXT);
+    }
+    // A step change is no edit.
+    expect(wizardReducer(attempted, { step: 1, type: "step" }).checkoutId).toBe(
+      CHECKOUT_ID
+    );
+  });
+
   test("a new attempt gets a new checkout id", () => {
     const state = wizardReducer(withSelection(1), {
       checkoutId: "f0a2b9a4-5c1e-4a51-9d0c-0d6b6f6b2c33",

@@ -57,6 +57,15 @@ export const e2eSeedSchema = z.discriminatedUnion("op", [
     slugs: z.array(slug).min(1).max(20),
   }),
   /**
+   * A read, not a write: each named gesture's sponsorships and their
+   * status (`rows` in the answer), so the sponsor spec can wait for the
+   * fake render's `in_review` (review I-7). Phase 6 task 8.
+   */
+  z.object({
+    op: z.literal("sponsorshipStatus"),
+    slugs: z.array(slug).min(1).max(20),
+  }),
+  /**
    * One sponsorship inserted in a given state (the CTA's states, the
    * re-edit link), with its own sponsor and, optionally, a token whose
    * SHA-256 the spec computed (the raw token stays in the spec). Inserted,
@@ -171,6 +180,14 @@ export function seedStatements(
       return resetStatements(db, seed.slugs);
     case "sponsorship":
       return sponsorshipStatements(db, seed);
+    case "sponsorshipStatus":
+      return [
+        db
+          .prepare(
+            "SELECT g.slug, s.status FROM sponsorship AS s JOIN gesture AS g ON g.id = s.gesture_id WHERE g.slug IN (SELECT value FROM json_each(?)) ORDER BY g.slug"
+          )
+          .bind(JSON.stringify(seed.slugs)),
+      ];
     default:
       return [seedStatement(db, seed)];
   }

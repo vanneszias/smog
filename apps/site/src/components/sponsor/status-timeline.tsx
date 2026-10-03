@@ -56,7 +56,12 @@ export function StatusTimeline(): ReactNode {
                 />
               ) : null}
             </span>
-            <span className="pb-4 text-body text-foreground">{step.label}</span>
+            <span className="pb-4 text-body text-foreground">
+              {step.label}
+              {step.done ? (
+                <span className="sr-only">{` (${t("a11y.stepCompleted")})`}</span>
+              ) : null}
+            </span>
           </li>
         ))}
       </ol>

@@ -4,12 +4,15 @@ import { Page } from "@/components/learning/page";
 import { RenewalView } from "@/components/sponsor/renewal-view";
 import { pageMeta } from "@/lib/head";
 import { validateTokenSearch } from "@/lib/sponsor-search";
+import { tokenPageHead, tokenPageHeaders } from "@/lib/token-page";
 
 const rootApi = getRouteApi("__root__");
 
 export const Route = createFileRoute("/sponsor/renew")({
   component: RenewPage,
-  head: ({ matches }) => pageMeta(matches, "sponsor.renew.eyebrow"),
+  head: ({ matches }) =>
+    tokenPageHead(pageMeta(matches, "sponsor.renew.eyebrow")),
+  headers: tokenPageHeaders,
   validateSearch: validateTokenSearch,
 });
 

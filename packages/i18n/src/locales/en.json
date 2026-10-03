@@ -1529,8 +1529,10 @@
       "showMore": "+{{count}} more",
       "showLess": "Show less",
       "clearFilters": "Clear filters",
-      "available_one": "{{count}} available gesture",
-      "available_other": "{{count}} available gestures",
+      "available_one": "{{count}} available gesture shown",
+      "available_other": "{{count}} available gestures shown",
+      "loadMore": "Load more",
+      "partial": "Showing {{shown}} of {{total}} matches. Search more precisely to find the rest.",
       "selected_one": "{{count}} selected",
       "selected_other": "{{count}} selected",
       "badge": {
@@ -1543,8 +1545,7 @@
       "empty": {
         "title": "No gestures found",
         "description": "Try another word or clear the filters."
-      },
-      "choose": "Choose {{name}}"
+      }
     },
     "bar": {
       "selected_one": "{{count}} gesture selected",

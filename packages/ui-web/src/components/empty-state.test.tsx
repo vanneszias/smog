@@ -23,4 +23,10 @@ describe("EmptyState", () => {
     const art = container.querySelector("[data-slot=empty-illustration]");
     expect(art?.getAttribute("aria-hidden")).toBe("true");
   });
+
+  test("is the page's h1 at level 1, sized as a screen title", () => {
+    renderKit(<EmptyState level={1} title="Paused" />);
+    const heading = screen.getByRole("heading", { level: 1, name: "Paused" });
+    expect(classesOf(heading)).toContain("text-title-1");
+  });
 });

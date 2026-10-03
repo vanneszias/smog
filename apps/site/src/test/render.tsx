@@ -58,7 +58,8 @@ type ApiRoutes = Record<string, unknown>;
 /** A fetch that answers `/api/rpc/<path>` from `routes` (404 otherwise). */
 function fakeFetch(
   routes: ApiRoutes,
-  calls: { input: unknown; path: string }[]
+  calls: { input: unknown; path: string }[],
+  headers: RenderedSite["headers"]
 ) {
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
@@ -69,6 +70,7 @@ function fakeFetch(
         : await request.text();
     const input = data ? (JSON.parse(data) as { json?: unknown }).json : null;
     calls.push({ input, path });
+    headers.push({ headers: request.headers, path });
     const route = routes[path];
     if (route === undefined) {
       return Response.json(
@@ -83,10 +85,10 @@ function fakeFetch(
         { status: 404 }
       );
     }
-    const value =
-      typeof route === "function"
-        ? (route as (input: unknown) => unknown)(input)
-        : route;
+    // A route may answer later (a Promise), to hold a page in its loading state.
+    const value: unknown = await (typeof route === "function"
+      ? (route as (input: unknown) => unknown)(input)
+      : route);
     if (value instanceof RpcErrorAnswer) {
       return Response.json(
         {
@@ -122,6 +124,8 @@ export interface RenderedSite {
   calls: { input: unknown; path: string }[];
   /** Every analytics event the screen tracked. */
   events: AnalyticsEvent[];
+  /** Every API call's request headers (the Turnstile token, …). */
+  headers: { headers: Headers; path: string }[];
   router: AnyRouter;
 }
 
@@ -138,12 +142,13 @@ export async function renderSite(
 ): Promise<RenderedSite> {
   const recorder = createRecordingAnalytics();
   const calls: RenderedSite["calls"] = [];
+  const headers: RenderedSite["headers"] = [];
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const client = createApiClient({
     baseUrl: "http://localhost:5173",
-    fetch: fakeFetch(api, calls),
+    fetch: fakeFetch(api, calls, headers),
   });
   const queryUtils = createApiQueryUtils(client);
   const store = createLocalStore(createMemoryAdapter());
@@ -193,5 +198,10 @@ export async function renderSite(
   } else {
     await waitFor(() => expect(router.state.status).toBe("idle"));
   }
-  return { calls, events: recorder.events, router: router as AnyRouter };
+  return {
+    calls,
+    events: recorder.events,
+    headers,
+    router: router as AnyRouter,
+  };
 }

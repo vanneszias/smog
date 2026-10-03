@@ -1554,9 +1554,11 @@
       "showMore": "+{{count}} de plus",
       "showLess": "Afficher moins",
       "clearFilters": "Effacer les filtres",
-      "available_one": "{{count}} geste disponible",
-      "available_many": "{{count}} gestes disponibles",
-      "available_other": "{{count}} gestes disponibles",
+      "available_one": "{{count}} geste disponible affiché",
+      "available_many": "{{count}} gestes disponibles affichés",
+      "available_other": "{{count}} gestes disponibles affichés",
+      "loadMore": "Charger plus de gestes",
+      "partial": "{{shown}} résultats sur {{total}} affichés. Précisez votre recherche pour trouver les autres.",
       "selected_one": "{{count}} sélectionné",
       "selected_many": "{{count}} sélectionnés",
       "selected_other": "{{count}} sélectionnés",
@@ -1570,8 +1572,7 @@
       "empty": {
         "title": "Aucun geste trouvé",
         "description": "Essayez un autre mot ou effacez les filtres."
-      },
-      "choose": "Choisir {{name}}"
+      }
     },
     "bar": {
       "selected_one": "{{count}} geste sélectionné",

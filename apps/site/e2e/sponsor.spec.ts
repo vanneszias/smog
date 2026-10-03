@@ -22,6 +22,7 @@ import {
   stubMuxStream,
   waitForApp,
 } from "./helpers";
+import { PHASE6_PENDING, type Phase6Pending } from "./phase6";
 
 const NAAM_IN_DE_VIDEO = /^Naam in de video/;
 const LOGO_TOEVOEGEN = /^Logo toevoegen/;
@@ -37,14 +38,19 @@ const P_120_00 = /120,00/;
  * gesture CTA (phase 6 task 8), against the Mollie fake
  * (`@smog/payments/testing/server`, playwright.config.ts).
  *
- * Some parts need the server procedures of later tasks; each probes for
- * them and is skipped until they answer, so it runs as soon as they merge:
- * - NEEDS TASK 4 (checkout, logo upload, payment status, the webhook and
- *   the fake render): the paid and the failed checkout.
- * - NEEDS TASK 5 (`reedit.*`): the re-edit link flow.
- * - NEEDS TASK 6 (`admin.sponsorships.*`): "the admin queue has 2" is
- *   checked through `sponsorships.availability` (both `pending`) until the
- *   admin list exists; see the TODO below.
+ * Some parts need the server procedures of later tasks, flagged in
+ * `PHASE6_PENDING` (`./phase6.ts`, review I-6). A flagged test skips only
+ * while its procedure answers the task 3 stub ("not implemented"); once
+ * the procedure is real it fails until the merging task removes its flag,
+ * and any other 500 fails it outright:
+ * - `checkout` (task 4): the paid and the failed checkout.
+ * - `reedit` (task 5): the re-edit link flow.
+ * - `adminQueue` (task 6): until then the paid test waits for both
+ *   sponsorships to reach `in_review` through the dev-only seed read.
+ *
+ * Run alone with a dev server you started yourself (`reuseExistingServer`),
+ * that server needs the Mollie fake's `SMOG_DEV_MOLLIE_*` env (see
+ * playwright.config.ts), or the wizard reads "paused" and these tests fail.
  *
  * Review screenshots (light/dark × 390/1280, reduced motion, nl-BE) only
  * when SPONSOR_SHOTS_DIR is set.
@@ -78,25 +84,70 @@ const PNG = Buffer.from(
 );
 const SUCCESS_URL = /\/sponsor\/success\?payment=/;
 const CHECKOUT_URL = new RegExp(`^${MOLLIE_FAKE}/checkout/`);
-const TASK4 = "needs phase 6 task 4 (checkout, payment status, webhook)";
+/** The probe of each flagged part: a read the stub answers "not implemented". */
+const PROBES: Record<
+  Exclude<Phase6Pending, "adminQueue">,
+  { input: unknown; path: string }
+> = {
+  checkout: {
+    input: { payment: "8c3c5a52-7a0c-4d9b-9d65-1f1d7f0c2a11" },
+    path: "sponsorships/paymentStatus",
+  },
+  reedit: { input: { token: "x".repeat(43) }, path: "sponsorships/reedit/get" },
+};
 
-/** Whether a procedure is implemented (not the task 3 stub's 500). */
-async function implemented(
+/** Whether the procedure still answers the task 3 stub, and nothing else. */
+async function isStub(
   request: APIRequestContext,
-  path: string,
-  input: unknown
+  part: keyof typeof PROBES
 ): Promise<boolean> {
+  const { input, path } = PROBES[part];
   const response = await request.post(`/api/rpc/${path}`, {
     data: { json: input },
     headers: { origin: ORIGIN },
   });
-  return response.status() !== 500;
+  if (response.status() !== 500) {
+    return false;
+  }
+  const body = (await response.json()) as {
+    json?: { code?: string; message?: string };
+  };
+  return (
+    body.json?.code === "INTERNAL_SERVER_ERROR" &&
+    body.json.message === "not implemented"
+  );
 }
 
-async function checkoutReady(request: APIRequestContext): Promise<boolean> {
-  return await implemented(request, "sponsorships/paymentStatus", {
-    payment: crypto.randomUUID(),
+/**
+ * Skips while `part` is flagged and still the stub; a flagged part that is
+ * implemented fails, so its flag is removed when it merges (review I-6).
+ */
+async function skipWhilePending(
+  request: APIRequestContext,
+  part: keyof typeof PROBES
+): Promise<void> {
+  const stub = await isStub(request, part);
+  if (PHASE6_PENDING[part] && !stub) {
+    throw new Error(
+      `sponsorships.${PROBES[part].path} is implemented: remove PHASE6_PENDING.${part} (e2e/phase6.ts)`
+    );
+  }
+  test.skip(stub, `waits for phase 6 (PHASE6_PENDING.${part})`);
+}
+
+/** The sponsorships' statuses on these gestures (dev-only seed read). */
+async function statuses(
+  request: APIRequestContext,
+  slugs: readonly string[]
+): Promise<string[]> {
+  const response = await request.post("/dev/e2e-seed", {
+    data: [{ op: "sponsorshipStatus", slugs }],
+    headers: { origin: ORIGIN },
   });
+  const { rows } = (await response.json()) as {
+    rows: { slug: string; status: string }[];
+  };
+  return rows.map((row) => `${row.slug}:${row.status}`);
 }
 
 async function availability(
@@ -118,8 +169,9 @@ async function availability(
   return body.json.items[0]?.state ?? "unknown";
 }
 
+/** A card is a toggle named by its gesture. */
 function card(page: Page, name: string) {
-  return page.getByRole("button", { name: `${name} kiezen` });
+  return page.getByRole("button", { exact: true, name });
 }
 
 /** The consent banner shows after hydration; decline it so it covers nothing. */
@@ -205,6 +257,11 @@ async function payAtMollie(page: Page, outcome: "Pay" | "Fail"): Promise<void> {
 }
 
 test.describe.configure({ mode: "serial" });
+
+// The rows stay out of the admin screens other specs look at (review Minor 10).
+test.afterAll(async ({ request }) => {
+  await e2eSeed(request, [{ op: "resetSponsorships", slugs: ALL }]);
+});
 
 test.beforeAll(async ({ request }) => {
   await e2eSeed(request, [
@@ -313,7 +370,7 @@ test("the gesture CTA: free, being sponsored, sponsored (L-17)", async ({
 test("pays for 2 gestures with a logo and an invoice; the success page shows paid", async ({
   page,
 }) => {
-  test.skip(!(await checkoutReady(page.request)), TASK4);
+  await skipWhilePending(page.request, "checkout");
   await openWizard(page);
   await choose(page, ["Broer", "Zus"]);
   await fillDetails(page, { invoice: true, logo: true });
@@ -323,21 +380,24 @@ test("pays for 2 gestures with a logo and an invoice; the success page shows pai
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Broer, Zus")).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
-  // The fake render ran: both are now in review (blocking, "pending").
-  // TODO(task 6): assert the admin moderation queue lists both once
-  // `admin.sponsorships.list` exists.
+  // The webhook, `payment.settled`, the consumer and the fake render ran:
+  // both sponsorships wait in review (review I-7).
   await expect
-    .poll(async () => [
-      await availability(page.request, "broer"),
-      await availability(page.request, "zus"),
-    ])
-    .toEqual(["pending", "pending"]);
+    .poll(async () => await statuses(page.request, FLOW_PAID), {
+      timeout: 30_000,
+    })
+    .toEqual(["broer:in_review", "zus:in_review"]);
+  if (!PHASE6_PENDING.adminQueue) {
+    throw new Error(
+      "task 6: assert here that the admin moderation queue lists Broer and Zus"
+    );
+  }
 });
 
 test("a failed payment frees the gestures, and Try again keeps the selection", async ({
   page,
 }) => {
-  test.skip(!(await checkoutReady(page.request)), TASK4);
+  await skipWhilePending(page.request, "checkout");
   await openWizard(page);
   await choose(page, ["Mama", "Papa"]);
   await fillDetails(page);
@@ -355,12 +415,7 @@ test("a failed payment frees the gestures, and Try again keeps the selection", a
 });
 
 test("the re-edit link: a new name, sent for review", async ({ page }) => {
-  test.skip(
-    !(await implemented(page.request, "sponsorships/reedit/get", {
-      token: "x".repeat(43),
-    })),
-    "needs phase 6 task 5 (reedit.get / reedit.submit)"
-  );
+  await skipWhilePending(page.request, "reedit");
   await stubMux(page);
   await page.goto(`/sponsor/edit?token=${REEDIT_TOKEN}`);
   await waitForApp(page);
@@ -453,6 +508,112 @@ async function eachThemeAndWidth(
   }
 }
 
+/**
+ * The pages whose data the server's stubs cannot give yet, answered in
+ * the page (`page.route`): paused, every success state, the re-edit and
+ * renewal links and their guards; then the CTA's three states (seeded).
+ * `each` runs on every state (a screenshot, an axe check).
+ */
+async function stubbedStates(
+  page: Page,
+  each: (state: string) => Promise<void>
+): Promise<void> {
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await stubMux(page);
+  await stubMuxStream(page);
+  await answer(page, "availability", {
+    checkoutEnabled: false,
+    items: [],
+  });
+  await page.goto("/sponsor");
+  await expect(
+    page.getByRole("heading", { name: "Sponsoren is even gepauzeerd" })
+  ).toBeVisible();
+  await each("05-paused");
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await stubMux(page);
+  await stubMuxStream(page);
+
+  for (const [status, kind, title] of [
+    ["paid", "initial", "Betaling geslaagd!"],
+    ["open", "initial", "Je betaling wordt verwerkt…"],
+    ["failed", "initial", "De betaling is niet gelukt"],
+    ["canceled", "initial", "De betaling is geannuleerd"],
+    ["refund_needed", "initial", "We nemen contact met je op"],
+    ["paid", "renewal", "Je sponsoring is verlengd!"],
+  ] as const) {
+    // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
+    await page.unroute("**/api/rpc/sponsorships/paymentStatus**");
+    await answer(page, "paymentStatus", paymentView(status, kind));
+    await page.goto(`/sponsor/success?payment=${PAYMENT}`);
+    await expect(
+      page.getByRole("heading", { level: 1, name: title })
+    ).toBeVisible();
+    await each(`06-success-${status}-${kind}`);
+  }
+  await page.unroute("**/api/rpc/sponsorships/paymentStatus**");
+  await page.goto("/sponsor/success");
+  await each("06-success-missing");
+
+  await answer(page, "reedit/get", {
+    displayName: "Oude Naam",
+    expiresAt: Date.now() + 3 * DAY,
+    gesture: { name: "Broer", slug: "broer" },
+    hasLogo: true,
+  });
+  await page.goto(`/sponsor/edit?token=${REEDIT_TOKEN}`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Werk je video bij" })
+  ).toBeVisible();
+  await each("07-edit");
+  await page.unroute("**/api/rpc/sponsorships/reedit/get**");
+  await page.route("**/api/rpc/sponsorships/reedit/get**", (route) =>
+    route.fulfill({
+      body: JSON.stringify({
+        json: {
+          code: "TOKEN_EXPIRED",
+          data: { expiresAt: Date.UTC(2026, 8, 30, 10) },
+          defined: true,
+          message: "TOKEN_EXPIRED",
+          status: 410,
+        },
+      }),
+      contentType: "application/json",
+      status: 410,
+    })
+  );
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Link verlopen" })
+  ).toBeVisible();
+  await each("07-edit-expired");
+  await page.goto("/sponsor/edit");
+  await each("07-edit-invalid");
+
+  await answer(page, "renewal/get", {
+    amountCents: 6000,
+    displayName: "Bakkerij Jansen",
+    endsAt: Date.UTC(2026, 10, 2, 10),
+    gesture: { name: "Broer", slug: "broer" },
+    hasLogo: true,
+  });
+  await page.goto(`/sponsor/renew?token=${REEDIT_TOKEN}`);
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "Nog een jaar in de video",
+    })
+  ).toBeVisible();
+  await each("08-renew");
+
+  for (const slug of [FREE, PENDING, LIVE]) {
+    // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
+    await page.goto(`/gestures/${slug}`);
+    await expect(page.getByTestId("sponsor-cta")).toBeVisible();
+    await each(`09-cta-${slug}`);
+  }
+}
+
 test("review screenshots", async () => {
   test.setTimeout(1_800_000);
   const dir = process.env.SPONSOR_SHOTS_DIR;
@@ -501,104 +662,34 @@ test("review screenshots", async () => {
         ).toBeVisible();
         await shoot(page, name("04-review"));
 
-        await page.unrouteAll({ behavior: "ignoreErrors" });
-        await stubMux(page);
-        await stubMuxStream(page);
-        await answer(page, "availability", {
-          checkoutEnabled: false,
-          items: [],
-        });
-        await page.goto("/sponsor");
-        await expect(
-          page.getByRole("heading", { name: "Sponsoren is even gepauzeerd" })
-        ).toBeVisible();
-        await shoot(page, name("05-paused"));
-        await page.unrouteAll({ behavior: "ignoreErrors" });
-        await stubMux(page);
-        await stubMuxStream(page);
-
-        for (const [status, kind, title] of [
-          ["paid", "initial", "Betaling geslaagd!"],
-          ["open", "initial", "Je betaling wordt verwerkt…"],
-          ["failed", "initial", "De betaling is niet gelukt"],
-          ["canceled", "initial", "De betaling is geannuleerd"],
-          ["refund_needed", "initial", "We nemen contact met je op"],
-          ["paid", "renewal", "Je sponsoring is verlengd!"],
-        ] as const) {
-          // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
-          await page.unroute("**/api/rpc/sponsorships/paymentStatus**");
-          await answer(page, "paymentStatus", paymentView(status, kind));
-          await page.goto(`/sponsor/success?payment=${PAYMENT}`);
-          await expect(
-            page.getByRole("heading", { level: 1, name: title })
-          ).toBeVisible();
-          await shoot(page, name(`06-success-${status}-${kind}`));
-        }
-        await page.unroute("**/api/rpc/sponsorships/paymentStatus**");
-        await page.goto("/sponsor/success");
-        await shoot(page, name("06-success-missing"));
-
-        await answer(page, "reedit/get", {
-          displayName: "Oude Naam",
-          expiresAt: Date.now() + 3 * DAY,
-          gesture: { name: "Broer", slug: "broer" },
-          hasLogo: true,
-        });
-        await page.goto(`/sponsor/edit?token=${REEDIT_TOKEN}`);
-        await expect(
-          page.getByRole("heading", { level: 1, name: "Werk je video bij" })
-        ).toBeVisible();
-        await shoot(page, name("07-edit"));
-        await page.unroute("**/api/rpc/sponsorships/reedit/get**");
-        await page.route("**/api/rpc/sponsorships/reedit/get**", (route) =>
-          route.fulfill({
-            body: JSON.stringify({
-              json: {
-                code: "TOKEN_EXPIRED",
-                data: { expiresAt: Date.UTC(2026, 8, 30, 10) },
-                defined: true,
-                message: "TOKEN_EXPIRED",
-                status: 410,
-              },
-            }),
-            contentType: "application/json",
-            status: 410,
-          })
-        );
-        await page.reload();
-        await expect(
-          page.getByRole("heading", { name: "Link verlopen" })
-        ).toBeVisible();
-        await shoot(page, name("07-edit-expired"));
-        await page.goto("/sponsor/edit");
-        await shoot(page, name("07-edit-invalid"));
-
-        await answer(page, "renewal/get", {
-          amountCents: 6000,
-          displayName: "Bakkerij Jansen",
-          endsAt: Date.UTC(2026, 10, 2, 10),
-          gesture: { name: "Broer", slug: "broer" },
-          hasLogo: true,
-        });
-        await page.goto(`/sponsor/renew?token=${REEDIT_TOKEN}`);
-        await expect(
-          page.getByRole("heading", {
-            level: 1,
-            name: "Nog een jaar in de video",
-          })
-        ).toBeVisible();
-        await shoot(page, name("08-renew"));
-
-        for (const slug of [FREE, PENDING, LIVE]) {
-          // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
-          await page.goto(`/gestures/${slug}`);
-          await expect(page.getByTestId("sponsor-cta")).toBeVisible();
-          await shoot(page, name(`09-cta-${slug}`));
-        }
+        await stubbedStates(page, (shot) => shoot(page, name(shot)));
       },
       dir
     );
   } finally {
     await browser.close();
+  }
+});
+
+test("axe on the paused, success, link and CTA states in light and dark (review Minor 9)", async ({
+  browser,
+}) => {
+  test.setTimeout(600_000);
+  for (const theme of THEMES) {
+    // biome-ignore lint/performance/noAwaitInLoops: one theme at a time.
+    const context = await themedContext(browser, theme, 1280);
+    try {
+      const page = await context.newPage();
+      await stubMux(page);
+      await stubMuxStream(page);
+      await page.goto("/");
+      await waitForApp(page);
+      await declineConsent(page);
+      await stubbedStates(page, async (state) => {
+        expect(await blockingViolations(page), `${theme} ${state}`).toEqual([]);
+      });
+    } finally {
+      await context.close();
+    }
   }
 });

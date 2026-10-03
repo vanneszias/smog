@@ -8,6 +8,8 @@ import {
 } from "./e2e-seed";
 
 const STATUS_UPDATE = /UPDATE\s+sponsorship/i;
+const SELECT_ONLY =
+  /^SELECT g\.slug, s\.status FROM sponsorship AS s JOIN gesture AS g/;
 
 /** A D1 stand-in that records the SQL and the bound values. */
 function recordingDb() {
@@ -93,6 +95,17 @@ describe("the e2e seed endpoint's operations", () => {
     expect(seen.every((entry) => !entry.sql.includes("dankjewel"))).toBe(true);
     // No status is ever updated here: rows are inserted in a state.
     expect(seen.some((entry) => STATUS_UPDATE.test(entry.sql))).toBe(false);
+  });
+
+  test("reads the sponsorship statuses of named gestures, never writing (review I-7)", () => {
+    const { db, seen } = recordingDb();
+    const statements = seedStatements(db, {
+      op: "sponsorshipStatus",
+      slugs: ["broer", "zus"],
+    });
+    expect(statements).toHaveLength(1);
+    expect(seen[0]?.sql).toMatch(SELECT_ONLY);
+    expect(seen[0]?.values).toEqual(['["broer","zus"]']);
   });
 
   test("resets the sponsorships of named gestures only, by one bound list", () => {

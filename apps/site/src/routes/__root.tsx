@@ -87,7 +87,7 @@ function NotFound(): ReactNode {
       }
       description={t("states.notFound.description")}
       illustration={1}
-      level={2}
+      level={1}
       title={t("states.notFound.title")}
     />
   );

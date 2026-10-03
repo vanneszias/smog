@@ -1,7 +1,13 @@
 import { formatDate } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import { sponsorshipError } from "@smog/sponsorships/client";
-import { Button, EmptyState, ErrorState, Skeleton, Text } from "@smog/ui-web";
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  Heading,
+  Skeleton,
+} from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { usePageLocale } from "./page-locale";
@@ -44,7 +50,7 @@ export function LinkState({
       <EmptyState
         action={<BackLink />}
         description={t("sponsor.link.invalid.description")}
-        level={2}
+        level={1}
         title={t("sponsor.link.invalid.title")}
       />
     );
@@ -55,7 +61,7 @@ export function LinkState({
       <EmptyState
         action={<BackLink />}
         description={t("sponsor.link.notFound.description")}
-        level={2}
+        level={1}
         title={t("sponsor.link.notFound.title")}
       />
     );
@@ -78,20 +84,20 @@ export function LinkState({
             ) : null}
           </>
         }
-        level={2}
+        level={1}
         title={t("sponsor.link.expired.title")}
       />
     );
   }
   if (error) {
-    return <ErrorState level={2} onRetry={retry} retrying={isFetching} />;
+    return <ErrorState level={1} onRetry={retry} retrying={isFetching} />;
   }
   if (pending) {
     return (
       <div className="flex flex-col gap-4" role="status">
-        <Skeleton className="h-10 w-1/2" />
+        {/* The page's h1 while the link is checked (review I-3). */}
+        <Heading level={1}>{t("sponsor.link.loading")}</Heading>
         <Skeleton className="h-16 w-full" />
-        <Text tone="muted">{t("sponsor.link.loading")}</Text>
       </div>
     );
   }

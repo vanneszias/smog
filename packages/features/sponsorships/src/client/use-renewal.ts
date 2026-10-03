@@ -12,6 +12,7 @@ import {
   useSponsorshipsClient,
   useSponsorshipsRpc,
 } from "./slice";
+import { useRedirecting } from "./use-checkout";
 
 /** The link's sponsorship; `TOKEN_INVALID` / `TOKEN_EXPIRED` are final. */
 export function useRenewal(token: string | null) {
@@ -45,7 +46,8 @@ export function useRenewalCheckout({
 }) {
   const client = useSponsorshipsClient();
   const [checkoutId, setCheckoutId] = useState(() => crypto.randomUUID());
-  return useMutation({
+  const [redirecting, setRedirecting] = useRedirecting();
+  const mutation = useMutation({
     mutationFn: async ({ token, turnstileToken }: RenewalRequest) =>
       await client.renewal.checkout(
         { checkoutId, token },
@@ -56,6 +58,10 @@ export function useRenewalCheckout({
         setCheckoutId(crypto.randomUUID());
       }
     },
-    onSuccess: (result) => onRedirect(result.checkoutUrl),
+    onSuccess: (result) => {
+      setRedirecting(true);
+      onRedirect(result.checkoutUrl);
+    },
   });
+  return { ...mutation, redirecting };
 }

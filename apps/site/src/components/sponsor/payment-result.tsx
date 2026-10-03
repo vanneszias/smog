@@ -15,7 +15,7 @@ import {
 import { formatMoney } from "@smog/utils";
 import { Link } from "@tanstack/react-router";
 import { CircleAlert, CircleCheck, CircleX, Clock } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { usePageLocale } from "./page-locale";
 import { StatusTimeline } from "./status-timeline";
 
@@ -69,21 +69,48 @@ function Summary({ view }: { view: PaymentStatusView }): ReactNode {
   );
 }
 
-function Header({
-  description,
-  icon,
-  title,
-}: {
+/** The page's headline: an icon, the h1 and a line under it. */
+interface Headline {
   description?: ReactNode;
+  /** A final outcome: its h1 takes focus when it arrives (review I-4). */
+  final: boolean;
   icon: ReactNode;
   title: string;
-}): ReactNode {
+}
+
+/**
+ * The one live region of the page (review I-4): it is always rendered and
+ * holds the current headline, so a screen reader hears "processing", then
+ * the outcome, never the per-attempt counter. A final outcome also moves
+ * the focus to its h1.
+ */
+function LiveHeadline({
+  description,
+  final,
+  icon,
+  title,
+}: Headline): ReactNode {
+  const heading = useRef<HTMLHeadingElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new title is a new outcome to focus.
+  useEffect(() => {
+    if (final) {
+      heading.current?.focus();
+    }
+  }, [final, title]);
   return (
-    <div className="flex flex-col items-center gap-3 text-center">
+    <div
+      aria-atomic="true"
+      aria-live="polite"
+      className="flex flex-col items-center gap-3 text-center"
+      data-testid="payment-status-live"
+      role="status"
+    >
       <span aria-hidden="true" className="*:size-12">
         {icon}
       </span>
-      <Heading level={1}>{title}</Heading>
+      <Heading className="outline-none" level={1} ref={heading} tabIndex={-1}>
+        {title}
+      </Heading>
       {description ? (
         <Text className="max-w-reading" tone="muted">
           {description}
@@ -136,7 +163,7 @@ export function PaymentResult({
       <EmptyState
         action={<HomeLink />}
         description={t("sponsor.success.missing.description")}
-        level={2}
+        level={1}
         title={t("sponsor.success.missing.title")}
       />
     );
@@ -144,116 +171,109 @@ export function PaymentResult({
   if (status.isError && !view) {
     return (
       <ErrorState
-        level={2}
+        level={1}
         onRetry={status.checkAgain}
         retrying={status.isFetching}
       />
     );
   }
+
+  let headline: Headline;
+  let extra: ReactNode = null;
   if (!view) {
-    return (
-      <div className="flex flex-col items-center gap-4" role="status">
-        <Skeleton className="size-12 rounded-full" />
-        <Text tone="muted">{t("sponsor.success.loading")}</Text>
+    headline = {
+      final: false,
+      icon: <Skeleton className="size-12 rounded-full" />,
+      title: t("sponsor.success.loading"),
+    };
+  } else if (view.status === "open" && status.timedOut) {
+    headline = {
+      description: t("sponsor.success.timeout.description"),
+      final: true,
+      icon: <Clock className="text-warning-strong" />,
+      title: t("sponsor.success.timeout.title"),
+    };
+    extra = (
+      <Button
+        className="self-center"
+        loading={status.isFetching}
+        onClick={status.checkAgain}
+      >
+        {t("sponsor.success.timeout.checkAgain")}
+      </Button>
+    );
+  } else if (view.status === "open") {
+    headline = {
+      description: t("sponsor.success.open.description"),
+      final: false,
+      icon: <Clock className="text-primary-strong" />,
+      title: t("sponsor.success.open.title"),
+    };
+    // Not live: "attempt n of 15" every 2 s would drown the outcome.
+    extra = (
+      <div className="flex flex-col gap-2">
+        <ProgressBar
+          label={t("sponsor.success.open.title")}
+          max={status.maxAttempts}
+          value={status.attempt}
+        />
+        <Text className="text-center" size="body-sm" tone="muted">
+          {t("sponsor.success.open.attempt", {
+            current: Math.max(1, status.attempt),
+            max: status.maxAttempts,
+          })}
+        </Text>
       </div>
     );
-  }
-
-  let content: ReactNode;
-  if (view.status === "open") {
-    content = status.timedOut ? (
-      <>
-        <Header
-          description={t("sponsor.success.timeout.description")}
-          icon={<Clock className="text-warning-strong" />}
-          title={t("sponsor.success.timeout.title")}
-        />
-        <Button
-          className="self-center"
-          loading={status.isFetching}
-          onClick={status.checkAgain}
-        >
-          {t("sponsor.success.timeout.checkAgain")}
-        </Button>
-      </>
-    ) : (
-      <>
-        <Header
-          description={t("sponsor.success.open.description")}
-          icon={<Clock className="text-primary-strong" />}
-          title={t("sponsor.success.open.title")}
-        />
-        <div className="flex flex-col gap-2" role="status">
-          <ProgressBar
-            label={t("sponsor.success.open.title")}
-            max={status.maxAttempts}
-            value={status.attempt}
-          />
-          <Text className="text-center" size="body-sm" tone="muted">
-            {t("sponsor.success.open.attempt", {
-              current: Math.max(1, status.attempt),
-              max: status.maxAttempts,
-            })}
-          </Text>
-        </div>
-      </>
-    );
   } else if (view.status === "paid" && view.kind === "renewal") {
-    content = (
-      <Header
-        description={
-          view.renewedUntil === undefined
-            ? undefined
-            : t("sponsor.success.renewed.description", {
-                date: formatDate(view.renewedUntil, locale),
-              })
-        }
-        icon={<CircleCheck className="text-success-strong" />}
-        title={t("sponsor.success.renewed.title")}
-      />
-    );
+    headline = {
+      description:
+        view.renewedUntil === undefined
+          ? undefined
+          : t("sponsor.success.renewed.description", {
+              date: formatDate(view.renewedUntil, locale),
+            }),
+      final: true,
+      icon: <CircleCheck className="text-success-strong" />,
+      title: t("sponsor.success.renewed.title"),
+    };
   } else if (view.status === "paid") {
-    content = (
-      <>
-        <Header
-          description={t("sponsor.success.paid.description")}
-          icon={<CircleCheck className="text-success-strong" />}
-          title={t("sponsor.success.paid.title")}
-        />
-        <StatusTimeline />
-      </>
-    );
+    headline = {
+      description: t("sponsor.success.paid.description"),
+      final: true,
+      icon: <CircleCheck className="text-success-strong" />,
+      title: t("sponsor.success.paid.title"),
+    };
+    extra = <StatusTimeline />;
   } else if (view.status === "refund_needed") {
-    content = (
-      <Header
-        description={t("sponsor.success.refund.description")}
-        icon={<CircleAlert className="text-warning-strong" />}
-        title={t("sponsor.success.refund.title")}
-      />
-    );
+    headline = {
+      description: t("sponsor.success.refund.description"),
+      final: true,
+      icon: <CircleAlert className="text-warning-strong" />,
+      title: t("sponsor.success.refund.title"),
+    };
   } else {
     const slugs = view.items.map((item) => item.gestureSlug).join(",");
-    content = (
-      <>
-        <Header
-          description={t("sponsor.success.failed.description")}
-          icon={<CircleX className="text-danger-strong" />}
-          title={t(UNPAID_TITLE_KEYS[view.status])}
-        />
-        {view.kind === "initial" ? (
-          <Button asChild className="self-center">
-            <Link search={{ gesture: slugs }} to="/sponsor">
-              {t("sponsor.success.retry")}
-            </Link>
-          </Button>
-        ) : null}
-      </>
-    );
+    headline = {
+      description: t("sponsor.success.failed.description"),
+      final: true,
+      icon: <CircleX className="text-danger-strong" />,
+      title: t(UNPAID_TITLE_KEYS[view.status]),
+    };
+    extra =
+      view.kind === "initial" ? (
+        <Button asChild className="self-center">
+          <Link search={{ gesture: slugs }} to="/sponsor">
+            {t("sponsor.success.retry")}
+          </Link>
+        </Button>
+      ) : null;
   }
   return (
     <div className="mx-auto flex w-full max-w-reading flex-col gap-6">
-      {content}
-      <Summary view={view} />
+      <LiveHeadline {...headline} />
+      {extra}
+      {view ? <Summary view={view} /> : null}
       <HomeLink />
     </div>
   );

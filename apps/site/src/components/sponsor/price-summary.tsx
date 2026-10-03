@@ -30,7 +30,7 @@ export function PriceSummary({
   const base = priceSponsorship({ count, logo: false }).totalCents;
   return (
     <Card className={cn("gap-3", className)} variant="sunken">
-      <Heading level={3} size="title-3">
+      <Heading level={2} size="title-3">
         {t("sponsor.price.title")}
       </Heading>
       <dl className="flex flex-col gap-2 text-body-sm">

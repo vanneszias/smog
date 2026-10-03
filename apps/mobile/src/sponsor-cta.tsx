@@ -77,7 +77,8 @@ export function SponsorCta({
   platform = Platform.OS,
 }: SponsorCtaProps): ReactElement | null {
   const { i18n, t } = useTranslation();
-  const view = useCtaView(gesture, sponsorLinkShown(platform, linkInApp));
+  const linkShown = sponsorLinkShown(platform, linkInApp);
+  const view = useCtaView(gesture, linkShown);
   const { slug } = gesture;
   const open = useCallback(() => {
     Linking.openURL(sponsorUrl(slug)).catch((error: unknown) => {
@@ -114,7 +115,8 @@ export function SponsorCta({
         <Text>
           {t("gesture.sponsorCta.sponsored.description", { name: view.name })}
         </Text>
-        {view.endsAt === null ? null : (
+        {/* Without the link on iOS, no pointer to a later purchase either. */}
+        {view.endsAt === null || !linkShown ? null : (
           <Text size="body-sm" tone="muted">
             {t("gesture.sponsorCta.sponsored.availableFrom", {
               date: formatDate(view.endsAt, locale),

@@ -13,6 +13,8 @@ const INLINE_SCRIPT = /<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g;
 const NONCE_ATTR = /\bnonce="([^"]+)"/;
 const NONCE_SOURCE = /'nonce-([^']+)'/;
 const DATA_BLOCK = /\btype="application\/(?:ld\+)?json"/;
+const REFERRER_META =
+  /<meta(?=[^>]*name="referrer")(?=[^>]*content="no-referrer")/;
 
 async function sha256Base64(source: string): Promise<string> {
   const digest = await crypto.subtle.digest(
@@ -274,5 +276,26 @@ describe("withSecurityHeaders", () => {
     expect(response.status).toBe(301);
     expect(response.headers.get("location")).toBe("https://example.com/");
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+});
+
+describe("the sponsor token pages (review I-8)", () => {
+  it.each([
+    "/sponsor/edit?token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "/sponsor/renew?token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  ])("%s sends no Referer anywhere: the token is in its URL", async (path) => {
+    const response = await fetchSite(path);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    // And for a client navigation, the page's own meta.
+    expect(await response.text()).toMatch(REFERRER_META);
+  });
+
+  it("the wizard keeps the site's policy", async () => {
+    const response = await fetchSite("/sponsor");
+    await response.body?.cancel();
+    expect(response.headers.get("referrer-policy")).toBe(
+      "strict-origin-when-cross-origin"
+    );
   });
 });

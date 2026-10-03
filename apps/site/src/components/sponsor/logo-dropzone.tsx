@@ -69,7 +69,7 @@ export function LogoDropzone({ file, onChange }: LogoDropzoneProps): ReactNode {
   const remove = useCallback(() => onChange(null), [onChange]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <>
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: a drop target; the button inside is the keyboard path. */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: the same drop target. */}
       <div
@@ -95,7 +95,12 @@ export function LogoDropzone({ file, onChange }: LogoDropzoneProps): ReactNode {
               width={96}
             />
             <div className="flex flex-col gap-2">
-              <Button onClick={browse} size="sm" variant="secondary">
+              <Button
+                aria-describedby={control["aria-describedby"]}
+                onClick={browse}
+                size="sm"
+                variant="secondary"
+              >
                 {t("sponsor.details.logo.replace")}
               </Button>
               <Button
@@ -116,7 +121,12 @@ export function LogoDropzone({ file, onChange }: LogoDropzoneProps): ReactNode {
             />
             <Text>
               {t("sponsor.details.logo.drop")}{" "}
-              <Button onClick={browse} size="sm" variant="secondary">
+              <Button
+                aria-describedby={control["aria-describedby"]}
+                onClick={browse}
+                size="sm"
+                variant="secondary"
+              >
                 {t("sponsor.details.logo.browse")}
               </Button>
             </Text>
@@ -137,19 +147,26 @@ export function LogoDropzone({ file, onChange }: LogoDropzoneProps): ReactNode {
           type="file"
         />
       </div>
-      <div className="rounded-md bg-surface-sunken p-4">
-        <Text className="font-semibold" size="body-sm">
-          {t("sponsor.details.logo.guidelines.title")}
-        </Text>
-        <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-body-sm text-foreground-muted">
-          <li>{t("sponsor.details.logo.guidelines.format")}</li>
-          <li>{t("sponsor.details.logo.guidelines.dimensions")}</li>
-          <li>{t("sponsor.details.logo.guidelines.aspectRatio")}</li>
-          <li>{t("sponsor.details.logo.guidelines.fileSize")}</li>
-          <li>{t("sponsor.details.logo.guidelines.style")}</li>
-          <li>{t("sponsor.details.logo.guidelines.avoid")}</li>
-        </ul>
-      </div>
+    </>
+  );
+}
+
+/** The logo guidelines (S-06), after the field so its error stays by it. */
+export function LogoGuidelines(): ReactNode {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-md bg-surface-sunken p-4">
+      <Text className="font-semibold" size="body-sm">
+        {t("sponsor.details.logo.guidelines.title")}
+      </Text>
+      <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-body-sm text-foreground-muted">
+        <li>{t("sponsor.details.logo.guidelines.format")}</li>
+        <li>{t("sponsor.details.logo.guidelines.dimensions")}</li>
+        <li>{t("sponsor.details.logo.guidelines.aspectRatio")}</li>
+        <li>{t("sponsor.details.logo.guidelines.fileSize")}</li>
+        <li>{t("sponsor.details.logo.guidelines.style")}</li>
+        <li>{t("sponsor.details.logo.guidelines.avoid")}</li>
+      </ul>
     </div>
   );
 }

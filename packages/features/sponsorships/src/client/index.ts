@@ -27,6 +27,7 @@ export {
   type PreselectGesture,
   type UseCheckoutOptions,
   useCheckout,
+  useRedirecting,
   useWizard,
   validateDetails,
   type WizardAction,

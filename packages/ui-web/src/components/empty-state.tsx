@@ -12,8 +12,8 @@ export interface EmptyStateProps
   icon?: ReactNode;
   /** Show one of the brand hands (index into `handSvgs`, `true` = the first). */
   illustration?: boolean | 0 | 1 | 2;
-  /** Heading level of the title (3 by default). */
-  level?: 2 | 3 | 4;
+  /** Heading level of the title (3 by default); 1 for a page-level state (the page's h1). */
+  level?: 1 | 2 | 3 | 4;
   title?: ReactNode;
 }
 
@@ -59,7 +59,12 @@ export function EmptyState({
           {icon}
         </span>
       ) : null}
-      <Heading className="font-semibold text-foreground text-title-3">
+      <Heading
+        className={cn(
+          "font-semibold text-foreground",
+          level === 1 ? "text-title-1" : "text-title-3"
+        )}
+      >
         {title ?? t("states.empty.title")}
       </Heading>
       <p className="text-body text-foreground-muted">

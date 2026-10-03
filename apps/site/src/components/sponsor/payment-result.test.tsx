@@ -53,6 +53,10 @@ describe("the payment's return page (S-14)", () => {
       )
     ).toBeDefined();
     expect(calls[0]?.input).toEqual({ payment: PAYMENT });
+    // The done step says so to a screen reader (review Minor 7).
+    expect(
+      screen.getByText("Your payment is confirmed.").parentElement?.textContent
+    ).toContain("(completed)");
     // A final answer stops the poll.
     await new Promise((resolve) => setTimeout(resolve, 40));
     expect(polls(calls)).toBe(1);
@@ -78,6 +82,57 @@ describe("the payment's return page (S-14)", () => {
     expect(
       await screen.findByRole("heading", {
         name: "This is taking longer than expected",
+      })
+    ).toBeDefined();
+  });
+
+  test("the outcome is announced: one live region holds the headline, and the h1 takes focus (review I-4)", async () => {
+    let answers = 0;
+    await renderSite(() => <Result />, {
+      api: {
+        "sponsorships/paymentStatus": () => {
+          answers += 1;
+          return view({ status: answers < 2 ? "open" : "paid" });
+        },
+      },
+    });
+    const live = screen.getByTestId("payment-status-live");
+    expect(live.getAttribute("role")).toBe("status");
+    await waitFor(() =>
+      expect(live.textContent).toContain("Your payment is being processed…")
+    );
+    // The attempt counter is not live: it would speak every 2 s.
+    expect(live.textContent).not.toContain("Attempt");
+    await waitFor(() =>
+      expect(live.textContent).toContain("Payment successful!")
+    );
+    // The same region, never remounted, and the result's h1 has focus.
+    expect(screen.getByTestId("payment-status-live")).toBe(live);
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Payment successful!",
+    });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+  });
+
+  test("every state has the page's h1, loading included (review I-3)", async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    await renderSite(() => <Result />, {
+      api: {
+        "sponsorships/paymentStatus": () =>
+          new Promise((resolve) => {
+            answer = resolve;
+          }),
+      },
+    });
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Checking your payment…" })
+    ).toBeDefined();
+    answer(view({ status: "failed" }));
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "The payment did not go through",
       })
     ).toBeDefined();
   });
@@ -149,14 +204,14 @@ describe("the payment's return page (S-14)", () => {
   test("no or an unknown payment: a calm notice", async () => {
     await renderSite(() => <Result payment={null} />);
     expect(
-      screen.getByRole("heading", { name: "No payment found" })
+      screen.getByRole("heading", { level: 1, name: "No payment found" })
     ).toBeDefined();
     cleanup();
     await renderSite(() => <Result />, {
       api: { "sponsorships/paymentStatus": rpcError("NOT_FOUND", 404) },
     });
     expect(
-      await screen.findByRole("heading", { name: "No payment found" })
+      await screen.findByRole("heading", { level: 1, name: "No payment found" })
     ).toBeDefined();
   });
 });

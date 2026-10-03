@@ -1529,8 +1529,10 @@
       "showMore": "+{{count}} meer",
       "showLess": "Minder tonen",
       "clearFilters": "Wis filters",
-      "available_one": "{{count}} beschikbaar gebaar",
-      "available_other": "{{count}} beschikbare gebaren",
+      "available_one": "{{count}} beschikbaar gebaar getoond",
+      "available_other": "{{count}} beschikbare gebaren getoond",
+      "loadMore": "Meer gebaren laden",
+      "partial": "{{shown}} van {{total}} resultaten getoond. Zoek preciezer om de rest te vinden.",
       "selected_one": "{{count}} geselecteerd",
       "selected_other": "{{count}} geselecteerd",
       "badge": {
@@ -1543,8 +1545,7 @@
       "empty": {
         "title": "Geen gebaren gevonden",
         "description": "Probeer een ander woord of wis de filters."
-      },
-      "choose": "{{name}} kiezen"
+      }
     },
     "bar": {
       "selected_one": "{{count}} gebaar geselecteerd",

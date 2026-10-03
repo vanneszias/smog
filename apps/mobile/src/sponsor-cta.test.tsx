@@ -94,31 +94,38 @@ describe("the gesture's sponsor card on mobile (L-17, ruling 13)", () => {
     expect(screen.queryByRole("button", { name: "Sponsor now" })).toBeNull();
   });
 
-  it("a sponsored gesture names the sponsor and the date, with or without the flag", async () => {
-    mockLinkInApp = false;
-    await renderApp({
-      initialUrl: "/gestures/hond",
-      routes: {
-        "sponsorships/availability": availability(
-          {
-            endsAt: LIVE_UNTIL,
-            sponsorName: "Bakkerij Jansen",
-            state: "sponsored",
-          },
-          false
-        ),
-      },
-    });
-    const cta = await card();
-    expect(
-      cta.getByText("This gesture is sponsored by Bakkerij Jansen.")
-    ).toBeOnTheScreen();
-    expect(
-      cta.getByText(
+  it.each([
+    [true, true],
+    [false, false],
+  ])(
+    "a sponsored gesture names the sponsor; with the link flag %p the date shows: %p (review Minor 13)",
+    async (flag, dated) => {
+      mockLinkInApp = flag;
+      await renderApp({
+        initialUrl: "/gestures/hond",
+        routes: {
+          "sponsorships/availability": availability(
+            {
+              endsAt: LIVE_UNTIL,
+              sponsorName: "Bakkerij Jansen",
+              state: "sponsored",
+            },
+            false
+          ),
+        },
+      });
+      const cta = await card();
+      expect(
+        cta.getByText("This gesture is sponsored by Bakkerij Jansen.")
+      ).toBeOnTheScreen();
+      // On iOS without the link, "available again from" would still point
+      // at a purchase outside the app (guideline 3.1.1 anti-steering).
+      const date = cta.queryByText(
         "It will be available for sponsoring again from 12 May 2027."
-      )
-    ).toBeOnTheScreen();
-  });
+      );
+      expect(date !== null).toBe(dated);
+    }
+  );
 
   it("a pending gesture says so, without a link", async () => {
     await renderApp({

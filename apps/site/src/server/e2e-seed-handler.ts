@@ -40,6 +40,8 @@ export async function e2eSeed(request: Request): Promise<Response> {
     return Response.json({
       changes: results.map((result) => result.meta.changes),
       marker: E2E_SEED_MARKER,
+      // A read operation's rows (`sponsorshipStatus`), in batch order.
+      rows: results.flatMap((result) => result.results ?? []),
     });
   } catch (error) {
     console.error("[e2e-seed] Failed to seed:", error);

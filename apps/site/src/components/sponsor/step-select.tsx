@@ -3,7 +3,7 @@ import {
   MAX_GESTURES_PER_CHECKOUT,
   PRICE_PER_GESTURE_YEAR_CENTS,
 } from "@smog/config/constants";
-import type { Category, SearchResult } from "@smog/gestures/schema";
+import type { Category, GestureSummary } from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
 import { RENDER_OVERLAY_LAYOUT } from "@smog/render/contract";
 import type { WizardGesture, WizardState } from "@smog/sponsorships/client";
@@ -22,7 +22,7 @@ import {
 } from "@smog/ui-web";
 import { formatMoney, muxThumbnailUrl } from "@smog/utils";
 import { Check, Heart } from "lucide-react";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useId, useMemo, useState } from "react";
 import { usePageLocale } from "./page-locale";
 
 /** Category chips shown before "+N more" (S-03). */
@@ -39,9 +39,15 @@ export interface StepSelectProps {
   onSearch: (search: SelectSearch) => void;
   onToggle: (gesture: WizardGesture) => void;
   results: {
-    data: readonly SearchResult[] | undefined;
+    data: readonly GestureSummary[] | undefined;
+    /** Browsing: more pages to load (`gestures.list`, keyset). */
+    hasMore: boolean;
     isError: boolean;
     isRefetching: boolean;
+    loadingMore: boolean;
+    onLoadMore: () => void;
+    /** Searching: all matches, when more than the page shows. */
+    partialOf: number | null;
     refetch: () => void;
   };
   search: SelectSearch;
@@ -94,7 +100,7 @@ function ValueCards(): ReactNode {
 type CardState = "available" | "pending" | "sponsored" | "taken";
 
 function cardState(
-  gesture: SearchResult,
+  gesture: GestureSummary,
   availability: ReadonlyMap<string, AvailabilityItem>,
   taken: readonly string[]
 ): CardState | null {
@@ -124,12 +130,13 @@ function GestureToggle({
   selected,
   state,
 }: {
-  gesture: SearchResult;
+  gesture: GestureSummary;
   onToggle: (gesture: WizardGesture) => void;
   selected: boolean;
   state: CardState | null;
 }): ReactNode {
   const { t } = useTranslation();
+  const id = useId();
   const toggle = useCallback(
     () =>
       onToggle({
@@ -142,10 +149,14 @@ function GestureToggle({
   );
   const blocked = state !== null && state !== "available";
   const [first, second, ...rest] = gesture.categories;
+  const nameId = `${id}-name`;
+  const badgeId = `${id}-badge`;
   return (
     <li className="min-w-0">
+      {/* Named by the gesture; the badge says why it cannot be chosen. */}
       <button
-        aria-label={t("sponsor.select.choose", { name: gesture.name })}
+        aria-describedby={blocked ? badgeId : undefined}
+        aria-labelledby={nameId}
         aria-pressed={selected}
         className={cn(
           "group relative flex w-full flex-col overflow-hidden rounded-lg border-2 bg-surface text-left text-foreground transition",
@@ -157,7 +168,8 @@ function GestureToggle({
             "cursor-not-allowed hover:border-border-subtle hover:shadow-0"
         )}
         data-state={state ?? "loading"}
-        disabled={blocked || state === null}
+        // A chosen card that became blocked can still be deselected.
+        disabled={!selected && (blocked || state === null)}
         onClick={toggle}
         type="button"
       >
@@ -179,7 +191,7 @@ function GestureToggle({
             blocked && "opacity-50"
           )}
         >
-          <span className="truncate font-semibold text-title-3">
+          <span className="truncate font-semibold text-title-3" id={nameId}>
             {gesture.name}
           </span>
           {first ? (
@@ -208,6 +220,7 @@ function GestureToggle({
           <Badge
             className="absolute top-2 left-2"
             icon={state === "sponsored" ? <Heart /> : undefined}
+            id={badgeId}
             variant={state === "taken" ? "danger" : "warning"}
           >
             {t(BADGE_KEYS[state])}
@@ -215,6 +228,79 @@ function GestureToggle({
         ) : null}
       </button>
     </li>
+  );
+}
+
+/** The grid's states: failed, loading, empty (clear the filters), or the cards. */
+function Grid({
+  availability,
+  clearFilters,
+  onToggle,
+  results,
+  selectedIds,
+  taken,
+}: {
+  availability: ReadonlyMap<string, AvailabilityItem>;
+  clearFilters: (() => void) | undefined;
+  onToggle: (gesture: WizardGesture) => void;
+  results: StepSelectProps["results"];
+  selectedIds: ReadonlySet<string>;
+  taken: readonly string[];
+}): ReactNode {
+  const { t } = useTranslation();
+  const items = results.data;
+  if (results.isError) {
+    return (
+      <ErrorState
+        level={3}
+        onRetry={results.refetch}
+        retrying={results.isRefetching}
+      />
+    );
+  }
+  if (items === undefined) {
+    return (
+      <ul className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: 8 }, (_, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no identity.
+          <li key={index}>
+            <Skeleton className="aspect-3/4 w-full rounded-lg" />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        action={
+          clearFilters ? (
+            <Button onClick={clearFilters} variant="secondary">
+              {t("sponsor.select.clearFilters")}
+            </Button>
+          ) : undefined
+        }
+        description={t("sponsor.select.empty.description")}
+        level={3}
+        title={t("sponsor.select.empty.title")}
+      />
+    );
+  }
+  return (
+    <ul
+      className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4"
+      data-testid="sponsor-grid"
+    >
+      {items.map((gesture) => (
+        <GestureToggle
+          gesture={gesture}
+          key={gesture.id}
+          onToggle={onToggle}
+          selected={selectedIds.has(gesture.id)}
+          state={cardState(gesture, availability, taken)}
+        />
+      ))}
+    </ul>
   );
 }
 
@@ -244,8 +330,10 @@ function useChips(
 }
 
 /**
- * Step 1, "Choose gestures" (S-03): the value cards, a search over
- * `gestures.search` with category chips, the result line, and a grid of
+ * Step 1, "Choose gestures" (S-03): the value cards, the whole catalogue
+ * a keyset page at a time (`gestures.list`, "Load more") or a search over
+ * `gestures.search` (with a note when it shows part of its matches), the
+ * category chips, the result line, and a grid of
  * toggle cards with their availability. Sponsored, pending and just-taken
  * gestures are disabled. At most 10 per payment, with the reason.
  */
@@ -288,59 +376,16 @@ export function StepSelect({
     ).length ?? 0;
   const filtered = search.q.trim() !== "" || search.categories.length > 0;
 
-  let grid: ReactNode;
-  if (results.isError) {
-    grid = (
-      <ErrorState
-        level={3}
-        onRetry={results.refetch}
-        retrying={results.isRefetching}
-      />
-    );
-  } else if (items === undefined) {
-    grid = (
-      <ul className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
-        {Array.from({ length: 8 }, (_, index) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no identity.
-          <li key={index}>
-            <Skeleton className="aspect-3/4 w-full rounded-lg" />
-          </li>
-        ))}
-      </ul>
-    );
-  } else if (items.length === 0) {
-    grid = (
-      <EmptyState
-        action={
-          filtered ? (
-            <Button onClick={clearFilters} variant="secondary">
-              {t("sponsor.select.clearFilters")}
-            </Button>
-          ) : undefined
-        }
-        description={t("sponsor.select.empty.description")}
-        level={3}
-        title={t("sponsor.select.empty.title")}
-      />
-    );
-  } else {
-    grid = (
-      <ul
-        className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4"
-        data-testid="sponsor-grid"
-      >
-        {items.map((gesture) => (
-          <GestureToggle
-            gesture={gesture}
-            key={gesture.id}
-            onToggle={onToggle}
-            selected={selectedIds.has(gesture.id)}
-            state={cardState(gesture, availability, state.taken)}
-          />
-        ))}
-      </ul>
-    );
-  }
+  const grid = (
+    <Grid
+      availability={availability}
+      clearFilters={filtered ? clearFilters : undefined}
+      onToggle={onToggle}
+      results={results}
+      selectedIds={selectedIds}
+      taken={state.taken}
+    />
+  );
 
   return (
     <section
@@ -400,7 +445,8 @@ export function StepSelect({
             ) : null}
           </div>
         ) : null}
-        <Text aria-live="polite" size="body-sm" tone="muted">
+        {/* Not live: the selection bar announces the count (review Minor 6). */}
+        <Text size="body-sm" tone="muted">
           {items === undefined
             ? null
             : `${t("sponsor.select.available", { count: availableCount })} · ${t(
@@ -418,6 +464,24 @@ export function StepSelect({
         </Text>
       ) : null}
       {grid}
+      {results.partialOf === null || items === undefined ? null : (
+        <Text className="text-center" size="body-sm" tone="muted">
+          {t("sponsor.select.partial", {
+            shown: items.length,
+            total: results.partialOf,
+          })}
+        </Text>
+      )}
+      {results.hasMore ? (
+        <Button
+          className="self-center"
+          loading={results.loadingMore}
+          onClick={results.onLoadMore}
+          variant="secondary"
+        >
+          {t("sponsor.select.loadMore")}
+        </Button>
+      ) : null}
     </section>
   );
 }

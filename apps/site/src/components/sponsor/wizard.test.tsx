@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Availability } from "@smog/sponsorships/schema";
 import {
   act,
@@ -28,11 +28,18 @@ const GESTURES = [
 ].map((gesture) => ({
   ...gesture,
   categories: [{ name: "Familie", slug: "familie" }],
-  matchedField: null,
-  matchType: null,
   playbackId: `pb-${gesture.slug}`,
-  score: 0,
 }));
+
+/** `gestures.search` items carry their match. */
+function searched<T>(items: T[]) {
+  return items.map((item) => ({
+    ...item,
+    matchedField: null,
+    matchType: null,
+    score: 0,
+  }));
+}
 
 function availability(
   taken: Record<string, "pending" | "sponsored"> = {},
@@ -68,7 +75,9 @@ function api(overrides: Record<string, unknown> = {}) {
     "gestures/categories": [
       { gestureCount: 3, name: "Familie", slug: "familie" },
     ],
-    "gestures/search": { items: GESTURES, total: GESTURES.length },
+    // The browse list (no query): keyset pages, as `gestures.list` answers.
+    "gestures/list": { items: GESTURES, nextCursor: null },
+    "gestures/search": { items: searched(GESTURES), total: GESTURES.length },
     "sponsorships/availability": availability({ [ID(3)]: "sponsored" }),
     ...overrides,
   };
@@ -93,8 +102,9 @@ function Wizard({ preselect = [] }: { preselect?: string[] }): ReactNode {
   );
 }
 
+/** A card is a toggle named by its gesture (the badge is its description). */
 function card(name: string): HTMLElement {
-  return screen.getByRole("button", { name: `Choose ${name}` });
+  return screen.getByRole("button", { name });
 }
 
 async function chooseBroerAndZus(): Promise<void> {
@@ -125,10 +135,34 @@ async function fillDetails(): Promise<void> {
   });
 }
 
+interface FakeTurnstile {
+  callback?: (token: string) => void;
+}
+const widget: FakeTurnstile = {};
+
+beforeEach(() => {
+  // The Turnstile widget, as Cloudflare's script exposes it.
+  window.turnstile = {
+    remove: () => undefined,
+    render: (_element, options) => {
+      widget.callback = options.callback;
+      return "widget-1";
+    },
+    reset: () => undefined,
+  };
+});
+
 afterEach(() => {
   cleanup();
   redirects.length = 0;
+  widget.callback = undefined;
 });
+
+function checkoutIds(calls: { input: unknown; path: string }[]): string[] {
+  return calls
+    .filter((call) => call.path === "sponsorships/checkout")
+    .map((call) => (call.input as { checkoutId: string }).checkoutId);
+}
 
 describe("the sponsor wizard (S-01–S-11)", () => {
   test("step 1: availability badges, a disabled sponsored card, the bar's count and total", async () => {
@@ -142,7 +176,9 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     expect(screen.getByText("€50.00")).toBeDefined();
     expect(screen.getByText("5 sec")).toBeDefined();
     expect(screen.getByText("+€10.00")).toBeDefined();
-    expect(screen.getByText("2 available gestures · 0 selected")).toBeDefined();
+    expect(
+      screen.getByText("2 available gestures shown · 0 selected")
+    ).toBeDefined();
     fireEvent.click(card("Broer"));
     expect(card("Broer").getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByTestId("selection-count").textContent).toBe(
@@ -167,6 +203,14 @@ describe("the sponsor wizard (S-01–S-11)", () => {
   test("step 2: the live counter /35, and the VAT error on its field", async () => {
     await renderSite(() => <Wizard />, { api: api() });
     await chooseBroerAndZus();
+    // Not a company name from the browser's autofill (review Minor 3).
+    expect(
+      screen.getByLabelText(NAME_IN_THE_VIDEO).getAttribute("autocomplete")
+    ).toBe("off");
+    // The price summary is a section of its own, not a part of Contact.
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Price summary" })
+    ).toBeDefined();
     type(NAME_IN_THE_VIDEO, "Bakkerij");
     expect(screen.getByText("8/35")).toBeDefined();
     type(FULL_NAME, "Jan Jansen");
@@ -207,9 +251,15 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     const input = screen.getByLabelText(LOGO) as HTMLInputElement;
     const gif = new File(["GIF89a"], "logo.gif", { type: "image/gif" });
     fireEvent.change(input, { target: { files: [gif] } });
-    expect(
-      await screen.findByText("Use a PNG, JPEG or WebP image.")
-    ).toBeDefined();
+    const error = await screen.findByText("Use a PNG, JPEG or WebP image.");
+    // The error sits right under the dropzone, before the guidelines, and
+    // the Browse button (the real control) is described by it (Minors 4, 5).
+    const guidelines = screen.getByText("Logo guidelines");
+    expect(error.compareDocumentPosition(guidelines)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+    const browse = screen.getByRole("button", { name: "Choose another logo" });
+    expect(browse.getAttribute("aria-describedby")).toContain(error.id);
     fireEvent.click(
       screen.getByRole("checkbox", { name: "Add a logo (+€10.00 per gesture)" })
     );
@@ -319,7 +369,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     }));
     await renderSite(() => <Wizard />, {
       api: api({
-        "gestures/search": { items: many, total: many.length },
+        "gestures/list": { items: many, nextCursor: null },
         "sponsorships/availability": availability(),
       }),
     });
@@ -338,6 +388,337 @@ describe("the sponsor wizard (S-01–S-11)", () => {
       screen.getByText(
         "You can sponsor up to 10 gestures per payment. Deselect one to choose another."
       )
+    ).toBeDefined();
+  });
+
+  test("a blocked card says why: its badge is the button's description (review I-5)", async () => {
+    await renderSite(() => <Wizard />, { api: api() });
+    await waitFor(() =>
+      expect(card("Mama").getAttribute("data-state")).toBe("sponsored")
+    );
+    const describedBy = card("Mama").getAttribute("aria-describedby") ?? "";
+    expect(document.getElementById(describedBy)?.textContent).toBe("Sponsored");
+    expect(card("Broer").getAttribute("aria-describedby")).toBeNull();
+  });
+
+  test("a chosen card that became blocked can still be deselected (review Minor 2)", async () => {
+    // Preselected while available (its own read), pending by the grid's read.
+    await renderSite(() => <Wizard preselect={["broer"]} />, {
+      api: api({
+        "sponsorships/availability": (input: unknown) => {
+          const ids = (input as { gestureIds: string[] }).gestureIds;
+          return {
+            checkoutEnabled: true,
+            items: ids.map((gestureId) => ({
+              gestureId,
+              state:
+                gestureId === ID(1) && ids.length > 1 ? "pending" : "available",
+            })),
+          };
+        },
+      }),
+    });
+    await waitFor(() =>
+      expect(card("Broer").getAttribute("aria-pressed")).toBe("true")
+    );
+    await waitFor(() =>
+      expect(card("Broer").getAttribute("data-state")).toBe("pending")
+    );
+    expect((card("Broer") as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(card("Broer"));
+    expect(card("Broer").getAttribute("aria-pressed")).toBe("false");
+    expect((card("Broer") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  test("browsing pages through every gesture with Load more (review I-1)", async () => {
+    const page2 = Array.from({ length: 3 }, (_, index) => ({
+      ...GESTURES[0],
+      id: `00000000-0000-4000-8000-0000000002${String(index).padStart(2, "0")}`,
+      name: `Later ${index}`,
+      slug: `later-${index}`,
+    }));
+    const { calls } = await renderSite(() => <Wizard />, {
+      api: api({
+        "gestures/list": (input: unknown) =>
+          (input as { cursor?: string }).cursor === "c2"
+            ? { items: page2, nextCursor: null }
+            : { items: GESTURES, nextCursor: "c2" },
+        "sponsorships/availability": availability(),
+      }),
+    });
+    await waitFor(() =>
+      expect(card("Broer").getAttribute("data-state")).toBe("available")
+    );
+    expect(screen.queryByRole("button", { name: "Later 0" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    await waitFor(() =>
+      expect(card("Later 2").getAttribute("data-state")).toBe("available")
+    );
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+    expect(
+      calls.filter((call) => call.path === "gestures/search")
+    ).toHaveLength(0);
+  });
+
+  test("a search says when it shows only part of its matches (review I-1)", async () => {
+    await renderSite(() => <Wizard />, {
+      api: api({
+        "gestures/search": { items: searched(GESTURES), total: 80 },
+      }),
+    });
+    await waitFor(() =>
+      expect(card("Broer").getAttribute("data-state")).toBe("available")
+    );
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "e" },
+    });
+    expect(
+      await screen.findByText(
+        "Showing 3 of 80 matches. Search more precisely to find the rest."
+      )
+    ).toBeDefined();
+  });
+
+  test("the count is announced once, by the selection bar (review Minor 6)", async () => {
+    const { container } = { container: document.body };
+    await renderSite(() => <Wizard />, { api: api() });
+    await waitFor(() =>
+      expect(card("Broer").getAttribute("data-state")).toBe("available")
+    );
+    const live = [...container.querySelectorAll("[aria-live]")].filter((node) =>
+      node.textContent?.includes("selected")
+    );
+    expect(live).toHaveLength(1);
+  });
+
+  test("pays with a logo: upload, PUT, checkout with the key, has_logo true", async () => {
+    const puts: { body: unknown; contentType: string | null; url: string }[] =
+      [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.startsWith("https://upload.test/")) {
+        puts.push({
+          body: init?.body,
+          contentType: new Headers(init?.headers).get("content-type"),
+          url,
+        });
+        return Promise.resolve(new Response(null, { status: 200 }));
+      }
+      return realFetch(input, init);
+    }) as typeof fetch;
+    try {
+      const { calls, events } = await renderSite(() => <Wizard />, {
+        api: api({
+          "sponsorships/checkout": (input: unknown) => ({
+            checkoutUrl: "https://mollie.test/checkout/tr_3",
+            paymentId: (input as { checkoutId: string }).checkoutId,
+          }),
+          "sponsorships/uploadLogo": {
+            expiresAt: Date.now() + 300_000,
+            headers: { "content-type": "image/png" },
+            key: "logos/0b6c1d2e-3f40-4a5b-8c6d-7e8f9a0b1c2d",
+            uploadUrl: "https://upload.test/logos/0b6c1d2e",
+          },
+        }),
+      });
+      await chooseBroerAndZus();
+      fireEvent.click(
+        screen.getByRole("checkbox", {
+          name: "Add a logo (+€10.00 per gesture)",
+        })
+      );
+      const png = new File([new Uint8Array(64)], "logo.png", {
+        type: "image/png",
+      });
+      fireEvent.change(screen.getByLabelText(LOGO), {
+        target: { files: [png] },
+      });
+      await fillDetails();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Continue to payment" })
+      );
+      await waitFor(() =>
+        expect(redirects).toEqual(["https://mollie.test/checkout/tr_3"])
+      );
+      expect(puts).toEqual([
+        {
+          body: png,
+          contentType: "image/png",
+          url: "https://upload.test/logos/0b6c1d2e",
+        },
+      ]);
+      expect(
+        calls.find((call) => call.path === "sponsorships/uploadLogo")?.input
+      ).toEqual({ contentType: "image/png", size: 64 });
+      expect(
+        calls.find((call) => call.path === "sponsorships/checkout")?.input
+      ).toMatchObject({
+        expectedTotalCents: 12_000,
+        logoKey: "logos/0b6c1d2e-3f40-4a5b-8c6d-7e8f9a0b1c2d",
+      });
+      expect(events).toContainEqual({
+        name: "sponsorship_checkout_started",
+        properties: { gesture_count: 2, has_logo: true },
+      });
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  test("sends the Turnstile token with the checkout, then needs a fresh one", async () => {
+    const { headers } = await renderSite(
+      () => (
+        <div data-testid="page">
+          <SponsorWizard
+            preselect={[]}
+            redirect={pushRedirect}
+            turnstileSiteKey="site-key"
+          />
+        </div>
+      ),
+      {
+        api: api({
+          "sponsorships/checkout": rpcError("TURNSTILE_FAILED", 403),
+        }),
+      }
+    );
+    await chooseBroerAndZus();
+    await fillDetails();
+    const pay = screen.getByRole("button", { name: "Continue to payment" });
+    expect((pay as HTMLButtonElement).disabled).toBe(true);
+    await waitFor(() => expect(widget.callback).toBeDefined());
+    act(() => widget.callback?.("widget-token"));
+    await waitFor(() =>
+      expect((pay as HTMLButtonElement).disabled).toBe(false)
+    );
+    fireEvent.click(pay);
+    expect(
+      await screen.findByText("The security check failed. Please try again.")
+    ).toBeDefined();
+    expect(
+      headers
+        .find((entry) => entry.path === "sponsorships/checkout")
+        ?.headers.get("x-turnstile-token")
+    ).toBe("widget-token");
+    // Single use: Pay waits for the next token.
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Continue to payment",
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(true);
+  });
+
+  test("a provider failure takes a new checkout id for the next try (ruling 5)", async () => {
+    let answer: unknown = rpcError("INVALID_STATE", 409, {
+      reason: "paymentProvider",
+    });
+    const { calls } = await renderSite(() => <Wizard />, {
+      api: api({ "sponsorships/checkout": () => answer }),
+    });
+    await chooseBroerAndZus();
+    await fillDetails();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Continue to payment" })
+    );
+    await screen.findByText(
+      "The payment could not be started. Nothing was charged. Please try again."
+    );
+    answer = {
+      checkoutUrl: "https://mollie.test/checkout/tr_4",
+      paymentId: ID(9),
+    };
+    fireEvent.click(
+      screen.getByRole("button", { name: "Continue to payment" })
+    );
+    await waitFor(() => expect(redirects).toHaveLength(1));
+    const [first, second] = checkoutIds(calls);
+    expect(first).toBeDefined();
+    expect(second).toBeDefined();
+    expect(second).not.toBe(first);
+  });
+
+  test("a network failure keeps the id; an edit after it takes a new one (review I-2)", async () => {
+    let answer: unknown = rpcError("INTERNAL_SERVER_ERROR", 500);
+    const { calls } = await renderSite(() => <Wizard />, {
+      api: api({ "sponsorships/checkout": () => answer }),
+    });
+    await chooseBroerAndZus();
+    await fillDetails();
+    const pay = () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: "Continue to payment" })
+      );
+    pay();
+    await screen.findByText("Continuing to payment failed. Please try again.");
+    pay();
+    await waitFor(() => expect(checkoutIds(calls)).toHaveLength(2));
+    // Back to the details, a new name, and pay again: a different payment.
+    fireEvent.click(screen.getByRole("button", { name: "Back to details" }));
+    type(NAME_IN_THE_VIDEO, "Bakkerij Peeters");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Continue to preview" })
+    );
+    await screen.findByRole("heading", { name: "Review your sponsorship" });
+    answer = {
+      checkoutUrl: "https://mollie.test/checkout/tr_5",
+      paymentId: ID(8),
+    };
+    pay();
+    await waitFor(() => expect(redirects).toHaveLength(1));
+    const [first, retry, edited] = checkoutIds(calls);
+    expect(retry).toBe(first);
+    expect(edited).not.toBe(first);
+  });
+
+  test("Pay cannot run twice while the browser leaves for Mollie (review I-9)", async () => {
+    const { calls, events } = await renderSite(() => <Wizard />, {
+      api: api({
+        "sponsorships/checkout": (input: unknown) => ({
+          checkoutUrl: "https://mollie.test/checkout/tr_6",
+          paymentId: (input as { checkoutId: string }).checkoutId,
+        }),
+      }),
+    });
+    await chooseBroerAndZus();
+    await fillDetails();
+    const pay = screen.getByRole("button", { name: "Continue to payment" });
+    fireEvent.click(pay);
+    await waitFor(() => expect(redirects).toHaveLength(1));
+    fireEvent.click(pay);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(checkoutIds(calls)).toHaveLength(1);
+    expect(
+      events.filter((event) => event.name === "sponsorship_checkout_started")
+    ).toHaveLength(1);
+    // Back from Mollie through the bfcache: Pay works again.
+    act(() => {
+      window.dispatchEvent(
+        Object.assign(new Event("pageshow"), { persisted: true })
+      );
+    });
+    await waitFor(() =>
+      expect(
+        (
+          screen.getByRole("button", {
+            name: "Continue to payment",
+          }) as HTMLButtonElement
+        ).disabled
+      ).toBe(false)
+    );
+  });
+
+  test("a paused wizard is the page's h1 (review I-3)", async () => {
+    await renderSite(() => <Wizard />, {
+      api: api({ "sponsorships/availability": availability({}, false) }),
+    });
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Sponsoring is paused for now",
+      })
     ).toBeDefined();
   });
 });

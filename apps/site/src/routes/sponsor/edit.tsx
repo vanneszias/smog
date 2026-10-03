@@ -4,12 +4,15 @@ import { Page } from "@/components/learning/page";
 import { ReeditView } from "@/components/sponsor/reedit-view";
 import { pageMeta } from "@/lib/head";
 import { validateTokenSearch } from "@/lib/sponsor-search";
+import { tokenPageHead, tokenPageHeaders } from "@/lib/token-page";
 
 const rootApi = getRouteApi("__root__");
 
 export const Route = createFileRoute("/sponsor/edit")({
   component: EditPage,
-  head: ({ matches }) => pageMeta(matches, "sponsor.edit.eyebrow"),
+  head: ({ matches }) =>
+    tokenPageHead(pageMeta(matches, "sponsor.edit.eyebrow")),
+  headers: tokenPageHeaders,
   validateSearch: validateTokenSearch,
 });
 

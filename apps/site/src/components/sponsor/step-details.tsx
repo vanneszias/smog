@@ -23,7 +23,7 @@ import {
   useState,
 } from "react";
 import { detailsErrorMessage } from "./errors";
-import { LogoDropzone } from "./logo-dropzone";
+import { LogoDropzone, LogoGuidelines } from "./logo-dropzone";
 import { usePageLocale } from "./page-locale";
 import { PriceSummary } from "./price-summary";
 
@@ -138,7 +138,8 @@ export function StepDetails({
               required
             >
               <Input
-                autoComplete="organization"
+                // Not the company: browsers would fill it in (review Minor 3).
+                autoComplete="off"
                 maxLength={DISPLAY_NAME_MAX}
                 onChange={text("displayName")}
                 placeholder={t("sponsor.details.displayNamePlaceholder")}
@@ -162,6 +163,7 @@ export function StepDetails({
                 <LogoDropzone file={logo} onChange={onLogo} />
               </Field>
             ) : null}
+            {details.includeLogo ? <LogoGuidelines /> : null}
           </section>
           <section className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">

@@ -45,14 +45,16 @@ afterEach(() => {
 describe("the re-edit page (S-19)", () => {
   test("guards: no token, unknown or used, expired", async () => {
     await renderSite(() => <Edit token={null} />);
-    expect(screen.getByRole("heading", { name: "Invalid link" })).toBeDefined();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Invalid link" })
+    ).toBeDefined();
     cleanup();
 
     await renderSite(() => <Edit />, {
       api: { "sponsorships/reedit/get": rpcError("TOKEN_INVALID", 404) },
     });
     expect(
-      await screen.findByRole("heading", { name: "Link not found" })
+      await screen.findByRole("heading", { level: 1, name: "Link not found" })
     ).toBeDefined();
     cleanup();
 
@@ -64,7 +66,7 @@ describe("the re-edit page (S-19)", () => {
       },
     });
     expect(
-      await screen.findByRole("heading", { name: "Link expired" })
+      await screen.findByRole("heading", { level: 1, name: "Link expired" })
     ).toBeDefined();
     expect(screen.getByText("Expired on 30 September 2026")).toBeDefined();
   });
@@ -95,7 +97,12 @@ describe("the re-edit page (S-19)", () => {
     ).toBeDefined();
     fireEvent.change(name, { target: { value: "Bakkerij Peeters" } });
     fireEvent.click(screen.getByRole("button", { name: "Send for review" }));
-    expect(await screen.findByRole("heading", { name: "Sent!" })).toBeDefined();
+    // Announced: the new h1 takes the focus the form had (review I-4).
+    const sent = await screen.findByRole("heading", {
+      level: 1,
+      name: "Sent!",
+    });
+    await waitFor(() => expect(document.activeElement).toBe(sent));
     expect(
       calls.find((call) => call.path === "sponsorships/reedit/submit")?.input
     ).toEqual({ displayName: "Bakkerij Peeters", token: TOKEN });

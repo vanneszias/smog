@@ -24,12 +24,14 @@ import {
   type FormEvent,
   type ReactNode,
   useCallback,
+  useEffect,
+  useRef,
   useState,
 } from "react";
 import { Turnstile } from "@/components/auth/turnstile";
 import { detailsErrorMessage, mutationErrorMessage } from "./errors";
 import { LinkState } from "./link-state";
-import { LogoDropzone } from "./logo-dropzone";
+import { LogoDropzone, LogoGuidelines } from "./logo-dropzone";
 import { SponsorOverlayPreview } from "./overlay-preview";
 
 export interface ReeditViewProps {
@@ -42,6 +44,37 @@ interface EditableLink {
   expiresAt: number;
   gesture: { name: string; slug: string };
   hasLogo: boolean;
+}
+
+/**
+ * "Sent!": the form is gone, so its h1 takes the focus and is read out
+ * (review I-4).
+ */
+function Submitted(): ReactNode {
+  const { t } = useTranslation();
+  const wrapper = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const heading = wrapper.current?.querySelector("h1");
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus();
+    }
+  }, []);
+  return (
+    <div ref={wrapper}>
+      <EmptyState
+        action={
+          <Button asChild variant="secondary">
+            <Link to="/">{t("sponsor.link.back")}</Link>
+          </Button>
+        }
+        description={t("sponsor.edit.submitted.description")}
+        illustration={1}
+        level={1}
+        title={t("sponsor.edit.submitted.title")}
+      />
+    </div>
+  );
 }
 
 /** The form once the link checks out. */
@@ -94,19 +127,7 @@ function ReeditForm({
   );
 
   if (submit.isSuccess) {
-    return (
-      <EmptyState
-        action={
-          <Button asChild variant="secondary">
-            <Link to="/">{t("sponsor.link.back")}</Link>
-          </Button>
-        }
-        description={t("sponsor.edit.submitted.description")}
-        illustration={1}
-        level={2}
-        title={t("sponsor.edit.submitted.title")}
-      />
-    );
+    return <Submitted />;
   }
   return (
     <form className="flex flex-col gap-8" noValidate onSubmit={send}>
@@ -176,6 +197,7 @@ function ReeditForm({
               <LogoDropzone file={logo} onChange={setLogo} />
             </Field>
           ) : null}
+          {link.hasLogo ? <LogoGuidelines /> : null}
           <Text size="body-sm" tone="muted">
             {t("sponsor.edit.noPayment")}
           </Text>
