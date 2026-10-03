@@ -157,8 +157,9 @@ describe("settlePayment (ruling 6)", () => {
       expect.objectContaining({
         idempotencyKey: `admin_refund_needed:${seeded.paymentId}:${admin.id}`,
         locale: "fr",
+        // Only the flagged item's share is refunded (Minor 4).
         props: expect.objectContaining({
-          amountCents: 10_000,
+          amountCents: 5000,
           paymentId: seeded.paymentId,
           reason: "late",
         }),
@@ -170,7 +171,9 @@ describe("settlePayment (ruling 6)", () => {
     expect(first?.events).toEqual([
       { paymentId: seeded.paymentId, type: "payment.settled" },
     ]);
-    expect(second).toMatchObject({ events: [], notify: [], outcome: "noop" });
+    // A retry (the first caller failed after the commit) re-derives the
+    // same fan-out and the same keyed emails (fix round 1, I-1).
+    expect(second).toEqual(first);
     expect((await paymentRow(db, seeded.paymentId)).status).toBe(
       "refund_needed"
     );
@@ -198,8 +201,11 @@ describe("settlePayment (ruling 6)", () => {
 
     expect(first?.outcome).toBe("refund_needed");
     expect(first?.events).toEqual([]);
-    expect(first?.notify[0]?.props).toMatchObject({ reason: "mismatch" });
-    expect(second?.outcome).toBe("noop");
+    expect(first?.notify[0]?.props).toMatchObject({
+      amountCents: 1,
+      reason: "mismatch",
+    });
+    expect(second).toEqual(first);
     expect((await paymentRow(db, seeded.paymentId)).status).toBe(
       "refund_needed"
     );
@@ -236,8 +242,15 @@ describe("settlePayment (ruling 6)", () => {
     fake.setStatus(mollieId, "paid");
     const { first, second } = await settleTwice(mollieId);
     expect(first?.outcome).toBe("refund_needed");
-    expect(first?.notify[0]?.props).toMatchObject({ reason: "double" });
-    expect(second?.outcome).toBe("noop");
+    expect(first?.notify[0]?.props).toMatchObject({
+      amountCents: 5000,
+      reason: "double",
+    });
+    // The sponsorship goes on: its fan-out is re-derived too.
+    expect(first?.events).toEqual([
+      { paymentId: seeded.paymentId, type: "payment.settled" },
+    ]);
+    expect(second).toEqual(first);
     expect(await statusOf(db, id)).toBe("rendering");
   });
 
@@ -307,8 +320,12 @@ describe("settlePayment (ruling 6)", () => {
     fake.setStatus(mollieId, "paid");
     const { first, second } = await settleTwice(mollieId);
     expect(first?.outcome).toBe("refund_needed");
-    expect(first?.notify[0]?.props).toMatchObject({ reason: "late" });
-    expect(second?.outcome).toBe("noop");
+    expect(first?.notify[0]?.props).toMatchObject({
+      amountCents: 5000,
+      reason: "late",
+    });
+    expect(first?.events).toEqual([]);
+    expect(second).toEqual(first);
     expect(await statusOf(db, id)).toBe("expired");
     expect((await paymentRow(db, renewalId)).status).toBe("refund_needed");
   });

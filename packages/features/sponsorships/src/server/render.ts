@@ -190,6 +190,7 @@ export async function markRenderRunning(
 
 interface JobRow {
   displayName: string;
+  error: string | null;
   gestureName: string;
   jobStatus: RenderJobStatus;
   sponsorshipId: string;
@@ -200,6 +201,7 @@ async function readJob(db: Db, renderJobId: string): Promise<JobRow | null> {
   const [row] = await db
     .select({
       displayName: sponsorship.displayName,
+      error: renderJob.error,
       gestureName: gesture.name,
       jobStatus: renderJob.status,
       sponsorshipId: sponsorship.id,
@@ -280,7 +282,8 @@ export async function completeRender(
       })
       .where(eq(renderJob.id, renderJobId)),
   ];
-  if (job.status === "rendering") {
+  const transitions = job.status === "rendering";
+  if (transitions) {
     statements.push(
       ...transitionStatements(db, {
         actorId: null,
@@ -297,17 +300,19 @@ export async function completeRender(
       `[sponsorships] Render job ${renderJobId} finished, but its sponsorship is ${job.status}; the video is not used`
     );
   }
-  return {
-    outcome: (await runFinal(db, statements, renderJobId))
-      ? "completed"
-      : "noop",
-  };
+  const ran = await runFinal(db, statements, renderJobId);
+  // Only a job that moved its sponsorship to review is "completed"; one
+  // that only closed itself is a no-op for the caller (Minor 6).
+  return { outcome: ran && transitions ? "completed" : "noop" };
 }
 
 /**
  * The render failed: the job `failed` with the error (at most 300
  * characters), `rendering → render_failed`, and the `admin_render_failed`
- * email for every admin, which the caller enqueues.
+ * email for every admin, which the caller enqueues. A re-run on a job that
+ * already failed (the caller failed after the commit) re-derives the same
+ * keyed emails with the stored error (fix round 1, I-1); a job that
+ * succeeded is a no-op.
  */
 export async function failRender(
   db: Db,
@@ -316,8 +321,11 @@ export async function failRender(
   const { now, renderJobId, siteUrl } = input;
   const error = input.error.slice(0, RENDER_ERROR_MAX);
   const job = await readJob(db, renderJobId);
-  if (!(job && isActive(job.jobStatus))) {
+  if (!job || job.jobStatus === "succeeded") {
     return { notify: [], outcome: "noop" };
+  }
+  if (job.jobStatus === "failed") {
+    return await failedOutcome(db, { job, now, renderJobId, siteUrl });
   }
   const statements: Statement[] = [
     finalJobGuard(db, renderJobId),
@@ -338,15 +346,26 @@ export async function failRender(
       })
     );
   }
-  if (!(await runFinal(db, statements, renderJobId))) {
-    return { notify: [], outcome: "noop" };
-  }
+  await runFinal(db, statements, renderJobId);
+  // Whoever finished the job, its outcome is what is stored now.
+  const stored = await readJob(db, renderJobId);
+  return stored?.jobStatus === "failed"
+    ? await failedOutcome(db, { job: stored, now, renderJobId, siteUrl })
+    : { notify: [], outcome: "noop" };
+}
+
+/** The admin emails of a failed job, keyed per job and admin. */
+async function failedOutcome(
+  db: Db,
+  input: { job: JobRow; now: Date; renderJobId: string; siteUrl: string }
+): Promise<{ notify: OutboxEmail[]; outcome: "failed" }> {
+  const { job, now, renderJobId, siteUrl } = input;
   const notify = await emailAdmins(db, now, (admin) => ({
     idempotencyKey: `admin_render_failed:${renderJobId}:${admin.id}`,
     locale: admin.locale,
     props: {
       displayName: job.displayName,
-      error,
+      error: job.error ?? "",
       gestureName: job.gestureName,
       url: `${siteUrl}/admin/sponsorships/${job.sponsorshipId}`,
     },

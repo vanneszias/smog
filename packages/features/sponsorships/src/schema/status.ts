@@ -59,6 +59,8 @@ export const SPONSORSHIP_STATUS_TONES = {
  * - `logoInvalid`: the uploaded logo is missing, too large or not an image.
  * - `noLogo`: a re-edit sent a logo for a sponsorship without one.
  * - `notRenewable`: the sponsorship can no longer be renewed.
+ * - `gestureTaken`: a request for changes on a rejected sponsorship whose
+ *   gesture was sponsored again (the partial unique index).
  * - `noVideo`: approve before the video exists.
  * - `paid`: cancel of a payment Mollie reports paid.
  * - `notRefunded`: record a refund Mollie does not report.
@@ -72,6 +74,7 @@ export const INVALID_STATE_REASONS = [
   "logoInvalid",
   "noLogo",
   "notRenewable",
+  "gestureTaken",
   "noVideo",
   "paid",
   "notRefunded",

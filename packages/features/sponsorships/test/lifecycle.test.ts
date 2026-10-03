@@ -3,7 +3,7 @@ import { makeGesture } from "@smog/db/testing";
 import { createFakeMollie, type FakeMollie } from "@smog/payments/testing";
 import { DAY_MS, newId } from "@smog/utils";
 import { and, eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { hashSponsorshipToken } from "../src/schema";
 import {
   approveStatements,
@@ -233,6 +233,75 @@ describe("reject and request changes", () => {
   });
 });
 
+describe("fix round 1 (Minors 2, 5, 9)", () => {
+  it("request changes from rejected refuses a gesture sponsored again meanwhile (gestureTaken)", async () => {
+    const { id } = await one({ status: "rejected" });
+    const row = await sponsorshipRow(db, id);
+    const gesture = await db.query.gesture.findFirst({
+      where: (table, { eq: equals }) => equals(table.id, row.gestureId),
+    });
+    await seedCheckout(db, { gestures: [gesture as never], status: "live" });
+    await expect(
+      requestChangesStatements(db, {
+        actorId,
+        now: NOW,
+        siteUrl: SITE_URL,
+        sponsorshipId: id,
+      })
+    ).rejects.toMatchObject({ reason: "gestureTaken" });
+    expect(await statusOf(db, id)).toBe("rejected");
+  });
+
+  it("never issues a renewal link that is already expired", async () => {
+    const { id } = await one({
+      endsAt: new Date(NOW.getTime() - 1000),
+      status: "expiring",
+    });
+    await expect(
+      regenerateTokenStatements(db, {
+        actorId,
+        now: NOW,
+        purpose: "renewal",
+        siteUrl: SITE_URL,
+        sponsorshipId: id,
+      })
+    ).rejects.toMatchObject({ reason: "notRenewable" });
+  });
+
+  it("the raw token appears only in the plan: not in the statements, the trail or the logs", async () => {
+    const { id } = await one({ status: "in_review" });
+    const logged: unknown[] = [];
+    const spies = (["log", "info", "warn", "error"] as const).map((level) =>
+      vi.spyOn(console, level).mockImplementation((...args: unknown[]) => {
+        logged.push(args);
+      })
+    );
+    try {
+      const plan = await requestChangesStatements(db, {
+        actorId,
+        now: NOW,
+        siteUrl: SITE_URL,
+        sponsorshipId: id,
+      });
+      const sqlText = JSON.stringify(
+        (plan.statements as unknown as { toSQL: () => unknown }[]).map((s) =>
+          s.toSQL()
+        )
+      );
+      expect(sqlText).not.toContain(plan.token);
+      await db.batch(plan.statements as never);
+      const trail = JSON.stringify(await eventsOf(db, id));
+      expect(trail).not.toContain(plan.token);
+      expect(JSON.stringify(await tokensOf(id))).not.toContain(plan.token);
+      expect(JSON.stringify(logged)).not.toContain(plan.token);
+    } finally {
+      for (const spy of spies) {
+        spy.mockRestore();
+      }
+    }
+  });
+});
+
 describe("mark paid and cancel act on the whole payment", () => {
   it("mark paid moves every item to rendering and plans payment.settled", async () => {
     const seeded = await seedCheckout(db, { count: 3 });
@@ -371,6 +440,18 @@ describe("force expire and refunds", () => {
       })
     ).rejects.toMatchObject({ reason: "notRefunded" });
     fake.refund(mollieId, 5000);
+    // Another payment's Mollie view is refused (Minor 3).
+    const other = await seedCheckout(db, { count: 1 });
+    const otherMollie = await molliePaymentFor(db, fake, other.paymentId, 5000);
+    fake.setStatus(otherMollie, "paid");
+    fake.refund(otherMollie, 5000);
+    await expect(
+      recordRefundStatements(db, {
+        now: NOW,
+        payment: await refetch(fake, otherMollie),
+        paymentId: seeded.paymentId,
+      })
+    ).rejects.toMatchObject({ reason: "stale" });
     const plan = await recordRefundStatements(db, {
       now: NOW,
       payment: await refetch(fake, mollieId),

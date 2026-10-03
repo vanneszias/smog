@@ -1,6 +1,7 @@
 import { renderJob } from "@smog/db";
 import { SAMPLE_PLAYBACK_ID } from "@smog/db/testing";
 import { renderInputSchema } from "@smog/render/contract";
+import { newId } from "@smog/utils";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import {
@@ -170,7 +171,40 @@ describe("the render seam (ruling 7)", () => {
       renderJobId,
       siteUrl: SITE_URL,
     });
-    expect(again).toEqual({ notify: [], outcome: "noop" });
+    // A re-run after the commit (the caller failed to enqueue) re-derives
+    // the same keyed emails, with the stored error (fix round 1, I-1).
+    expect(again).toEqual({ notify: failed.notify, outcome: "failed" });
+    expect((await eventsOf(db, id)).map((event) => event.type)).toEqual([
+      "render_started",
+      "render_failed",
+    ]);
+  });
+
+  it("completing a job whose sponsorship left rendering closes the job only: noop (Minor 6)", async () => {
+    const seeded = await seedCheckout(db, {
+      count: 1,
+      paymentStatus: "paid",
+      status: "in_review",
+    });
+    const id = seeded.sponsorshipIds[0] as string;
+    const renderJobId = newId();
+    // A fixture: a job left queued for a sponsorship already in review.
+    await db.insert(renderJob).values({
+      id: renderJobId,
+      input: {},
+      sponsorshipId: id,
+      status: "queued",
+      workflowInstanceId: renderJobId,
+    });
+    const done = await completeRender(db, {
+      assetId: null,
+      now: NOW,
+      playbackId: "late",
+      renderJobId,
+    });
+    expect(done.outcome).toBe("noop");
+    expect((await jobsOf(id))[0]?.status).toBe("succeeded");
+    expect((await sponsorshipRow(db, id)).videoPlaybackId).toBeNull();
   });
 
   it("a second attempt counts up after a failed one", async () => {

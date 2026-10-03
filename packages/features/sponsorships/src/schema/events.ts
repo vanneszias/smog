@@ -34,7 +34,13 @@ export const CANCEL_REASONS = [
 ] as const;
 
 /** Why a payment needs a refund by hand (ruling 4). */
-export const REFUND_REASONS = ["late", "mismatch", "double"] as const;
+export const REFUND_REASONS = [
+  "late",
+  "mismatch",
+  "double",
+  /** Mollie reports a chargeback: recorded and told, never auto-cancelled (fix round 1, I-3). */
+  "chargeback",
+] as const;
 export type RefundReason = (typeof REFUND_REASONS)[number];
 
 export const SPONSORSHIP_EVENT_DATA_SCHEMAS = {

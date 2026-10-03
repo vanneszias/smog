@@ -12,8 +12,10 @@
  */
 import { SPONSORSHIP_DURATION_DAYS } from "@smog/config/constants";
 import {
+  BLOCKING_SPONSORSHIP_STATUSES,
   failWhen,
   gesture,
+  inList,
   type PaymentKind,
   type PaymentStatus,
   payment,
@@ -29,7 +31,7 @@ import type { OutboxEmail } from "@smog/email";
 import type { EventMessage } from "@smog/jobs";
 import type { MolliePayment } from "@smog/payments";
 import { DAY_MS } from "@smog/utils";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, ne, sql } from "drizzle-orm";
 import type { InvalidStateReason } from "../schema/status";
 import { REEDIT_TOKEN_TTL_MS } from "../schema/tokens";
 import { isRenewable, renewStatements } from "./settle";
@@ -69,6 +71,7 @@ const DURATION_MS = SPONSORSHIP_DURATION_DAYS * DAY_MS;
 interface SponsorshipView {
   displayName: string;
   endsAt: Date | null;
+  gestureId: string;
   gestureMuxAssetId: string | null;
   gestureName: string;
   gestureSlug: string;
@@ -89,6 +92,7 @@ async function readSponsorship(
     .select({
       displayName: sponsorship.displayName,
       endsAt: sponsorship.endsAt,
+      gestureId: sponsorship.gestureId,
       gestureMuxAssetId: gesture.muxAssetId,
       gestureName: gesture.name,
       gestureSlug: gesture.slug,
@@ -205,6 +209,11 @@ export async function rejectStatements(
   };
 }
 
+/**
+ * A plan that issues a link. `token` and `url` are for the admin's copy
+ * dialog only, shown once: never put either into audit data, an event or
+ * a log (only the hash is stored; ruling 11).
+ */
 export interface TokenPlan extends LifecyclePlan {
   /** Epoch ms. */
   expiresAt: number;
@@ -234,6 +243,15 @@ export async function requestChangesStatements(
   const { actorId, now, siteUrl, sponsorshipId } = input;
   const view = await readSponsorship(db, sponsorshipId);
   requireStatus(view, ["in_review", "rejected"], "request changes for");
+  if (view.status === "rejected" && (await gestureTaken(db, view))) {
+    // `changes_requested` blocks the gesture again; the partial unique
+    // index would refuse the batch (callers map `isGestureTaken` to the
+    // same reason for a race after this read).
+    throw new SponsorshipActionError(
+      "gestureTaken",
+      `The gesture of sponsorship ${sponsorshipId} was sponsored again`
+    );
+  }
   const issued = await issueTokenStatements(db, {
     actorId,
     expiresAt: new Date(now.getTime() + REEDIT_TOKEN_TTL_MS),
@@ -263,6 +281,25 @@ export async function requestChangesStatements(
   };
 }
 
+/** Whether another sponsorship holds the gesture of `view` (a blocking status). */
+async function gestureTaken(
+  db: Db,
+  view: { gestureId: string; id: string }
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: sponsorship.id })
+    .from(sponsorship)
+    .where(
+      and(
+        eq(sponsorship.gestureId, view.gestureId),
+        ne(sponsorship.id, view.id),
+        inList(sponsorship.status, BLOCKING_SPONSORSHIP_STATUSES)
+      )
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
 /** The status a token of each purpose may be regenerated in. */
 const REGENERATE_FROM = {
   reedit: "changes_requested",
@@ -282,6 +319,13 @@ export async function regenerateTokenStatements(
   const view = await readSponsorship(db, sponsorshipId);
   const from = REGENERATE_FROM[purpose];
   requireStatus(view, [from], `regenerate the ${purpose} link of`);
+  if (purpose === "renewal" && !(view.endsAt && view.endsAt > now)) {
+    // Never a link that is dead on arrival (fix round 1, Minor 5).
+    throw new SponsorshipActionError(
+      "notRenewable",
+      `Sponsorship ${sponsorshipId} has already ended`
+    );
+  }
   const expiresAt =
     purpose === "renewal" && view.endsAt
       ? view.endsAt
@@ -318,6 +362,7 @@ interface PaymentView {
     status: SponsorshipStatus;
   }[];
   kind: PaymentKind;
+  mollieId: string | null;
   refundedCents: number;
   status: PaymentStatus;
 }
@@ -328,6 +373,7 @@ async function readPayment(db: Db, paymentId: string): Promise<PaymentView> {
       amountCents: payment.amountCents,
       id: payment.id,
       kind: payment.kind,
+      mollieId: payment.mollieId,
       refundedCents: payment.refundedCents,
       status: payment.status,
     })
@@ -503,6 +549,13 @@ export async function recordRefundStatements(
   input: { now: Date; payment: MolliePayment; paymentId: string }
 ): Promise<LifecyclePlan & { amountCents: number; refundedCents: number }> {
   const view = await readPayment(db, input.paymentId);
+  if (input.payment.id !== view.mollieId) {
+    // Another payment's Mollie view (a caller bug): store nothing.
+    throw new SponsorshipActionError(
+      "stale",
+      `Mollie payment ${input.payment.id} is not payment ${input.paymentId}`
+    );
+  }
   const refundedCents = input.payment.amountRefundedCents;
   if (refundedCents <= 0) {
     throw new SponsorshipActionError(

@@ -6,12 +6,16 @@
  * payment status: every write is guarded by the status it read
  * (`paymentGuard`), so a replayed, duplicated or out-of-order call leaves
  * exactly one state. The caller enqueues `events` (the `payment.settled`
- * fan-out) and `notify` (the admin emails) after it returns.
+ * fan-out) and `notify` (the admin emails) after it returns, whatever the
+ * outcome. A retry re-derives both from the stored state (fix round 1,
+ * I-1), so a caller that failed after the commit loses nothing: the
+ * idempotency keys make the resends safe.
  */
 
 import { SPONSORSHIP_DURATION_DAYS } from "@smog/config/constants";
 import {
   BLOCKING_SPONSORSHIP_STATUSES,
+  failWhen,
   type PaymentKind,
   type PaymentStatus,
   payment,
@@ -37,6 +41,7 @@ import { emailAdmins } from "./recipients";
 import {
   isGestureTaken,
   isStalePayment,
+  PAYMENT_STALE_GUARD,
   paymentGuard,
   refundStatement,
   revokeTokensStatement,
@@ -80,6 +85,7 @@ export interface SettleInput {
 
 interface PaymentRow {
   amountCents: number;
+  chargedBackCents: number;
   id: string;
   kind: PaymentKind;
   mollieId: string | null;
@@ -88,6 +94,8 @@ interface PaymentRow {
 }
 
 interface ItemRow {
+  /** This item's share of the payment (`payment_item.amount_cents`). */
+  amountCents: number;
   endsAt: Date | null;
   sponsorshipId: string;
   status: SponsorshipStatus;
@@ -101,9 +109,14 @@ const LATE_STATUSES: readonly PaymentStatus[] = [
 ];
 const RENEWABLE: readonly SponsorshipStatus[] = ["live", "expiring"];
 const BLOCKING: readonly SponsorshipStatus[] = BLOCKING_SPONSORSHIP_STATUSES;
+/** The statuses of an item whose payment counted: it needs the fan-out. */
+const PAST_PAYMENT: readonly SponsorshipStatus[] = BLOCKING.filter(
+  (status) => status !== "awaiting_payment"
+);
 
 const PAYMENT_COLUMNS = {
   amountCents: payment.amountCents,
+  chargedBackCents: payment.chargedBackCents,
   id: payment.id,
   kind: payment.kind,
   mollieId: payment.mollieId,
@@ -143,6 +156,7 @@ async function findPayment(
 async function loadItems(db: Db, paymentId: string): Promise<ItemRow[]> {
   return await db
     .select({
+      amountCents: paymentItem.amountCents,
       endsAt: sponsorship.endsAt,
       sponsorshipId: sponsorship.id,
       status: sponsorship.status,
@@ -197,7 +211,10 @@ function settled(paymentId: string): EventMessage[] {
 
 /**
  * The renewal of `item` by `paymentId`: one more year from its current
- * end, the reminder reset, and the open renewal tokens used (bug 35).
+ * end, the reminder reset, and the open renewal tokens used (bug 35). The
+ * year is added in SQL (`ends_at + 365 d`), so two renewals settling at
+ * once add two years (fix round 1, Minor 1); the event's `endsAt` is the
+ * end as read plus one year.
  */
 export function renewStatements(
   db: Db,
@@ -227,7 +244,10 @@ export function renewStatements(
       event: "renewed",
       from: item.status,
       now,
-      patch: { endsAt, reminderSentAt: null },
+      patch: {
+        endsAt: sql`coalesce(${sponsorship.endsAt}, ${now.getTime()}) + ${DURATION_MS}`,
+        reminderSentAt: null,
+      },
       sponsorshipId: item.sponsorshipId,
     }),
     revokeTokensStatement(db, {
@@ -285,17 +305,89 @@ async function noop(
   });
 }
 
+/** The Mollie dashboard page of a payment, for the admin emails. */
+function dashboardUrl(mollie: MolliePayment): string {
+  return (
+    mollie.dashboardUrl ??
+    `https://my.mollie.com/dashboard/payments/${mollie.id}`
+  );
+}
+
 /**
- * The payment becomes `refund_needed` and every admin is emailed. `before`
- * are the item changes of the same batch (the released items of a
- * mismatch); every item not in `kept` gets a `refund_needed` event.
+ * The outputs of a `refund_needed` payment, derived from what is stored
+ * (fix round 1, I-1), on the first run and on every retry alike:
+ * - `events`: `payment.settled` while any item went past payment (a late
+ *   revival, or the sponsorship of a payment paid twice);
+ * - `notify`: the `admin_refund_needed` email per admin (keyed, so a
+ *   resend is skipped), with the reason of the payment's `refund_needed`
+ *   events and the amount to refund: the flagged items' share for `late`
+ *   (Minor 4), what Mollie received otherwise.
+ */
+async function refundOutcome(db: Db, context: Context): Promise<SettleResult> {
+  const { mollie, now, row } = context;
+  const items = await loadItems(db, row.id);
+  const flags = await db
+    .select({
+      reason: sql<string>`json_extract(${sponsorshipEvent.data}, '$.reason')`,
+      sponsorshipId: sponsorshipEvent.sponsorshipId,
+    })
+    .from(paymentItem)
+    .innerJoin(
+      sponsorshipEvent,
+      eq(sponsorshipEvent.sponsorshipId, paymentItem.sponsorshipId)
+    )
+    .where(
+      and(
+        eq(paymentItem.paymentId, row.id),
+        eq(sponsorshipEvent.type, "refund_needed"),
+        sql`json_extract(${sponsorshipEvent.data}, '$.paymentId') = ${row.id}`,
+        sql`json_extract(${sponsorshipEvent.data}, '$.reason') <> 'chargeback'`
+      )
+    )
+    .orderBy(
+      asc(sponsorshipEvent.createdAt),
+      asc(sql`${sponsorshipEvent}.rowid`)
+    );
+  const reason = (flags.at(-1)?.reason ?? "late") as RefundReason;
+  const flagged = new Set(
+    flags.filter((flag) => flag.reason === reason).map((f) => f.sponsorshipId)
+  );
+  const share = items
+    .filter((item) => flagged.has(item.sponsorshipId))
+    .reduce((total, item) => total + item.amountCents, 0);
+  const amountCents =
+    reason === "late" && share > 0 ? share : mollie.amountCents;
+  const notify = await emailAdmins(db, now, (admin) => ({
+    idempotencyKey: `admin_refund_needed:${row.id}:${admin.id}`,
+    locale: admin.locale,
+    props: {
+      amountCents,
+      paymentId: row.id,
+      reason,
+      url: dashboardUrl(mollie),
+    },
+    template: "transactional/admin-refund-needed",
+    to: admin.email,
+  }));
+  return result(context, "refund_needed", {
+    events: items.some((item) => PAST_PAYMENT.includes(item.status))
+      ? settled(row.id)
+      : [],
+    notify,
+  });
+}
+
+/**
+ * The payment becomes `refund_needed`: `before` are the item changes of
+ * the same batch (the released items of a mismatch, the paid items of a
+ * late payment), and every `flagged` item gets a `refund_needed` event
+ * with the reason. The outputs are then derived (`refundOutcome`).
  */
 async function flagRefund(
   db: Db,
   context: Context,
   options: {
     before?: Statement[];
-    events?: EventMessage[];
     flagged: readonly string[];
     reason: RefundReason;
   }
@@ -324,24 +416,7 @@ async function flagRefund(
     ),
     ...context.extra,
   ]);
-  const notify = await emailAdmins(db, now, (admin) => ({
-    idempotencyKey: `admin_refund_needed:${row.id}:${admin.id}`,
-    locale: admin.locale,
-    props: {
-      amountCents: mollie.amountCents,
-      paymentId: row.id,
-      reason: options.reason,
-      url:
-        mollie.dashboardUrl ??
-        `https://my.mollie.com/dashboard/payments/${mollie.id}`,
-    },
-    template: "transactional/admin-refund-needed",
-    to: admin.email,
-  }));
-  return result(context, "refund_needed", {
-    events: options.events ?? [],
-    notify,
-  });
+  return await refundOutcome(db, context);
 }
 
 /** Mollie says paid and the amount or currency differ from ours (bug 6). */
@@ -487,11 +562,9 @@ async function settleLateInitial(
       flagged.push(item.sponsorshipId);
     }
   }
-  const events = revived > 0 ? settled(row.id) : [];
   if (flagged.length > 0) {
     return await flagRefund(db, context, {
       before: pending,
-      events,
       flagged,
       reason: "late",
     });
@@ -507,18 +580,25 @@ async function settleLateInitial(
     ),
     ...context.extra,
   ]);
-  return result(context, "late_revived", { events });
+  return result(context, "late_revived", {
+    events: revived > 0 ? settled(row.id) : [],
+  });
 }
 
 async function settlePaid(db: Db, context: Context): Promise<SettleResult> {
   const { mollie, row } = context;
   if (row.status === "refund_needed") {
-    return await noop(db, context);
+    // Already flagged: re-derive the outputs, so a retry resends them.
+    await run(db, context.extra);
+    return await refundOutcome(db, context);
   }
   if (row.status === "paid") {
     // Mollie's money arrived for a payment an admin already marked paid.
     return (await markedPaidByHand(db, row.id))
-      ? await flagRefund(db, context, { flagged: [], reason: "double" })
+      ? await flagRefund(db, context, {
+          flagged: context.items.map((item) => item.sponsorshipId),
+          reason: "double",
+        })
       : await noop(db, context, "already");
   }
   if (mollie.amountCents !== row.amountCents || mollie.currency !== "EUR") {
@@ -592,14 +672,18 @@ async function settleOnce(
       })
     );
   }
-  const context: Context = {
-    extra,
-    items: await loadItems(db, row.id),
-    mollie,
-    now,
-    row,
-  };
-  const mapped = mapMollieStatus(mollie.status);
+  const items = await loadItems(db, row.id);
+  extra.push(...chargebackStatements(db, { items, mollie, now, row }));
+  const context: Context = { extra, items, mollie, now, row };
+  const outcome = await settleStatus(db, context);
+  if (mollie.amountChargedBackCents > 0) {
+    outcome.notify.push(...(await chargebackNotify(db, context)));
+  }
+  return outcome;
+}
+
+async function settleStatus(db: Db, context: Context): Promise<SettleResult> {
+  const mapped = mapMollieStatus(context.mollie.status);
   if (mapped === "paid") {
     return await settlePaid(db, context);
   }
@@ -610,20 +694,102 @@ async function settleOnce(
 }
 
 /**
+ * A new chargeback (Mollie's `amountChargedBack` above what is stored,
+ * fix round 1, I-3): store it, and note it in each item's trail
+ * (`refund_needed`, `chargeback`). The guard makes two concurrent settles
+ * record it once (the loser reads again). The status stays `paid` and the
+ * sponsorship is not touched: an admin decides (the cancel path).
+ */
+function chargebackStatements(
+  db: Db,
+  { items, mollie, now, row }: Omit<Context, "extra">
+): Statement[] {
+  const cents = mollie.amountChargedBackCents;
+  if (cents <= row.chargedBackCents) {
+    return [];
+  }
+  console.warn(
+    `[sponsorships] Chargeback of ${cents} cents on payment ${row.id} (${mollie.id})`
+  );
+  return [
+    failWhen(
+      db,
+      PAYMENT_STALE_GUARD,
+      sql`EXISTS (SELECT 1 FROM ${payment} WHERE ${payment.id} = ${row.id} AND ${payment.chargedBackCents} >= ${cents})`
+    ),
+    db
+      .update(payment)
+      .set({
+        chargedBackAt: sql`coalesce(${payment.chargedBackAt}, ${now.getTime()})`,
+        chargedBackCents: cents,
+        updatedAt: now,
+      })
+      .where(eq(payment.id, row.id)),
+    ...items.map((item) =>
+      eventStatement(db, {
+        actorId: null,
+        data: { paymentId: row.id, reason: "chargeback" },
+        now,
+        sponsorshipId: item.sponsorshipId,
+        type: "refund_needed",
+      })
+    ),
+  ];
+}
+
+/**
+ * The chargeback email per admin, on every settle while Mollie reports
+ * one (keyed by the amount, so each new chargeback is told once).
+ */
+async function chargebackNotify(
+  db: Db,
+  { mollie, now, row }: Context
+): Promise<OutboxEmail[]> {
+  const cents = mollie.amountChargedBackCents;
+  return await emailAdmins(db, now, (admin) => ({
+    idempotencyKey: `admin_chargeback:${row.id}:${cents}:${admin.id}`,
+    locale: admin.locale,
+    props: {
+      amountCents: cents,
+      paymentId: row.id,
+      reason: "chargeback",
+      url: dashboardUrl(mollie),
+    },
+    template: "transactional/admin-refund-needed",
+    to: admin.email,
+  }));
+}
+
+/**
+ * A settle that lost a race reads again; a late payment's revivals and its
+ * final batch can each lose once to a concurrent settle, so three attempts
+ * always end on the winner's stored state.
+ */
+const SETTLE_ATTEMPTS = 3;
+
+/**
  * Applies Mollie's view of a payment to ours (ruling 6); `null` when the
  * payment is not ours. Idempotent: a lost race (another settle moved the
- * payment or an item on) is read again once.
+ * payment or an item on) is read again, up to `SETTLE_ATTEMPTS` in all,
+ * and the last error is logged.
  */
 export async function settlePayment(
   db: Db,
   input: SettleInput
 ): Promise<SettleResult | null> {
   try {
-    return await settleOnce(db, input);
-  } catch (error) {
-    if (isStalePayment(error) || isStaleTransition(error)) {
-      return await settleOnce(db, input);
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        // biome-ignore lint/performance/noAwaitInLoops: each attempt reads the state the last one lost to.
+        return await settleOnce(db, input);
+      } catch (error) {
+        const lostRace = isStalePayment(error) || isStaleTransition(error);
+        if (!lostRace || attempt >= SETTLE_ATTEMPTS) {
+          throw error;
+        }
+      }
     }
+  } catch (error) {
     console.error(
       `[sponsorships] Failed to settle the Mollie payment ${input.payment.id}:`,
       error

@@ -1,11 +1,17 @@
 import { stubTemplate } from "./stub";
 
 export interface AdminRefundNeededProps {
-  /** The amount Mollie received, in integer cents. */
+  /**
+   * In integer cents: the share to refund (late), what Mollie received
+   * (mismatch, paid twice), or what the bank charged back (chargeback).
+   */
   amountCents: number;
   paymentId: string;
-  /** Late (the gesture was taken), an amount mismatch, or paid twice. */
-  reason: "late" | "mismatch" | "double";
+  /**
+   * Late (the gesture was taken), an amount mismatch, paid twice, or a
+   * chargeback (sent as `admin_chargeback:<paymentId>:<cents>:<adminId>`).
+   */
+  reason: "late" | "mismatch" | "double" | "chargeback";
   /** The payment's page in the Mollie dashboard. */
   url: string;
 }

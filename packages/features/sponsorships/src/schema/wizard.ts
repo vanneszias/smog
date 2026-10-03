@@ -30,8 +30,16 @@ export const contactEmailSchema = z
   .trim()
   .pipe(z.email().max(EMAIL_MAX).regex(OLD_EMAIL_PATTERN));
 
-/** The sponsor line in the video (1..35 characters, trimmed). */
-export const displayNameSchema = z.string().trim().min(1).max(DISPLAY_NAME_MAX);
+/** No control characters or line breaks: the name is one line of video and email. */
+const ONE_LINE = /^[^\p{Cc}\u2028\u2029]*$/u;
+
+/** The sponsor line in the video (1..35 characters, trimmed, one line). */
+export const displayNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(DISPLAY_NAME_MAX)
+  .regex(ONE_LINE, { message: "controlCharacters" });
 
 export const logoKeySchema = z.string().regex(LOGO_KEY_PATTERN);
 

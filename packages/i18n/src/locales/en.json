@@ -1391,6 +1391,7 @@
       "logoInvalid": "The logo could not be read. Choose a PNG, JPEG or WebP file of at most 2 MB.",
       "noLogo": "This sponsorship has no logo, so one cannot be added.",
       "notRenewable": "This sponsorship can no longer be renewed.",
+      "gestureTaken": "Someone else has sponsored this gesture in the meantime.",
       "noVideo": "The video is not ready yet.",
       "paid": "This payment has been paid and cannot be cancelled.",
       "notRefunded": "Mollie reports no refund yet. Refund in the Mollie dashboard first.",

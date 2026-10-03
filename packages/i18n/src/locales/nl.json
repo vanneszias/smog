@@ -1391,6 +1391,7 @@
       "logoInvalid": "Het logo kon niet gelezen worden. Kies een PNG-, JPEG- of WebP-bestand van maximaal 2 MB.",
       "noLogo": "Deze sponsoring heeft geen logo, dus je kunt er geen toevoegen.",
       "notRenewable": "Deze sponsoring kan niet meer verlengd worden.",
+      "gestureTaken": "Dit gebaar wordt intussen door iemand anders gesponsord.",
       "noVideo": "De video is nog niet klaar.",
       "paid": "Deze betaling is al betaald en kan niet geannuleerd worden.",
       "notRefunded": "Mollie meldt nog geen terugbetaling. Betaal eerst terug in het Mollie-dashboard.",

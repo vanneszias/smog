@@ -138,6 +138,20 @@ describe("createPayment", () => {
 });
 
 describe("getPayment", () => {
+  it("reads Mollie's amountChargedBack in cents (0 without one)", async () => {
+    const fake = createFakeMollie();
+    const created = await createPayment(fake.mollie, INPUT);
+    fake.setStatus(created.id, "paid");
+    expect(await getPayment(fake.mollie, created.id)).toMatchObject({
+      amountChargedBackCents: 0,
+    });
+    fake.chargeback(created.id, 6000);
+    expect(await getPayment(fake.mollie, created.id)).toMatchObject({
+      amountChargedBackCents: 6000,
+      status: "paid",
+    });
+  });
+
   it("re-reads the payment, with its status, refunds and paid date", async () => {
     const fake = createFakeMollie();
     const created = await createPayment(fake.mollie, INPUT);
