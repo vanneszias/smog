@@ -7,7 +7,14 @@ import {
   type WorkerVars,
 } from "@smog/config/env/worker";
 import { createDb } from "@smog/db/client";
-import { createEmailSender, type EmailSender } from "@smog/email";
+import {
+  createEmailSender,
+  DirectEmailOutbox,
+  type EmailDeliveryEnv,
+  type EmailOutbox,
+  type EmailSender,
+} from "@smog/email";
+import { QueueEmailOutbox } from "@smog/jobs";
 import {
   RATE_LIMIT_BINDINGS,
   type RateLimitBinding,
@@ -52,14 +59,43 @@ export function siteEnv(): SiteEnv {
   return cached;
 }
 
-/** dev → the KV dev mailbox; staging/production → the `EMAIL` binding. */
-function getEmailSender(): EmailSender {
+/**
+ * dev → the KV dev mailbox; staging/production → the `EMAIL` binding.
+ * The email consumer sends through it (and the outbox's fallback).
+ */
+export function getEmailSender(): EmailSender {
   const { kv, vars } = siteEnv();
   return createEmailSender({
     binding: env.EMAIL,
     environment: vars.ENVIRONMENT,
     kv,
   });
+}
+
+/** `From`, `Reply-To` and the site (the header logo) of every email. */
+export function emailDeliveryEnv(): EmailDeliveryEnv {
+  const { vars } = siteEnv();
+  return {
+    EMAIL_FROM: vars.EMAIL_FROM,
+    EMAIL_REPLY_TO: vars.EMAIL_REPLY_TO,
+    SITE_URL: vars.SITE_URL,
+  };
+}
+
+/**
+ * Where the site's emails go (phase 6 ruling 8): `EMAIL_QUEUE`, which the
+ * email consumer (`worker/email-queue.ts`) renders and sends from. Every
+ * env binds it; without it (a broken config) emails are rendered and sent
+ * inline, as before the queue, and that is logged.
+ */
+function getEmailOutbox(): EmailOutbox {
+  if (env.EMAIL_QUEUE) {
+    return new QueueEmailOutbox(env.EMAIL_QUEUE);
+  }
+  console.warn(
+    "[site] The EMAIL_QUEUE binding is missing: emails are sent inline (DirectEmailOutbox)"
+  );
+  return new DirectEmailOutbox(getEmailSender(), emailDeliveryEnv());
 }
 
 const instances: { open?: Auth; signInOnly?: Auth } = {};
@@ -83,8 +119,8 @@ export function getAuth({
     auth = createAuth({
       baseURL: vars.SITE_URL,
       db: createDb(db),
-      email: getEmailSender(),
       env: authEnv,
+      outbox: getEmailOutbox(),
       signInOnly,
       waitUntil,
     });

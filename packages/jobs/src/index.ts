@@ -8,6 +8,16 @@
 
 export { CRON, type CronName, cronName } from "./cron";
 export {
+  EMAIL_SENT_TTL_SECONDS,
+  type EmailConsumerDeps,
+  type EmailDecision,
+  type EmailDelivery,
+  type EmailSentStore,
+  emailRetryDelaySeconds,
+  emailSentKey,
+  processEmailMessage,
+} from "./email-consumer";
+export {
   EMAIL_IDEMPOTENCY_KEY_MAX,
   EMAIL_MESSAGE_MAX_BYTES,
   type EmailMessage,

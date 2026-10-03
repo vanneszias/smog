@@ -9,7 +9,6 @@ import {
   type EmailMessage,
   MemoryEmailSender,
   readDevMail,
-  sendEmail,
 } from "../src";
 
 function message(overrides: Partial<EmailMessage> = {}): EmailMessage {
@@ -128,27 +127,5 @@ describe("createEmailSender", () => {
     expect(() =>
       createEmailSender({ environment: "production", kv: env.KV })
     ).toThrow("EMAIL");
-  });
-});
-
-describe("sendEmail", () => {
-  it("renders the template in the locale and sends it", async () => {
-    const sender = new MemoryEmailSender();
-
-    await sendEmail(sender, {
-      from: "SMOG & Co <noreply@smog.vlaanderen>",
-      locale: "en",
-      props: { code: "123456", minutes: 5 },
-      replyTo: "info@smog.vlaanderen",
-      template: "auth/otp",
-      to: "a@b.test",
-    });
-
-    expect(sender.sent).toHaveLength(1);
-    const [sent] = sender.sent;
-    expect(sent?.subject).toBe("123456 is your SMOG & Co code");
-    expect(sent?.replyTo).toBe("info@smog.vlaanderen");
-    expect(sent?.to).toBe("a@b.test");
-    expect(sent?.text).toContain("123456");
   });
 });

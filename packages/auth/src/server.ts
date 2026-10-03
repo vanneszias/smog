@@ -10,11 +10,11 @@ import {
 import type { Db } from "@smog/db/client";
 import {
   APP_NAME,
-  type EmailSender,
+  type EmailOutbox,
   type EmailTemplateId,
   type EmailTemplateProps,
   emailLocale,
-  sendEmail,
+  type OutboxEmail,
 } from "@smog/email";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -92,8 +92,13 @@ export interface CreateAuthOptions {
   /** The site origin, e.g. `http://localhost:5173` (`SITE_URL`). */
   baseURL: string;
   db: Db;
-  email: EmailSender;
   env: AuthEnv;
+  /**
+   * Where the auth emails and the welcome email go (phase 6 ruling 8): the
+   * site's `QueueEmailOutbox` on `EMAIL_QUEUE`, so they are rendered and
+   * sent by the email consumer; tests use `DirectEmailOutbox`.
+   */
+  outbox: EmailOutbox;
   /**
    * Existing users only (the site during maintenance): every sign-up is
    * off, no user is ever created (the create hook refuses), a code or a
@@ -101,7 +106,7 @@ export interface CreateAuthOptions {
    * code endpoint sends sign-in codes only.
    */
   signInOnly?: boolean | undefined;
-  /** Runs email sends after the response (`waitUntil`); awaited when unset. */
+  /** Runs the email hand-offs after the response (`waitUntil`); awaited when unset. */
   waitUntil?: ((promise: Promise<unknown>) => void) | undefined;
 }
 
@@ -269,23 +274,83 @@ export function createAuth(options: CreateAuthOptions) {
     return (await findAccount(email))?.locale ?? null;
   }
 
+  /**
+   * Hands an auth email to the outbox. No idempotency key: every code and
+   * link is new. `From`/`Reply-To` are the consumer's, from env.
+   */
   async function send<Id extends EmailTemplateId>(
     template: Id,
     to: string,
     props: EmailTemplateProps[Id],
     context: { locale: string | null; request?: Request | undefined }
   ): Promise<void> {
-    await sendEmail(options.email, {
-      from: env.EMAIL_FROM,
+    await options.outbox.send({
       locale: emailLocale({
         request: context.request,
         userLocale: context.locale,
       }),
       props,
-      replyTo: env.EMAIL_REPLY_TO,
       template,
       to,
+    } as OutboxEmail);
+  }
+
+  /**
+   * The welcome email (E-01, ruling 8): once per account, when its address
+   * becomes verified, keyed `welcome:<userId>`. A failure is logged and
+   * never fails the sign-up or the verification: the account is fine
+   * without it. The sign-in-only server never sends it.
+   */
+  async function welcome(
+    target: { email: string; id: string; locale?: unknown; name: string },
+    request: Request | undefined
+  ): Promise<void> {
+    if (signInOnly) {
+      return;
+    }
+    try {
+      await options.outbox.send({
+        idempotencyKey: `welcome:${target.id}`,
+        locale: emailLocale({ request, userLocale: localeOf(target) }),
+        props: { name: target.name || null, url: env.SITE_URL },
+        template: "transactional/welcome",
+        to: target.email,
+      });
+    } catch (error) {
+      console.error("[auth] Failed to queue the welcome email:", error);
+    }
+  }
+
+  /**
+   * Better Auth's update hooks see the change (`before`) and the updated
+   * row (`after`), never the row before. `before` decides whether this
+   * update verifies an unverified address and leaves the answer for
+   * `after` under the endpoint context both share; an update outside an
+   * endpoint (our own server code) never verifies an address.
+   */
+  const verifying = new WeakMap<object, number>();
+
+  /** Whether `data` turns an unverified address into a verified one. */
+  async function becomesVerified(data: {
+    email?: unknown;
+    emailVerified?: unknown;
+  }): Promise<boolean> {
+    if (data.emailVerified !== true) {
+      return false;
+    }
+    if (typeof data.email !== "string") {
+      // Every Better Auth path that sets only `emailVerified` checks first
+      // that the address is unverified (link, magic link, code reset,
+      // social sign-in over an unproven account, account linking).
+      return true;
+    }
+    // A code verification writes the address too: a verified one is a
+    // repeat, and an address no user has yet is an email change.
+    const current = await db.query.user.findFirst({
+      columns: { emailVerified: true },
+      where: eq(user.email, data.email.toLowerCase()),
     });
+    return current?.emailVerified === false;
   }
 
   return betterAuth({
@@ -316,6 +381,13 @@ export function createAuth(options: CreateAuthOptions) {
     databaseHooks: {
       user: {
         create: {
+          // A code, magic-link or social sign-up arrives verified. Rows
+          // inserted by SQL (the seed, the phase 8 import) run no hook.
+          after: async (created, context) => {
+            if (created.emailVerified) {
+              await welcome(created, context?.request);
+            }
+          },
           // biome-ignore lint/suspicious/useAwait: Better Auth's hook signature is async.
           before: async (data, context) => {
             if (signInOnly) {
@@ -325,6 +397,21 @@ export function createAuth(options: CreateAuthOptions) {
               });
             }
             return { data: newUserProfile(data, context?.path) };
+          },
+        },
+        update: {
+          after: async (updated, context) => {
+            const pending = context ? (verifying.get(context) ?? 0) : 0;
+            if (!(context && pending > 0 && updated.emailVerified)) {
+              return;
+            }
+            verifying.set(context, pending - 1);
+            await welcome(updated, context.request);
+          },
+          before: async (data, context) => {
+            if (context && (await becomesVerified(data))) {
+              verifying.set(context, (verifying.get(context) ?? 0) + 1);
+            }
           },
         },
       },

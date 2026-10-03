@@ -30,7 +30,11 @@
   // `EMAIL_QUEUE` (smog-<env>-email) and `EVENTS_QUEUE`
   // (smog-<env>-sponsorship-events), each consumed by this Worker with a
   // DLQ (smog-<env>-…-dlq, no consumer: checked by hand, kept 4 days), and
-  // the four Cron Triggers. `scripts/ensure-cloudflare-resources.ts` creates
+  // the four Cron Triggers. Every email (auth codes and links too) goes
+  // through EMAIL_QUEUE; its consumer waits at most 1 s for a batch
+  // (`max_batch_timeout`), so a sign-in code still arrives in seconds, and
+  // sends with this env's EMAIL binding and EMAIL_FROM / EMAIL_REPLY_TO
+  // (dev: the KV mailbox at /dev/mail). `scripts/ensure-cloudflare-resources.ts` creates
   // the queues and the bucket (and its CORS) in the deploy job before the
   // deploy; `release-config-check` holds the names to this pattern. Vite
   // dev and the tests emulate all of them locally. New secrets
@@ -62,6 +66,7 @@
           {
             "queue": "smog-dev-email",
             "max_batch_size": 10,
+            "max_batch_timeout": 1,
             "max_retries": 5,
             "retry_delay": 30,
             "dead_letter_queue": "smog-dev-email-dlq"
@@ -143,6 +148,7 @@
           {
             "queue": "smog-staging-email",
             "max_batch_size": 10,
+            "max_batch_timeout": 1,
             "max_retries": 5,
             "retry_delay": 30,
             "dead_letter_queue": "smog-staging-email-dlq"
@@ -231,6 +237,7 @@
           {
             "queue": "smog-production-email",
             "max_batch_size": 10,
+            "max_batch_timeout": 1,
             "max_retries": 5,
             "retry_delay": 30,
             "dead_letter_queue": "smog-production-email-dlq"

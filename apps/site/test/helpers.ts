@@ -23,8 +23,9 @@ export async function mailTo(email: string): Promise<DevMailMessage[]> {
 
 /**
  * Waits until the dev mailbox has a message to `email` (that `match`
- * accepts) and returns every such message. Auth emails are rendered and
- * sent in `waitUntil`, after the response, and a React Email render can
+ * accepts) and returns every such message. Auth emails are queued in
+ * `waitUntil`, after the response, then rendered and sent by the email
+ * queue's consumer (a batch waits up to 1 s), and a React Email render can
  * take seconds under load, so this polls against a deadline (in workerd
  * `Date.now()` advances across I/O) and, on timeout, throws with what the
  * mailbox held.
@@ -95,5 +96,9 @@ export async function signedUp(
     .getSetCookie()
     .map((value) => value.split(";")[0])
     .join("; ");
+  // Verifying queues the welcome email (in the account's language): wait
+  // for it, so a test that counts this address's mail later starts from a
+  // settled mailbox.
+  await waitForMail(email, { match: ({ text }) => !VERIFY_LINK.test(text) });
   return { cookie, email };
 }

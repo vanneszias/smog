@@ -35,10 +35,16 @@ export function uniqueEmail(): string {
   return `e2e-${crypto.randomUUID()}@smog.test`;
 }
 
-/** The newest dev mail to `email` (auth mails are sent after the response). */
+/**
+ * The newest dev mail to `email` that `match` accepts. Auth mails are
+ * queued after the response and sent by the email queue's consumer, and a
+ * verified address also gets the welcome email, so the newest mail is not
+ * always the one a test waits for.
+ */
 async function latestMail(
   request: APIRequestContext,
-  email: string
+  email: string,
+  match: (message: DevMail["messages"][number]) => boolean
 ): Promise<DevMail["messages"][number]> {
   let found: DevMail["messages"][number] | undefined;
   await expect
@@ -46,7 +52,9 @@ async function latestMail(
       async () => {
         const response = await request.get("/dev/mail.json");
         const { messages } = (await response.json()) as DevMail;
-        found = messages.find((message) => message.to === email);
+        found = messages.find(
+          (message) => message.to === email && match(message)
+        );
         return Boolean(found);
       },
       { timeout: 15_000 }
@@ -62,7 +70,9 @@ export async function otpFor(
   request: APIRequestContext,
   email: string
 ): Promise<string> {
-  const mail = await latestMail(request, email);
+  const mail = await latestMail(request, email, ({ subject }) =>
+    OTP.test(subject)
+  );
   const code = mail.subject.match(OTP)?.[1];
   if (!code) {
     throw new Error(`no code in "${mail.subject}"`);
@@ -74,7 +84,9 @@ export async function verifyLinkFor(
   request: APIRequestContext,
   email: string
 ): Promise<string> {
-  const mail = await latestMail(request, email);
+  const mail = await latestMail(request, email, ({ text }) =>
+    VERIFY_LINK.test(text)
+  );
   const link = mail.text.match(VERIFY_LINK)?.[0];
   if (!link) {
     throw new Error("no verification link in the mail");

@@ -387,7 +387,13 @@ export function checkWranglerConfig(source: string): string[] {
 
 /** The consumer settings of ruling 8, per queue kind. */
 const CONSUMER_SETTINGS = {
-  email: { max_batch_size: 10, max_retries: 5, retry_delay: 30 },
+  // `max_batch_timeout` 1: a sign-in code waits at most 1 s for its batch.
+  email: {
+    max_batch_size: 10,
+    max_batch_timeout: 1,
+    max_retries: 5,
+    retry_delay: 30,
+  },
   "sponsorship-events": {
     max_batch_size: 10,
     max_retries: 10,

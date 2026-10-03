@@ -59,8 +59,8 @@ describe("email + password", () => {
     expect(ctx.email.sent).toHaveLength(1);
     const [message] = ctx.email.sent;
     expect(message?.to).toBe(email);
-    expect(message?.from).toBe(ctx.authEnv.EMAIL_FROM);
-    expect(message?.replyTo).toBe(ctx.authEnv.EMAIL_REPLY_TO);
+    expect(message?.from).toBe("SMOG & Co <noreply@smog.vlaanderen>");
+    expect(message?.replyTo).toBe("info@smog.vlaanderen");
     expect(message?.subject).toBe("Bevestig je e-mailadres");
     expect(linkIn(message?.text)).toContain("/api/auth/verify-email?token=");
 
