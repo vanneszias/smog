@@ -596,7 +596,7 @@
         "preheader": "Your sponsorship ends on {{date}}.",
         "heading": "Your sponsorship ends soon",
         "body": "Your sponsorship of {{gesture}} ends on {{date}}, within 30 days. After that the gesture shows its original video again.",
-        "renew": "Would you like to sponsor for another year? Renew with the button below. You pay the same amount as last year.",
+        "renew": "Would you like to sponsor for another year? Renew with the button below. A renewal is a new payment for one more year, at the price then shown.",
         "button": "Renew sponsorship",
         "footer": "The link works until your sponsorship ends. Don't want to renew? Then you don't need to do anything."
       },

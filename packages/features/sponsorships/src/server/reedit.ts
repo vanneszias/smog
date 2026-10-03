@@ -16,7 +16,7 @@
 import type { Db } from "@smog/db/client";
 import { enqueueOutputs } from "@smog/jobs";
 import type { RpcEnv } from "@smog/rpc";
-import { claimLogo, deleteLogo } from "./logo";
+import { claimLogo, deleteLogo, isLogoInUse } from "./logo";
 import type { SponsorshipsImplementer } from "./procedure";
 import { invalidState, requireOpen, tokenInvalid } from "./refusals";
 import { createRenderJobStatements } from "./render";
@@ -54,6 +54,7 @@ interface NextLogo {
  * not a valid logo.
  */
 async function nextLogo(
+  db: Db,
   sponsorship: LinkSponsorship,
   upload: string | undefined,
   media: RpcEnv["MEDIA"]
@@ -67,6 +68,14 @@ async function nextLogo(
   if (!media) {
     console.error(
       "[sponsorships] The MEDIA binding is missing: the re-edit logo cannot be verified"
+    );
+    throw invalidState("logoInvalid");
+  }
+  if (await isLogoInUse(db, upload)) {
+    // Another sponsorship's logo (fix wave, payments M-4): never claimed
+    // or deleted here.
+    console.warn(
+      `[sponsorships] Refused the logo ${upload} for a re-edit: a sponsorship uses it`
     );
     throw invalidState("logoInvalid");
   }
@@ -88,7 +97,7 @@ async function submitReedit(
   const now = new Date();
   const link = await openReedit(db, input.token, now);
   const { sponsorship } = link;
-  const logo = await nextLogo(sponsorship, input.logoKey, env.MEDIA);
+  const logo = await nextLogo(db, sponsorship, input.logoKey, env.MEDIA);
   const discardClaim = async () => {
     if (env.MEDIA && logo.claimed) {
       await deleteLogo(env.MEDIA, logo.claimed);

@@ -7,7 +7,10 @@
  * "provider" }`), so the gestures are free again; a renewal payment is
  * only marked `failed`. The caller answers `INVALID_STATE paymentProvider`.
  * A crash between the two leaves an `open` payment without `mollie_id`,
- * which the 24 h stale sweep cancels.
+ * which the 24 h stale sweep cancels. The compensation never runs on a
+ * payment that has a `mollie_id`: a concurrent call (a retry with the same
+ * `checkoutId`) created it at Mollie, and its checkout is the answer
+ * (Phase 6 fix wave, payments M-3; the D-STALE rule from the other side).
  */
 import type { Locale } from "@smog/config/constants";
 import {
@@ -15,20 +18,24 @@ import {
   type WorkerEnv,
 } from "@smog/config/env/worker";
 import {
+  failWhen,
   type PaymentKind,
   payment,
   paymentItem,
   type Statement,
   sponsorship,
+  toGuardFailure,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { createI18n } from "@smog/i18n";
 import { createPayment, type MollieClient } from "@smog/payments";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { paymentGuard } from "./statements";
 import { transitionStatements } from "./transition";
 
 const PAYMENT_ID_TAKEN = "UNIQUE constraint failed: payment.id";
+/** The compensation's guard: the payment exists at Mollie already. */
+const AT_MOLLIE_GUARD = "payment-at-mollie";
 
 /**
  * Whether a batch failed because the payment id (the client's
@@ -115,6 +122,11 @@ function compensation(
   const paymentId = input.payment.id;
   return [
     paymentGuard(db, paymentId, ["open"]),
+    failWhen(
+      db,
+      AT_MOLLIE_GUARD,
+      sql`EXISTS (SELECT 1 FROM ${payment} WHERE ${payment.id} = ${paymentId} AND ${payment.mollieId} IS NOT NULL)`
+    ),
     db
       .update(payment)
       .set({ status: "failed", updatedAt: now })
@@ -136,19 +148,46 @@ function compensation(
   ];
 }
 
+/** The Mollie payment another call stored for ours, if any. */
+async function storedAtMollie(
+  db: Db,
+  paymentId: string
+): Promise<{ checkoutUrl: string; mollieId: string } | null> {
+  const [row] = await db
+    .select({ checkoutUrl: payment.checkoutUrl, mollieId: payment.mollieId })
+    .from(payment)
+    .where(eq(payment.id, paymentId))
+    .limit(1);
+  return row?.checkoutUrl && row.mollieId
+    ? { checkoutUrl: row.checkoutUrl, mollieId: row.mollieId }
+    : null;
+}
+
+/**
+ * Runs the compensation; answers the Mollie payment a concurrent call
+ * stored instead, when there is one (then nothing is compensated).
+ */
 async function compensate(
   db: Db,
   input: StartMolliePaymentInput
-): Promise<void> {
+): Promise<{ checkoutUrl: string; mollieId: string } | null> {
   const statuses = await db
     .select({ sponsorshipId: sponsorship.id, status: sponsorship.status })
     .from(paymentItem)
     .innerJoin(sponsorship, eq(sponsorship.id, paymentItem.sponsorshipId))
     .where(eq(paymentItem.paymentId, input.payment.id));
   const [first, ...rest] = compensation(db, input, statuses);
-  if (first) {
-    await db.batch([first, ...rest]);
+  try {
+    if (first) {
+      await db.batch([first, ...rest]);
+    }
+  } catch (error) {
+    if (toGuardFailure(error)?.guard !== AT_MOLLIE_GUARD) {
+      throw error;
+    }
+    return await storedAtMollie(db, input.payment.id);
   }
+  return null;
 }
 
 /**
@@ -180,7 +219,13 @@ export async function startMolliePayment(
       error
     );
     try {
-      await compensate(db, input);
+      const stored = await compensate(db, input);
+      if (stored) {
+        console.warn(
+          `[sponsorships] Payment ${id} was created at Mollie by a concurrent call; answering its checkout`
+        );
+        return stored;
+      }
     } catch (compensationError) {
       // The stale sweep cancels the open payment within 24 h.
       console.error(

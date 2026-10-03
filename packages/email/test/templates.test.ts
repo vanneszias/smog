@@ -209,6 +209,24 @@ describe("money and dates per locale", () => {
     expect(plain(email.text)).toContain(BRUSSELS_DATE.nl);
     expect(email.text).toContain(url);
   });
+
+  it.each([
+    ["nl", "tegen de dan getoonde prijs", "hetzelfde bedrag"],
+    ["en", "at the price then shown", "same amount"],
+    ["fr", "au prix alors indiqué", "même montant"],
+  ] as const)(
+    "renewal_reminder promises the price then shown, as the terms do, never last year's amount (%s; fix wave, jobs M-5)",
+    async (locale, promise, old) => {
+      const email = await renderEmail(
+        "transactional/renewal-reminder",
+        EMAIL_SAMPLES["transactional/renewal-reminder"],
+        locale
+      );
+      const text = plain(email.text);
+      expect(text).toContain(promise);
+      expect(text).not.toContain(old);
+    }
+  );
 });
 
 describe("the missing-gesture fallback (bug 28)", () => {

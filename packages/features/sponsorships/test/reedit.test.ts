@@ -287,6 +287,24 @@ describe("sponsorships.reedit.submit", () => {
     expect(messages).toEqual([]);
   });
 
+  it("refuses another sponsorship's logo key and leaves that logo alone (fix wave, payments M-4)", async () => {
+    const { id, token } = await changesRequested();
+    const other = await changesRequested();
+    const theirs = await upload();
+    await db
+      .update(sponsorship)
+      .set({ logoKey: theirs })
+      .where(eq(sponsorship.id, other.id));
+
+    expect(
+      await failure(
+        reedit("submit", { displayName: "Acme", logoKey: theirs, token })
+      )
+    ).toEqual({ code: "INVALID_STATE", data: { reason: "logoInvalid" } });
+    expect(await env.MEDIA.head(theirs)).not.toBeNull();
+    expect((await sponsorshipRow(db, id)).status).toBe("changes_requested");
+  });
+
   it("takes a new logo when one was paid for but the purge released it (I-1)", async () => {
     const { id, token } = await changesRequested();
     await db

@@ -1,4 +1,3 @@
-import { env as bindings } from "cloudflare:workers";
 import { createDb, type Db } from "@smog/db/client";
 import { enqueueOutputs, type JobQueues } from "@smog/jobs";
 import {
@@ -9,7 +8,11 @@ import {
 } from "@smog/payments";
 import { MOLLIE_PAYMENT_ID } from "@smog/payments/schema";
 import { checkRateLimit } from "@smog/rpc";
-import { settlePayment } from "@smog/sponsorships/server";
+import {
+  markFanout,
+  recentFanout,
+  settlePayment,
+} from "@smog/sponsorships/server";
 import { readCappedBody } from "@smog/utils";
 import { siteEnv } from "./auth";
 
@@ -35,15 +38,17 @@ import { siteEnv } from "./auth";
  * throttled; past it the answer is 429.
  *
  * A verified id is never limited, so its payer could replay the webhook at
- * will: an `already` outcome re-enqueues `payment.settled` at most once a
- * minute per payment (KV `mollie:fanout:<paymentId>`, written only after
- * a successful enqueue, so a 503's retry always resends).
+ * will: an `already` outcome skips `payment.settled` while the payment's
+ * fan-out marker (`markFanout`, KV `mollie:fanout:<paymentId>`, 5 min) is
+ * set, which it writes after its own `already` enqueue and the return
+ * page's poll writes after it settled the payment (Phase 6 fix wave,
+ * payments M-2). The marker is written only after a successful enqueue,
+ * so a 503's retry always resends. The admin emails (`notify`, keyed) are
+ * always enqueued, so a chargeback is never dropped (fix wave, M-1).
  */
 
 /** Mollie sends one short form field; the old handler's JSON fits too. */
 const MOLLIE_WEBHOOK_MAX_BYTES = 4096;
-/** KV's shortest TTL: one `already` fan-out per payment per minute. */
-const FANOUT_MARKER_TTL_S = 60;
 
 export interface MollieWebhookDeps {
   db: Db;
@@ -78,28 +83,6 @@ function paymentId(bytes: Uint8Array, contentType: string): string | null {
     id = new URLSearchParams(text).get("id");
   }
   return typeof id === "string" && MOLLIE_PAYMENT_ID.test(id) ? id : null;
-}
-
-function fanoutKey(ourPaymentId: string): string {
-  return `mollie:fanout:${ourPaymentId}`;
-}
-
-/** Whether an `already` fan-out for this payment went out in the last minute. */
-async function recentFanout(kv: KVNamespace, id: string): Promise<boolean> {
-  try {
-    return (await kv.get(fanoutKey(id))) !== null;
-  } catch (error) {
-    console.error("[payments] Failed to read the fan-out marker:", error);
-    return false;
-  }
-}
-
-async function markFanout(kv: KVNamespace, id: string): Promise<void> {
-  try {
-    await kv.put(fanoutKey(id), "1", { expirationTtl: FANOUT_MARKER_TTL_S });
-  } catch (error) {
-    console.error("[payments] Failed to write the fan-out marker:", error);
-  }
 }
 
 export async function handleMollieWebhook(
@@ -153,14 +136,18 @@ export async function handleMollieWebhook(
     return answer(200, "NOT_OURS");
   }
   const already = result.outcome === "already";
-  if (already && (await recentFanout(deps.kv, result.paymentId))) {
+  const throttled = already && (await recentFanout(deps.kv, result.paymentId));
+  if (throttled) {
     console.log(
-      `[payments] Mollie webhook ${id}: already, fanned out in the last minute`
+      `[payments] Mollie webhook ${id}: already, fanned out in the last 5 minutes`
     );
-    return answer(200, "OK");
   }
   try {
-    await enqueueOutputs(deps.queues, result, { onFailure: "throw" });
+    await enqueueOutputs(
+      deps.queues,
+      { events: throttled ? [] : result.events, notify: result.notify },
+      { onFailure: "throw" }
+    );
   } catch (error) {
     console.error(
       `[payments] Failed to enqueue the outputs of ${id} (${result.outcome}):`,
@@ -168,7 +155,7 @@ export async function handleMollieWebhook(
     );
     return answer(503, "ENQUEUE_FAILED");
   }
-  if (already) {
+  if (already && !throttled) {
     await markFanout(deps.kv, result.paymentId);
   }
   console.log(
@@ -191,7 +178,7 @@ export async function serveMollieWebhook(
   if (legacy) {
     console.warn("[mollie] legacy webhook path used");
   }
-  const { db, kv, rateLimits, worker } = siteEnv();
+  const { bindings, db, kv, rateLimits, worker } = siteEnv();
   return await handleMollieWebhook(request, {
     db: createDb(db),
     kv,

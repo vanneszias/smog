@@ -1,4 +1,3 @@
-import { env as bindings } from "cloudflare:workers";
 import { AuthError, getSession, requireAdminUser } from "@smog/auth";
 import { checkRateLimit, isForeignRequest } from "@smog/rpc";
 import { LOGO_MAX_BYTES } from "@smog/sponsorships/schema";
@@ -38,10 +37,7 @@ function json(status: number, body: unknown): Response {
 }
 
 function media(): R2Bucket {
-  if (!bindings.MEDIA) {
-    throw new Error("[logos] The MEDIA binding is missing");
-  }
-  return bindings.MEDIA;
+  return siteEnv().bindings.MEDIA;
 }
 
 export async function handleLogoUpload(

@@ -38,7 +38,7 @@ import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { priceSponsorship } from "../schema/pricing";
 import type { CheckoutInput, CheckoutResult } from "../schema/wizard";
 import { getAvailability } from "./availability";
-import { claimLogo, deleteLogo } from "./logo";
+import { claimLogo, deleteLogo, isLogoInUse } from "./logo";
 import {
   allowFakeWebhook,
   isPaymentIdTaken,
@@ -297,6 +297,44 @@ function checkoutStatements(
   return { amountCents: price.totalCents, sponsorshipIds, statements };
 }
 
+/**
+ * The checkout's logo: `null` without one, the claimed copy's key, or the
+ * answer of a concurrent twin of this `checkoutId` that committed first
+ * and removed the upload (fix wave, payments M-7). A key a sponsorship
+ * already uses is refused and left alone (M-4).
+ */
+async function claimCheckoutLogo(
+  run: CheckoutRun,
+  input: CheckoutInput
+): Promise<string | null | CheckoutResult> {
+  const { db, env } = run;
+  if (input.logoKey === undefined) {
+    return null;
+  }
+  const media = env.MEDIA;
+  if (!media) {
+    console.error(
+      "[sponsorships] The MEDIA binding is missing: the logo cannot be verified"
+    );
+    throw invalidState("logoInvalid");
+  }
+  if (await isLogoInUse(db, input.logoKey)) {
+    console.warn(
+      `[sponsorships] Refused the logo ${input.logoKey} for a checkout: a sponsorship uses it`
+    );
+    throw invalidState("logoInvalid");
+  }
+  const logoKey = await claimLogo(media, input.logoKey);
+  if (logoKey) {
+    return logoKey;
+  }
+  const twin = await existingPayment(db, input.checkoutId);
+  if (twin) {
+    return await replay(run, input, twin);
+  }
+  throw invalidState("logoInvalid");
+}
+
 /** Runs the checkout (see the module comment). */
 async function runCheckout(
   db: Db,
@@ -326,19 +364,11 @@ async function runCheckout(
     throw gestureUnavailable(missing);
   }
   const media = env.MEDIA;
-  let logoKey: string | null = null;
-  if (input.logoKey !== undefined) {
-    if (!media) {
-      console.error(
-        "[sponsorships] The MEDIA binding is missing: the logo cannot be verified"
-      );
-      throw invalidState("logoInvalid");
-    }
-    logoKey = await claimLogo(media, input.logoKey);
-    if (!logoKey) {
-      throw invalidState("logoInvalid");
-    }
+  const claimed = await claimCheckoutLogo(run, input);
+  if (typeof claimed === "object" && claimed !== null) {
+    return claimed;
   }
+  const logoKey = claimed;
   const plan = checkoutStatements(db, input, logoKey, run.now);
   const [first, ...rest] = plan.statements;
   try {

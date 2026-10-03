@@ -2,10 +2,12 @@ import { describe, expect, test } from "bun:test";
 import {
   ENVIRONMENTS,
   MOLLIE_DEFAULT_API_URL,
+  parseWorkerBindings,
   parseWorkerEnv,
   parseWorkerVars,
   publicAuthConfig,
   REQUIRED_WORKER_CONFIG,
+  WORKER_BINDINGS,
   workerEnvSchema,
   workerSecretsSchema,
   workerVarsSchema,
@@ -378,5 +380,35 @@ describe("REQUIRED_WORKER_CONFIG (ruling 12)", () => {
       }
     }
     expect(workerEnvSchema).toBeDefined();
+  });
+});
+
+const ALL_BINDINGS = /EMAIL_QUEUE[\s\S]*EVENTS_QUEUE[\s\S]*MEDIA/;
+const QUEUE_AND_BUCKET = /EMAIL_QUEUE[\s\S]*MEDIA/;
+
+describe("parseWorkerBindings (Phase 6 fix wave, jobs M-4)", () => {
+  const queue = { send: () => Promise.resolve() };
+  const bucket = {
+    delete: () => Promise.resolve(),
+    get: () => Promise.resolve(null),
+    head: () => Promise.resolve(null),
+    list: () => Promise.resolve({ objects: [] }),
+    put: () => Promise.resolve(null),
+  };
+
+  test("answers the queue and R2 bindings as given", () => {
+    const env = { EMAIL_QUEUE: queue, EVENTS_QUEUE: queue, MEDIA: bucket };
+    const bindings = parseWorkerBindings(env);
+    expect(bindings.EMAIL_QUEUE).toBe(queue);
+    expect(bindings.EVENTS_QUEUE).toBe(queue);
+    expect(bindings.MEDIA).toBe(bucket);
+    expect(WORKER_BINDINGS).toEqual(["EMAIL_QUEUE", "EVENTS_QUEUE", "MEDIA"]);
+  });
+
+  test("names every missing or malformed binding", () => {
+    expect(() => parseWorkerBindings({})).toThrow(ALL_BINDINGS);
+    expect(() =>
+      parseWorkerBindings({ EMAIL_QUEUE: {}, EVENTS_QUEUE: queue, MEDIA: {} })
+    ).toThrow(QUEUE_AND_BUCKET);
   });
 });

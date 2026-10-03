@@ -10,7 +10,9 @@
  *   sponsorship, and `admin_new_sponsorship` per admin;
  * - a renewal: `payment_confirmed` with the new end.
  * Every email has its idempotency key (ruling 8) and goes out only within
- * 6 days of `paid_at` (`EMAIL_WINDOW_MS`). Only items past payment
+ * 6 days of when we first applied the payment (`EMAIL_WINDOW_MS` from its
+ * first settling event, else `paid_at`; fix wave, jobs I-1: Mollie's
+ * `paidAt` may be days older). Only items past payment
  * count (`rendering` … `expiring`): a cancelled item, or one flagged
  * `refund_needed` (`late`/`mismatch`) for this payment, gets nothing
  * (task 3 fix round 1, I-1).
@@ -29,15 +31,10 @@ import {
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import type { OutboxEmail } from "@smog/email";
-import {
-  EMAIL_SENT_TTL_SECONDS,
-  type EventMessage,
-  type Outputs,
-} from "@smog/jobs";
+import type { EventMessage, Outputs } from "@smog/jobs";
 import { type RenderInput, renderInputSchema } from "@smog/render/contract";
-import { DAY_MS } from "@smog/utils";
 import { and, asc, eq, sql } from "drizzle-orm";
-
+import { firstSettledAt, insideEmailWindow } from "./email-window";
 import { emailAdmins } from "./recipients";
 import { createRenderJob } from "./render";
 
@@ -46,14 +43,6 @@ const PAST_PAYMENT: readonly SponsorshipStatus[] =
     (status) => status !== "awaiting_payment"
   );
 const TRAILING_SLASHES = /\/+$/;
-
-/**
- * The emails go out only while `now − paid_at` is under 6 days: inside the
- * email consumer's 7-day `email:sent:<key>` marker, with a day to spare.
- * Every real retry (the events DLQ after about 10 h, Mollie's retries for
- * about a day) falls well inside it (fix round 1, I-1).
- */
-const EMAIL_WINDOW_MS = EMAIL_SENT_TTL_SECONDS * 1000 - DAY_MS;
 
 interface ItemRow {
   amountCents: number;
@@ -201,7 +190,8 @@ export async function handlePaymentSettled(
     return { events: [], notify: [] };
   }
   const events = await renderRequests(db, items, now);
-  if (row.paidAt && now.getTime() - row.paidAt.getTime() >= EMAIL_WINDOW_MS) {
+  const since = (await firstSettledAt(db, paymentId)) ?? row.paidAt;
+  if (since && !insideEmailWindow(since, now)) {
     // A refund or chargeback weeks later settles `already` and fans out
     // again: the jobs are re-checked, but the emails were sent long ago,
     // and their KV markers are gone.

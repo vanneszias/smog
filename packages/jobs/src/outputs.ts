@@ -11,6 +11,7 @@ import {
   type EnqueueOptions,
   enqueueEmail,
   enqueueEvent,
+  InvalidMessageError,
   type QueueProducer,
 } from "./producers";
 
@@ -23,6 +24,23 @@ export interface JobQueues {
 export interface Outputs {
   events: readonly EventMessage[];
   notify: readonly OutboxEmail[];
+}
+
+/** One email; `false` when it was dropped as invalid or the queue stayed down. */
+async function enqueueValidEmail(
+  queue: QueueProducer<EmailMessage>,
+  message: OutboxEmail,
+  options: EnqueueOptions
+): Promise<boolean> {
+  try {
+    return (await enqueueEmail(queue, message, options)) !== null;
+  } catch (error) {
+    if (error instanceof InvalidMessageError) {
+      console.error(`[jobs] Dropped an invalid ${error.what} message`);
+      return false;
+    }
+    throw error;
+  }
 }
 
 function missing(name: string, onFailure: EnqueueOptions["onFailure"]) {
@@ -39,6 +57,10 @@ function missing(name: string, onFailure: EnqueueOptions["onFailure"]) {
  * consumer) a queue that stays down, or is not bound, throws, so the
  * caller answers 503 or retries and re-derives the outputs; by default it
  * is logged and the answer is `false` (admin actions, crons, polls).
+ * An email that fails its schema (an admin with an address `z.email()`
+ * refuses, say) is dropped and logged in either mode, and the others still
+ * go out: retrying cannot fix it, and one bad address must not block the
+ * rest of a fan-out (bug 30; Phase 6 fix wave, jobs M-1).
  */
 export async function enqueueOutputs(
   queues: JobQueues,
@@ -64,7 +86,7 @@ export async function enqueueOutputs(
   if (email) {
     for (const message of outputs.notify) {
       // biome-ignore lint/performance/noAwaitInLoops: in order, each with its own retries.
-      all = (await enqueueEmail(email, message, options)) !== null && all;
+      all = (await enqueueValidEmail(email, message, options)) && all;
     }
   }
   return all;

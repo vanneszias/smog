@@ -1,4 +1,3 @@
-import { env as bindings } from "cloudflare:workers";
 import { createDb, type Db } from "@smog/db/client";
 import {
   enqueueOutputs,
@@ -92,7 +91,7 @@ export async function handleEventsBatch(
   _env: Env,
   _ctx: ExecutionContext
 ): Promise<void> {
-  const { db: d1, vars } = siteEnv();
+  const { bindings, db: d1, vars } = siteEnv();
   const db = createDb(d1);
   const deps: EventsDeps = {
     db,

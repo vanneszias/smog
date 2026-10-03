@@ -2,7 +2,7 @@ import { exports } from "cloudflare:workers";
 import { MAINTENANCE_KV_KEY } from "@smog/config/maintenance";
 import { createPayment } from "@smog/payments";
 import { createFakeMollie, type FakeMollie } from "@smog/payments/testing";
-import { renderStarterFor } from "@smog/sponsorships/server";
+import { markFanout, renderStarterFor } from "@smog/sponsorships/server";
 import { DAY_MS } from "@smog/utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -257,6 +257,40 @@ describe("the Mollie webhook (ruling 2)", () => {
     await kv().delete(`mollie:fanout:${checkout.paymentId}`);
     await deliver(form(checkout.mollieId));
     expect(queues.events.messages).toHaveLength(3);
+  });
+
+  it("a throttled `already` still enqueues its admin emails: a chargeback is told (fix wave, payments M-1)", async () => {
+    const admin = await makeAdmin();
+    const checkout = await checkoutVia(fake, { count: 1 });
+    fake.setStatus(checkout.mollieId, "paid");
+    await deliver(form(checkout.mollieId));
+    // A replay marks the fan-out...
+    await deliver(form(checkout.mollieId));
+    expect(queues.events.messages).toHaveLength(2);
+    // ...and the chargeback webhook within the minute is `already` too.
+    fake.chargeback(checkout.mollieId, 5000);
+    expect(await deliver(form(checkout.mollieId))).toEqual({
+      code: "OK",
+      status: 200,
+    });
+    expect(queues.events.messages).toHaveLength(2);
+    expect(queues.email.messages).toContainEqual(
+      expect.objectContaining({
+        idempotencyKey: `admin_chargeback:${checkout.paymentId}:5000:${admin.id}`,
+        to: admin.email,
+      })
+    );
+  });
+
+  it("an `already` right after the return page's poll fanned out sends no second payment.settled (fix wave, payments M-2)", async () => {
+    const checkout = await checkoutVia(fake, { count: 1 });
+    fake.setStatus(checkout.mollieId, "paid");
+    await deliver(form(checkout.mollieId));
+    expect(queues.events.messages).toHaveLength(1);
+    // What `sponsorships.paymentStatus` writes after its own enqueue.
+    await markFanout(kv(), checkout.paymentId);
+    await deliver(form(checkout.mollieId));
+    expect(queues.events.messages).toHaveLength(1);
   });
 
   it("a refund webhook 30 days after payment fans out again but sends no email (I-1)", async () => {

@@ -17,6 +17,7 @@ import type { RpcContext } from "@smog/rpc";
 import { asc, eq } from "drizzle-orm";
 import type { PaymentStatusView } from "../schema/status";
 import { mollieFor } from "./checkout";
+import { markFanout } from "./fanout-marker";
 
 import type { SponsorshipsDeps, SponsorshipsImplementer } from "./procedure";
 import { settlePayment } from "./settle";
@@ -76,7 +77,8 @@ async function claimRefetch(
 
 /**
  * Re-fetches an open payment and settles it, then enqueues the outputs
- * (logged on a failure: the webhook re-derives them). A Mollie failure is
+ * (logged on a failure: the webhook re-derives them) and, once they are
+ * on the queue, writes the fan-out marker (`fanout-marker.ts`). A Mollie failure is
  * logged and the stored status stands.
  */
 async function refreshOpenPayment(
@@ -98,13 +100,17 @@ async function refreshOpenPayment(
       ? await settlePayment(context.db, { now, payment: fetched })
       : null;
     if (result) {
-      await enqueueOutputs(
+      const sent = await enqueueOutputs(
         {
           email: context.env.EMAIL_QUEUE,
           events: context.env.EVENTS_QUEUE,
         },
         result
       );
+      if (sent && result.events.length > 0) {
+        // The webhook's `already` that follows sends no second fan-out (M-2).
+        await markFanout(context.kv, result.paymentId);
+      }
     }
   } catch (error) {
     console.error(

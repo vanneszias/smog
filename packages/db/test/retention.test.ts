@@ -1,12 +1,13 @@
 import { env } from "cloudflare:workers";
 import { newId } from "@smog/utils";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AUDIT_RETENTION_MS,
   auditLog,
   RETENTION_CHUNK_SIZE,
   RETENTION_MAX_CHUNKS,
   RETENTION_PURGES,
+  RetentionPurgeError,
   runRetentionPurges,
   SPONSORSHIP_TOKEN_GRACE_MS,
   session,
@@ -260,6 +261,44 @@ describe("the retention purges (ruling 9)", () => {
     // The real run deletes exactly what the dry run counted.
     expect(await runRetentionPurges(db, NOW)).toEqual(dry);
     expect(await count("audit_log")).toBe(1);
+  });
+
+  it("logs what it deleted before it rethrows a partial failure (fix wave, jobs M-6)", async () => {
+    await addAudit(new Date(NOW.getTime() - AUDIT_RETENTION_MS - 1), 2);
+    const broken = new Proxy(env.DB, {
+      get(target, key, receiver) {
+        if (key === "prepare") {
+          return (query: string) => {
+            if (query.startsWith('delete from "verification"')) {
+              throw new Error("verification is locked");
+            }
+            return target.prepare(query);
+          };
+        }
+        const value = Reflect.get(target, key, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    const failure = await runRetentionPurges(createDb(broken), NOW).catch(
+      (e: unknown) => e
+    );
+
+    expect(failure).toBeInstanceOf(RetentionPurgeError);
+    expect((failure as RetentionPurgeError).counts).toMatchObject({
+      audit_log: 2,
+      verification: 0,
+    });
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '[db] The retention purge failed part way; deleted: {"audit_log":2'
+      )
+    );
+    expect(await count("audit_log")).toBe(0);
+    error.mockRestore();
   });
 
   it("deletes nothing the second time", async () => {

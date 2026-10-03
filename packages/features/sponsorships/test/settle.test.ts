@@ -6,10 +6,11 @@ import {
   sponsorshipToken,
 } from "@smog/db";
 import { makeGesture } from "@smog/db/testing";
+import { createPayment } from "@smog/payments";
 import { createFakeMollie, type FakeMollie } from "@smog/payments/testing";
 import { DAY_MS, newId } from "@smog/utils";
 import { eq, sql } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { settleFromMollie, settlePayment } from "../src/server/settle";
 import {
   eventsOf,
@@ -501,5 +502,207 @@ describe("settlePayment's extra statements (the caller's, same batch)", () => {
       seeded.sponsorshipIds.map((id) => statusOf(db, id))
     );
     expect(statuses).toEqual(["awaiting_payment", "awaiting_payment"]);
+  });
+});
+
+describe("Phase 6 fix wave (server): the admin refund and chargeback emails", () => {
+  const at = (days: number) => new Date(NOW.getTime() + days * DAY_MS);
+
+  async function settleAt(mollieId: string, now: Date) {
+    return await settlePayment(db, {
+      now,
+      payment: await refetch(fake, mollieId),
+    });
+  }
+
+  /** A payment flagged refund_needed at NOW (paid twice: by hand, then Mollie). */
+  async function flaggedDouble() {
+    const admin = await makeAdmin(db);
+    const seeded = await seedCheckout(db, {
+      count: 1,
+      paymentStatus: "paid",
+      status: "rendering",
+    });
+    const id = seeded.sponsorshipIds[0] as string;
+    const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 5000);
+    await db.run(
+      sql`INSERT INTO sponsorship_event (id, sponsorship_id, type, actor_id, data, created_at) VALUES (${newId()}, ${id}, 'marked_paid_manually', NULL, ${JSON.stringify({ paymentId: seeded.paymentId })}, ${NOW.getTime() - DAY_MS})`
+    );
+    fake.setStatus(mollieId, "paid");
+    const first = await settleAt(mollieId, NOW);
+    expect(first?.outcome).toBe("refund_needed");
+    expect(
+      first?.notify.filter((email) => email.to === admin.email)
+    ).toHaveLength(1);
+    return { admin, mollieId, seeded };
+  }
+
+  function toAdmin(
+    result: Awaited<ReturnType<typeof settleAt>>,
+    admin: { email: string }
+  ) {
+    return result?.notify.filter((email) => email.to === admin.email) ?? [];
+  }
+
+  it("refund_needed: resent inside the 6-day window of the first flag, never after it", async () => {
+    const { admin, mollieId } = await flaggedDouble();
+    // A retry the next day still re-derives the email (the KV marker skips it).
+    expect(toAdmin(await settleAt(mollieId, at(1)), admin)).toHaveLength(1);
+    // Ten days later the KV marker is gone: nothing is told again.
+    const late = await settleAt(mollieId, at(10));
+    expect(late?.outcome).toBe("refund_needed");
+    expect(late?.notify).toEqual([]);
+  });
+
+  it("refund_needed: nothing is told once Mollie's refund covers the amount", async () => {
+    const { mollieId, seeded } = await flaggedDouble();
+    fake.refund(mollieId, 5000);
+    const refunded = await settleAt(mollieId, at(1));
+    expect(refunded?.notify).toEqual([]);
+    expect((await paymentRow(db, seeded.paymentId)).refundedCents).toBe(5000);
+    // A partial refund leaves the rest to refund: still told in the window.
+    const other = await flaggedDouble();
+    fake.refund(other.mollieId, 2000);
+    expect(
+      toAdmin(await settleAt(other.mollieId, at(1)), other.admin)
+    ).toHaveLength(1);
+  });
+
+  it("chargeback: told within 6 days of its recording, again only for a higher amount", async () => {
+    const admin = await makeAdmin(db);
+    const seeded = await seedCheckout(db, { count: 2 });
+    const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 10_000);
+    fake.setStatus(mollieId, "paid");
+    await settleAt(mollieId, NOW);
+    fake.chargeback(mollieId, 4000);
+    const key = (cents: number) =>
+      `admin_chargeback:${seeded.paymentId}:${cents}:${admin.id}`;
+    const keys = (result: Awaited<ReturnType<typeof settleAt>>) =>
+      toAdmin(result, admin).map((email) => email.idempotencyKey);
+
+    expect(keys(await settleAt(mollieId, NOW))).toEqual([key(4000)]);
+    expect(keys(await settleAt(mollieId, at(1)))).toEqual([key(4000)]);
+    // A refund webhook ten days later tells nobody again.
+    fake.refund(mollieId, 1000);
+    expect(keys(await settleAt(mollieId, at(10)))).toEqual([]);
+    // A new, higher chargeback is recorded and told.
+    fake.chargeback(mollieId, 3000);
+    expect(keys(await settleAt(mollieId, at(11)))).toEqual([key(7000)]);
+    expect(
+      (await paymentRow(db, seeded.paymentId)).chargedBackAt?.getTime()
+    ).toBe(at(11).getTime());
+    expect(keys(await settleAt(mollieId, at(20)))).toEqual([]);
+  });
+
+  it("a reversed chargeback stores Mollie's lower amount and tells nobody (M-7)", async () => {
+    const admin = await makeAdmin(db);
+    const seeded = await seedCheckout(db, { count: 1 });
+    const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 5000);
+    fake.setStatus(mollieId, "paid");
+    await settleAt(mollieId, NOW);
+    fake.chargeback(mollieId, 5000);
+    await settleAt(mollieId, NOW);
+    const stored = fake.payments.get(mollieId);
+    if (!stored) {
+      throw new Error("[test] No fake payment");
+    }
+    stored.chargedBackCents = 0;
+    const reversed = await settleAt(mollieId, at(1));
+    expect(toAdmin(reversed, admin)).toEqual([]);
+    const row = await paymentRow(db, seeded.paymentId);
+    expect(row.chargedBackCents).toBe(0);
+    expect(row.status).toBe("paid");
+    // Idempotent: the next settle writes nothing new.
+    expect(toAdmin(await settleAt(mollieId, at(1)), admin)).toEqual([]);
+    expect((await paymentRow(db, seeded.paymentId)).chargedBackCents).toBe(0);
+  });
+});
+
+describe("Phase 6 fix wave (server): settlePaid hardening", () => {
+  it("an open payment Mollie reports paid but fully refunded is not activated (M-5)", async () => {
+    await makeAdmin(db);
+    const seeded = await seedCheckout(db, { count: 1 });
+    const id = seeded.sponsorshipIds[0] as string;
+    const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 5000);
+    fake.setStatus(mollieId, "paid");
+    fake.refund(mollieId, 5000);
+    const { first, second } = await settleTwice(mollieId);
+    expect(first?.outcome).toBe("refund_needed");
+    expect(first?.events).toEqual([]);
+    expect(second?.outcome).toBe("refund_needed");
+    expect(await statusOf(db, id)).toBe("cancelled");
+    expect((await paymentRow(db, seeded.paymentId)).status).toBe(
+      "refund_needed"
+    );
+  });
+
+  it("an open payment Mollie reports paid but charged back is not activated, and the admins are told (M-5)", async () => {
+    const admin = await makeAdmin(db);
+    const seeded = await seedCheckout(db, { count: 1 });
+    const id = seeded.sponsorshipIds[0] as string;
+    const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 5000);
+    fake.setStatus(mollieId, "paid");
+    fake.chargeback(mollieId, 5000);
+    const result = await settlePayment(db, {
+      now: NOW,
+      payment: await refetch(fake, mollieId),
+    });
+    expect(result?.outcome).toBe("refund_needed");
+    expect(result?.notify.map((email) => email.idempotencyKey)).toContain(
+      `admin_chargeback:${seeded.paymentId}:5000:${admin.id}`
+    );
+    expect(await statusOf(db, id)).toBe("cancelled");
+  });
+
+  it("a second Mollie payment of ours (another id) is logged and told when paid, never settled (M-6)", async () => {
+    const admin = await makeAdmin(db);
+    const seeded = await seedCheckout(db, { count: 1 });
+    await molliePaymentFor(db, fake, seeded.paymentId, 5000);
+    const other = await createPayment(fake.mollie, {
+      amountCents: 5000,
+      description: "Sponsoring",
+      idempotencyKey: newId(),
+      locale: "nl",
+      metadata: { kind: "initial", paymentId: seeded.paymentId },
+      redirectUrl: "https://smog.example/sponsor/success",
+    });
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const open = await settlePayment(db, {
+      now: NOW,
+      payment: await refetch(fake, other.id),
+    });
+    expect(open).toMatchObject({ notify: [], outcome: "duplicate" });
+
+    fake.setStatus(other.id, "paid");
+    const paid = await settlePayment(db, {
+      now: NOW,
+      payment: await refetch(fake, other.id),
+    });
+    expect(paid?.outcome).toBe("duplicate");
+    expect(paid?.events).toEqual([]);
+    expect(paid?.notify).toContainEqual(
+      expect.objectContaining({
+        idempotencyKey: `admin_refund_needed:${seeded.paymentId}:${other.id}:${admin.id}`,
+        props: expect.objectContaining({ amountCents: 5000, reason: "double" }),
+      })
+    );
+    expect(
+      error.mock.calls.some(
+        ([line]) =>
+          String(line).includes(other.id) &&
+          String(line).includes(seeded.paymentId)
+      )
+    ).toBe(true);
+    // Ours is untouched.
+    expect((await paymentRow(db, seeded.paymentId)).status).toBe("open");
+    expect(await statusOf(db, seeded.sponsorshipIds[0] as string)).toBe(
+      "awaiting_payment"
+    );
+    error.mockRestore();
+    warn.mockRestore();
   });
 });

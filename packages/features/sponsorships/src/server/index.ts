@@ -8,6 +8,11 @@
  */
 export { getAvailability } from "./availability";
 export {
+  FANOUT_MARKER_TTL_S,
+  markFanout,
+  recentFanout,
+} from "./fanout-marker";
+export {
   type AfterCommit,
   approveStatements,
   cancelPaymentStatements,

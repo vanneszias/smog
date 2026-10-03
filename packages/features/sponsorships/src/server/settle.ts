@@ -37,6 +37,7 @@ import {
 import { DAY_MS } from "@smog/utils";
 import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import type { RefundReason } from "../schema/events";
+import { insideEmailWindow } from "./email-window";
 import { emailAdmins } from "./recipients";
 import {
   isGestureTaken,
@@ -63,6 +64,12 @@ export type SettleOutcome =
   | "refund_needed"
   /** Mollie failed, cancelled or expired our open payment. */
   | "failed"
+  /**
+   * Another Mollie payment names ours in its metadata while ours points
+   * at a different Mollie id: never applied; logged, and told when paid
+   * (Phase 6 fix wave, payments M-6).
+   */
+  | "duplicate"
   /** Nothing to change (still open, or already final). */
   | "noop";
 
@@ -93,6 +100,8 @@ export interface SettleInput {
 
 interface PaymentRow {
   amountCents: number;
+  /** When the stored chargeback amount was last raised. */
+  chargedBackAt: Date | null;
   chargedBackCents: number;
   id: string;
   kind: PaymentKind;
@@ -124,6 +133,7 @@ const PAST_PAYMENT: readonly SponsorshipStatus[] = BLOCKING.filter(
 
 const PAYMENT_COLUMNS = {
   amountCents: payment.amountCents,
+  chargedBackAt: payment.chargedBackAt,
   chargedBackCents: payment.chargedBackCents,
   id: payment.id,
   kind: payment.kind,
@@ -135,19 +145,20 @@ const PAYMENT_COLUMNS = {
 /**
  * Our payment for Mollie's: by `payment.mollie_id`, else by the
  * `metadata.paymentId` we sent (a crash may have left `mollie_id` unset),
- * or `null` when it is not ours.
+ * or `null` when it is not ours. `duplicate` when the metadata names ours
+ * but ours already points at another Mollie payment (M-6).
  */
 async function findPayment(
   db: Db,
   mollie: MolliePayment
-): Promise<PaymentRow | null> {
+): Promise<{ duplicate: boolean; row: PaymentRow } | null> {
   const [byMollieId] = await db
     .select(PAYMENT_COLUMNS)
     .from(payment)
     .where(eq(payment.mollieId, mollie.id))
     .limit(1);
   if (byMollieId) {
-    return byMollieId;
+    return { duplicate: false, row: byMollieId };
   }
   const paymentId = mollie.metadata?.paymentId;
   if (typeof paymentId !== "string") {
@@ -156,9 +167,12 @@ async function findPayment(
   const [byMetadata] = await db
     .select(PAYMENT_COLUMNS)
     .from(payment)
-    .where(and(eq(payment.id, paymentId), isNull(payment.mollieId)))
+    .where(eq(payment.id, paymentId))
     .limit(1);
-  return byMetadata ?? null;
+  if (!byMetadata) {
+    return null;
+  }
+  return { duplicate: byMetadata.mollieId !== null, row: byMetadata };
 }
 
 async function loadItems(db: Db, paymentId: string): Promise<ItemRow[]> {
@@ -339,6 +353,7 @@ async function refundOutcome(db: Db, context: Context): Promise<SettleResult> {
   const items = await loadItems(db, row.id);
   const flags = await db
     .select({
+      createdAt: sponsorshipEvent.createdAt,
       reason: sql<string>`json_extract(${sponsorshipEvent.data}, '$.reason')`,
       sponsorshipId: sponsorshipEvent.sponsorshipId,
     })
@@ -368,8 +383,45 @@ async function refundOutcome(db: Db, context: Context): Promise<SettleResult> {
     .reduce((total, item) => total + item.amountCents, 0);
   const amountCents =
     reason === "late" && share > 0 ? share : mollie.amountCents;
-  const notify = await emailAdmins(db, now, (admin) => ({
-    idempotencyKey: `admin_refund_needed:${row.id}:${admin.id}`,
+  // Told only while it is actionable and the KV marker of the first email
+  // still dedupes a resend: not once Mollie's refund covers it, and only
+  // within 6 days of the first flag (Phase 6 fix wave, payments I-1).
+  const flaggedAt = flags[0]?.createdAt ?? now;
+  const actionable =
+    mollie.amountRefundedCents < amountCents &&
+    insideEmailWindow(flaggedAt, now);
+  const notify = actionable
+    ? await refundEmails(db, now, { amountCents, mollie, reason, row })
+    : [];
+  return result(context, "refund_needed", {
+    events: items.some((item) => PAST_PAYMENT.includes(item.status))
+      ? settled(row.id)
+      : [],
+    notify,
+  });
+}
+
+/** The `admin_refund_needed` email per admin (keyed per payment and admin). */
+async function refundEmails(
+  db: Db,
+  now: Date,
+  {
+    amountCents,
+    key,
+    mollie,
+    reason,
+    row,
+  }: {
+    amountCents: number;
+    /** Distinguishes another Mollie payment of ours (M-6). */
+    key?: string;
+    mollie: MolliePayment;
+    reason: RefundReason;
+    row: PaymentRow;
+  }
+): Promise<OutboxEmail[]> {
+  return await emailAdmins(db, now, (admin) => ({
+    idempotencyKey: `admin_refund_needed:${row.id}:${key ? `${key}:` : ""}${admin.id}`,
     locale: admin.locale,
     props: {
       amountCents,
@@ -380,12 +432,6 @@ async function refundOutcome(db: Db, context: Context): Promise<SettleResult> {
     template: "transactional/admin-refund-needed",
     to: admin.email,
   }));
-  return result(context, "refund_needed", {
-    events: items.some((item) => PAST_PAYMENT.includes(item.status))
-      ? settled(row.id)
-      : [],
-    notify,
-  });
 }
 
 /**
@@ -430,11 +476,21 @@ async function flagRefund(
   return await refundOutcome(db, context);
 }
 
-/** Mollie says paid and the amount or currency differ from ours (bug 6). */
-async function settleMismatch(db: Db, context: Context): Promise<SettleResult> {
+/**
+ * Mollie says paid and the amount or currency differ from ours (bug 6),
+ * or the money went back already (`returned`: refunded or charged back
+ * before we applied it, fix wave M-5). Either way nothing is activated.
+ */
+async function settleMismatch(
+  db: Db,
+  context: Context,
+  cause: "amount" | "returned" = "amount"
+): Promise<SettleResult> {
   const { items, mollie, now, row } = context;
   console.error(
-    `[sponsorships] Mollie's amount for payment ${row.id} (${mollie.id}) is ${mollie.amountCents} ${mollie.currency}, ours is ${row.amountCents} EUR; flagged refund_needed`
+    cause === "amount"
+      ? `[sponsorships] Mollie's amount for payment ${row.id} (${mollie.id}) is ${mollie.amountCents} ${mollie.currency}, ours is ${row.amountCents} EUR; flagged refund_needed`
+      : `[sponsorships] Mollie's ${mollie.id} for payment ${row.id} is paid but ${mollie.amountRefundedCents} cents were refunded and ${mollie.amountChargedBackCents} charged back already; not applied, flagged refund_needed`
   );
   // The items of an open payment are released, so the gestures are free.
   const before =
@@ -615,6 +671,12 @@ async function settlePaid(db: Db, context: Context): Promise<SettleResult> {
   if (mollie.amountCents !== row.amountCents || mollie.currency !== "EUR") {
     return await settleMismatch(db, context);
   }
+  if (
+    mollie.amountRefundedCents + mollie.amountChargedBackCents >=
+    row.amountCents
+  ) {
+    return await settleMismatch(db, context, "returned");
+  }
   const late = LATE_STATUSES.includes(row.status);
   if (row.kind === "renewal") {
     return await settleRenewal(db, context, late ? "late_revived" : "paid");
@@ -661,9 +723,13 @@ async function settleOnce(
   db: Db,
   { extra: callerExtra = [], now, payment: mollie }: SettleInput
 ): Promise<SettleResult | null> {
-  const row = await findPayment(db, mollie);
-  if (!row) {
+  const found = await findPayment(db, mollie);
+  if (!found) {
     return null;
+  }
+  const { row } = found;
+  if (found.duplicate) {
+    return await duplicateOutcome(db, { mollie, now, row });
   }
   const extra: Statement[] = [];
   if (row.mollieId === null) {
@@ -688,10 +754,53 @@ async function settleOnce(
   extra.push(...callerExtra);
   const context: Context = { extra, items, mollie, now, row };
   const outcome = await settleStatus(db, context);
-  if (mollie.amountChargedBackCents > 0) {
-    outcome.notify.push(...(await chargebackNotify(db, context)));
-  }
+  outcome.notify.push(...(await chargebackNotify(db, context)));
   return outcome;
+}
+
+/**
+ * Another Mollie payment names ours (M-6): a create whose `mollie_id`
+ * update failed, then a retry past Mollie's idempotency window. It is never
+ * applied. When it is paid the money arrived and nothing records it, so it
+ * is logged as an error and the admins are told to refund it by hand
+ * (reason `double`, keyed by that Mollie id), within 6 days of Mollie's
+ * `paidAt` and until Mollie's refund covers it.
+ */
+async function duplicateOutcome(
+  db: Db,
+  { mollie, now, row }: { mollie: MolliePayment; now: Date; row: PaymentRow }
+): Promise<SettleResult> {
+  const base: SettleResult = {
+    events: [],
+    kind: row.kind,
+    notify: [],
+    outcome: "duplicate",
+    paymentId: row.id,
+  };
+  if (mapMollieStatus(mollie.status) !== "paid") {
+    console.warn(
+      `[sponsorships] Mollie's ${mollie.id} (${mollie.status}) names payment ${row.id}, which is Mollie's ${row.mollieId}; ignored`
+    );
+    return base;
+  }
+  console.error(
+    `[sponsorships] Mollie's ${mollie.id} names payment ${row.id}, which is Mollie's ${row.mollieId}, and it is paid: not applied, refund it by hand`
+  );
+  const told =
+    mollie.amountRefundedCents < mollie.amountCents &&
+    insideEmailWindow(mollie.paidAt ?? now, now);
+  return told
+    ? {
+        ...base,
+        notify: await refundEmails(db, now, {
+          amountCents: mollie.amountCents,
+          key: mollie.id,
+          mollie,
+          reason: "double",
+          row,
+        }),
+      }
+    : base;
 }
 
 async function settleStatus(db: Db, context: Context): Promise<SettleResult> {
@@ -717,7 +826,10 @@ function chargebackStatements(
   { items, mollie, now, row }: Omit<Context, "extra">
 ): Statement[] {
   const cents = mollie.amountChargedBackCents;
-  if (cents <= row.chargedBackCents) {
+  if (cents < row.chargedBackCents) {
+    return chargebackReversal(db, { cents, mollie, now, row });
+  }
+  if (cents === row.chargedBackCents) {
     return [];
   }
   console.warn(
@@ -732,7 +844,8 @@ function chargebackStatements(
     db
       .update(payment)
       .set({
-        chargedBackAt: sql`coalesce(${payment.chargedBackAt}, ${now.getTime()})`,
+        // When the amount last rose: the chargeback email's window (I-1).
+        chargedBackAt: now,
         chargedBackCents: cents,
         updatedAt: now,
       })
@@ -750,14 +863,55 @@ function chargebackStatements(
 }
 
 /**
- * The chargeback email per admin, on every settle while Mollie reports
- * one (keyed by the amount, so each new chargeback is told once).
+ * Mollie lowered the chargeback (reversed, fully or in part; M-7): the
+ * stored amount follows Mollie's, logged. `charged_back_at` keeps when it
+ * last rose, and no trail entry is written (`refund_needed` means money to
+ * return, and the event types are CHECKed); the log line is the record.
+ */
+function chargebackReversal(
+  db: Db,
+  {
+    cents,
+    mollie,
+    now,
+    row,
+  }: { cents: number; mollie: MolliePayment; now: Date; row: PaymentRow }
+): Statement[] {
+  console.warn(
+    `[sponsorships] Chargeback on payment ${row.id} (${mollie.id}) reversed: ${row.chargedBackCents} -> ${cents} cents`
+  );
+  return [
+    failWhen(
+      db,
+      PAYMENT_STALE_GUARD,
+      sql`EXISTS (SELECT 1 FROM ${payment} WHERE ${payment.id} = ${row.id} AND ${payment.chargedBackCents} <= ${cents})`
+    ),
+    db
+      .update(payment)
+      .set({ chargedBackCents: cents, updatedAt: now })
+      .where(eq(payment.id, row.id)),
+  ];
+}
+
+/**
+ * The chargeback email per admin, keyed by the amount, so each new
+ * chargeback is told once: while Mollie reports one that is not a
+ * reversal, and within 6 days of when that amount was recorded (the KV
+ * marker's window, Phase 6 fix wave I-1).
  */
 async function chargebackNotify(
   db: Db,
   { mollie, now, row }: Context
 ): Promise<OutboxEmail[]> {
   const cents = mollie.amountChargedBackCents;
+  if (cents <= 0 || cents < row.chargedBackCents) {
+    return [];
+  }
+  const recordedAt =
+    cents > row.chargedBackCents ? now : (row.chargedBackAt ?? now);
+  if (!insideEmailWindow(recordedAt, now)) {
+    return [];
+  }
   return await emailAdmins(db, now, (admin) => ({
     idempotencyKey: `admin_chargeback:${row.id}:${cents}:${admin.id}`,
     locale: admin.locale,

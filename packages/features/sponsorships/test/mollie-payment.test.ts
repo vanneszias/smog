@@ -1,5 +1,7 @@
+import { payment } from "@smog/db";
 import { createFakeMollie, type FakeMollie } from "@smog/payments/testing";
 import { DAY_MS } from "@smog/utils";
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   PaymentProviderError,
@@ -119,6 +121,35 @@ describe("startMolliePayment", () => {
     await expect(
       seedCheckout(db, { gestures: seeded.gestures })
     ).resolves.toBeDefined();
+  });
+
+  it("never compensates a payment another call already created at Mollie: answers its checkout (fix wave, payments M-3)", async () => {
+    const seeded = await seedCheckout(db, { count: 1 });
+    // Call A stored its Mollie payment while call B (a retry) was creating.
+    await db
+      .update(payment)
+      .set({
+        checkoutUrl: "https://mollie.example/checkout/a",
+        mollieId: "tr_storedByCallA",
+      })
+      .where(eq(payment.id, seeded.paymentId));
+    fake.failNext(503);
+    const result = await startMolliePayment(db, fake.mollie, {
+      allowFakeWebhook: false,
+      items: [{ sponsorshipId: seeded.sponsorshipIds[0] as string }],
+      locale: "nl",
+      now: NOW,
+      payment: { amountCents: 5000, id: seeded.paymentId, kind: "initial" },
+      siteUrl: SITE_URL,
+    });
+    expect(result).toEqual({
+      checkoutUrl: "https://mollie.example/checkout/a",
+      mollieId: "tr_storedByCallA",
+    });
+    expect((await paymentRow(db, seeded.paymentId)).status).toBe("open");
+    expect(await statusOf(db, seeded.sponsorshipIds[0] as string)).toBe(
+      "awaiting_payment"
+    );
   });
 
   it("compensates a create without a checkout link the same way", async () => {

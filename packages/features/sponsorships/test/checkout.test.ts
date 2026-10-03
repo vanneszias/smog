@@ -395,6 +395,51 @@ describe("sponsorships.checkout (ruling 5)", () => {
     });
   });
 
+  it("refuses a logo key a sponsorship already uses, and leaves that logo alone (fix wave, payments M-4)", async () => {
+    const owner = await seedCheckout(db, { count: 1, logo: true });
+    const claimed = await putLogo();
+    await db
+      .update(sponsorship)
+      .set({ logoKey: claimed })
+      .where(eq(sponsorship.id, owner.sponsorshipIds[0] as string));
+    const gesture = await makeGesture(db);
+    const input = checkoutInput([gesture.id], { logoKey: claimed });
+    expect(await codeOf(checkout(input))).toEqual({
+      code: "INVALID_STATE",
+      data: { reason: "logoInvalid" },
+    });
+    expect(await media().head(claimed)).not.toBeNull();
+    await nothingWritten(input.checkoutId, [gesture.id]);
+  });
+
+  it("a double click whose twin claimed and removed the upload first answers the twin's checkout (fix wave, payments M-7)", async () => {
+    const gesture = await makeGesture(db);
+    const logoKey = await putLogo();
+    const input = checkoutInput([gesture.id], { logoKey });
+    let twin: CheckoutAnswer | undefined;
+    const bucket = media();
+    // Call A runs to the end while call B reads the upload.
+    const racing = new Proxy(bucket, {
+      get(target, key, receiver) {
+        if (key === "head") {
+          return async (objectKey: string) => {
+            if (!twin && objectKey === logoKey) {
+              twin = await checkout(input);
+            }
+            return await target.head(objectKey);
+          };
+        }
+        const value = Reflect.get(target, key, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const answer = await checkout(input, {
+      env: { MEDIA: racing, MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY },
+    });
+    expect(twin).toBeDefined();
+    expect(answer).toEqual(twin);
+  });
+
   it("keeps the upload and drops the copy when the batch fails, so a retry can use the logo", async () => {
     const taken = await makeGesture(db);
     await seedCheckout(db, { gestures: [taken], status: "in_review" });
