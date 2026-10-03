@@ -57,7 +57,7 @@ export function csvCell(value: string): string {
  * The UTF-8 byte order mark the CSV starts with, so Excel reads it (the
  * euro sign, accented names) as UTF-8 (fix round 1, M4).
  */
-export const CSV_BOM = "\ufeff";
+const CSV_BOM = "\ufeff";
 
 const csvLine = (cells: readonly string[]): string =>
   `${cells.map(csvCell).join(",")}\r\n`;
