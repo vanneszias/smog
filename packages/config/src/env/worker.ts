@@ -231,6 +231,62 @@ export function parseWorkerVars(env: object): WorkerVars {
   return result.data;
 }
 
+/**
+ * The queue and R2 bindings every env declares in `wrangler.jsonc`
+ * (Phase 6 fix wave, jobs M-4). They are validated once per isolate with
+ * the vars and secrets (the site's `siteEnv()`), so a missing binding
+ * fails at the first request instead of after a cron committed its state.
+ * Only the shape the code calls is checked (`send`; R2's object methods):
+ * the platform types stay the site's.
+ */
+export const WORKER_BINDINGS = ["EMAIL_QUEUE", "EVENTS_QUEUE", "MEDIA"] as const;
+export type WorkerBinding = (typeof WORKER_BINDINGS)[number];
+
+function hasMethods(value: unknown, methods: readonly string[]): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    methods.every(
+      (method) => typeof (value as Record<string, unknown>)[method] === "function"
+    )
+  );
+}
+
+const queueBinding = z.custom<object>(
+  (value) => hasMethods(value, ["send"]),
+  "a Queue producer binding (send)"
+);
+const bucketBinding = z.custom<object>(
+  (value) => hasMethods(value, ["head", "get", "put", "delete", "list"]),
+  "an R2 bucket binding"
+);
+
+export const workerBindingsSchema = z.object({
+  EMAIL_QUEUE: queueBinding,
+  EVENTS_QUEUE: queueBinding,
+  MEDIA: bucketBinding,
+} satisfies Record<WorkerBinding, z.ZodType>);
+
+/**
+ * Validates the queue and R2 bindings once per isolate and answers them
+ * as given (typed by the caller's env); names every missing one.
+ */
+export function parseWorkerBindings<
+  Env extends Partial<Record<WorkerBinding, unknown>>,
+>(env: Env): { [K in WorkerBinding]: NonNullable<Env[K]> } {
+  const result = workerBindingsSchema.safeParse(env);
+  if (!result.success) {
+    throw new Error(
+      `[config] Invalid worker bindings:\n${z.prettifyError(result.error)}`
+    );
+  }
+  return {
+    EMAIL_QUEUE: env.EMAIL_QUEUE as NonNullable<Env["EMAIL_QUEUE"]>,
+    EVENTS_QUEUE: env.EVENTS_QUEUE as NonNullable<Env["EVENTS_QUEUE"]>,
+    MEDIA: env.MEDIA as NonNullable<Env["MEDIA"]>,
+  };
+}
+
 /** What the sign-in screens may know about the server's auth setup. */
 export interface PublicAuthConfig {
   apple: boolean;

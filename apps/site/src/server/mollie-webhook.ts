@@ -1,4 +1,3 @@
-import { env as bindings } from "cloudflare:workers";
 import { createDb, type Db } from "@smog/db/client";
 import { enqueueOutputs, type JobQueues } from "@smog/jobs";
 import {
@@ -180,7 +179,7 @@ export async function serveMollieWebhook(
   if (legacy) {
     console.warn("[mollie] legacy webhook path used");
   }
-  const { db, kv, rateLimits, worker } = siteEnv();
+  const { bindings, db, kv, rateLimits, worker } = siteEnv();
   return await handleMollieWebhook(request, {
     db: createDb(db),
     kv,

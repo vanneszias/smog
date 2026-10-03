@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { type Auth, type AuthEnv, createAuth, parseAuthEnv } from "@smog/auth";
 import {
+  parseWorkerBindings,
   parseWorkerEnv,
   parseWorkerVars,
   type WorkerEnv,
@@ -9,7 +10,6 @@ import {
 import { createDb } from "@smog/db/client";
 import {
   createEmailSender,
-  DirectEmailOutbox,
   type EmailDeliveryEnv,
   type EmailOutbox,
   type EmailSender,
@@ -21,8 +21,13 @@ import {
   type RateLimiter,
 } from "@smog/rpc";
 
+/** The queue and R2 bindings, validated (`parseWorkerBindings`). */
+export type SiteBindings = ReturnType<typeof parseWorkerBindings<Env>>;
+
 export interface SiteEnv {
   auth: AuthEnv;
+  /** `EMAIL_QUEUE`, `EVENTS_QUEUE` and `MEDIA` (fix wave, jobs M-4). */
+  bindings: SiteBindings;
   db: D1Database;
   kv: KVNamespace;
   rateLimits: Record<RateLimitBinding, RateLimiter>;
@@ -50,6 +55,7 @@ function rateLimits(): Record<RateLimitBinding, RateLimiter> {
 export function siteEnv(): SiteEnv {
   cached ??= {
     auth: parseAuthEnv(env),
+    bindings: parseWorkerBindings(env),
     db: required(env.DB, "DB"),
     kv: required(env.KV, "KV"),
     rateLimits: rateLimits(),
@@ -85,17 +91,10 @@ export function emailDeliveryEnv(): EmailDeliveryEnv {
 /**
  * Where the site's emails go (phase 6 ruling 8): `EMAIL_QUEUE`, which the
  * email consumer (`worker/email-queue.ts`) renders and sends from. Every
- * env binds it; without it (a broken config) emails are rendered and sent
- * inline, as before the queue, and that is logged.
+ * env binds it, and `siteEnv()` refuses to start without it.
  */
 function getEmailOutbox(): EmailOutbox {
-  if (env.EMAIL_QUEUE) {
-    return new QueueEmailOutbox(env.EMAIL_QUEUE);
-  }
-  console.warn(
-    "[site] The EMAIL_QUEUE binding is missing: emails are sent inline (DirectEmailOutbox)"
-  );
-  return new DirectEmailOutbox(getEmailSender(), emailDeliveryEnv());
+  return new QueueEmailOutbox(siteEnv().bindings.EMAIL_QUEUE);
 }
 
 const instances: { open?: Auth; signInOnly?: Auth } = {};
