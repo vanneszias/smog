@@ -87,6 +87,10 @@ export function useAdminSponsorshipActions() {
   const rpc = useAdminRpc();
   const invalidate = useInvalidateAfterAdminWrite();
   const settled = { onSettled: invalidate };
+  // The link holds a raw token: no cache keeps the answer once the
+  // component has it and lets go (`gcTime: 0` drops the mutation from the
+  // MutationCache as soon as no observer holds it).
+  const oneTime = { ...settled, gcTime: 0 };
   return {
     approve: useMutation(rpc.sponsorships.approve.mutationOptions(settled)),
     cancel: useMutation(rpc.sponsorships.cancel.mutationOptions(settled)),
@@ -98,11 +102,11 @@ export function useAdminSponsorshipActions() {
       rpc.sponsorships.recordRefund.mutationOptions(settled)
     ),
     regenerateToken: useMutation(
-      rpc.sponsorships.regenerateToken.mutationOptions(settled)
+      rpc.sponsorships.regenerateToken.mutationOptions(oneTime)
     ),
     reject: useMutation(rpc.sponsorships.reject.mutationOptions(settled)),
     requestChanges: useMutation(
-      rpc.sponsorships.requestChanges.mutationOptions(settled)
+      rpc.sponsorships.requestChanges.mutationOptions(oneTime)
     ),
   } satisfies Record<(typeof SPONSORSHIP_ACTIONS)[number], unknown>;
 }

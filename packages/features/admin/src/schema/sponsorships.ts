@@ -117,6 +117,11 @@ export const adminSponsorshipRowSchema = z.object({
   /** The checkout's payment status; `null` without one. */
   paymentStatus: paymentStatusSchema.nullable(),
   /**
+   * The video to show (the review card's thumbnail): the sponsored video
+   * once it exists, else the gesture's own (phase 6 task 7).
+   */
+  playbackId: z.string(),
+  /**
    * A payment of this sponsorship needs the admin: `refund_needed` with no
    * refund recorded yet, or a chargeback while the sponsorship still holds
    * its gesture.

@@ -1,6 +1,7 @@
 import type { Environment } from "@smog/config/env/worker";
 import {
   AUDIT_TARGET_TYPES,
+  PAYMENT_STATUSES,
   SPONSORSHIP_STATUSES,
   SPONSORSHIP_TOKEN_PURPOSES,
 } from "@smog/db/enums";
@@ -87,6 +88,35 @@ export const e2eSeedSchema = z.discriminatedUnion("op", [
       })
       .optional(),
   }),
+  /**
+   * One checkout as the money path writes it, in a given state: a sponsor
+   * (and an invoice request), one `initial` payment priced by the ruling 3
+   * rule, and per gesture a sponsorship (ids `<id>-<n>`), its item and its
+   * `created` event. The admin spec's fixtures (phase 6 task 7). Inserted,
+   * never updated.
+   */
+  z.object({
+    displayName: z.string().min(1).max(35),
+    /** Epoch ms (live or expiring); `starts_at` is then now. */
+    endsAt: z.number().int().optional(),
+    gestureSlugs: z.array(slug).min(1).max(10),
+    id: fixtureId,
+    invoice: z.boolean().optional(),
+    logo: z.boolean().optional(),
+    /** A stored logo (`logos/<uuid>`, uploaded by the spec). */
+    logoKey: z
+      .string()
+      .regex(/^logos\/[0-9a-f-]{36}$/)
+      .optional(),
+    op: z.literal("sponsorshipCheckout"),
+    paymentStatus: z.enum(PAYMENT_STATUSES),
+    status: z.enum(SPONSORSHIP_STATUSES),
+    /** The sponsored video (a Mux playback id). */
+    videoPlaybackId: z
+      .string()
+      .regex(/^[A-Za-z0-9]{1,64}$/)
+      .optional(),
+  }),
 ]);
 
 export type E2eSeed = z.infer<typeof e2eSeedSchema>;
@@ -170,6 +200,75 @@ function sponsorshipStatements(
   return statements;
 }
 
+/** One gesture's price (cents): 50 euro, plus 10 with a logo (ruling 3). */
+const GESTURE_CENTS = 5000;
+const LOGO_CENTS = 1000;
+const LIVE_STATUSES: readonly string[] = ["live", "expiring"];
+
+/** `sponsorshipCheckout`: the sponsor, the payment, then each gesture's rows. */
+function checkoutStatements(
+  db: D1Database,
+  seed: Extract<E2eSeed, { op: "sponsorshipCheckout" }>
+): D1PreparedStatement[] {
+  const each = GESTURE_CENTS + (seed.logo ? LOGO_CENTS : 0);
+  const paid = seed.paymentStatus === "paid" ? 1 : 0;
+  const live = LIVE_STATUSES.includes(seed.status) ? 1 : 0;
+  const statements = [
+    db
+      .prepare(
+        `INSERT INTO sponsor (id, name, email, company, locale, created_at) VALUES (?, 'E2E Sponsor', 'e2e-sponsor@smog.test', 'E2E BV', 'nl', ${NOW_MS})`
+      )
+      .bind(seed.id),
+  ];
+  if (seed.invoice) {
+    statements.push(
+      db
+        .prepare(
+          "INSERT INTO invoice_request (sponsor_id, name, vat_number, email) VALUES (?, 'E2E BV', '0123456749', 'factuur@smog.test')"
+        )
+        .bind(seed.id)
+    );
+  }
+  statements.push(
+    db
+      .prepare(
+        `INSERT INTO payment (id, mollie_id, kind, status, amount_cents, currency, paid_at, created_at, updated_at) VALUES (?, NULL, 'initial', ?, ?, 'EUR', CASE WHEN ? = 1 THEN ${NOW_MS} END, ${NOW_MS}, ${NOW_MS})`
+      )
+      .bind(seed.id, seed.paymentStatus, each * seed.gestureSlugs.length, paid)
+  );
+  seed.gestureSlugs.forEach((gestureSlug, index) => {
+    const id = `${seed.id}-${index}`;
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO sponsorship (id, sponsor_id, gesture_id, display_name, logo_key, status, starts_at, ends_at, video_playback_id, created_at, updated_at) SELECT ?, ?, g.id, ?, ?, ?, CASE WHEN ? = 1 THEN ${NOW_MS} END, ?, ?, ${NOW_MS}, ${NOW_MS} FROM gesture AS g WHERE g.slug = ?`
+        )
+        .bind(
+          id,
+          seed.id,
+          seed.displayName,
+          seed.logoKey ?? null,
+          seed.status,
+          live,
+          seed.endsAt ?? null,
+          seed.videoPlaybackId ?? null,
+          gestureSlug
+        ),
+      db
+        .prepare(
+          "INSERT INTO payment_item (payment_id, sponsorship_id, amount_cents, includes_logo) VALUES (?, ?, ?, ?)"
+        )
+        .bind(seed.id, id, each, seed.logo ? 1 : 0),
+      db
+        .prepare(
+          `INSERT INTO sponsorship_event (id, sponsorship_id, type, actor_id, data, created_at) VALUES (?, ?, 'created', NULL, ?, ${NOW_MS})`
+        )
+        .bind(`${id}-created`, id, JSON.stringify({ paymentId: seed.id }))
+    );
+  });
+  return statements;
+}
+
 /** The statements of any seed operation, in order, with bound values. */
 export function seedStatements(
   db: D1Database,
@@ -180,6 +279,8 @@ export function seedStatements(
       return resetStatements(db, seed.slugs);
     case "sponsorship":
       return sponsorshipStatements(db, seed);
+    case "sponsorshipCheckout":
+      return checkoutStatements(db, seed);
     case "sponsorshipStatus":
       return [
         db

@@ -186,6 +186,7 @@ describe("admin.sponsorships.list", () => {
 
   let ids: Record<string, string>;
   let paymentId: string;
+  let pairPlaybackId: string;
 
   beforeAll(async () => {
     const review = await seedCheckout({
@@ -195,6 +196,7 @@ describe("admin.sponsorships.list", () => {
       logo: true,
       paymentStatus: "paid",
       status: "in_review",
+      videoPlaybackId: "review-render",
     });
     const pair = await seedCheckout({
       count: 2,
@@ -220,6 +222,7 @@ describe("admin.sponsorships.list", () => {
       review: review.sponsorshipIds[0] as string,
     };
     ({ paymentId } = pair);
+    pairPlaybackId = pair.gestures[0]?.playbackId ?? "";
   });
 
   const list = (input: Record<string, unknown> = {}) =>
@@ -247,12 +250,17 @@ describe("admin.sponsorships.list", () => {
       hasLogo: true,
       invoiceRequested: true,
       paymentStatus: "paid",
+      playbackId: "review-render",
       refundNeeded: false,
       sponsor: { company: "Acme BV", name: "Alex Sponsor" },
       startsAt: null,
       status: "in_review",
     });
     expect(all.items[0]?.refundNeeded).toBe(true);
+    // Without a sponsored video yet, the thumbnail is the gesture's own.
+    expect(all.items.find((row) => row.id === ids.pairA)?.playbackId).toBe(
+      pairPlaybackId
+    );
 
     const first = await list({ limit: 2 });
     expect(first.items.map((row) => row.id)).toEqual(expected.slice(0, 2));

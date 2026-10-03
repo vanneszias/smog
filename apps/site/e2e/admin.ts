@@ -26,6 +26,8 @@ export type Theme = (typeof THEMES)[number];
 /** Every admin screen, by a short name (the screenshot file prefix). */
 export const ADMIN_PAGES = [
   ["dashboard", "/admin"],
+  ["sponsorships", "/admin/sponsorships"],
+  ["sponsorships-all", "/admin/sponsorships?tab=all"],
   ["audit", "/admin/audit"],
   ["gestures", "/admin/gestures"],
   ["gesture-new", "/admin/gestures/new"],

@@ -135,6 +135,82 @@ describe("the e2e seed endpoint's operations", () => {
     ).toBe(false);
   });
 
+  test("seeds a checkout as the money path writes it, all bound (phase 6 task 7)", () => {
+    const { db, seen } = recordingDb();
+    const statements = seedStatements(db, {
+      displayName: "Bakkerij Zon",
+      gestureSlugs: ["vogel", "eten"],
+      id: "e2e-adm-paid",
+      invoice: true,
+      logo: true,
+      logoKey: "logos/0b5c9c3e-6d1f-4c39-a7d2-2f7e5d1c9a10",
+      op: "sponsorshipCheckout",
+      paymentStatus: "paid",
+      status: "in_review",
+      videoPlaybackId: "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU",
+    });
+    // The sponsor, the invoice request, the payment, then per gesture the
+    // sponsorship, its item and its `created` event.
+    expect(statements).toHaveLength(3 + 2 * 3);
+    const sql = seen.map((entry) => entry.sql);
+    expect(sql[0]).toContain("INSERT INTO sponsor ");
+    expect(sql[1]).toContain("INSERT INTO invoice_request");
+    expect(sql[2]).toContain("INSERT INTO payment ");
+    expect(seen[2]?.values).toContain(12_000);
+    expect(seen[2]?.values).toContain("paid");
+    expect(sql[3]).toContain("INSERT INTO sponsorship ");
+    expect(seen[3]?.values).toEqual(
+      expect.arrayContaining([
+        "e2e-adm-paid-0",
+        "vogel",
+        "in_review",
+        "logos/0b5c9c3e-6d1f-4c39-a7d2-2f7e5d1c9a10",
+        "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU",
+      ])
+    );
+    expect(sql[4]).toContain("INSERT INTO payment_item");
+    expect(seen[4]?.values).toEqual([
+      "e2e-adm-paid",
+      "e2e-adm-paid-0",
+      6000,
+      1,
+    ]);
+    expect(sql[5]).toContain("INSERT INTO sponsorship_event");
+    expect(seen[6]?.values).toEqual(
+      expect.arrayContaining(["e2e-adm-paid-1", "eten"])
+    );
+    for (const entry of seen) {
+      expect(entry.sql).not.toContain("vogel");
+      expect(entry.sql).not.toContain("Bakkerij");
+    }
+    // Inserted in a state, never updated.
+    expect(seen.some((entry) => STATUS_UPDATE.test(entry.sql))).toBe(false);
+  });
+
+  test("a checkout seed refuses ids, keys and amounts it does not own", () => {
+    const base = {
+      displayName: "x",
+      gestureSlugs: ["vogel"],
+      id: "e2e-adm",
+      op: "sponsorshipCheckout",
+      paymentStatus: "open",
+      status: "awaiting_payment",
+    };
+    expect(e2eSeedSchema.safeParse(base).success).toBe(true);
+    expect(e2eSeedSchema.safeParse({ ...base, id: "real-id" }).success).toBe(
+      false
+    );
+    expect(
+      e2eSeedSchema.safeParse({ ...base, logoKey: "../secrets" }).success
+    ).toBe(false);
+    expect(e2eSeedSchema.safeParse({ ...base, gestureSlugs: [] }).success).toBe(
+      false
+    );
+    expect(
+      e2eSeedSchema.safeParse({ ...base, paymentStatus: "bogus" }).success
+    ).toBe(false);
+  });
+
   test("binds every value", () => {
     const { db, seen } = recordingDb();
     seedStatement(db, {
