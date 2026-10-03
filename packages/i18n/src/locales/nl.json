@@ -402,7 +402,22 @@
       "description": "Scan de code om dit gebaar te openen.",
       "download": "QR-code downloaden"
     },
-    "sponsorCta": {}
+    "sponsorCta": {
+      "available": {
+        "title": "Sponsor dit gebaar",
+        "description": "Word peter of meter van dit gebaar.",
+        "action": "Nu sponsoren"
+      },
+      "pending": {
+        "title": "Momenteel gesponsord",
+        "description": "Dit gebaar wordt momenteel gesponsord."
+      },
+      "sponsored": {
+        "title": "Momenteel gesponsord",
+        "description": "Dit gebaar wordt gesponsord door {{name}}.",
+        "availableFrom": "Het zal opnieuw beschikbaar zijn voor sponsoring vanaf {{date}}."
+      }
+    }
   },
   "search": {
     "categories": "Categorieën",
@@ -1784,5 +1799,243 @@
       "renewal": "Verlenging van je sponsoring bij SMOG & Co"
     }
   },
-  "sponsor": {}
+  "sponsor": {
+    "meta": {
+      "title": "Sponsor een gebaar",
+      "description": "Steun een gebaar voor één jaar. Jouw naam verschijnt in de video en helpt het SMOG-project."
+    },
+    "steps": {
+      "select": "Gebaren kiezen",
+      "details": "Jouw gegevens",
+      "review": "Voorbeeld en betalen"
+    },
+    "paused": {
+      "title": "Sponsoren is even gepauzeerd",
+      "description": "Je kunt op dit moment geen gebaar sponsoren. Probeer het later opnieuw."
+    },
+    "select": {
+      "title": "Steun een gebaar",
+      "description": "Steun een gebaar voor één jaar. Jouw naam verschijnt in de video en helpt het SMOG-project.",
+      "value": {
+        "perGesture": "Per gebaar, per jaar",
+        "seconds": "{{seconds}} sec",
+        "nameInVideo": "Jouw naam in elke video",
+        "logoPrice": "+{{price}}",
+        "optionalLogo": "Voeg je logo toe (optioneel)"
+      },
+      "search": "Gebaren zoeken",
+      "searchPlaceholder": "Zoek op naam, begrip of categorie...",
+      "showMore": "+{{count}} meer",
+      "showLess": "Minder tonen",
+      "clearFilters": "Wis filters",
+      "available_one": "{{count}} beschikbaar gebaar getoond",
+      "available_other": "{{count}} beschikbare gebaren getoond",
+      "loadMore": "Meer gebaren laden",
+      "partial": "{{shown}} van {{total}} resultaten getoond. Zoek preciezer om de rest te vinden.",
+      "selected_one": "{{count}} geselecteerd",
+      "selected_other": "{{count}} geselecteerd",
+      "badge": {
+        "sponsored": "Gesponsord",
+        "pending": "In behandeling",
+        "taken": "Net gekozen"
+      },
+      "limit": "Je kunt tot {{max}} gebaren per betaling sponsoren. Haal er een weg om een ander te kiezen.",
+      "taken": "Iemand anders was je net voor. Die gebaren zijn gemarkeerd; kies eventueel andere.",
+      "empty": {
+        "title": "Geen gebaren gevonden",
+        "description": "Probeer een ander woord of wis de filters."
+      }
+    },
+    "bar": {
+      "selected_one": "{{count}} gebaar geselecteerd",
+      "selected_other": "{{count}} gebaren geselecteerd",
+      "total": "Totaal: {{price}}",
+      "continue": "Doorgaan"
+    },
+    "details": {
+      "title": "Configureer je sponsoring",
+      "videoSection": "In de video",
+      "displayName": "Naam in de video",
+      "displayNamePlaceholder": "Bijv. Acme",
+      "displayNameHint": "Voorbeeld: “{{intro}} {{name}}”",
+      "logo": {
+        "include": "Logo toevoegen (+{{price}} per gebaar)",
+        "label": "Logo",
+        "drop": "Sleep je logo hierheen of",
+        "browse": "kies een bestand",
+        "formats": "PNG, JPEG of WebP · max. 2 MB",
+        "previewAlt": "Voorbeeld van het logo",
+        "remove": "Logo verwijderen",
+        "replace": "Ander logo kiezen",
+        "guidelines": {
+          "title": "Logo-richtlijnen",
+          "format": "Formaat: PNG met transparante achtergrond (aanbevolen), JPEG of WebP",
+          "dimensions": "Afmetingen: minimaal 800 × 800 px voor de beste kwaliteit",
+          "aspectRatio": "Verhouding: vierkant (1:1) aanbevolen",
+          "fileSize": "Bestandsgrootte: maximaal 2 MB",
+          "style": "Stijl: eenvoudige, contrastrijke logo's werken het best",
+          "avoid": "Vermijd: zeer gedetailleerde logo's of dunne lijnen"
+        }
+      },
+      "contact": {
+        "title": "Contactgegevens",
+        "description": "We gebruiken dit om je te contacteren over je sponsoring.",
+        "name": "Volledige naam",
+        "email": "E-mail",
+        "company": "Bedrijf"
+      },
+      "invoice": {
+        "checkbox": "Ik wens een factuur",
+        "name": "Naam op de factuur",
+        "namePlaceholder": "Naam of bedrijfsnaam",
+        "vat": "Ondernemingsnummer",
+        "vatHint": "10 cijfers, bijv. 0123.456.749",
+        "email": "E-mailadres voor de factuur"
+      },
+      "errors": {
+        "displayNameRequired": "De naam in de video is verplicht.",
+        "displayNameTooLong": "Gebruik maximaal {{max}} tekens.",
+        "displayNameInvalid": "Gebruik één regel tekst, zonder speciale tekens.",
+        "logoRequired": "Upload een logo of vink de optie uit.",
+        "logoTooLarge": "Het logo moet kleiner zijn dan 2 MB.",
+        "logoType": "Gebruik een PNG-, JPEG- of WebP-afbeelding.",
+        "required": "Dit veld is verplicht.",
+        "tooLong": "Deze tekst is te lang.",
+        "emailInvalid": "Ongeldig e-mailadres.",
+        "vatInvalid": "Ongeldig ondernemingsnummer.",
+        "summary": "Kijk de gemarkeerde velden na."
+      },
+      "back": "Terug naar selectie",
+      "continue": "Doorgaan naar voorbeeld"
+    },
+    "price": {
+      "title": "Prijsoverzicht",
+      "base_one": "{{count}} gebaar × 1 jaar",
+      "base_other": "{{count}} gebaren × 1 jaar",
+      "logo": "Logo-toevoeging",
+      "total": "Totaal"
+    },
+    "review": {
+      "title": "Bekijk je sponsoring",
+      "description": "Zo verschijnt je naam op de geselecteerde gebaren. De echte video wordt na de betaling gemaakt en gecontroleerd voor hij online gaat.",
+      "previewLabel": "Voorbeeld voor {{name}}",
+      "summary": "Sponsoringdetails",
+      "gestures": "Gebaren",
+      "duration": "Duur",
+      "durationValue": "1 jaar",
+      "nameInVideo": "Naam in video",
+      "logo": "Logo",
+      "yes": "Ja",
+      "no": "Nee",
+      "contact": "Contact",
+      "invoice": "Factuur",
+      "total": "Totaalbedrag",
+      "pay": "Doorgaan naar betaling",
+      "redirectNote": "Je wordt doorgestuurd naar Mollie voor een veilige betaling.",
+      "captchaHint": "Bevestig eerst dat je geen robot bent.",
+      "back": "Terug naar details",
+      "failed": "Doorgaan naar betaling mislukt. Probeer het opnieuw."
+    },
+    "success": {
+      "title": "Je sponsoring",
+      "missing": {
+        "title": "Geen betaling gevonden",
+        "description": "Bij deze link hoort geen betaling. Kijk je e-mail na voor de bevestiging."
+      },
+      "loading": "Je betaling controleren…",
+      "open": {
+        "title": "Je betaling wordt verwerkt…",
+        "description": "Deze pagina werkt zichzelf bij zodra Mollie de betaling bevestigt.",
+        "attempt": "Poging {{current}} van {{max}}"
+      },
+      "timeout": {
+        "title": "Dit duurt langer dan verwacht",
+        "description": "Mollie heeft de betaling nog niet bevestigd. Een overschrijving kan langer duren; je krijgt een e-mail zodra ze binnen is.",
+        "checkAgain": "Opnieuw controleren"
+      },
+      "paid": {
+        "title": "Betaling geslaagd!",
+        "description": "Bedankt voor je steun aan SMOG."
+      },
+      "renewed": {
+        "title": "Je sponsoring is verlengd!",
+        "description": "Je naam blijft in de video tot {{date}}."
+      },
+      "failed": {
+        "title": "De betaling is niet gelukt",
+        "description": "Er werd niets aangerekend en de gebaren zijn weer vrij. Je kunt het opnieuw proberen."
+      },
+      "canceled": {
+        "title": "De betaling is geannuleerd"
+      },
+      "expired": {
+        "title": "De betaling is verlopen"
+      },
+      "retry": "Opnieuw proberen",
+      "refund": {
+        "title": "We nemen contact met je op",
+        "description": "Je betaling is binnen, maar we konden je sponsoring niet zomaar verwerken (bijvoorbeeld omdat het gebaar intussen gesponsord werd). We nemen contact met je op en betalen terug waar nodig."
+      },
+      "summary": {
+        "title": "Samenvatting",
+        "gestures": "Gebaren",
+        "sponsor": "Sponsor",
+        "duration": "Duur",
+        "total": "Totaal betaald",
+        "amount": "Bedrag"
+      },
+      "timeline": {
+        "title": "Wat gebeurt er nu?",
+        "paid": "Je betaling is bevestigd.",
+        "video": "We maken je video met je naam erin.",
+        "review": "Een beheerder beoordeelt je sponsoring binnen vijf werkdagen.",
+        "live": "Je krijgt een e-mail zodra hij online staat."
+      },
+      "home": "Terug naar home"
+    },
+    "link": {
+      "invalid": {
+        "title": "Ongeldige link",
+        "description": "Bij deze link ontbreekt een vereiste code. Gebruik de link uit je e-mail."
+      },
+      "loading": "Je link controleren…",
+      "notFound": {
+        "title": "Link niet gevonden",
+        "description": "Deze link is ongeldig of al gebruikt. Neem contact op met SMOG als je denkt dat dit niet klopt."
+      },
+      "expired": {
+        "title": "Link verlopen",
+        "description": "Deze link is verlopen. Vraag SMOG om een nieuwe link.",
+        "since": "Verlopen op {{date}}"
+      },
+      "back": "Terug naar de website"
+    },
+    "edit": {
+      "eyebrow": "Sponsoring aanpassen",
+      "title": "Werk je video bij",
+      "gesture": "Gebaar: {{name}}",
+      "expires_one": "Link verloopt over {{count}} dag",
+      "expires_other": "Link verloopt over {{count}} dagen",
+      "logoHint": "Laat leeg om je huidige logo te houden.",
+      "noPayment": "Je hoeft niet opnieuw te betalen. We controleren de aanpassing voordat ze online gaat.",
+      "submit": "Ter controle verzenden",
+      "submitted": {
+        "title": "Verzonden!",
+        "description": "We maken je nieuwe video en controleren hem voor hij online gaat. Je hoeft niet opnieuw te betalen."
+      },
+      "failed": "We konden je aanpassing niet verzenden. Probeer het opnieuw."
+    },
+    "renew": {
+      "eyebrow": "Sponsoring verlengen",
+      "title": "Nog een jaar in de video",
+      "description": "Verleng je sponsoring met één jaar. Je video blijft zoals hij is.",
+      "gesture": "Gebaar",
+      "name": "Naam in video",
+      "currentEnd": "Loopt nu tot",
+      "newEnd": "Na verlenging tot",
+      "amount": "Bedrag",
+      "pay": "Verlengen en betalen",
+      "failed": "De betaling kon niet starten. Probeer het opnieuw."
+    }
+  }
 }

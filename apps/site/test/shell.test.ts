@@ -24,6 +24,8 @@ function htmlTag(html: string): string {
   return html.match(HTML_TAG)?.[0] ?? "";
 }
 
+const NOT_FOUND_H1 = /<h1[^>]*>Pagina niet gevonden<\/h1>/;
+
 describe("app shell (SSR)", () => {
   it(
     "renders nl and the system theme by default, with the pre-paint script",
@@ -105,6 +107,8 @@ describe("app shell (SSR)", () => {
   it("answers an unknown page with the not-found screen", async () => {
     const response = await exports.default.fetch(`${ORIGIN}/nope`);
     expect(response.status).toBe(404);
-    expect(await response.text()).toContain("Pagina niet gevonden");
+    const html = await response.text();
+    // The page's h1 (review I-3: page-level states are level 1).
+    expect(html).toMatch(NOT_FOUND_H1);
   });
 });

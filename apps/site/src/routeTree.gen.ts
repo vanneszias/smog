@@ -41,6 +41,10 @@ import { Route as GesturesSlugRouteImport } from './routes/gestures/$slug'
 import { Route as ListsIndexRouteImport } from './routes/lists/index'
 import { Route as ListsShareTokenRouteImport } from './routes/lists/$shareToken'
 import { Route as MagicLinkAppRouteImport } from './routes/magic-link_.app'
+import { Route as SponsorIndexRouteImport } from './routes/sponsor/index'
+import { Route as SponsorEditRouteImport } from './routes/sponsor/edit'
+import { Route as SponsorRenewRouteImport } from './routes/sponsor/renew'
+import { Route as SponsorSuccessRouteImport } from './routes/sponsor/success'
 import { Route as WebhooksMollieRouteImport } from './routes/webhooks/mollie'
 import { Route as AdminGesturesIndexRouteImport } from './routes/admin/gestures/index'
 import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id'
@@ -215,6 +219,26 @@ const MagicLinkAppRoute = MagicLinkAppRouteImport.update({
   path: '/magic-link/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SponsorIndexRoute = SponsorIndexRouteImport.update({
+  id: '/sponsor/',
+  path: '/sponsor/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SponsorEditRoute = SponsorEditRouteImport.update({
+  id: '/sponsor/edit',
+  path: '/sponsor/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SponsorRenewRoute = SponsorRenewRouteImport.update({
+  id: '/sponsor/renew',
+  path: '/sponsor/renew',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SponsorSuccessRoute = SponsorSuccessRouteImport.update({
+  id: '/sponsor/success',
+  path: '/sponsor/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WebhooksMollieRoute = WebhooksMollieRouteImport.update({
   id: '/webhooks/mollie',
   path: '/webhooks/mollie',
@@ -311,10 +335,14 @@ export interface FileRoutesByFullPath {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link/app': typeof MagicLinkAppRoute
+  '/sponsor/edit': typeof SponsorEditRoute
+  '/sponsor/renew': typeof SponsorRenewRoute
+  '/sponsor/success': typeof SponsorSuccessRoute
   '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
+  '/sponsor/': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
@@ -357,10 +385,14 @@ export interface FileRoutesByTo {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link/app': typeof MagicLinkAppRoute
+  '/sponsor/edit': typeof SponsorEditRoute
+  '/sponsor/renew': typeof SponsorRenewRoute
+  '/sponsor/success': typeof SponsorSuccessRoute
   '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin': typeof AdminIndexRoute
   '/gestures': typeof GesturesIndexRoute
   '/lists': typeof ListsIndexRoute
+  '/sponsor': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
@@ -405,10 +437,14 @@ export interface FileRoutesById {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link_/app': typeof MagicLinkAppRoute
+  '/sponsor/edit': typeof SponsorEditRoute
+  '/sponsor/renew': typeof SponsorRenewRoute
+  '/sponsor/success': typeof SponsorSuccessRoute
   '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
+  '/sponsor/': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
@@ -454,10 +490,14 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link/app'
+    | '/sponsor/edit'
+    | '/sponsor/renew'
+    | '/sponsor/success'
     | '/webhooks/mollie'
     | '/admin/'
     | '/gestures/'
     | '/lists/'
+    | '/sponsor/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
@@ -500,10 +540,14 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link/app'
+    | '/sponsor/edit'
+    | '/sponsor/renew'
+    | '/sponsor/success'
     | '/webhooks/mollie'
     | '/admin'
     | '/gestures'
     | '/lists'
+    | '/sponsor'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
@@ -547,10 +591,14 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link_/app'
+    | '/sponsor/edit'
+    | '/sponsor/renew'
+    | '/sponsor/success'
     | '/webhooks/mollie'
     | '/admin/'
     | '/gestures/'
     | '/lists/'
+    | '/sponsor/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
@@ -590,9 +638,13 @@ export interface RootRouteChildren {
   GesturesSlugRoute: typeof GesturesSlugRoute
   ListsShareTokenRoute: typeof ListsShareTokenRoute
   MagicLinkAppRoute: typeof MagicLinkAppRoute
+  SponsorEditRoute: typeof SponsorEditRoute
+  SponsorRenewRoute: typeof SponsorRenewRoute
+  SponsorSuccessRoute: typeof SponsorSuccessRoute
   WebhooksMollieRoute: typeof WebhooksMollieRoute
   GesturesIndexRoute: typeof GesturesIndexRoute
   ListsIndexRoute: typeof ListsIndexRoute
+  SponsorIndexRoute: typeof SponsorIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiLogosKeyRoute: typeof ApiLogosKeyRoute
   ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
@@ -828,6 +880,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MagicLinkAppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sponsor/': {
+      id: '/sponsor/'
+      path: '/sponsor'
+      fullPath: '/sponsor/'
+      preLoaderRoute: typeof SponsorIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sponsor/edit': {
+      id: '/sponsor/edit'
+      path: '/sponsor/edit'
+      fullPath: '/sponsor/edit'
+      preLoaderRoute: typeof SponsorEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sponsor/renew': {
+      id: '/sponsor/renew'
+      path: '/sponsor/renew'
+      fullPath: '/sponsor/renew'
+      preLoaderRoute: typeof SponsorRenewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sponsor/success': {
+      id: '/sponsor/success'
+      path: '/sponsor/success'
+      fullPath: '/sponsor/success'
+      preLoaderRoute: typeof SponsorSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/webhooks/mollie': {
       id: '/webhooks/mollie'
       path: '/webhooks/mollie'
@@ -977,9 +1057,13 @@ const rootRouteChildren: RootRouteChildren = {
   GesturesSlugRoute: GesturesSlugRoute,
   ListsShareTokenRoute: ListsShareTokenRoute,
   MagicLinkAppRoute: MagicLinkAppRoute,
+  SponsorEditRoute: SponsorEditRoute,
+  SponsorRenewRoute: SponsorRenewRoute,
+  SponsorSuccessRoute: SponsorSuccessRoute,
   WebhooksMollieRoute: WebhooksMollieRoute,
   GesturesIndexRoute: GesturesIndexRoute,
   ListsIndexRoute: ListsIndexRoute,
+  SponsorIndexRoute: SponsorIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiLogosKeyRoute: ApiLogosKeyRoute,
   ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,

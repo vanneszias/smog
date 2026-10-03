@@ -19,6 +19,16 @@ const PORT = Number(process.env.E2E_PORT ?? 5173);
 const MUX_PORT = Number(process.env.E2E_MUX_PORT ?? 4010);
 const MUX_FAKE_URL = `http://localhost:${MUX_PORT}`;
 const MUX_WEBHOOK_SECRET = "e2e-mux-webhook-secret";
+/**
+ * The Mollie fake (`@smog/payments/testing/server`): the dev server's
+ * Mollie API and a hosted checkout page with Pay / Fail / Cancel / Expire
+ * (`E2E_MOLLIE_PORT`, 4020 by default). It POSTs the webhook to the dev
+ * server the way Mollie does. The key is the fake's own test key.
+ */
+const MOLLIE_PORT = Number(process.env.E2E_MOLLIE_PORT ?? 4020);
+const MOLLIE_FAKE_URL = `http://localhost:${MOLLIE_PORT}`;
+const FAKE_MOLLIE_API_KEY = "test_fakeMollieKeyForTestsOnly000000";
+
 /** The dev seed's public sample (`@smog/db` `SAMPLE_PLAYBACK_ID`). */
 const SAMPLE_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
 
@@ -110,8 +120,20 @@ export default defineConfig({
       url: `${MUX_FAKE_URL}/__fake/health`,
     },
     {
+      command: "bun ../../packages/payments/src/testing/fake-server.ts",
+      env: {
+        FAKE_MOLLIE_PORT: String(MOLLIE_PORT),
+        FAKE_MOLLIE_WEBHOOK_URL: `http://localhost:${PORT}/api/webhooks/mollie`,
+      },
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+      url: `${MOLLIE_FAKE_URL}/__fake/health`,
+    },
+    {
       command: `bunx vite dev --port ${PORT} --strictPort`,
       env: {
+        SMOG_DEV_MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY,
+        SMOG_DEV_MOLLIE_API_URL: MOLLIE_FAKE_URL,
         SMOG_DEV_MUX_API_URL: MUX_FAKE_URL,
         SMOG_DEV_MUX_TOKEN_ID: "fake-token-id",
         SMOG_DEV_MUX_TOKEN_SECRET: "fake-token-secret",

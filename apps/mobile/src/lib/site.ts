@@ -16,6 +16,11 @@ export function gestureUrl(slug: string): string {
   return siteUrl(`/gestures/${encodeURIComponent(slug)}`);
 }
 
+/** The site's sponsor wizard with the gesture preselected (ruling 13). */
+export function sponsorUrl(slug: string): string {
+  return siteUrl(`/sponsor?gesture=${encodeURIComponent(slug)}`);
+}
+
 export interface ShareUrlOptions {
   /** The text with the url in it (Android shares text only). */
   message: string;

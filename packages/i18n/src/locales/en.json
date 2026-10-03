@@ -402,7 +402,22 @@
       "description": "Scan the code to open this gesture.",
       "download": "Download QR code"
     },
-    "sponsorCta": {}
+    "sponsorCta": {
+      "available": {
+        "title": "Sponsor this gesture",
+        "description": "Become the sponsor of this gesture.",
+        "action": "Sponsor now"
+      },
+      "pending": {
+        "title": "Currently sponsored",
+        "description": "This gesture is being sponsored."
+      },
+      "sponsored": {
+        "title": "Currently sponsored",
+        "description": "This gesture is sponsored by {{name}}.",
+        "availableFrom": "It will be available for sponsoring again from {{date}}."
+      }
+    }
   },
   "search": {
     "categories": "Categories",
@@ -1784,5 +1799,243 @@
       "renewal": "Renewal of your sponsorship at SMOG & Co"
     }
   },
-  "sponsor": {}
+  "sponsor": {
+    "meta": {
+      "title": "Sponsor a gesture",
+      "description": "Support a gesture for one year. Your name appears in the video and helps the SMOG project."
+    },
+    "steps": {
+      "select": "Choose gestures",
+      "details": "Your details",
+      "review": "Preview & pay"
+    },
+    "paused": {
+      "title": "Sponsoring is paused for now",
+      "description": "You cannot sponsor a gesture right now. Please try again later."
+    },
+    "select": {
+      "title": "Support a gesture",
+      "description": "Support a gesture for one year. Your name appears in the video and helps the SMOG project.",
+      "value": {
+        "perGesture": "Per gesture, per year",
+        "seconds": "{{seconds}} sec",
+        "nameInVideo": "Your name in every video",
+        "logoPrice": "+{{price}}",
+        "optionalLogo": "Add your logo (optional)"
+      },
+      "search": "Search gestures",
+      "searchPlaceholder": "Search by name, concept or category...",
+      "showMore": "+{{count}} more",
+      "showLess": "Show less",
+      "clearFilters": "Clear filters",
+      "available_one": "{{count}} available gesture shown",
+      "available_other": "{{count}} available gestures shown",
+      "loadMore": "Load more",
+      "partial": "Showing {{shown}} of {{total}} matches. Search more precisely to find the rest.",
+      "selected_one": "{{count}} selected",
+      "selected_other": "{{count}} selected",
+      "badge": {
+        "sponsored": "Sponsored",
+        "pending": "In progress",
+        "taken": "Just taken"
+      },
+      "limit": "You can sponsor up to {{max}} gestures per payment. Deselect one to choose another.",
+      "taken": "Someone else was just ahead of you. Those gestures are marked; choose others if you like.",
+      "empty": {
+        "title": "No gestures found",
+        "description": "Try another word or clear the filters."
+      }
+    },
+    "bar": {
+      "selected_one": "{{count}} gesture selected",
+      "selected_other": "{{count}} gestures selected",
+      "total": "Total: {{price}}",
+      "continue": "Continue"
+    },
+    "details": {
+      "title": "Configure your sponsorship",
+      "videoSection": "In the video",
+      "displayName": "Name in the video",
+      "displayNamePlaceholder": "E.g. Acme",
+      "displayNameHint": "Example: “{{intro}} {{name}}”",
+      "logo": {
+        "include": "Add a logo (+{{price}} per gesture)",
+        "label": "Logo",
+        "drop": "Drag your logo here or",
+        "browse": "browse",
+        "formats": "PNG, JPEG or WebP · max. 2 MB",
+        "previewAlt": "Preview of the logo",
+        "remove": "Remove logo",
+        "replace": "Choose another logo",
+        "guidelines": {
+          "title": "Logo guidelines",
+          "format": "Format: PNG with a transparent background (recommended), JPEG or WebP",
+          "dimensions": "Size: at least 800 × 800 px for the best quality",
+          "aspectRatio": "Aspect ratio: square (1:1) recommended",
+          "fileSize": "File size: at most 2 MB",
+          "style": "Style: simple, high-contrast logos work best",
+          "avoid": "Avoid: very detailed logos or thin lines"
+        }
+      },
+      "contact": {
+        "title": "Contact details",
+        "description": "We use this to contact you about your sponsorship.",
+        "name": "Full name",
+        "email": "Email",
+        "company": "Company"
+      },
+      "invoice": {
+        "checkbox": "I want an invoice",
+        "name": "Name on the invoice",
+        "namePlaceholder": "Name or company name",
+        "vat": "Enterprise number",
+        "vatHint": "10 digits, e.g. 0123.456.749",
+        "email": "Email address for the invoice"
+      },
+      "errors": {
+        "displayNameRequired": "The name in the video is required.",
+        "displayNameTooLong": "Use at most {{max}} characters.",
+        "displayNameInvalid": "Use one line of text, without special characters.",
+        "logoRequired": "Upload a logo or untick the option.",
+        "logoTooLarge": "The logo must be smaller than 2 MB.",
+        "logoType": "Use a PNG, JPEG or WebP image.",
+        "required": "This field is required.",
+        "tooLong": "This text is too long.",
+        "emailInvalid": "Invalid email address.",
+        "vatInvalid": "Invalid enterprise number.",
+        "summary": "Check the marked fields."
+      },
+      "back": "Back to selection",
+      "continue": "Continue to preview"
+    },
+    "price": {
+      "title": "Price summary",
+      "base_one": "{{count}} gesture × 1 year",
+      "base_other": "{{count}} gestures × 1 year",
+      "logo": "Logo add-on",
+      "total": "Total"
+    },
+    "review": {
+      "title": "Review your sponsorship",
+      "description": "This is how your name appears on the selected gestures. The real video is made after payment and checked before it goes online.",
+      "previewLabel": "Preview for {{name}}",
+      "summary": "Sponsorship details",
+      "gestures": "Gestures",
+      "duration": "Duration",
+      "durationValue": "1 year",
+      "nameInVideo": "Name in video",
+      "logo": "Logo",
+      "yes": "Yes",
+      "no": "No",
+      "contact": "Contact",
+      "invoice": "Invoice",
+      "total": "Total amount",
+      "pay": "Continue to payment",
+      "redirectNote": "You will be redirected to Mollie for a secure payment.",
+      "captchaHint": "First confirm that you are not a robot.",
+      "back": "Back to details",
+      "failed": "Continuing to payment failed. Please try again."
+    },
+    "success": {
+      "title": "Your sponsorship",
+      "missing": {
+        "title": "No payment found",
+        "description": "This link has no payment. Check your email for the confirmation."
+      },
+      "loading": "Checking your payment…",
+      "open": {
+        "title": "Your payment is being processed…",
+        "description": "This page updates itself as soon as Mollie confirms the payment.",
+        "attempt": "Attempt {{current}} of {{max}}"
+      },
+      "timeout": {
+        "title": "This is taking longer than expected",
+        "description": "Mollie has not confirmed the payment yet. A bank transfer can take longer; you get an email as soon as it arrives.",
+        "checkAgain": "Check again"
+      },
+      "paid": {
+        "title": "Payment successful!",
+        "description": "Thank you for supporting SMOG."
+      },
+      "renewed": {
+        "title": "Your sponsorship is renewed!",
+        "description": "Your name stays in the video until {{date}}."
+      },
+      "failed": {
+        "title": "The payment did not go through",
+        "description": "Nothing was charged and the gestures are free again. You can try again."
+      },
+      "canceled": {
+        "title": "The payment was cancelled"
+      },
+      "expired": {
+        "title": "The payment expired"
+      },
+      "retry": "Try again",
+      "refund": {
+        "title": "We will contact you",
+        "description": "Your payment arrived, but we could not process your sponsorship as is (for example because the gesture was sponsored in the meantime). We will contact you and refund where needed."
+      },
+      "summary": {
+        "title": "Summary",
+        "gestures": "Gestures",
+        "sponsor": "Sponsor",
+        "duration": "Duration",
+        "total": "Total paid",
+        "amount": "Amount"
+      },
+      "timeline": {
+        "title": "What happens next?",
+        "paid": "Your payment is confirmed.",
+        "video": "We make your video with your name in it.",
+        "review": "An administrator reviews your sponsorship within five working days.",
+        "live": "You get an email as soon as it is online."
+      },
+      "home": "Back to home"
+    },
+    "link": {
+      "invalid": {
+        "title": "Invalid link",
+        "description": "This link is missing a required code. Use the link from your email."
+      },
+      "loading": "Checking your link…",
+      "notFound": {
+        "title": "Link not found",
+        "description": "This link is invalid or has already been used. Contact SMOG if you think this is wrong."
+      },
+      "expired": {
+        "title": "Link expired",
+        "description": "This link has expired. Ask SMOG for a new link.",
+        "since": "Expired on {{date}}"
+      },
+      "back": "Back to the website"
+    },
+    "edit": {
+      "eyebrow": "Edit your sponsorship",
+      "title": "Update your video",
+      "gesture": "Gesture: {{name}}",
+      "expires_one": "Link expires in {{count}} day",
+      "expires_other": "Link expires in {{count}} days",
+      "logoHint": "Leave empty to keep your current logo.",
+      "noPayment": "You do not have to pay again. We check the change before it goes online.",
+      "submit": "Send for review",
+      "submitted": {
+        "title": "Sent!",
+        "description": "We make your new video and check it before it goes online. You do not have to pay again."
+      },
+      "failed": "We could not send your change. Please try again."
+    },
+    "renew": {
+      "eyebrow": "Renew your sponsorship",
+      "title": "Another year in the video",
+      "description": "Renew your sponsorship for one year. Your video stays as it is.",
+      "gesture": "Gesture",
+      "name": "Name in video",
+      "currentEnd": "Currently runs until",
+      "newEnd": "After renewal until",
+      "amount": "Amount",
+      "pay": "Renew and pay",
+      "failed": "The payment could not start. Please try again."
+    }
+  }
 }
