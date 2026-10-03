@@ -1,5 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
-import { type APIRequestContext, expect, type Page } from "@playwright/test";
+import {
+  type APIRequestContext,
+  expect,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 
 export const ORIGIN = `http://localhost:${process.env.E2E_PORT ?? 5173}`;
 
@@ -217,4 +222,23 @@ export async function waitForApp(page: Page): Promise<void> {
       Object.keys(main).some((key) => key.startsWith("__reactFiber"))
     );
   });
+}
+
+/**
+ * Presses Tab until `target` has the focus (at most `max` times), so a
+ * step is reached the way a keyboard user reaches it.
+ */
+export async function tabTo(
+  page: Page,
+  target: Locator,
+  max = 30
+): Promise<void> {
+  for (let presses = 0; presses < max; presses += 1) {
+    // biome-ignore lint/performance/noAwaitInLoops: one key at a time.
+    if (await target.evaluate((node) => node === document.activeElement)) {
+      return;
+    }
+    await page.keyboard.press("Tab");
+  }
+  await expect(target).toBeFocused();
 }

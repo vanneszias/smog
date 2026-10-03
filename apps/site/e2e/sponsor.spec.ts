@@ -20,6 +20,7 @@ import {
   ORIGIN,
   stubMux,
   stubMuxStream,
+  tabTo,
   waitForApp,
 } from "./helpers";
 import { signInAsAdmin } from "./maintenance";
@@ -273,6 +274,69 @@ test("the wizard's three steps, accessible in light and dark", async ({
       await context.close();
     }
   }
+});
+
+test("keyboard only: the cards, the selection bar, the dropzone's button and the stepper", async ({
+  page,
+}) => {
+  await openWizard(page);
+  const steps = page.getByRole("navigation", { name: "Stappen" });
+  const current = steps.locator('[aria-current="step"]');
+  await expect(current).toContainText("Gebaren kiezen");
+  // A card is a toggle: Tab to it, Space chooses it.
+  const blij = card(page, "Blij");
+  await tabTo(page, blij, 120);
+  await page.keyboard.press("Space");
+  await expect(blij).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("selection-count")).toHaveText(
+    "1 gebaar geselecteerd"
+  );
+  // The sticky selection bar's Continue is in the tab order after the grid.
+  await tabTo(
+    page,
+    page.getByRole("button", { exact: true, name: "Doorgaan" }),
+    120
+  );
+  await page.keyboard.press("Enter");
+  const details = page.getByRole("heading", {
+    level: 1,
+    name: "Configureer je sponsoring",
+  });
+  await expect(details).toBeFocused();
+  await expect(current).toContainText("Jouw gegevens");
+  await tabTo(page, page.getByLabel(NAAM_IN_DE_VIDEO));
+  await page.keyboard.type("Bakkerij Toets");
+  await tabTo(page, page.getByRole("checkbox", { name: LOGO_TOEVOEGEN }));
+  await page.keyboard.press("Space");
+  // The dropzone's keyboard path is its button, which opens the file picker.
+  await tabTo(page, page.getByRole("button", { name: "kies een bestand" }));
+  const chooser = page.waitForEvent("filechooser");
+  await page.keyboard.press("Enter");
+  await (await chooser).setFiles({
+    buffer: PNG,
+    mimeType: "image/png",
+    name: "logo.png",
+  });
+  await expect(page.getByAltText("Voorbeeld van het logo")).toBeVisible();
+  await tabTo(page, page.getByLabel(VOLLEDIGE_NAAM));
+  await page.keyboard.type("Toets Toetsenbord");
+  await tabTo(page, page.getByLabel(E_MAIL));
+  await page.keyboard.type("e2e-keyboard@smog.test");
+  await tabTo(
+    page,
+    page.getByRole("button", { name: "Doorgaan naar voorbeeld" })
+  );
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Bekijk je sponsoring" })
+  ).toBeFocused();
+  await expect(current).toContainText("Voorbeeld en betalen");
+  expect(await blockingViolations(page)).toEqual([]);
+  // Back keeps what was typed.
+  await tabTo(page, page.getByRole("button", { name: "Terug naar details" }));
+  await page.keyboard.press("Enter");
+  await expect(details).toBeFocused();
+  await expect(page.getByLabel(NAAM_IN_DE_VIDEO)).toHaveValue("Bakkerij Toets");
 });
 
 test("an old /sponsors?gestureId=<legacy id> lands in the wizard preselected (R-11)", async ({
