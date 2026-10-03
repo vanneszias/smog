@@ -523,38 +523,120 @@
         "footer": "Vous n'avez rien demandé\u202f? Vous pouvez ignorer cet e-mail. Votre mot de passe reste inchangé."
       }
     },
+    "common": {
+      "yourGesture": "votre geste",
+      "gestureNamed": "le geste «\u00a0{{name}}\u00a0»",
+      "logoAlt": "SMOG & Co",
+      "copyright": "© {{year}} SMOG & CO asbl · Belgique",
+      "tagline": "SMOG — Spreken Met Ondersteuning van Gebaren (parler avec le soutien des signes)",
+      "questions": "Des questions\u00a0? Répondez simplement à cet e-mail.",
+      "adminFooter": "Vous recevez cet e-mail parce que vous êtes administrateur de SMOG & Co.",
+      "contactWithCompany": "{{name}} ({{company}})",
+      "oneYear": "1 an",
+      "yes": "Oui",
+      "no": "Non",
+      "fields": {
+        "gesture": "Geste",
+        "gestures": "Gestes",
+        "displayName": "Nom dans la vidéo",
+        "paidAmount": "Montant payé",
+        "amount": "Montant",
+        "total": "Total",
+        "activeFrom": "En ligne depuis le",
+        "activeUntil": "En ligne jusqu'au",
+        "renewedUntil": "Prolongé jusqu'au",
+        "payment": "Paiement",
+        "email": "E-mail",
+        "contact": "Personne de contact",
+        "duration": "Durée",
+        "invoiceRequested": "Facture demandée",
+        "invoiceName": "Nom de facturation",
+        "vatNumber": "Numéro de TVA",
+        "invoiceEmail": "E-mail de facturation",
+        "error": "Erreur",
+        "reason": "Raison"
+      }
+    },
     "transactional": {
       "welcome": {
-        "subject": "Bienvenue sur SMOG & Co",
-        "body": "Votre compte est prêt. Découvrez les gestes et gardez vos favoris."
+        "subject": "Bienvenue chez SMOG & Co",
+        "preheader": "Découvrez des gestes et soutenez SMOG en parrainant un geste.",
+        "heading": "Bienvenue chez SMOG & Co",
+        "body": "Votre compte est prêt. Voici ce que vous pouvez faire\u00a0:",
+        "explore": "Découvrir des gestes et voir comment les faire",
+        "favorites": "Enregistrer vos gestes favoris et créer vos propres listes",
+        "sponsor": "Soutenir SMOG en parrainant un geste",
+        "button": "Découvrir les gestes",
+        "footer": "Vous n'avez pas créé ce compte\u00a0? Vous pouvez ignorer cet e-mail."
       },
       "sponsorshipReceived": {
-        "subject": "Nous avons reçu votre parrainage",
-        "body": "Merci\u00a0! Nous préparons votre vidéo et la vérifions avant sa mise en ligne."
+        "subject": "Nous avons bien reçu votre parrainage",
+        "preheader": "Merci\u00a0! Voici la suite.",
+        "heading": "Parrainage reçu",
+        "body": "Merci de parrainer {{gesture}}. La vidéo affichera le nom {{displayName}}.",
+        "nextTitle": "Et maintenant\u00a0?",
+        "stepRender": "Nous réalisons votre vidéo parrainée.",
+        "stepReview": "Nous vérifions la vidéo avant sa mise en ligne.",
+        "stepLive": "Vous recevez un e-mail dès que votre parrainage est en ligne.",
+        "footer": "Vous recevez cet e-mail parce que vous avez récemment soumis un parrainage via SMOG & Co."
       },
       "paymentConfirmed": {
-        "subject": "Votre paiement est confirmé",
-        "body": "Merci pour votre paiement. Vous trouverez les détails ci-dessous."
+        "subject": "Paiement confirmé — merci\u00a0!",
+        "preheader": "Nous avons bien reçu votre paiement de {{amount}}.",
+        "heading": "Paiement confirmé",
+        "body": "Nous avons bien reçu votre paiement. Merci\u00a0!",
+        "initialNext": "Votre parrainage est normalement en ligne dans un délai de 1 à 2 jours ouvrables. Nous vous enverrons un e-mail à ce moment-là.",
+        "renewalNext": "Votre parrainage a été prolongé et court désormais jusqu'au {{date}}.",
+        "footer": "Conservez cet e-mail comme preuve de paiement. Besoin d'une facture\u00a0? Contactez-nous."
       },
       "sponsorshipLive": {
-        "subject": "Votre parrainage est en ligne",
-        "body": "Votre vidéo parrainée s'affiche maintenant avec le geste."
+        "subject": "Votre parrainage est en ligne\u00a0!",
+        "preheader": "Votre vidéo parrainée est en ligne.",
+        "heading": "Votre parrainage est en ligne\u00a0!",
+        "body": "Votre vidéo parrainée pour {{gesture}} est maintenant en ligne avec le nom {{displayName}}.",
+        "button": "Voir sur SMOG",
+        "thanks": "Merci de soutenir SMOG\u00a0!",
+        "footer": "Nous vous enverrons un rappel 30 jours avant la fin, pour que vous puissiez prolonger."
       },
       "renewalReminder": {
-        "subject": "Votre parrainage se termine bientôt",
-        "body": "Votre parrainage se termine dans 30 jours. Renouvelez-le avec le lien ci-dessous."
+        "subject": "Votre parrainage SMOG se termine bientôt",
+        "preheader": "Votre parrainage se termine le {{date}}.",
+        "heading": "Votre parrainage se termine bientôt",
+        "body": "Votre parrainage pour {{gesture}} se termine le {{date}}, dans moins de 30 jours. Ensuite, le geste affichera de nouveau sa vidéo d'origine.",
+        "renew": "Vous souhaitez parrainer une année de plus\u00a0? Prolongez avec le bouton ci-dessous. Vous payez le même montant que l'an dernier.",
+        "button": "Prolonger le parrainage",
+        "footer": "Le lien fonctionne jusqu'à la fin de votre parrainage. Vous ne souhaitez pas prolonger\u00a0? Vous n'avez rien à faire."
       },
       "adminNewSponsorship": {
-        "subject": "Nouveau parrainage payé",
-        "body": "Un nouveau parrainage a été payé. Consultez-le dans l'administration."
+        "subject": "Nouveau parrainage\u00a0: {{name}}",
+        "subjectRenewal": "Parrainage prolongé par {{name}}",
+        "preheader": "Payé\u00a0: {{total}}.",
+        "heading": "Nouveau parrainage payé",
+        "headingRenewal": "Parrainage prolongé",
+        "body": "Un parrainage a été payé. Il attend maintenant sa vidéo, puis une approbation.",
+        "bodyRenewal": "Un parrainage a été prolongé d'un an. Aucune nouvelle vidéo ni approbation n'est nécessaire.",
+        "detailsTitle": "Parrainage",
+        "invoiceTitle": "Facturation",
+        "button": "Voir dans l'administration"
       },
       "adminRenderFailed": {
-        "subject": "Échec de la vidéo",
-        "body": "La vidéo d'un parrainage n'a pas pu être créée. Consultez-la dans l'administration."
+        "subject": "Échec de la vidéo pour {{gesture}}",
+        "preheader": "La vidéo pour {{displayName}} n'a pas pu être réalisée.",
+        "heading": "Échec de la vidéo",
+        "body": "La vidéo parrainée n'a pas pu être réalisée, même après de nouvelles tentatives. Vérifiez le parrainage dans l'administration.",
+        "button": "Voir le parrainage"
       },
       "adminRefundNeeded": {
-        "subject": "Remboursement nécessaire",
-        "body": "Un paiement doit être remboursé dans le tableau de bord Mollie."
+        "subject": "Remboursement nécessaire pour le paiement {{paymentId}}",
+        "preheader": "Remboursez {{amount}} dans le tableau de bord Mollie.",
+        "heading": "Remboursement nécessaire",
+        "body": "Ce paiement doit être remboursé manuellement.",
+        "reasonLate": "Payé trop tard\u00a0: quelqu'un d'autre a parrainé le geste entre-temps.",
+        "reasonMismatch": "Le montant ou la devise du paiement ne correspond pas à la commande.",
+        "reasonDouble": "Payé deux fois\u00a0: le paiement avait déjà été marqué comme payé manuellement.",
+        "reasonChargeback": "Rétrofacturé\u00a0: la banque a annulé le paiement. Vérifiez le parrainage et contactez le parrain si nécessaire.",
+        "steps": "Remboursez le montant dans le tableau de bord Mollie. Si le remboursement n'apparaît pas ensuite dans l'administration, enregistrez-le sur le paiement.",
+        "button": "Ouvrir dans Mollie"
       }
     }
   },

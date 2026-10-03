@@ -49,7 +49,8 @@ describe("admin.emails.preview", () => {
         const expected = await renderEmail(
           template,
           EMAIL_SAMPLES[template] as never,
-          locale
+          locale,
+          { siteUrl: "http://localhost:5173" }
         );
         expect(preview).toEqual(expected);
         expect(preview.html).toContain(`lang="${locale}"`);

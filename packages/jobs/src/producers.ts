@@ -22,7 +22,7 @@ export interface QueueProducer<Body> {
   send: (
     body: Body,
     options?: { contentType?: "json"; delaySeconds?: number }
-  ) => Promise<void>;
+  ) => Promise<unknown>;
 }
 
 export const ENQUEUE_RETRY_DELAYS_MS = [100, 400, 1600] as const;
