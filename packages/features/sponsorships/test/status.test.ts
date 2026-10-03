@@ -123,12 +123,7 @@ describe("sponsorships.paymentStatus (S-14, ruling 2)", () => {
     expect(await recentFanout(env.KV, seeded.paymentId)).toBe(true);
     // A failed enqueue leaves no marker: the webhook then sends it.
     const other = await seedCheckout(db, { count: 1 });
-    const otherMollie = await molliePaymentFor(
-      db,
-      fake,
-      other.paymentId,
-      5000
-    );
+    const otherMollie = await molliePaymentFor(db, fake, other.paymentId, 5000);
     fake.setStatus(otherMollie, "paid");
     const error = vi
       .spyOn(console, "error")

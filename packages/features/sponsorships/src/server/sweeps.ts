@@ -53,6 +53,7 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
+import { SETTLED_AT_SQL } from "./email-window";
 import {
   ENDED_STATUSES,
   type LogoBucket,
@@ -60,7 +61,6 @@ import {
   orphanLogoSweep,
   releaseTerminalLogos,
 } from "./orphan-logos";
-import { SETTLED_AT_SQL } from "./email-window";
 import { settlePayment } from "./settle";
 import {
   isStalePayment,

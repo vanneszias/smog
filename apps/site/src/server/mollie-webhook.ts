@@ -136,8 +136,7 @@ export async function handleMollieWebhook(
     return answer(200, "NOT_OURS");
   }
   const already = result.outcome === "already";
-  const throttled =
-    already && (await recentFanout(deps.kv, result.paymentId));
+  const throttled = already && (await recentFanout(deps.kv, result.paymentId));
   if (throttled) {
     console.log(
       `[payments] Mollie webhook ${id}: already, fanned out in the last 5 minutes`

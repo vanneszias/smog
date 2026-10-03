@@ -8,6 +8,11 @@
  */
 export { getAvailability } from "./availability";
 export {
+  FANOUT_MARKER_TTL_S,
+  markFanout,
+  recentFanout,
+} from "./fanout-marker";
+export {
   type AfterCommit,
   approveStatements,
   cancelPaymentStatements,
@@ -37,11 +42,6 @@ export {
 } from "./mollie-payment";
 export type { SponsorshipsDeps, SponsorshipsImplementer } from "./procedure";
 export { getQuote } from "./quote";
-export {
-  FANOUT_MARKER_TTL_S,
-  markFanout,
-  recentFanout,
-} from "./fanout-marker";
 export {
   type AdminRecipient,
   adminRecipients,

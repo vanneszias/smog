@@ -239,7 +239,11 @@ export function parseWorkerVars(env: object): WorkerVars {
  * Only the shape the code calls is checked (`send`; R2's object methods):
  * the platform types stay the site's.
  */
-export const WORKER_BINDINGS = ["EMAIL_QUEUE", "EVENTS_QUEUE", "MEDIA"] as const;
+export const WORKER_BINDINGS = [
+  "EMAIL_QUEUE",
+  "EVENTS_QUEUE",
+  "MEDIA",
+] as const;
 export type WorkerBinding = (typeof WORKER_BINDINGS)[number];
 
 function hasMethods(value: unknown, methods: readonly string[]): boolean {
@@ -247,7 +251,8 @@ function hasMethods(value: unknown, methods: readonly string[]): boolean {
     typeof value === "object" &&
     value !== null &&
     methods.every(
-      (method) => typeof (value as Record<string, unknown>)[method] === "function"
+      (method) =>
+        typeof (value as Record<string, unknown>)[method] === "function"
     )
   );
 }

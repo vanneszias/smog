@@ -269,7 +269,7 @@ describe("the retention purges (ruling 9)", () => {
       get(target, key, receiver) {
         if (key === "prepare") {
           return (query: string) => {
-            if (query.startsWith("delete from \"verification\"")) {
+            if (query.startsWith('delete from "verification"')) {
               throw new Error("verification is locked");
             }
             return target.prepare(query);
@@ -293,7 +293,9 @@ describe("the retention purges (ruling 9)", () => {
       verification: 0,
     });
     expect(error).toHaveBeenCalledWith(
-      expect.stringContaining('[db] The retention purge failed part way; deleted: {"audit_log":2')
+      expect.stringContaining(
+        '[db] The retention purge failed part way; deleted: {"audit_log":2'
+      )
     );
     expect(await count("audit_log")).toBe(0);
     error.mockRestore();

@@ -383,6 +383,9 @@ describe("REQUIRED_WORKER_CONFIG (ruling 12)", () => {
   });
 });
 
+const ALL_BINDINGS = /EMAIL_QUEUE[\s\S]*EVENTS_QUEUE[\s\S]*MEDIA/;
+const QUEUE_AND_BUCKET = /EMAIL_QUEUE[\s\S]*MEDIA/;
+
 describe("parseWorkerBindings (Phase 6 fix wave, jobs M-4)", () => {
   const queue = { send: () => Promise.resolve() };
   const bucket = {
@@ -403,11 +406,9 @@ describe("parseWorkerBindings (Phase 6 fix wave, jobs M-4)", () => {
   });
 
   test("names every missing or malformed binding", () => {
-    expect(() => parseWorkerBindings({})).toThrow(
-      /EMAIL_QUEUE[\s\S]*EVENTS_QUEUE[\s\S]*MEDIA/
-    );
+    expect(() => parseWorkerBindings({})).toThrow(ALL_BINDINGS);
     expect(() =>
       parseWorkerBindings({ EMAIL_QUEUE: {}, EVENTS_QUEUE: queue, MEDIA: {} })
-    ).toThrow(/EMAIL_QUEUE[\s\S]*MEDIA/);
+    ).toThrow(QUEUE_AND_BUCKET);
   });
 });

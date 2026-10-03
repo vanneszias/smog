@@ -41,7 +41,9 @@ const SETTLING_LIST = sql.raw(
  * id is `paymentId` (a value, or a column of the outer query), or NULL.
  */
 export function firstSettledAtSql(paymentId: SQL | string): SQL<number | null> {
-  return sql<number | null>`(SELECT min(${ref("se", sponsorshipEvent.createdAt)}) FROM ${paymentItem} AS ${sql.raw("pi")} INNER JOIN ${sponsorshipEvent} AS ${sql.raw("se")} ON ${ref("se", sponsorshipEvent.sponsorshipId)} = ${ref("pi", paymentItem.sponsorshipId)} WHERE ${ref("pi", paymentItem.paymentId)} = ${paymentId} AND ${ref("se", sponsorshipEvent.type)} IN (${SETTLING_LIST}) AND json_extract(${ref("se", sponsorshipEvent.data)}, '$.paymentId') = ${paymentId})`;
+  return sql<
+    number | null
+  >`(SELECT min(${ref("se", sponsorshipEvent.createdAt)}) FROM ${paymentItem} AS ${sql.raw("pi")} INNER JOIN ${sponsorshipEvent} AS ${sql.raw("se")} ON ${ref("se", sponsorshipEvent.sponsorshipId)} = ${ref("pi", paymentItem.sponsorshipId)} WHERE ${ref("pi", paymentItem.paymentId)} = ${paymentId} AND ${ref("se", sponsorshipEvent.type)} IN (${SETTLING_LIST}) AND json_extract(${ref("se", sponsorshipEvent.data)}, '$.paymentId') = ${paymentId})`;
 }
 
 /**
