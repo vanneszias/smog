@@ -45,6 +45,8 @@ import { Route as WebhooksMollieRouteImport } from './routes/webhooks/mollie'
 import { Route as AdminGesturesIndexRouteImport } from './routes/admin/gestures/index'
 import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id'
 import { Route as AdminGesturesNewRouteImport } from './routes/admin/gestures/new'
+import { Route as AdminSponsorshipsIndexRouteImport } from './routes/admin/sponsorships/index'
+import { Route as AdminSponsorshipsIdRouteImport } from './routes/admin/sponsorships/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiLogosKeyRouteImport } from './routes/api/logos/$key'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
@@ -233,6 +235,16 @@ const AdminGesturesNewRoute = AdminGesturesNewRouteImport.update({
   path: '/gestures/new',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSponsorshipsIndexRoute = AdminSponsorshipsIndexRouteImport.update({
+  id: '/sponsorships/',
+  path: '/sponsorships/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSponsorshipsIdRoute = AdminSponsorshipsIdRouteImport.update({
+  id: '/sponsorships/$id',
+  path: '/sponsorships/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -305,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/lists/': typeof ListsIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
@@ -312,6 +325,7 @@ export interface FileRoutesByFullPath {
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
+  '/admin/sponsorships/': typeof AdminSponsorshipsIndexRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRoutesByTo {
@@ -349,6 +363,7 @@ export interface FileRoutesByTo {
   '/lists': typeof ListsIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
@@ -356,6 +371,7 @@ export interface FileRoutesByTo {
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures': typeof AdminGesturesIndexRoute
+  '/admin/sponsorships': typeof AdminSponsorshipsIndexRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRoutesById {
@@ -395,6 +411,7 @@ export interface FileRoutesById {
   '/lists/': typeof ListsIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
@@ -402,6 +419,7 @@ export interface FileRoutesById {
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
+  '/admin/sponsorships/': typeof AdminSponsorshipsIndexRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRouteTypes {
@@ -442,6 +460,7 @@ export interface FileRouteTypes {
     | '/lists/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/sponsorships/$id'
     | '/api/auth/$'
     | '/api/logos/$key'
     | '/api/openapi/$'
@@ -449,6 +468,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
+    | '/admin/sponsorships/'
     | '/api/logos/upload/$key'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -486,6 +506,7 @@ export interface FileRouteTypes {
     | '/lists'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/sponsorships/$id'
     | '/api/auth/$'
     | '/api/logos/$key'
     | '/api/openapi/$'
@@ -493,6 +514,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures'
+    | '/admin/sponsorships'
     | '/api/logos/upload/$key'
   id:
     | '__root__'
@@ -531,6 +553,7 @@ export interface FileRouteTypes {
     | '/lists/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/sponsorships/$id'
     | '/api/auth/$'
     | '/api/logos/$key'
     | '/api/openapi/$'
@@ -538,6 +561,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
+    | '/admin/sponsorships/'
     | '/api/logos/upload/$key'
   fileRoutesById: FileRoutesById
 }
@@ -832,6 +856,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGesturesNewRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/sponsorships/': {
+      id: '/admin/sponsorships/'
+      path: '/sponsorships'
+      fullPath: '/admin/sponsorships/'
+      preLoaderRoute: typeof AdminSponsorshipsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/sponsorships/$id': {
+      id: '/admin/sponsorships/$id'
+      path: '/sponsorships/$id'
+      fullPath: '/admin/sponsorships/$id'
+      preLoaderRoute: typeof AdminSponsorshipsIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -893,7 +931,9 @@ interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminGesturesIdRoute: typeof AdminGesturesIdRoute
   AdminGesturesNewRoute: typeof AdminGesturesNewRoute
+  AdminSponsorshipsIdRoute: typeof AdminSponsorshipsIdRoute
   AdminGesturesIndexRoute: typeof AdminGesturesIndexRoute
+  AdminSponsorshipsIndexRoute: typeof AdminSponsorshipsIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -905,7 +945,9 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminGesturesIdRoute: AdminGesturesIdRoute,
   AdminGesturesNewRoute: AdminGesturesNewRoute,
+  AdminSponsorshipsIdRoute: AdminSponsorshipsIdRoute,
   AdminGesturesIndexRoute: AdminGesturesIndexRoute,
+  AdminSponsorshipsIndexRoute: AdminSponsorshipsIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

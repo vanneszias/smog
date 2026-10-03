@@ -816,6 +816,7 @@
       "label": "Beheer",
       "open": "Beheermenu openen",
       "dashboard": "Overzicht",
+      "sponsorships": "Sponsorings",
       "gestures": "Gebaren",
       "categories": "Categorieën",
       "users": "Gebruikers",
@@ -849,7 +850,24 @@
       "quickLinks": "Snel naar",
       "newGesture": "Nieuw gebaar",
       "manageCategories": "Categorieën beheren",
-      "sponsorships": {}
+      "sponsorships": {
+        "title": "Sponsorings",
+        "review": "Sponsorings beoordelen",
+        "inReview_one": "te beoordelen",
+        "inReview_other": "te beoordelen",
+        "awaitingPayment_one": "{{count}} wacht op betaling",
+        "awaitingPayment_other": "{{count}} wachten op betaling",
+        "rendering_one": "{{count}} video in de maak",
+        "rendering_other": "{{count}} video’s in de maak",
+        "renderFailed_one": "{{count}} video mislukt",
+        "renderFailed_other": "{{count}} video’s mislukt",
+        "live_one": "{{count}} live",
+        "live_other": "{{count}} live",
+        "expiring_one": "{{count}} loopt binnenkort af",
+        "expiring_other": "{{count}} lopen binnenkort af",
+        "refundNeeded_one": "{{count}} betaling terug te betalen",
+        "refundNeeded_other": "{{count}} betalingen terug te betalen"
+      }
     },
     "audit": {
       "title": "Logboek",
@@ -1319,7 +1337,9 @@
         "self": "Dit is je eigen account. Een andere beheerder moet de rol wijzigen, het account blokkeren of verwijderen.",
         "adminTarget": "Neem eerst de beheerdersrol af voor je dit account blokkeert of verwijdert.",
         "bannedTarget": "Hef de blokkering op voor je dit account beheerder maakt.",
-        "notFound": "Dit account bestaat niet meer."
+        "notFound": "Dit account bestaat niet meer.",
+        "sponsorships": "Sponsorings",
+        "noSponsorships": "Geen sponsorings met dit e-mailadres."
       },
       "methods": {
         "credential": "Wachtwoord",
@@ -1449,8 +1469,286 @@
       "empty": "Nog geen e-mailsjablonen.",
       "sandboxed": "Getoond in een sandbox: geen scripts, links openen niet."
     },
-    "sponsorships": {},
-    "export": {}
+    "sponsorships": {
+      "title": "Sponsorings",
+      "description": "Beoordelen, betalingen opvolgen en exporteren. Elke actie wordt gelogd.",
+      "tabs": {
+        "label": "Sponsorings per fase",
+        "review": "Te beoordelen",
+        "all": "Alle",
+        "awaiting": "Wacht op betaling",
+        "rendering": "Video in de maak of mislukt",
+        "live": "Live of loopt af",
+        "refund": "Terug te betalen",
+        "closed": "Afgesloten"
+      },
+      "filters": {
+        "label": "Filters",
+        "search": "Zoek op gebaar, naam of e-mailadres",
+        "status": "Status",
+        "all": "Alle statussen",
+        "from": "Vanaf",
+        "to": "Tot en met",
+        "clear": "Filters wissen"
+      },
+      "columns": {
+        "gesture": "Gebaar en naam",
+        "status": "Status",
+        "sponsor": "Contact",
+        "payment": "Betaling",
+        "invoice": "Factuur",
+        "created": "Aangemaakt"
+      },
+      "empty": "Geen sponsorings gevonden.",
+      "nextPage": "Oudere sponsorings",
+      "firstPage": "Nieuwste sponsorings",
+      "refundNeededBadge": "Terugbetalen",
+      "amountUnknown": "een onbekend bedrag",
+      "queue": {
+        "label": "Te beoordelen",
+        "empty": "Alles is beoordeeld",
+        "emptyDescription": "Er wacht geen sponsoring op een beoordeling. Een betaalde sponsoring komt hier zodra haar video klaar is."
+      },
+      "invoice": {
+        "requested": "Factuur gevraagd",
+        "none": "Geen factuur",
+        "short": "Factuur",
+        "name": "Naam",
+        "vat": "Ondernemingsnr.",
+        "email": "E-mailadres"
+      },
+      "logo": {
+        "title": "Logo",
+        "has": "Logo",
+        "alt": "Logo van {{name}}",
+        "none": "Zonder logo.",
+        "removed": "Het logo is verwijderd (30 dagen na het einde). Het blijft betaald."
+      },
+      "errors": {
+        "notFound": "Deze sponsoring of betaling bestaat niet meer.",
+        "validation": "Dat klopt niet. Controleer wat je invulde."
+      },
+      "paymentStatus": {
+        "open": "Open",
+        "paid": "Betaald",
+        "failed": "Mislukt",
+        "canceled": "Geannuleerd",
+        "expired": "Verlopen",
+        "refund_needed": "Terug te betalen"
+      },
+      "detail": {
+        "back": "Alle sponsorings",
+        "subtitle": "Sponsoring van {{gesture}}, aangemaakt op {{date}}",
+        "publicPage": "Op de site bekijken",
+        "notFound": "Deze sponsoring bestaat niet",
+        "notFoundDescription": "Misschien is de link fout. Zoek de sponsoring in de lijst.",
+        "videos": "Video’s",
+        "original": "Origineel",
+        "originalOf": "Originele video van {{name}}",
+        "sponsored": "Gesponsorde video",
+        "sponsoredOf": "Gesponsorde video van {{name}}",
+        "fakeRender": "Testvideo (zonder overlay)",
+        "noVideo": "Nog geen video.",
+        "facts": "Gegevens",
+        "gesture": "Gebaar",
+        "amount": "Bedrag",
+        "displayName": "Naam in de video",
+        "contact": "Contactpersoon",
+        "company": "Bedrijf",
+        "email": "E-mailadres",
+        "language": "Taal",
+        "created": "Aangemaakt",
+        "startsAt": "Live vanaf",
+        "endsAt": "Live tot",
+        "reminderSent": "Herinnering verstuurd"
+      },
+      "actions": {
+        "title": "Acties",
+        "notes": {
+          "awaitingPayment": "Wacht op betaling. Markeer als betaald of annuleer bij de betaling hieronder.",
+          "rendering": "De video wordt gemaakt. Daarna komt de sponsoring bij Te beoordelen.",
+          "renderFailed": "De video is mislukt. Opnieuw proberen komt met de nieuwe videomaker; tot dan kan niemand hier iets doen.",
+          "closed": "Deze sponsoring is afgesloten."
+        }
+      },
+      "approve": {
+        "action": "Goedkeuren",
+        "title": "{{name}} op {{gesture}} goedkeuren?",
+        "description": "Betaald: {{amount}}. Het gaat nu live voor een jaar, tot {{date}}, en de sponsor krijgt een e-mail.",
+        "done": "{{name}} is goedgekeurd en live.",
+        "noVideo": "Er is nog geen video: keur goed zodra de video klaar is."
+      },
+      "requestChanges": {
+        "action": "Aanpassing vragen",
+        "title": "Een aanpassing vragen aan {{name}}?",
+        "description": "Je krijgt een link die je zelf naar de sponsor stuurt; er gaat geen e-mail uit. De link werkt één keer, 7 dagen lang.",
+        "done": "Aanpassing gevraagd. Stuur de link naar de sponsor."
+      },
+      "regenerate": {
+        "reeditAction": "Nieuwe bewerklink",
+        "renewalAction": "Nieuwe verlenglink",
+        "confirm": "Nieuwe link maken",
+        "reeditTitle": "Een nieuwe bewerklink voor {{name}}?",
+        "renewalTitle": "Een nieuwe verlenglink voor {{name}}?",
+        "reeditDescription": "De vorige link werkt meteen niet meer. De nieuwe werkt één keer, 7 dagen lang.",
+        "renewalDescription": "De vorige link werkt meteen niet meer. De nieuwe werkt tot de sponsoring afloopt.",
+        "done": "Nieuwe link gemaakt. De vorige werkt niet meer."
+      },
+      "reject": {
+        "action": "Afwijzen",
+        "title": "{{name}} op {{gesture}} afwijzen?",
+        "description": "Betaald: {{amount}}. Het gebaar komt weer vrij. Er gaat geen e-mail uit en er wordt niets automatisch terugbetaald: betaal terug in het Mollie-dashboard als dat zo afgesproken is.",
+        "reason": "Reden",
+        "reasonHint": "Komt in de geschiedenis en het logboek. De sponsor ziet ze niet.",
+        "done": "{{name}} is afgewezen."
+      },
+      "forceExpire": {
+        "action": "Nu beëindigen",
+        "title": "{{name}} op {{gesture}} nu beëindigen?",
+        "description": "Het gaat meteen offline en de gesponsorde video wordt verwijderd. Betaald: {{amount}}; er wordt niets automatisch terugbetaald en er gaat geen e-mail uit.",
+        "confirmLabel": "Typ {{gesture}} om te bevestigen",
+        "done": "{{name}} is beëindigd."
+      },
+      "markPaid": {
+        "action": "Als betaald markeren",
+        "title": "{{amount}} als betaald markeren?",
+        "description": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: van elk wordt de video gemaakt.",
+        "note": "Bankreferentie",
+        "noteHint": "Komt in de geschiedenis, bv. de mededeling van de overschrijving.",
+        "done": "Als betaald gemarkeerd. De video’s worden gemaakt.",
+        "settled": "Mollie had deze betaling al: ze is als betaald verwerkt.",
+        "refundNeeded": "Mollie had deze betaling al, maar ze moet terugbetaald worden. Bekijk de betaling hieronder.",
+        "lateFailure": "De betaling is als betaald gemarkeerd, maar de video’s starten mislukte. De controle van elk uur start ze; je hoeft niets meer te doen."
+      },
+      "cancel": {
+        "action": "Betaling annuleren",
+        "keep": "Behouden",
+        "title": "De betaling van {{amount}} annuleren?",
+        "description": "Ze dekt {{gestures}}: die worden allemaal geannuleerd en komen weer vrij, en de betaling wordt ook bij Mollie geannuleerd. Er gaat geen e-mail uit.",
+        "done": "Betaling geannuleerd. {{gestures}}: weer vrij."
+      },
+      "recordRefund": {
+        "action": "Terugbetaling registreren",
+        "title": "De terugbetaling van {{amount}} registreren?",
+        "description": "Betaal eerst terug in het Mollie-dashboard. Dit leest wat Mollie terugbetaalde voor {{gestures}}.",
+        "done": "Terugbetaling van {{amount}} geregistreerd."
+      },
+      "link": {
+        "reeditTitle": "Bewerklink voor {{name}}",
+        "renewalTitle": "Verlenglink voor {{name}}",
+        "description": "Kopieer hem nu: hij wordt maar één keer getoond. Hij werkt tot {{date}}.",
+        "label": "Link",
+        "reeditHint": "Stuur hem zelf naar de sponsor. Daarmee past die de naam en het logo aan.",
+        "renewalHint": "Stuur hem zelf naar de sponsor. Daarmee verlengt die met een jaar.",
+        "copy": "Link kopiëren",
+        "copied": "Link gekopieerd.",
+        "copyByHand": "Kopiëren lukte niet. De link is geselecteerd: kopieer hem zelf.",
+        "done": "Klaar"
+      },
+      "payment": {
+        "section": "Betalingen",
+        "empty": "Geen betalingen.",
+        "title": "{{kind}}",
+        "kind": {
+          "initial": "Aankoop",
+          "renewal": "Verlenging"
+        },
+        "created": "Aangemaakt",
+        "paid": "Betaald op",
+        "refund": "Terugbetaling",
+        "refunded": "Terugbetaald",
+        "partlyRefunded": "{{amount}} van {{total}} terugbetaald",
+        "notRefunded": "Niets terugbetaald",
+        "refundNeeded": "Deze betaling moet terugbetaald worden. Betaal terug in het Mollie-dashboard en registreer het daarna hier.",
+        "chargedBack": "Teruggevorderd: {{amount}} ({{date}}).",
+        "chargebackHint": "Annuleren gaat alleen voor open betalingen: beëindig een live sponsoring of wijs er een af die ter beoordeling staat.",
+        "mollieId": "Mollie-id",
+        "noMollie": "Geen (lokaal)",
+        "openInMollie": "Openen in Mollie",
+        "newTab": "(opent in een nieuw tabblad)",
+        "gestures_one": "Dekt {{count}} gebaar",
+        "gestures_other": "Dekt {{count}} gebaren"
+      },
+      "events": {
+        "title": "Geschiedenis",
+        "empty": "Nog niets gebeurd.",
+        "system": "Systeem",
+        "deletedActor": "Verwijderd account",
+        "legacyActor": "Oude site",
+        "period": "{{start}} tot {{end}}",
+        "until": "Tot {{date}}",
+        "linkUntil": "Link werkt tot {{date}}",
+        "created": "Aangemaakt bij het afrekenen",
+        "payment_paid": "Betaald",
+        "payment_failed": "Betaling mislukt",
+        "marked_paid_manually": "Handmatig als betaald gemarkeerd",
+        "render_started": "Video gestart",
+        "render_succeeded": "Video klaar",
+        "render_failed": "Video mislukt",
+        "render_retried": "Video opnieuw gestart",
+        "approved": "Goedgekeurd",
+        "rejected": "Afgewezen",
+        "changes_requested": "Aanpassing gevraagd",
+        "resubmitted": "Aangepast door de sponsor",
+        "reminder_sent": "Herinnering verstuurd",
+        "renewed": "Verlengd",
+        "expired": "Afgelopen",
+        "force_expired": "Vroeger beëindigd",
+        "cancelled": "Geannuleerd",
+        "revived": "Hersteld na een late betaling",
+        "refund_needed": "Terugbetaling nodig",
+        "token_issued": "Link gemaakt",
+        "legacy": "Oude logregel",
+        "cancelReason": {
+          "provider": "Mollie gaf een fout bij het afrekenen",
+          "admin": "Door een beheerder",
+          "stale": "Niet betaald binnen 24 uur",
+          "mismatch": "Het bedrag klopte niet"
+        },
+        "refundReason": {
+          "late": "Te laat betaald: het gebaar was intussen bezet",
+          "mismatch": "Het bedrag klopte niet",
+          "double": "Twee keer betaald",
+          "chargeback": "Teruggevorderd door de bank"
+        }
+      },
+      "renderJobs": {
+        "title": "Videotaken",
+        "retryLater": "Alleen lezen. Opnieuw proberen komt met de nieuwe videomaker.",
+        "empty": "Nog geen videotaken.",
+        "attempt": "Poging {{attempt}}",
+        "status": {
+          "queued": "In de wachtrij",
+          "running": "Bezig",
+          "succeeded": "Gelukt",
+          "failed": "Mislukt"
+        }
+      },
+      "tokens": {
+        "title": "Links",
+        "empty": "Nog geen links.",
+        "purpose": {
+          "reedit": "Bewerklink",
+          "renewal": "Verlenglink"
+        },
+        "active": "Actief",
+        "used": "Gebruikt of vervangen",
+        "expired": "Verlopen",
+        "dates": "Gemaakt {{created}} · werkt tot {{expires}}"
+      }
+    },
+    "export": {
+      "action": "CSV exporteren",
+      "title": "CSV exporteren",
+      "description": "Eén rij per sponsoring, met de 18 kolommen van vroeger. Laat leeg voor alles; de export wordt gelogd.",
+      "status": "Status",
+      "allStatuses": "Alle statussen",
+      "from": "Aangemaakt vanaf",
+      "to": "Aangemaakt tot en met",
+      "download": "Downloaden",
+      "done_one": "{{count}} rij geëxporteerd.",
+      "done_other": "{{count}} rijen geëxporteerd."
+    }
   },
   "sponsorship": {
     "status": {

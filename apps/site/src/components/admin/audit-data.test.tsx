@@ -53,6 +53,16 @@ describe("audit target links", () => {
     expect(
       auditTargetLink({ ...ENTRY, targetId: null, targetType: "system" })
     ).toBeNull();
+    // Phase 6: a sponsorship opens its detail, a payment its sponsorships.
+    expect(
+      auditTargetLink({ ...ENTRY, targetId: "sp-1", targetType: "sponsorship" })
+    ).toEqual({ params: { id: "sp-1" }, to: "/admin/sponsorships/$id" });
+    expect(
+      auditTargetLink({ ...ENTRY, targetId: "pay-1", targetType: "payment" })
+    ).toEqual({
+      search: { payment: "pay-1", tab: "all" },
+      to: "/admin/sponsorships",
+    });
   });
 });
 
