@@ -18,6 +18,24 @@ const BLOCKING = new Set(["serious", "critical"]);
  * review I-3: page-level states are level 1 in the kit).
  */
 const BLOCKING_RULES = new Set(["page-has-heading-one"]);
+
+/**
+ * The third-party Mux player's own element (and its shadow DOM), left out
+ * of every axe scan: whether its built-in, unnamed error dialog opens
+ * depends on when the stubbed or unreachable stream answers, so scanning
+ * it made the a11y specs non-deterministic (`aria-dialog-name`). Our markup
+ * around the player (the wrapper, its label, the poster) is still scanned.
+ */
+const AXE_EXCLUDED = ["mux-player"] as const;
+
+/** `builder` without `AXE_EXCLUDED` (one `exclude` per selector: an array is a frame path). */
+export function withoutAxeExcluded(builder: AxeBuilder): AxeBuilder {
+  let scoped = builder;
+  for (const selector of AXE_EXCLUDED) {
+    scoped = scoped.exclude(selector);
+  }
+  return scoped;
+}
 const OTP = /\b(\d{6})\b/;
 const VERIFY_LINK = new RegExp(`${ORIGIN}/api/auth/verify-email\\?\\S+`);
 
@@ -140,7 +158,8 @@ export function watchErrors(page: Page): string[] {
 }
 
 /**
- * axe's serious and critical violations, plus `BLOCKING_RULES`. `exclude` leaves selectors out,
+ * axe's serious and critical violations, plus `BLOCKING_RULES`, outside
+ * `AXE_EXCLUDED` (the Mux player). `exclude` leaves more selectors out,
  * frames included: axe never enters an excluded frame (a sandboxed
  * preview frame refuses its script, and the run can hang there).
  */
@@ -149,7 +168,7 @@ export async function blockingViolations(
   { exclude = [] }: { exclude?: readonly string[] } = {}
 ) {
   let builder = new AxeBuilder({ page });
-  for (const selector of exclude) {
+  for (const selector of [...AXE_EXCLUDED, ...exclude]) {
     builder = builder.exclude(selector);
   }
   const results = await builder.analyze();
