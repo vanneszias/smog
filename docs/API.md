@@ -124,6 +124,24 @@ integer cents, dates epoch milliseconds.
 - `render.requested { renderJobId }`: a `queued` job is started by `worker/render.ts` (`renderStarterFor(RENDER_MODE)`: `fake` completes it with the gesture's own video; `container`/`local` log and leave it queued until phase 7); any other job is acked.
 - An invalid message is acked; a failure retries after `min(30 × 2^(attempts − 1), 3600)` s, and the DLQ takes it after 10 attempts.
 
+### The `EMAIL_QUEUE` consumer
+
+- `apps/site/src/worker/email-queue.ts` over `processEmailMessage` (`@smog/jobs`), one message of the batch (at most 10) at a time: an invalid message, an auth email past its validity and a send the Email Service refuses for good (the recipient or the payload) are acked and logged; a message whose `idempotencyKey` has a KV `email:sent:<key>` marker is acked unsent; otherwise it is rendered (React Email, the message's locale) and sent with the env's sender (dev: the KV mailbox at `/dev/mail`; staging and production: the `EMAIL` binding, From and Reply-To from `wrangler.jsonc`), then the marker is written for 7 days. Any other failure (a render failure included) retries after `min(30 × 2^(attempts − 1), 3600)` s; after `max_retries` (5) the platform moves it to `smog-<env>-email-dlq`, which has no consumer (checked by hand).
+- Producers: `QueueEmailOutbox` (`@smog/jobs`) for auth emails, the welcome email and every sponsorship email, always after the D1 commit (phase 6 ruling 8). The keys: `welcome:<userId>`, `sponsorship_received:<sponsorshipId>`, `payment_confirmed:<paymentId>:<sponsorshipId>`, `admin_new_sponsorship:<paymentId>:<adminId>`, `sponsorship_live:<sponsorshipId>:<startsAt>`, `renewal_reminder:<sponsorshipId>:<endsAt>`, `admin_render_failed:<renderJobId>:<adminId>`, `admin_refund_needed:<paymentId>:<adminId>`; auth emails have none.
+
+### Cron Triggers (`scheduled`)
+
+`apps/site/src/worker/scheduled.ts` matches `controller.cron` against `CRON` (`@smog/jobs`), runs the sweep from `@smog/sponsorships/server` and logs `[cron] <name> <counts>`; an unknown schedule is logged and ignored, and a failing sweep is logged and rethrown (every sweep is idempotent and the next run continues). UTC, the same four in every env (`release-config-check` compares them with `wrangler.jsonc`):
+
+| Name | Schedule | Work |
+|---|---|---|
+| `stale` | `0 * * * *` | `runStaleSweep`: each `open` payment older than 24 h is re-fetched from Mollie and settled (a `paid` one is never cancelled), else cancelled at Mollie when cancelable and settled `canceled` (locally only without a key or a Mollie id); then the reconciliation re-sends `payment.settled` for paid payments still waiting for a render job (J-03) |
+| `expiry` | `0 0 * * *` | `runExpirySweep`: `live`/`expiring` past `ends_at` become `expired`, and a sponsored Mux asset that is not the gesture's own is deleted (failures logged, J-01) |
+| `reminders` | `0 8 * * *` | `runReminderSweep`: `live` ending within 30 days without a reminder becomes `expiring`, gets a renewal token valid until `ends_at` and the `renewal_reminder` email (J-02) |
+| `retention` | `15 3 * * *` | `runRetentionPurge`: the daily purge (J-04; see `docs/DATA_MODEL.md`, "Retention") |
+
+Locally: `bun run cron <stale|expiry|reminders|retention>` calls the dev server's scheduled endpoint; `bun run retention --env <env> --dry-run` counts what the purge would delete.
+
 ## `admin.*` (`@smog/admin`)
 
 Every admin procedure needs the admin role: `UNAUTHORIZED` for a guest,

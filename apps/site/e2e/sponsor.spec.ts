@@ -20,10 +20,10 @@ import {
   ORIGIN,
   stubMux,
   stubMuxStream,
+  tabTo,
   waitForApp,
 } from "./helpers";
 import { signInAsAdmin } from "./maintenance";
-import { PHASE6_PENDING, type Phase6Pending } from "./phase6";
 
 const NAAM_IN_DE_VIDEO = /^Naam in de video/;
 const LOGO_TOEVOEGEN = /^Logo toevoegen/;
@@ -39,15 +39,9 @@ const P_120_00 = /120,00/;
  * gesture CTA (phase 6 task 8), against the Mollie fake
  * (`@smog/payments/testing/server`, playwright.config.ts).
  *
- * Some parts need the server procedures of later tasks, flagged in
- * `PHASE6_PENDING` (`./phase6.ts`, review I-6). A flagged test skips only
- * while its procedure answers the task 3 stub ("not implemented"); once
- * the procedure is real it fails until the merging task removes its flag,
- * and any other 500 fails it outright:
- * - `checkout` (task 4): the paid and the failed checkout.
- * - `reedit` (task 5): the re-edit link flow.
- * The paid test checks the admin review queue (`admin.sponsorships.list`,
- * task 6) until both sponsorships are `in_review`.
+ * The paid test checks the admin review queue (`admin.sponsorships.list`)
+ * until both sponsorships are `in_review`, which proves the webhook, the
+ * `payment.settled` fan-out and the fake render.
  *
  * Run alone with a dev server you started yourself (`reuseExistingServer`),
  * that server needs the Mollie fake's `SMOG_DEV_MOLLIE_*` env (see
@@ -85,54 +79,6 @@ const PNG = Buffer.from(
 );
 const SUCCESS_URL = /\/sponsor\/success\?payment=/;
 const CHECKOUT_URL = new RegExp(`^${MOLLIE_FAKE}/checkout/`);
-/** The probe of each flagged part: a read the stub answers "not implemented". */
-const PROBES: Record<Phase6Pending, { input: unknown; path: string }> = {
-  checkout: {
-    input: { payment: "8c3c5a52-7a0c-4d9b-9d65-1f1d7f0c2a11" },
-    path: "sponsorships/paymentStatus",
-  },
-  reedit: { input: { token: "x".repeat(43) }, path: "sponsorships/reedit/get" },
-};
-
-/** Whether the procedure still answers the task 3 stub, and nothing else. */
-async function isStub(
-  request: APIRequestContext,
-  part: keyof typeof PROBES
-): Promise<boolean> {
-  const { input, path } = PROBES[part];
-  const response = await request.post(`/api/rpc/${path}`, {
-    data: { json: input },
-    headers: { origin: ORIGIN },
-  });
-  if (response.status() !== 500) {
-    return false;
-  }
-  const body = (await response.json()) as {
-    json?: { code?: string; message?: string };
-  };
-  return (
-    body.json?.code === "INTERNAL_SERVER_ERROR" &&
-    body.json.message === "not implemented"
-  );
-}
-
-/**
- * Skips while `part` is flagged and still the stub; a flagged part that is
- * implemented fails, so its flag is removed when it merges (review I-6).
- */
-async function skipWhilePending(
-  request: APIRequestContext,
-  part: keyof typeof PROBES
-): Promise<void> {
-  const stub = await isStub(request, part);
-  if (PHASE6_PENDING[part] && !stub) {
-    throw new Error(
-      `sponsorships.${PROBES[part].path} is implemented: remove PHASE6_PENDING.${part} (e2e/phase6.ts)`
-    );
-  }
-  test.skip(stub, `waits for phase 6 (PHASE6_PENDING.${part})`);
-}
-
 /**
  * The admin review queue (`admin.sponsorships.list`, status `in_review`)
  * as `slug:status`, for these gestures, read with an admin session.
@@ -330,6 +276,69 @@ test("the wizard's three steps, accessible in light and dark", async ({
   }
 });
 
+test("keyboard only: the cards, the selection bar, the dropzone's button and the stepper", async ({
+  page,
+}) => {
+  await openWizard(page);
+  const steps = page.getByRole("navigation", { name: "Stappen" });
+  const current = steps.locator('[aria-current="step"]');
+  await expect(current).toContainText("Gebaren kiezen");
+  // A card is a toggle: Tab to it, Space chooses it.
+  const blij = card(page, "Blij");
+  await tabTo(page, blij, 120);
+  await page.keyboard.press("Space");
+  await expect(blij).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("selection-count")).toHaveText(
+    "1 gebaar geselecteerd"
+  );
+  // The sticky selection bar's Continue is in the tab order after the grid.
+  await tabTo(
+    page,
+    page.getByRole("button", { exact: true, name: "Doorgaan" }),
+    120
+  );
+  await page.keyboard.press("Enter");
+  const details = page.getByRole("heading", {
+    level: 1,
+    name: "Configureer je sponsoring",
+  });
+  await expect(details).toBeFocused();
+  await expect(current).toContainText("Jouw gegevens");
+  await tabTo(page, page.getByLabel(NAAM_IN_DE_VIDEO));
+  await page.keyboard.type("Bakkerij Toets");
+  await tabTo(page, page.getByRole("checkbox", { name: LOGO_TOEVOEGEN }));
+  await page.keyboard.press("Space");
+  // The dropzone's keyboard path is its button, which opens the file picker.
+  await tabTo(page, page.getByRole("button", { name: "kies een bestand" }));
+  const chooser = page.waitForEvent("filechooser");
+  await page.keyboard.press("Enter");
+  await (await chooser).setFiles({
+    buffer: PNG,
+    mimeType: "image/png",
+    name: "logo.png",
+  });
+  await expect(page.getByAltText("Voorbeeld van het logo")).toBeVisible();
+  await tabTo(page, page.getByLabel(VOLLEDIGE_NAAM));
+  await page.keyboard.type("Toets Toetsenbord");
+  await tabTo(page, page.getByLabel(E_MAIL));
+  await page.keyboard.type("e2e-keyboard@smog.test");
+  await tabTo(
+    page,
+    page.getByRole("button", { name: "Doorgaan naar voorbeeld" })
+  );
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Bekijk je sponsoring" })
+  ).toBeFocused();
+  await expect(current).toContainText("Voorbeeld en betalen");
+  expect(await blockingViolations(page)).toEqual([]);
+  // Back keeps what was typed.
+  await tabTo(page, page.getByRole("button", { name: "Terug naar details" }));
+  await page.keyboard.press("Enter");
+  await expect(details).toBeFocused();
+  await expect(page.getByLabel(NAAM_IN_DE_VIDEO)).toHaveValue("Bakkerij Toets");
+});
+
 test("an old /sponsors?gestureId=<legacy id> lands in the wizard preselected (R-11)", async ({
   page,
 }) => {
@@ -376,7 +385,6 @@ test("pays for 2 gestures with a logo and an invoice; the success page shows pai
   page,
   request,
 }) => {
-  await skipWhilePending(page.request, "checkout");
   await openWizard(page);
   await choose(page, ["Broer", "Zus"]);
   await fillDetails(page, { invoice: true, logo: true });
@@ -399,7 +407,6 @@ test("pays for 2 gestures with a logo and an invoice; the success page shows pai
 test("a failed payment frees the gestures, and Try again keeps the selection", async ({
   page,
 }) => {
-  await skipWhilePending(page.request, "checkout");
   await openWizard(page);
   await choose(page, ["Mama", "Papa"]);
   await fillDetails(page);
@@ -417,7 +424,6 @@ test("a failed payment frees the gestures, and Try again keeps the selection", a
 });
 
 test("the re-edit link: a new name, sent for review", async ({ page }) => {
-  await skipWhilePending(page.request, "reedit");
   await stubMux(page);
   await page.goto(`/sponsor/edit?token=${REEDIT_TOKEN}`);
   await waitForApp(page);

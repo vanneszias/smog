@@ -101,6 +101,9 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
   use: {
+    // Every action (a click, a focus) fails on its own line after 15 s
+    // instead of hanging until the test times out (task 7 review I6).
+    actionTimeout: 15_000,
     baseURL: `http://localhost:${PORT}`,
     // Accept-Language picks the page language (no cookie yet): Dutch, the default.
     locale: "nl-BE",

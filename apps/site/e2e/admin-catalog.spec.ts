@@ -74,15 +74,28 @@ async function signInAsAdmin(page: Page): Promise<void> {
   expect(response.ok()).toBe(true);
 }
 
+/** The budget of one bounded wait in a test step (the reorder response). */
+const STEP_MS = 15_000;
+/** The budget of one cleanup request in `afterEach`. */
+const CLEANUP_MS = 10_000;
+
+const REGEXP_SPECIALS = /[.*+?^${}()|[\]\\]/g;
+
+function escapeRegExp(text: string): string {
+  return text.replace(REGEXP_SPECIALS, "\\$&");
+}
+
 /** One oRPC call over HTTP, as the admin client makes it. */
 async function rpc<T>(
   request: APIRequestContext,
   path: string,
-  input: unknown = null
+  input: unknown = null,
+  timeout?: number
 ): Promise<T> {
   const response = await request.post(`/api/rpc/${path}`, {
     data: { json: input },
     headers: HEADERS,
+    ...(timeout === undefined ? {} : { timeout }),
   });
   const body = (await response.json()) as { json: T };
   if (!response.ok()) {
@@ -178,11 +191,12 @@ test.describe("admin catalogue", () => {
     await signInAsAdmin(page);
   });
 
-  // After the tests' own `finally` deleted their gestures.
+  // After the tests' own `finally` deleted their gestures. Each delete has
+  // its own budget, so a cleanup failure never hides a test's real error.
   test.afterEach(async ({ page }) => {
     for (const id of madeCategories.splice(0)) {
       // biome-ignore lint/performance/noAwaitInLoops: one at a time.
-      await rpc(page.request, "admin/categories/delete", { id });
+      await rpc(page.request, "admin/categories/delete", { id }, CLEANUP_MS);
     }
   });
 
@@ -521,27 +535,20 @@ test.describe("admin catalogue", () => {
   }) => {
     // Only categories this test owns: two hidden ones, reordered within
     // the hidden section (the public order never changes).
+    // `afterEach` deletes them (`madeCategories`).
     const word = tag();
     const made: AdminCategory[] = [];
-    try {
-      for (const name of [`Zzorde a ${word}`, `Zzorde b ${word}`]) {
-        // biome-ignore lint/performance/noAwaitInLoops: created in this order.
-        const category = await rpc<AdminCategory>(
-          page.request,
-          "admin/categories/create",
-          { name, published: false }
-        );
-        made.push(category);
-      }
-      await reorderByKeyboard(page, made);
-    } finally {
-      for (const category of made) {
-        // biome-ignore lint/performance/noAwaitInLoops: one at a time.
-        await rpc(page.request, "admin/categories/delete", {
-          id: category.id,
-        });
-      }
+    for (const name of [`Zzorde a ${word}`, `Zzorde b ${word}`]) {
+      // biome-ignore lint/performance/noAwaitInLoops: created in this order.
+      const category = await rpc<AdminCategory>(
+        page.request,
+        "admin/categories/create",
+        { name, published: false }
+      );
+      madeCategories.push(category.id);
+      made.push(category);
     }
+    await reorderByKeyboard(page, made);
   });
 
   test("the QR dialog downloads smog-<slug>-qr.png", async ({ page }) => {
@@ -570,19 +577,47 @@ async function reorderByKeyboard(
   const handle = page.getByRole("button", {
     name: `Slepen om de volgorde te wijzigen: ${first.name}`,
   });
-  const saved = page.waitForResponse("**/api/rpc/admin/categories/reorder");
+  await expect(handle).toBeVisible();
+  const from = hidden.findIndex((item) => item.id === first.id) + 1;
+  const position = hidden.findIndex((item) => item.id === second.id) + 1;
+  // Each key waits for the drag's own state (task 7 review I6). dnd-kit
+  // measures the rows after the pick-up and then announces the row over
+  // itself ("verplaatst naar positie <from>"), which replaces "opgepakt" in
+  // the live region at once; an ArrowDown sent before the measuring finds no
+  // target and the drop is a no-op. So: wait for the handle to be pressed
+  // and for the announcement at `from`, then press ArrowDown until the
+  // region announces `position` (a press that came too early did nothing).
   await handle.focus();
   await page.keyboard.press("Space");
-  await page.keyboard.press("ArrowDown");
+  await expect(handle).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByText(
+      new RegExp(
+        `^${escapeRegExp(first.name)} (opgepakt, positie|verplaatst naar positie) ${from} van`
+      )
+    )
+  ).toBeAttached();
+  const moved = page.getByText(
+    `${first.name} verplaatst naar positie ${position} van`,
+    { exact: false }
+  );
+  await expect(async () => {
+    if ((await moved.count()) === 0) {
+      await page.keyboard.press("ArrowDown");
+    }
+    await expect(moved).toBeAttached({ timeout: 2000 });
+  }).toPass({ intervals: [500, 1000, 2000], timeout: STEP_MS });
+  const saved = page.waitForResponse("**/api/rpc/admin/categories/reorder", {
+    timeout: STEP_MS,
+  });
   await page.keyboard.press("Space");
   expect((await saved).ok()).toBe(true);
-  const position = hidden.findIndex((item) => item.id === second.id) + 1;
   await expect(
     page.getByText(
       `${first.name} neergezet op positie ${position} van ${hidden.length}.`
     )
   ).toBeAttached();
-  expect(await mine()).toEqual([second.name, first.name]);
+  await expect.poll(mine).toEqual([second.name, first.name]);
   expect(await blockingViolations(page)).toEqual([]);
 }
 

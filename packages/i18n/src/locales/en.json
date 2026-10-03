@@ -378,7 +378,6 @@
     "about": "About this gesture",
     "keywords": "Related concepts",
     "related": "Related gestures",
-    "sponsoredBy": "Sponsored by {{name}}",
     "share": "Share gesture",
     "shareMessage": "{{name}} in SMOG: {{url}}",
     "notFound": {

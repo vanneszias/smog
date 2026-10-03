@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import { adminRpc, openAdmin, stubMuxMedia } from "./admin";
-import { blockingViolations, ORIGIN } from "./helpers";
+import { blockingViolations, ORIGIN, tabTo } from "./helpers";
 import { signInAsAdmin } from "./maintenance";
 import {
   FLOW_IDS,
@@ -114,17 +114,21 @@ test.describe("admin sponsorships", () => {
     await expect(page.getByText("E2E Vogel").first()).toBeVisible();
   });
 
-  test("request changes shows the link once; it opens the sponsor's edit page", async ({
+  test("request changes (keyboard only) shows the link once; it opens the sponsor's edit page", async ({
     context,
     page,
   }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await openDetail(page, FLOW_IDS.koffie);
-    await page.getByRole("button", { name: "Aanpassing vragen" }).click();
-    await page
+    // The moderation action and the token dialog, by keyboard only.
+    const request = page.getByRole("button", { name: "Aanpassing vragen" });
+    await request.focus();
+    await page.keyboard.press("Enter");
+    const confirm = page
       .getByRole("alertdialog")
-      .getByRole("button", { name: "Aanpassing vragen" })
-      .click();
+      .getByRole("button", { name: "Aanpassing vragen" });
+    await tabTo(page, confirm);
+    await page.keyboard.press("Enter");
     const dialog = page.getByRole("dialog", {
       name: "Bewerklink voor E2E Koffie",
     });
@@ -134,10 +138,12 @@ test.describe("admin sponsorships", () => {
       .inputValue();
     expect(url).toMatch(REEDIT_LINK);
     expect(await blockingViolations(page)).toEqual([]);
-    await dialog.getByRole("button", { name: "Link kopiëren" }).click();
+    await tabTo(page, dialog.getByRole("button", { name: "Link kopiëren" }));
+    await page.keyboard.press("Enter");
     await expect(page.getByText("Link gekopieerd.").first()).toBeVisible();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
-    await dialog.getByRole("button", { name: "Klaar" }).click();
+    await tabTo(page, dialog.getByRole("button", { name: "Klaar" }));
+    await page.keyboard.press("Enter");
     await expect(dialog).toBeHidden();
     // Shown once: the page no longer holds the token.
     const token = new URL(url).searchParams.get("token") ?? "";

@@ -382,7 +382,6 @@
     "about": "À propos de ce geste",
     "keywords": "Concepts liés",
     "related": "Gestes liés",
-    "sponsoredBy": "Sponsorisé par {{name}}",
     "share": "Partager le geste",
     "shareMessage": "{{name}} en SMOG\u00a0: {{url}}",
     "notFound": {

@@ -1,6 +1,11 @@
-import { expect, type Page, test } from "@playwright/test";
+import {
+  type APIRequestContext,
+  expect,
+  type Page,
+  test,
+} from "@playwright/test";
 import { ADMIN_PAGES, openAdmin, stubMuxMedia } from "./admin";
-import { signInWithApi, stubMux, waitForApp } from "./helpers";
+import { e2eSeed, signInWithApi, stubMux, waitForApp } from "./helpers";
 import { signInAsAdmin } from "./maintenance";
 
 /**
@@ -45,6 +50,19 @@ ${SEGMENT_URL}
 #EXT-X-ENDLIST
 `;
 
+const MOLLIE_FAKE = `http://localhost:${process.env.E2E_MOLLIE_PORT ?? 4020}`;
+const CHECKOUT_URL = new RegExp(`^${MOLLIE_FAKE}/checkout/`);
+const BLOB_URL = /^blob:/;
+const NAAM_IN_DE_VIDEO = /^Naam in de video/;
+const LOGO_TOEVOEGEN = /^Logo toevoegen/;
+const VOLLEDIGE_NAAM = /^Volledige naam/;
+const E_MAIL = /^E-mail$/;
+/** A 1x1 transparent PNG. */
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+  "base64"
+);
+
 declare global {
   interface Window {
     __cspViolations?: string[];
@@ -82,6 +100,45 @@ function hits(): Map<string, number> {
 function count(map: Map<string, number>, url: string): void {
   const { host } = new URL(url);
   map.set(host, (map.get(host) ?? 0) + 1);
+}
+
+/**
+ * Cloudflare's script, stubbed: it renders the challenge iframe from
+ * challenges.cloudflare.com (frame-src) and hands back the test token.
+ * `answered` counts both requests.
+ */
+async function stubTurnstile(
+  page: Page,
+  answered: Map<string, number>
+): Promise<void> {
+  await page.route(
+    "https://challenges.cloudflare.com/turnstile/v0/api.js*",
+    async (route) => {
+      count(answered, route.request().url());
+      await route.fulfill({
+        body: `window.turnstile = {
+          render(element, options) {
+            const frame = document.createElement("iframe");
+            frame.src = ${JSON.stringify(TURNSTILE_FRAME)};
+            frame.title = "turnstile";
+            element.append(frame);
+            setTimeout(() => options.callback(${JSON.stringify(DUMMY_TOKEN)}), 0);
+            return "e2e";
+          },
+          remove() {},
+          reset() {},
+        };`,
+        contentType: "text/javascript",
+      });
+    }
+  );
+  await page.route(`${TURNSTILE_FRAME}*`, async (route) => {
+    count(answered, route.request().url());
+    await route.fulfill({
+      body: "<!doctype html><title>turnstile</title>",
+      contentType: "text/html",
+    });
+  });
 }
 
 test.describe("CSP (enforced in dev)", () => {
@@ -183,36 +240,7 @@ test.describe("CSP (enforced in dev)", () => {
   test("the sign-in page renders the Turnstile widget", async ({ page }) => {
     const csp = await watchCsp(page);
     const answered = hits();
-    // Cloudflare's script, stubbed: it renders the challenge iframe from
-    // challenges.cloudflare.com (frame-src) and hands back the test token.
-    await page.route(
-      "https://challenges.cloudflare.com/turnstile/v0/api.js*",
-      async (route) => {
-        count(answered, route.request().url());
-        await route.fulfill({
-          body: `window.turnstile = {
-            render(element, options) {
-              const frame = document.createElement("iframe");
-              frame.src = ${JSON.stringify(TURNSTILE_FRAME)};
-              frame.title = "turnstile";
-              element.append(frame);
-              setTimeout(() => options.callback(${JSON.stringify(DUMMY_TOKEN)}), 0);
-              return "e2e";
-            },
-            remove() {},
-            reset() {},
-          };`,
-          contentType: "text/javascript",
-        });
-      }
-    );
-    await page.route(`${TURNSTILE_FRAME}*`, async (route) => {
-      count(answered, route.request().url());
-      await route.fulfill({
-        body: "<!doctype html><title>turnstile</title>",
-        contentType: "text/html",
-      });
-    });
+    await stubTurnstile(page, answered);
     await page.goto("/sign-in");
     await waitForApp(page);
     const captcha = page.getByRole("group", { name: "Beveiligingscontrole" });
@@ -378,6 +406,110 @@ test.describe("CSP (enforced in dev)", () => {
     );
     expect(uploads.get(new URL(MUX_UPLOAD_URL).host)).toBeGreaterThan(0);
     expect(await violations(page, csp)).toEqual([]);
+  });
+
+  test.describe("the sponsor pages", () => {
+    // This spec's own gesture: no other sponsor test touches it.
+    const SLUG = "paard";
+    const reset = async ({ request }: { request: APIRequestContext }) => {
+      await e2eSeed(request, [{ op: "resetSponsorships", slugs: [SLUG] }]);
+    };
+    test.beforeAll(reset);
+    test.afterAll(reset);
+
+    for (const path of [
+      "/sponsor",
+      `/sponsor/success?payment=${crypto.randomUUID()}`,
+      "/sponsor/edit",
+      "/sponsor/renew",
+    ]) {
+      test(`${path.split("?")[0]} loads with the enforced CSP and no violation`, async ({
+        page,
+      }) => {
+        const csp = await watchCsp(page);
+        await stubMux(page);
+        const response = await page.goto(path);
+        expect(response?.status()).toBe(200);
+        const header = response?.headers()["content-security-policy"] ?? "";
+        expect(header).toMatch(NONCE_SOURCE);
+        expect(header).toContain("https://challenges.cloudflare.com");
+        await waitForApp(page);
+        await page.waitForLoadState("networkidle");
+        expect(await violations(page, csp)).toEqual([]);
+      });
+    }
+
+    test("the wizard: Turnstile, the blob logo preview, the fallback upload and the redirect to the checkout", async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      const csp = await watchCsp(page);
+      const answered = hits();
+      await stubTurnstile(page, answered);
+      await stubMux(page);
+      await page.goto(`/sponsor?gesture=${SLUG}`);
+      await waitForApp(page);
+      await page
+        .getByRole("button", { name: "Alleen noodzakelijke" })
+        .click({ timeout: 3000 })
+        .catch(() => undefined);
+      await expect(
+        page.getByRole("button", { exact: true, name: "Paard" })
+      ).toHaveAttribute("aria-pressed", "true");
+      await page.getByRole("button", { exact: true, name: "Doorgaan" }).click();
+      await page.getByLabel(NAAM_IN_DE_VIDEO).fill("CSP Proef");
+      await page.getByRole("checkbox", { name: LOGO_TOEVOEGEN }).click();
+      await page.locator("input#logo-upload").setInputFiles({
+        buffer: PNG,
+        mimeType: "image/png",
+        name: "logo.png",
+      });
+      // The preview is an object URL: `img-src blob:`.
+      const preview = page.getByAltText("Voorbeeld van het logo");
+      await expect(preview).toBeVisible();
+      expect(await preview.getAttribute("src")).toMatch(BLOB_URL);
+      await expect
+        .poll(() =>
+          preview.evaluate((image: HTMLImageElement) => image.naturalWidth)
+        )
+        .toBe(1);
+      await page.getByLabel(VOLLEDIGE_NAAM).fill("Csp Proef");
+      await page.getByLabel(E_MAIL).fill("e2e-csp-sponsor@smog.test");
+      await page
+        .getByRole("button", { name: "Doorgaan naar voorbeeld" })
+        .click();
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Bekijk je sponsoring" })
+      ).toBeVisible();
+      // Turnstile renders only with a site key (none in dev by default);
+      // the sign-in test above covers the frame the same way.
+      const captcha = page.getByRole("group", {
+        name: "Beveiligingscontrole",
+      });
+      if ((await captcha.count()) > 0) {
+        await expect(captcha.locator("iframe")).toBeAttached();
+        await expect
+          .poll(() => answered.get("challenges.cloudflare.com") ?? 0)
+          .toBe(2);
+      }
+      await page.waitForLoadState("networkidle");
+      expect(await violations(page, csp)).toEqual([]);
+      // The logo goes up through the signed same-origin fallback (no R2
+      // tokens in dev), then the browser leaves for the checkout.
+      const upload = page.waitForResponse(
+        (candidate) =>
+          candidate.request().method() === "PUT" &&
+          candidate.url().includes("/api/logos/upload/"),
+        { timeout: 15_000 }
+      );
+      await page
+        .getByRole("button", { name: "Doorgaan naar betaling" })
+        .click();
+      expect((await upload).status()).toBeLessThan(300);
+      await page.waitForURL(CHECKOUT_URL);
+      // The page that left reported any violation to the console too.
+      expect(csp).toEqual([]);
+    });
   });
 
   for (const path of ["/dev/ui", "/dev/mail"]) {
