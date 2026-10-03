@@ -8,6 +8,11 @@ interface DevMail {
 }
 
 const BLOCKING = new Set(["serious", "critical"]);
+/**
+ * Moderate rules that still block: every page has its h1 (phase 6 task 8
+ * review I-3: page-level states are level 1 in the kit).
+ */
+const BLOCKING_RULES = new Set(["page-has-heading-one"]);
 const OTP = /\b(\d{6})\b/;
 const VERIFY_LINK = new RegExp(`${ORIGIN}/api/auth/verify-email\\?\\S+`);
 
@@ -130,7 +135,7 @@ export function watchErrors(page: Page): string[] {
 }
 
 /**
- * axe's serious and critical violations. `exclude` leaves selectors out,
+ * axe's serious and critical violations, plus `BLOCKING_RULES`. `exclude` leaves selectors out,
  * frames included: axe never enters an excluded frame (a sandboxed
  * preview frame refuses its script, and the run can hang there).
  */
@@ -144,7 +149,10 @@ export async function blockingViolations(
   }
   const results = await builder.analyze();
   return results.violations
-    .filter((violation) => BLOCKING.has(violation.impact ?? ""))
+    .filter(
+      (violation) =>
+        BLOCKING.has(violation.impact ?? "") || BLOCKING_RULES.has(violation.id)
+    )
     .map((violation) => ({
       id: violation.id,
       nodes: violation.nodes.map((node) => node.target.join(" ")),

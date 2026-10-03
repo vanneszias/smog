@@ -11,6 +11,7 @@ const WARM_UP_PATHS = [
   "/gestures/hond",
   "/sign-in",
   "/account",
+  "/sponsor",
 ];
 
 /**

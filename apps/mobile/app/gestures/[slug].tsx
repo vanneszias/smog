@@ -45,6 +45,7 @@ import {
 } from "@/components/gesture-cards";
 import { SaveToList } from "@/components/save-to-list";
 import { gestureUrl, shareUrl } from "@/lib/site";
+import { SponsorCta } from "@/sponsor-cta";
 
 /** Related gestures under the detail (the contract's default is 5). */
 const RELATED_LIMIT = 5;
@@ -176,11 +177,6 @@ function GestureDetail({
         <Heading level={1} size="title-2">
           {gesture.name}
         </Heading>
-        {gesture.sponsor ? (
-          <Text size="body-sm" tone="muted">
-            {t("gesture.sponsoredBy", { name: gesture.sponsor.name })}
-          </Text>
-        ) : null}
         {gesture.categories.length > 0 ? (
           <View
             accessibilityLabel={t("search.categories")}
@@ -217,6 +213,7 @@ function GestureDetail({
           </View>
         </View>
       ) : null}
+      <SponsorCta gesture={gesture} />
       <RelatedGestures slug={gesture.canonicalSlug} />
     </ScrollView>
   );

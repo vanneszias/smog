@@ -14,8 +14,10 @@
     "test": "vitest run && bun test --timeout=20000 src"
   },
   "dependencies": {
+    "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
+    "@smog/analytics": "workspace:*",
     "@smog/config": "workspace:*",
     "@smog/db": "workspace:*",
     "@smog/email": "workspace:*",

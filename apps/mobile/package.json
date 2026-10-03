@@ -28,6 +28,7 @@
     "@smog/lists": "workspace:*",
     "@smog/local-store": "workspace:*",
     "@smog/rpc": "workspace:*",
+    "@smog/sponsorships": "workspace:*",
     "@smog/styles": "workspace:*",
     "@smog/ui-native": "workspace:*",
     "@tanstack/query-async-storage-persister": "5.104.0",

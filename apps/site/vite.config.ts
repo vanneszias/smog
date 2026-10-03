@@ -38,9 +38,23 @@ const devMuxVars: Record<string, string> =
       }
     : {};
 
+/**
+ * The Mollie fake for the e2e (`@smog/payments/testing/server`, started by
+ * playwright.config.ts): its URL and its test key, as dev vars, so the
+ * wizard's checkout runs end to end. Dev only; `.dev.vars` still wins.
+ */
+const devMollieVars: Record<string, string> =
+  process.env.CLOUDFLARE_ENV === "dev" && process.env.SMOG_DEV_MOLLIE_API_URL
+    ? {
+        MOLLIE_API_KEY: process.env.SMOG_DEV_MOLLIE_API_KEY ?? "",
+        MOLLIE_API_URL: process.env.SMOG_DEV_MOLLIE_API_URL,
+      }
+    : {};
+
 const devVars: Record<string, string> = {
   ...(devSiteUrl ? { SITE_URL: devSiteUrl } : {}),
   ...devMuxVars,
+  ...devMollieVars,
 };
 
 export default defineConfig({

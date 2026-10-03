@@ -2,7 +2,7 @@ import { ENVIRONMENTS } from "@smog/config/env/worker";
 import handler from "@tanstack/react-start/server-entry";
 import { legacyRedirect } from "@/lib/legacy-redirects";
 import { handleAuthRequest } from "@/server/auth-handler";
-import { loadCategorySlugs } from "@/server/legacy-categories";
+import { loadCategorySlugs, loadGestureSlug } from "@/server/legacy-categories";
 import {
   devConnectSources,
   r2ConnectSources,
@@ -34,7 +34,11 @@ async function route(request: Request, nonce: string): Promise<Response> {
   if (new URL(request.url).pathname === BYPASS_PATH) {
     return await handleBypass(request);
   }
-  const redirect = await legacyRedirect(request, loadCategorySlugs);
+  const redirect = await legacyRedirect(
+    request,
+    loadCategorySlugs,
+    loadGestureSlug
+  );
   return redirect ?? (await handler.fetch(request, { context: { nonce } }));
 }
 
