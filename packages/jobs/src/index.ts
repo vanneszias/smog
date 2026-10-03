@@ -8,6 +8,7 @@
 
 export { CRON, type CronName, cronName } from "./cron";
 export {
+  EMAIL_IDEMPOTENCY_KEY_MAX,
   EMAIL_MESSAGE_MAX_BYTES,
   type EmailMessage,
   type EventMessage,

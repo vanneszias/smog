@@ -19,7 +19,10 @@ import {
 
 /** The part of a Cloudflare `Queue` binding a producer uses. */
 export interface QueueProducer<Body> {
-  send: (body: Body, options?: { delaySeconds?: number }) => Promise<void>;
+  send: (
+    body: Body,
+    options?: { contentType?: "json"; delaySeconds?: number }
+  ) => Promise<void>;
 }
 
 export const ENQUEUE_RETRY_DELAYS_MS = [100, 400, 1600] as const;
@@ -55,7 +58,7 @@ async function sendWithRetries<Body>(
       await sleep(ENQUEUE_RETRY_DELAYS_MS[attempt - 1] ?? 0);
     }
     try {
-      await queue.send(body);
+      await queue.send(body, { contentType: "json" });
       return true;
     } catch (error) {
       lastError = error;

@@ -9,20 +9,24 @@ import { join } from "node:path";
  * The bindings `apps/site/wrangler.jsonc` names that `wrangler deploy`
  * does not create: the queues and their DLQs, and the R2 bucket with its
  * CORS (phase 6 ruling 12). It reads the env's config and asks wrangler
- * what exists (`queues info`, `r2 bucket info`, `r2 bucket cors list`):
+ * what exists (`queues info`, `r2 bucket list`, `r2 bucket cors list`):
  *
  * - `--create` creates what is missing (`queues create`, `r2 bucket
  *   create`, and `r2 bucket cors set` on a bucket that has no CORS). It
- *   never deletes or changes anything that exists: an existing CORS that
- *   differs is reported, not overwritten. Production needs
+ *   never deletes or changes anything that exists. A CORS that does not
+ *   allow the PUT from `SITE_URL` fails the run with the command that
+ *   fixes it, and is never overwritten. Production needs
  *   `SMOG_PROVISION_PRODUCTION=1` as well (the repository variable of the
- *   same name, `deploy.yml`).
+ *   same name, `deploy.yml`) and a `SITE_URL` that is not the placeholder.
  * - `--check` creates nothing and fails, printing the exact commands, when
  *   anything is missing (`deploy.yml` runs it for production by default).
  * - `--dry-run` calls nothing and prints every command it could run.
  *
  * Wrangler runs from `apps/site` with the deploy job's
- * `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+ * `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Prerequisites: the
+ * Workers Paid plan (Queues), R2 enabled on the account, and a token with
+ * Workers R2 Storage: Edit and Workers Scripts: Edit (or Queues: Edit).
+ * A refusal names the one that is missing (`[provision]` hints).
  */
 
 const DEPLOY_ENVS = ["staging", "production"] as const;
@@ -61,6 +65,14 @@ function strings(...values: unknown[]): string[] {
   return values.filter((value): value is string => typeof value === "string");
 }
 
+/**
+ * Production's `SITE_URL` until the launch domain is known
+ * (`wrangler.jsonc`). The bucket's CORS cannot be set from it: it would
+ * allow the logo PUT from an origin nobody uses.
+ */
+export const PRODUCTION_SITE_URL_PLACEHOLDER =
+  "https://smog-site-production.workers.dev";
+
 /** What `env.<env>` of `wrangler.jsonc` needs to exist before a deploy. */
 export function planResources(source: string, env: DeployEnv): ResourcePlan {
   const config: unknown = Bun.JSONC.parse(source);
@@ -75,11 +87,17 @@ export function planResources(source: string, env: DeployEnv): ResourcePlan {
   ];
   const vars = isRecord(target.vars) ? target.vars : {};
   const siteUrl = typeof vars.SITE_URL === "string" ? vars.SITE_URL : "";
+  const buckets = records(target.r2_buckets).flatMap((bucket) =>
+    strings(bucket.bucket_name)
+  );
+  if (buckets.length > 0 && !siteUrl) {
+    throw new Error(
+      `[provision] env.${env}.vars.SITE_URL is empty: the bucket's CORS origin comes from it`
+    );
+  }
   const origin = siteUrl ? new URL(siteUrl).origin : "";
   return {
-    buckets: records(target.r2_buckets).flatMap((bucket) =>
-      strings(bucket.bucket_name).map((name) => ({ corsOrigin: origin, name }))
-    ),
+    buckets: buckets.map((name) => ({ corsOrigin: origin, name })),
     queues: [...new Set(names)].sort(),
   };
 }
@@ -103,20 +121,65 @@ export function corsRules(origin: string) {
   };
 }
 
-const QUEUE_MISSING = /does not exist/i;
-const BUCKET_MISSING = /bucket does not exist|code: 10006|NoSuchBucket/i;
-const CORS_NONE = /There is no CORS configuration/i;
-const CORS_MISSING =
-  /code: 10059|CORS configuration does not exist|NoSuchCORSConfiguration/i;
+/** wrangler's `[code: N]` of a Cloudflare API error. */
+const BUCKET_TAKEN = /\[code: 10004\]/;
+const CORS_NONE = /^There is no CORS configuration defined for bucket '/m;
+const CORS_MISSING = /\[code: 10059\]/;
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+const LABELLED_LINE = /^\s*([a-z_]+):\s+(.*)$/;
+
+/** `label:  value` of a `formatLabelledValues` line, or `null`. */
+function labelled(line: string): { label: string; value: string } | null {
+  if (!LABELLED_LINE.test(line)) {
+    return null;
+  }
+  return {
+    label: line.replace(LABELLED_LINE, "$1"),
+    value: line.replace(LABELLED_LINE, "$2").trim(),
+  };
+}
+
+/**
+ * What to enable when wrangler is refused (I1): the account and token
+ * prerequisites of the deploy step (AGENTS.md, DECISIONS).
+ */
+const PREREQUISITE_HINTS: { hint: string; pattern: RegExp }[] = [
+  {
+    hint: "[provision] R2 is not enabled on this account: enable R2 once in the Cloudflare dashboard (R2 Object Storage), then re-run the deploy.",
+    pattern: /\[code: 10042\]|enable R2/i,
+  },
+  {
+    hint: "[provision] Queues need the Workers Paid plan on this account.",
+    pattern: /Workers Paid|paid plan/i,
+  },
+  {
+    hint: "[provision] The API token (CLOUDFLARE_API_TOKEN) lacks a permission: it needs Account › Workers R2 Storage: Edit (the bucket and its CORS) and Account › Workers Scripts: Edit or Queues: Edit (the queues).",
+    pattern:
+      /\[code: 1000[01]\]|Authentication error|\(403\)|\b403 Forbidden\b|permission/i,
+  },
+];
 
 function output(result: WranglerResult): string {
-  return `${result.stdout}\n${result.stderr}`.trim();
+  return `${result.stdout}\n${result.stderr}`.replace(ANSI, "").trim();
+}
+
+function withHint(message: string, result: WranglerResult): Error {
+  const text = output(result);
+  const hints = PREREQUISITE_HINTS.filter(({ pattern }) =>
+    pattern.test(text)
+  ).map(({ hint }) => hint);
+  return new Error([message, ...hints].join("\n"));
 }
 
 function lookupFailed(what: string, result: WranglerResult): Error {
-  return new Error(
-    `[ensure] Failed to look up ${what} (wrangler exited ${result.code}): ${output(result)}`
+  return withHint(
+    `[provision] Failed to look up ${what} (wrangler exited ${result.code}): ${output(result)}`,
+    result
   );
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function queueExists(
@@ -124,42 +187,94 @@ async function queueExists(
   name: string
 ): Promise<boolean> {
   const result = await run(["queues", "info", name]);
-  if (result.code === 0 && result.stdout.includes(name)) {
+  const quoted = escapeRegExp(name);
+  if (
+    result.code === 0 &&
+    new RegExp(`^Queue Name: ${quoted}$`, "m").test(output(result))
+  ) {
     return true;
   }
-  if (result.code !== 0 && QUEUE_MISSING.test(output(result))) {
+  if (
+    result.code !== 0 &&
+    new RegExp(`Queue "${quoted}" does not exist`).test(output(result))
+  ) {
     return false;
   }
   throw lookupFailed(`the queue ${name}`, result);
 }
 
-async function bucketExists(
-  run: WranglerRunner,
-  name: string
-): Promise<boolean> {
-  const result = await run(["r2", "bucket", "info", name, "--json"]);
-  if (result.code === 0) {
-    return true;
+/**
+ * Every bucket of the account, from `r2 bucket list` (`name:` lines,
+ * matched exactly). Not `r2 bucket info`, which also runs an analytics
+ * query that needs another permission (M3).
+ */
+async function listBuckets(run: WranglerRunner): Promise<Set<string>> {
+  const result = await run(["r2", "bucket", "list"]);
+  if (result.code !== 0) {
+    throw lookupFailed("the R2 buckets", result);
   }
-  if (BUCKET_MISSING.test(output(result))) {
-    return false;
+  const names = new Set<string>();
+  for (const line of output(result).split("\n")) {
+    const entry = labelled(line);
+    if (entry?.label === "name" && entry.value) {
+      names.add(entry.value);
+    }
   }
-  throw lookupFailed(`the bucket ${name}`, result);
+  return names;
 }
 
-/** The bucket's CORS as wrangler lists it, or `null` when it has none. */
+/** One rule of `r2 bucket cors list` (`formatLabelledValues` blocks). */
+interface CorsRule {
+  headers: string[];
+  methods: string[];
+  origins: string[];
+}
+
+function parseCorsTable(text: string): CorsRule[] {
+  const rules: CorsRule[] = [];
+  let current: CorsRule | null = null;
+  const list = (value: string) =>
+    value.startsWith("(") ? [] : value.split(",").map((item) => item.trim());
+  for (const line of text.split("\n")) {
+    const { label, value } = labelled(line) ?? { label: "", value: "" };
+    if (label === "allowed_origins") {
+      current = { headers: [], methods: [], origins: list(value) };
+      rules.push(current);
+    } else if (current && label === "allowed_methods") {
+      current.methods = list(value);
+    } else if (current && label === "allowed_headers") {
+      current.headers = list(value).map((header) => header.toLowerCase());
+    }
+  }
+  return rules;
+}
+
+type CorsState = "none" | "ok" | "mismatch";
+
+/** Whether the bucket's CORS allows the presigned PUT from `origin`. */
 async function bucketCors(
   run: WranglerRunner,
-  name: string
-): Promise<string | null> {
-  const result = await run(["r2", "bucket", "cors", "list", name]);
-  if (result.code === 0) {
-    return CORS_NONE.test(result.stdout) ? null : result.stdout;
+  bucket: { corsOrigin: string; name: string }
+): Promise<CorsState> {
+  const result = await run(["r2", "bucket", "cors", "list", bucket.name]);
+  const text = output(result);
+  if (result.code !== 0) {
+    if (CORS_MISSING.test(text)) {
+      return "none";
+    }
+    throw lookupFailed(`the CORS of ${bucket.name}`, result);
   }
-  if (CORS_MISSING.test(output(result))) {
-    return null;
+  if (CORS_NONE.test(text)) {
+    return "none";
   }
-  throw lookupFailed(`the CORS of ${name}`, result);
+  const allows = parseCorsTable(text).some(
+    (rule) =>
+      (rule.origins.includes(bucket.corsOrigin) ||
+        rule.origins.includes("*")) &&
+      rule.methods.includes("PUT") &&
+      (rule.headers.includes("content-type") || rule.headers.includes("*"))
+  );
+  return allows ? "ok" : "mismatch";
 }
 
 function shown(args: string[]): string {
@@ -177,13 +292,22 @@ function corsSetArgs(bucket: string, file: string): string[] {
   return ["r2", "bucket", "cors", "set", bucket, "--file", file, "--force"];
 }
 
-async function runCreate(run: WranglerRunner, args: string[]): Promise<void> {
+function corsFix(bucket: { corsOrigin: string; name: string }): string {
+  return `${shown(corsSetArgs(bucket.name, "cors.json"))}   # cors.json: ${JSON.stringify(corsRules(bucket.corsOrigin))}`;
+}
+
+async function runCreate(
+  run: WranglerRunner,
+  args: string[]
+): Promise<WranglerResult> {
   const result = await run(args);
   if (result.code !== 0) {
-    throw new Error(
-      `[ensure] Failed to run wrangler ${args.join(" ")} (exit ${result.code}): ${output(result)}`
+    throw withHint(
+      `[provision] Failed to run wrangler ${args.join(" ")} (exit ${result.code}): ${output(result)}`,
+      result
     );
   }
+  return result;
 }
 
 async function setCors(
@@ -205,7 +329,10 @@ async function setCors(
 export interface EnsureResult {
   /** What this run created (`cors:<bucket>` for a CORS policy). */
   created: string[];
-  /** What is missing and was not created (`--check`). */
+  /**
+   * What is missing and was not created (`--check`), or wrong and never
+   * overwritten (`cors-mismatch:<bucket>`, both modes).
+   */
   missing: string[];
   ok: boolean;
 }
@@ -223,8 +350,10 @@ function dryRun({ log, plan }: EnsureOptions): EnsureResult {
     log.log(shown(["queues", "info", name]));
     log.log(`  if missing: ${shown(["queues", "create", name])}`);
   }
+  if (plan.buckets.length > 0) {
+    log.log(shown(["r2", "bucket", "list"]));
+  }
   for (const bucket of plan.buckets) {
-    log.log(shown(["r2", "bucket", "info", bucket.name, "--json"]));
     log.log(`  if missing: ${shown(bucketCreateArgs(bucket.name))}`);
     log.log(shown(["r2", "bucket", "cors", "list", bucket.name]));
     log.log(
@@ -236,7 +365,8 @@ function dryRun({ log, plan }: EnsureOptions): EnsureResult {
 
 interface BucketState {
   bucket: ResourcePlan["buckets"][number];
-  cors: boolean;
+  /** `null` while the bucket does not exist (nothing to look up). */
+  cors: CorsState | null;
   exists: boolean;
 }
 
@@ -251,8 +381,7 @@ interface Lookup {
  */
 async function lookUp(
   run: WranglerRunner,
-  plan: ResourcePlan,
-  log: Logger
+  plan: ResourcePlan
 ): Promise<Lookup> {
   const missingQueues: string[] = [];
   for (const name of plan.queues) {
@@ -261,21 +390,34 @@ async function lookUp(
       missingQueues.push(name);
     }
   }
+  const existing =
+    plan.buckets.length > 0 ? await listBuckets(run) : new Set<string>();
   const buckets: BucketState[] = [];
   for (const bucket of plan.buckets) {
+    const exists = existing.has(bucket.name);
     // biome-ignore lint/performance/noAwaitInLoops: one wrangler call at a time.
-    const exists = await bucketExists(run, bucket.name);
-    const cors = exists ? await bucketCors(run, bucket.name) : null;
-    const allowsPut =
-      cors?.includes(bucket.corsOrigin) === true && cors.includes("PUT");
-    if (cors !== null && !allowsPut) {
-      log.warn(
-        `${bucket.name} already has a CORS configuration that may not allow PUT from ${bucket.corsOrigin}; it is left as it is. Compare with ${JSON.stringify(corsRules(bucket.corsOrigin))}.`
-      );
-    }
-    buckets.push({ bucket, cors: cors !== null, exists });
+    const cors = exists ? await bucketCors(run, bucket) : null;
+    buckets.push({ bucket, cors, exists });
   }
   return { buckets, missingQueues };
+}
+
+function mismatches(lookup: Lookup): BucketState[] {
+  return lookup.buckets.filter((entry) => entry.cors === "mismatch");
+}
+
+/**
+ * A CORS that does not allow the PUT from `SITE_URL` (a changed site
+ * origin): never overwritten, reported with the command that fixes it.
+ */
+function reportMismatches(lookup: Lookup, log: Logger): string[] {
+  return mismatches(lookup).map(({ bucket }) => {
+    log.warn(
+      `[provision] ${bucket.name} has a CORS configuration that does not allow PUT with content-type from ${bucket.corsOrigin}. It is never overwritten here; after checking it, replace it with:`
+    );
+    log.warn(`  ${corsFix(bucket)}`);
+    return `cors-mismatch:${bucket.name}`;
+  });
 }
 
 function missingOf({ buckets, missingQueues }: Lookup): string[] {
@@ -285,7 +427,7 @@ function missingOf({ buckets, missingQueues }: Lookup): string[] {
       .filter((entry) => !entry.exists)
       .map((entry) => entry.bucket.name),
     ...buckets
-      .filter((entry) => !entry.cors)
+      .filter((entry) => entry.cors === null || entry.cors === "none")
       .map((entry) => `cors:${entry.bucket.name}`),
   ];
 }
@@ -293,30 +435,57 @@ function missingOf({ buckets, missingQueues }: Lookup): string[] {
 /** `--check`: what is missing, with the commands that would create it. */
 function report(env: DeployEnv, lookup: Lookup, log: Logger): EnsureResult {
   const missing = missingOf(lookup);
-  if (missing.length === 0) {
-    log.log(`[ensure] ${env}: every queue and bucket exists.`);
-    return { created: [], missing: [], ok: true };
-  }
-  log.warn(
-    `[ensure] ${env} is missing ${missing.join(", ")}. Create them with:`
-  );
-  for (const name of lookup.missingQueues) {
-    log.warn(`  ${shown(["queues", "create", name])}`);
-  }
-  for (const { bucket, cors, exists } of lookup.buckets) {
-    if (!exists) {
-      log.warn(`  ${shown(bucketCreateArgs(bucket.name))}`);
+  if (missing.length > 0) {
+    log.warn(
+      `[provision] ${env} is missing ${missing.join(", ")}. Create them with:`
+    );
+    for (const name of lookup.missingQueues) {
+      log.warn(`  ${shown(["queues", "create", name])}`);
     }
-    if (!cors) {
-      log.warn(
-        `  ${shown(corsSetArgs(bucket.name, "cors.json"))}   # cors.json: ${JSON.stringify(corsRules(bucket.corsOrigin))}`
-      );
+    for (const { bucket, cors, exists } of lookup.buckets) {
+      if (!exists) {
+        log.warn(`  ${shown(bucketCreateArgs(bucket.name))}`);
+      }
+      if (cors === null || cors === "none") {
+        log.warn(`  ${corsFix(bucket)}`);
+      }
     }
+    log.warn(
+      "  or set the repository variable SMOG_PROVISION_PRODUCTION=1 so the deploy creates them."
+    );
   }
-  log.warn(
-    "  or set the repository variable SMOG_PROVISION_PRODUCTION=1 so the deploy creates them."
+  const wrong = reportMismatches(lookup, log);
+  if (missing.length === 0 && wrong.length === 0) {
+    log.log(`[provision] ${env}: every queue and bucket exists.`);
+  }
+  return {
+    created: [],
+    missing: [...missing, ...wrong],
+    ok: missing.length === 0 && wrong.length === 0,
+  };
+}
+
+/** Creates a bucket; one that `r2 bucket list` did not show but exists (10004) is kept. */
+async function createBucket(
+  run: WranglerRunner,
+  bucket: { corsOrigin: string; name: string },
+  log: Logger
+): Promise<{ cors: CorsState; created: boolean }> {
+  const result = await run(bucketCreateArgs(bucket.name));
+  if (result.code === 0) {
+    log.log(`[provision] Created the bucket ${bucket.name}`);
+    return { cors: "none", created: true };
+  }
+  if (BUCKET_TAKEN.test(output(result))) {
+    log.log(
+      `[provision] ${bucket.name} already exists (not in the bucket list); it is left as it is`
+    );
+    return { cors: await bucketCors(run, bucket), created: false };
+  }
+  throw withHint(
+    `[provision] Failed to run wrangler ${bucketCreateArgs(bucket.name).join(" ")} (exit ${result.code}): ${output(result)}`,
+    result
   );
-  return { created: [], missing, ok: false };
 }
 
 /** `--create`: creates what the lookup found missing, one call at a time. */
@@ -330,28 +499,34 @@ async function create(
   for (const name of lookup.missingQueues) {
     // biome-ignore lint/performance/noAwaitInLoops: one wrangler call at a time; the first failure stops the run.
     await runCreate(run, ["queues", "create", name]);
-    log.log(`[ensure] Created the queue ${name}`);
+    log.log(`[provision] Created the queue ${name}`);
     created.push(name);
   }
-  for (const { bucket, cors, exists } of lookup.buckets) {
-    if (!exists) {
+  for (const entry of lookup.buckets) {
+    const { bucket } = entry;
+    if (!entry.exists) {
       // biome-ignore lint/performance/noAwaitInLoops: one wrangler call at a time; the first failure stops the run.
-      await runCreate(run, bucketCreateArgs(bucket.name));
-      log.log(`[ensure] Created the bucket ${bucket.name}`);
-      created.push(bucket.name);
+      const outcome = await createBucket(run, bucket, log);
+      entry.cors = outcome.cors;
+      if (outcome.created) {
+        created.push(bucket.name);
+      }
     }
-    if (!cors) {
+    if (entry.cors === "none") {
       await setCors(run, bucket);
       log.log(
-        `[ensure] Set the CORS of ${bucket.name} (PUT from ${bucket.corsOrigin})`
+        `[provision] Set the CORS of ${bucket.name} (PUT from ${bucket.corsOrigin})`
       );
       created.push(`cors:${bucket.name}`);
     }
   }
-  if (created.length === 0) {
-    log.log(`[ensure] ${env}: every queue and bucket exists; nothing changed.`);
+  const wrong = reportMismatches(lookup, log);
+  if (created.length === 0 && wrong.length === 0) {
+    log.log(
+      `[provision] ${env}: every queue and bucket exists; nothing changed.`
+    );
   }
-  return { created, missing: [], ok: true };
+  return { created, missing: wrong, ok: wrong.length === 0 };
 }
 
 /**
@@ -365,7 +540,18 @@ export async function ensureResources(
   if (mode === "dry-run") {
     return dryRun(options);
   }
-  const lookup = await lookUp(run, plan, log);
+  if (
+    env === "production" &&
+    mode === "create" &&
+    plan.buckets.some(
+      (bucket) => bucket.corsOrigin === PRODUCTION_SITE_URL_PLACEHOLDER
+    )
+  ) {
+    throw new Error(
+      `[provision] production SITE_URL is still the placeholder ${PRODUCTION_SITE_URL_PLACEHOLDER}: set the launch origin in wrangler.jsonc before creating the production bucket (its CORS is set from it)`
+    );
+  }
+  const lookup = await lookUp(run, plan);
   return mode === "check"
     ? report(env, lookup, log)
     : await create(env, lookup, run, log);
@@ -379,7 +565,7 @@ export function parseEnsureArgs(
   const env = at === -1 ? undefined : argv[at + 1];
   if (!DEPLOY_ENVS.includes(env as DeployEnv)) {
     throw new Error(
-      `[ensure] --env must be staging or production (dev uses local resources), got ${JSON.stringify(env ?? null)}`
+      `[provision] --env must be staging or production (dev uses local resources), got ${JSON.stringify(env ?? null)}`
     );
   }
   const modes = (["create", "check", "dry-run"] as const).filter((flag) =>
@@ -388,7 +574,7 @@ export function parseEnsureArgs(
   const [mode] = modes;
   if (modes.length !== 1 || !mode) {
     throw new Error(
-      "[ensure] pass exactly one mode: --create, --check or --dry-run"
+      "[provision] pass exactly one mode: --create, --check or --dry-run"
     );
   }
   if (
@@ -397,7 +583,7 @@ export function parseEnsureArgs(
     environment.SMOG_PROVISION_PRODUCTION !== "1"
   ) {
     throw new Error(
-      "[ensure] --create for production needs SMOG_PROVISION_PRODUCTION=1 (otherwise use --check)"
+      "[provision] --create for production needs SMOG_PROVISION_PRODUCTION=1 (otherwise use --check)"
     );
   }
   return { env: env as DeployEnv, mode };

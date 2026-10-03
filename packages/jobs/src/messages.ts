@@ -11,12 +11,18 @@ import { z } from "zod";
 /** Cloudflare Queues' limit for one message. */
 export const EMAIL_MESSAGE_MAX_BYTES = 128 * 1024;
 
+/**
+ * The consumer marks a sent key as KV `email:sent:<key>`, and a KV key
+ * holds at most 512 bytes: 480 leaves room for the prefix (M6).
+ */
+export const EMAIL_IDEMPOTENCY_KEY_MAX = 480;
+
 /** `EMAIL_QUEUE`: one email to render and send. */
 export const emailMessageSchema = z.object({
   /** A new UUID per message, for the logs. */
   id: z.uuid(),
   /** The consumer skips a key it sent in the last 7 days (`email:sent:<key>`). */
-  idempotencyKey: z.string().min(1).max(512).optional(),
+  idempotencyKey: z.string().min(1).max(EMAIL_IDEMPOTENCY_KEY_MAX).optional(),
   locale: z.enum(LOCALES),
   /** The template's props; the template's own types checked them at the producer. */
   props: z.record(z.string(), z.unknown()),
@@ -41,7 +47,11 @@ export const eventMessageSchema = z.discriminatedUnion("type", [
 
 export type EventMessage = z.infer<typeof eventMessageSchema>;
 
-/** The size of a message as the queue counts it (its JSON in UTF-8). */
+/**
+ * The size of a message as the queue stores it: the producers send with
+ * `contentType: "json"`, so this is its JSON in UTF-8 (the default `v8`
+ * serialisation would count differently, M7).
+ */
 export function messageBytes(message: unknown): number {
   return new TextEncoder().encode(JSON.stringify(message)).byteLength;
 }

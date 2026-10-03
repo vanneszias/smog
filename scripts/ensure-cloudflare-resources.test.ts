@@ -6,8 +6,10 @@ import {
   type DeployEnv,
   type EnsureMode,
   ensureResources,
+  PRODUCTION_SITE_URL_PLACEHOLDER,
   parseEnsureArgs,
   planResources,
+  type ResourcePlan,
   type WranglerRunner,
 } from "./ensure-cloudflare-resources";
 
@@ -16,6 +18,8 @@ const WRANGLER = readFileSync(
   join(ROOT, "apps", "site", "wrangler.jsonc"),
   "utf8"
 );
+const STAGING_ORIGIN = "https://smog-site-staging.zias.workers.dev";
+const LAUNCH_ORIGIN = "https://smog.example";
 
 interface FakeAccount {
   buckets: Set<string>;
@@ -23,25 +27,49 @@ interface FakeAccount {
   queues: Set<string>;
 }
 
+interface FakeOptions {
+  /** Overrides the answer to one command (its args joined with spaces). */
+  answers?: Record<string, { code: number; stderr?: string; stdout?: string }>;
+  /** Every call fails with this output. */
+  lookupError?: string;
+}
+
+/** `wrangler r2 bucket cors list` output of one rule (`formatLabelledValues`). */
+function corsTable(origins: string, methods: string, headers = "content-type") {
+  return [
+    `allowed_origins:  ${origins}`,
+    `allowed_methods:  ${methods}`,
+    `allowed_headers:  ${headers}`,
+    "exposed_headers:  (no exposed headers)",
+    "max_age_seconds:  3600",
+  ].join("\n");
+}
+
 /**
  * A fake `wrangler` that answers like the real one (wrangler 4.143's
- * output): `queues info` prints `Queue Name: …` or fails with
- * `Queue "…" does not exist`, `r2 bucket info --json` prints JSON or fails
- * with code 10006, `r2 bucket cors list` prints the rules or says there are
- * none. Every call is recorded, with the CORS file's content.
+ * source): `queues info` prints `Queue Name: …` or fails with
+ * `Queue "…" does not exist`; `r2 bucket list` prints `name:` /
+ * `creation_date:` blocks; `r2 bucket cors list` prints the rules or says
+ * there are none; `r2 bucket create` of a taken name fails with 10004.
+ * Every call is recorded, with the CORS file's content.
  */
-function fakeWrangler(
-  state: FakeAccount,
-  options: { lookupError?: string } = {}
-) {
+function fakeWrangler(state: FakeAccount, options: FakeOptions = {}) {
   const calls: string[][] = [];
   const corsFiles: unknown[] = [];
+  const ok = (stdout: string) =>
+    Promise.resolve({ code: 0, stderr: "", stdout });
+  const fail = (stderr: string) =>
+    Promise.resolve({ code: 1, stderr, stdout: "" });
   const run: WranglerRunner = (args) => {
     calls.push(args);
-    const ok = (stdout: string) =>
-      Promise.resolve({ code: 0, stderr: "", stdout });
-    const fail = (stderr: string) =>
-      Promise.resolve({ code: 1, stderr, stdout: "" });
+    const answer = options.answers?.[args.join(" ")];
+    if (answer) {
+      return Promise.resolve({
+        code: answer.code,
+        stderr: answer.stderr ?? "",
+        stdout: answer.stdout ?? "",
+      });
+    }
     if (options.lookupError) {
       return fail(options.lookupError);
     }
@@ -55,16 +83,21 @@ function fakeWrangler(
     }
     if (a === "queues" && b === "create" && c) {
       state.queues.add(c);
-      return ok(`Creating queue '${c}'\nCreated queue '${c}'.`);
+      return ok(`🌀 Creating queue '${c}'\n✅ Created queue '${c}'.`);
     }
-    if (a === "r2" && b === "bucket" && c === "info" && d) {
-      return state.buckets.has(d)
-        ? ok(JSON.stringify({ name: d }))
-        : fail(
-            "✘ [ERROR] A request to the Cloudflare API failed.\n  The specified bucket does not exist. [code: 10006]"
-          );
+    if (a === "r2" && b === "bucket" && c === "list") {
+      const blocks = [...state.buckets].map(
+        (name) =>
+          `name:           ${name}\ncreation_date:  2026-10-02T00:00:00.000Z`
+      );
+      return ok(`Listing buckets...\n${blocks.join("\n\n")}`);
     }
     if (a === "r2" && b === "bucket" && c === "create" && d) {
+      if (state.buckets.has(d)) {
+        return fail(
+          "✘ [ERROR] A request to the Cloudflare API failed.\n  The bucket you tried to create already exists, and you own it. [code: 10004]"
+        );
+      }
       state.buckets.add(d);
       return ok(
         `Created bucket '${d}' with default storage class of Standard.`
@@ -84,9 +117,14 @@ function fakeWrangler(
       const file = args[args.indexOf("--file") + 1] ?? "";
       const content = JSON.parse(readFileSync(file, "utf8"));
       corsFiles.push(content);
+      const { allowed } = content.rules[0];
       state.cors.set(
         bucket,
-        `allowed_origins: ${content.rules[0].allowed.origins.join(", ")}\nallowed_methods: PUT`
+        corsTable(
+          allowed.origins.join(", "),
+          allowed.methods.join(", "),
+          allowed.headers.join(", ")
+        )
       );
       return ok(`Set CORS configuration for bucket '${bucket}'.`);
     }
@@ -115,12 +153,25 @@ const STAGING_QUEUES = [
 
 const silent = { log: () => undefined, warn: () => undefined };
 
+/** The production plan with a launch origin instead of the placeholder. */
+function productionPlan(): ResourcePlan {
+  const plan = planResources(WRANGLER, "production");
+  return {
+    ...plan,
+    buckets: plan.buckets.map((bucket) => ({
+      ...bucket,
+      corsOrigin: LAUNCH_ORIGIN,
+    })),
+  };
+}
+
 async function ensure(
   mode: EnsureMode,
   state: FakeAccount,
-  env: DeployEnv = "staging"
+  env: DeployEnv = "staging",
+  options: FakeOptions & { plan?: ResourcePlan } = {}
 ) {
-  const fake = fakeWrangler(state);
+  const fake = fakeWrangler(state, options);
   const lines: string[] = [];
   const result = await ensureResources({
     env,
@@ -129,21 +180,27 @@ async function ensure(
       warn: (line) => lines.push(`warn: ${line}`),
     },
     mode,
-    plan: planResources(WRANGLER, env),
+    plan:
+      options.plan ??
+      (env === "production" ? productionPlan() : planResources(WRANGLER, env)),
     run: fake.run,
   });
-  return { ...fake, lines, result };
+  return { ...fake, lines, output: lines.join("\n"), result };
+}
+
+async function failure(promise: Promise<unknown>): Promise<string> {
+  try {
+    await promise;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error("expected a failure");
 }
 
 describe("planResources", () => {
   test("reads the queues, DLQs and bucket of an env from wrangler.jsonc", () => {
     expect(planResources(WRANGLER, "staging")).toEqual({
-      buckets: [
-        {
-          corsOrigin: "https://smog-site-staging.zias.workers.dev",
-          name: "smog-staging-media",
-        },
-      ],
+      buckets: [{ corsOrigin: STAGING_ORIGIN, name: "smog-staging-media" }],
       queues: STAGING_QUEUES,
     });
     expect(planResources(WRANGLER, "production").queues).toEqual(
@@ -151,14 +208,24 @@ describe("planResources", () => {
     );
   });
 
+  test("refuses a bucket without a SITE_URL to take the CORS origin from (M4)", () => {
+    const config = Bun.JSONC.parse(WRANGLER) as {
+      env: { staging: { vars: Record<string, unknown> } };
+    };
+    config.env.staging.vars.SITE_URL = "";
+    expect(() => planResources(JSON.stringify(config), "staging")).toThrow(
+      "SITE_URL"
+    );
+  });
+
   test("allows PUT with content-type from the site's origin only", () => {
-    expect(corsRules("https://smog.example")).toEqual({
+    expect(corsRules(LAUNCH_ORIGIN)).toEqual({
       rules: [
         {
           allowed: {
             headers: ["content-type"],
             methods: ["PUT"],
-            origins: ["https://smog.example"],
+            origins: [LAUNCH_ORIGIN],
           },
           maxAgeSeconds: 3600,
         },
@@ -183,44 +250,126 @@ describe("ensureResources --create", () => {
     });
     expect([...state.queues].sort()).toEqual(STAGING_QUEUES);
     expect([...state.buckets]).toEqual(["smog-staging-media"]);
-    expect(corsFiles).toEqual([
-      corsRules("https://smog-site-staging.zias.workers.dev"),
-    ]);
+    expect(corsFiles).toEqual([corsRules(STAGING_ORIGIN)]);
     expect(calls.filter((call) => call.includes("create")).length).toBe(5);
+  });
+
+  test("never runs `r2 bucket info` (it also queries analytics, M3)", async () => {
+    const state = account();
+    await ensure("create", state);
+    const { calls } = await ensure("create", state);
+    expect(
+      calls.some((call) => call.includes("info") && call[0] === "r2")
+    ).toBe(false);
   });
 
   test("creates only what is missing and changes nothing that exists", async () => {
     const state = account({
       buckets: new Set(["smog-staging-media"]),
-      cors: new Map([
-        [
-          "smog-staging-media",
-          "allowed_origins: https://other.example\nallowed_methods: GET",
-        ],
-      ]),
+      cors: new Map([["smog-staging-media", corsTable(STAGING_ORIGIN, "PUT")]]),
       queues: new Set(["smog-staging-email", "smog-staging-email-dlq"]),
     });
-    const { calls, lines, result } = await ensure("create", state);
+    const { calls, result } = await ensure("create", state);
 
-    expect(result.created).toEqual([
-      "smog-staging-sponsorship-events",
-      "smog-staging-sponsorship-events-dlq",
-    ]);
-    // The existing CORS differs: reported, never overwritten.
+    expect(result).toEqual({
+      created: [
+        "smog-staging-sponsorship-events",
+        "smog-staging-sponsorship-events-dlq",
+      ],
+      missing: [],
+      ok: true,
+    });
     expect(calls.some((call) => call.includes("set"))).toBe(false);
-    expect(lines.join("\n")).toContain(
-      "warn: smog-staging-media already has a CORS configuration"
-    );
-    expect(state.cors.get("smog-staging-media")).toContain("other.example");
   });
 
-  test("sets CORS on an existing bucket that has none", async () => {
+  test("sets CORS on an existing bucket that has none, also when wrangler answers 10059", async () => {
     const state = account({
       buckets: new Set(["smog-staging-media"]),
       queues: new Set(STAGING_QUEUES),
     });
-    const { result } = await ensure("create", state);
+    expect((await ensure("create", state)).result.created).toEqual([
+      "cors:smog-staging-media",
+    ]);
+
+    const again = account({
+      buckets: new Set(["smog-staging-media"]),
+      queues: new Set(STAGING_QUEUES),
+    });
+    const { result } = await ensure("create", again, "staging", {
+      answers: {
+        "r2 bucket cors list smog-staging-media": {
+          code: 1,
+          stderr:
+            "✘ [ERROR] A request to the Cloudflare API failed.\n  The CORS configuration does not exist. [code: 10059]",
+        },
+      },
+    });
     expect(result.created).toEqual(["cors:smog-staging-media"]);
+  });
+
+  test("a CORS that does not allow the PUT from SITE_URL fails, prints the fix and is never overwritten (I2)", async () => {
+    const stale = corsTable("https://old.example", "PUT");
+    const state = account({
+      buckets: new Set(["smog-staging-media"]),
+      cors: new Map([["smog-staging-media", stale]]),
+    });
+    const { calls, output, result } = await ensure("create", state);
+
+    expect(result.ok).toBe(false);
+    expect(result.created).toEqual(STAGING_QUEUES);
+    expect(result.missing).toEqual(["cors-mismatch:smog-staging-media"]);
+    expect(calls.some((call) => call.includes("set"))).toBe(false);
+    expect(state.cors.get("smog-staging-media")).toBe(stale);
+    expect(output).toContain(
+      "bunx wrangler r2 bucket cors set smog-staging-media --file cors.json --force"
+    );
+    expect(output).toContain(STAGING_ORIGIN);
+  });
+
+  test("reads the CORS table exactly: the right origin with GET only, or a missing header, is a mismatch", async () => {
+    for (const rules of [
+      corsTable(STAGING_ORIGIN, "GET"),
+      corsTable(STAGING_ORIGIN, "PUT", "(no headers)"),
+      corsTable(`${STAGING_ORIGIN}.evil.example`, "PUT"),
+    ]) {
+      const state = account({
+        buckets: new Set(["smog-staging-media"]),
+        cors: new Map([["smog-staging-media", rules]]),
+        queues: new Set(STAGING_QUEUES),
+      });
+      // biome-ignore lint/performance/noAwaitInLoops: one fake account at a time.
+      const { result } = await ensure("check", state);
+      expect(result.missing, rules).toEqual([
+        "cors-mismatch:smog-staging-media",
+      ]);
+    }
+  });
+
+  test("a bucket the list missed but that exists (10004 on create) is treated as existing", async () => {
+    const state = account({ queues: new Set(STAGING_QUEUES) });
+    state.buckets.add("smog-staging-media");
+    const { result } = await ensure("create", state, "staging", {
+      answers: {
+        "r2 bucket list": { code: 0, stdout: "Listing buckets...\n" },
+      },
+    });
+    expect(result).toEqual({
+      created: ["cors:smog-staging-media"],
+      missing: [],
+      ok: true,
+    });
+  });
+
+  test("matches bucket names exactly in `r2 bucket list`", async () => {
+    const state = account({
+      buckets: new Set(["smog-staging-media-old"]),
+      queues: new Set(STAGING_QUEUES),
+    });
+    const { result } = await ensure("check", state);
+    expect(result.missing).toEqual([
+      "smog-staging-media",
+      "cors:smog-staging-media",
+    ]);
   });
 
   test("is a no-op the second time", async () => {
@@ -243,11 +392,65 @@ describe("ensureResources --create", () => {
     }
   });
 
-  test("stops on a lookup it cannot read, before creating anything", async () => {
+  test("refuses production while SITE_URL is the placeholder", async () => {
+    expect(planResources(WRANGLER, "production").buckets[0]?.corsOrigin).toBe(
+      PRODUCTION_SITE_URL_PLACEHOLDER
+    );
+    const message = await failure(
+      ensure("create", account(), "production", {
+        plan: planResources(WRANGLER, "production"),
+      })
+    );
+    expect(message).toContain("[provision]");
+    expect(message).toContain("placeholder");
+  });
+});
+
+describe("the queue lookup (M1, M2)", () => {
+  test("needs the exact `Queue Name:` line", async () => {
+    const message = await failure(
+      ensure("check", account(), "staging", {
+        answers: {
+          "queues info smog-staging-email": {
+            code: 0,
+            stdout: "Queue Name: smog-staging-email-dlq\nQueue ID: 1",
+          },
+        },
+      })
+    );
+    expect(message).toContain("Failed to look up the queue smog-staging-email");
+  });
+
+  test("an answer without the name is not a lookup", async () => {
+    const message = await failure(
+      ensure("check", account(), "staging", {
+        answers: { "queues info smog-staging-email": { code: 0, stdout: "" } },
+      })
+    );
+    expect(message).toContain("smog-staging-email");
+  });
+
+  test('only `Queue "<name>" does not exist` means missing', async () => {
+    const message = await failure(
+      ensure("check", account(), "staging", {
+        answers: {
+          "queues info smog-staging-email": {
+            code: 1,
+            stderr: "✘ [ERROR] The account does not exist [code: 7003]",
+          },
+        },
+      })
+    );
+    expect(message).toContain("code: 7003");
+  });
+});
+
+describe("the prerequisites hints (I1)", () => {
+  test("an authentication error names the token permissions", async () => {
     const fake = fakeWrangler(account(), {
       lookupError: "✘ [ERROR] Authentication error [code: 10000]",
     });
-    await expect(
+    const message = await failure(
       ensureResources({
         env: "staging",
         log: silent,
@@ -255,15 +458,63 @@ describe("ensureResources --create", () => {
         plan: planResources(WRANGLER, "staging"),
         run: fake.run,
       })
-    ).rejects.toThrow("Authentication error");
+    );
+    expect(message).toContain("[provision]");
+    expect(message).toContain("Workers R2 Storage: Edit");
+    expect(message).toContain("Workers Scripts: Edit");
     expect(fake.calls.some((call) => call.includes("create"))).toBe(false);
+  });
+
+  test("R2 not enabled (10042) says to enable R2", async () => {
+    const message = await failure(
+      ensure("create", account(), "staging", {
+        answers: {
+          "r2 bucket list": {
+            code: 1,
+            stderr:
+              "✘ [ERROR] A request to the Cloudflare API failed.\n  Please enable R2 through the Cloudflare Dashboard. [code: 10042]",
+          },
+        },
+      })
+    );
+    expect(message).toContain("[provision] R2 is not enabled");
+  });
+
+  test("a 403 or a missing paid plan is explained too", async () => {
+    const forbidden = await failure(
+      ensure("create", account(), "staging", {
+        answers: {
+          "queues create smog-staging-email": {
+            code: 1,
+            stderr: "✘ [ERROR] A request to the Cloudflare API failed. (403)",
+          },
+        },
+      })
+    );
+    expect(forbidden).toContain("Workers Scripts: Edit");
+    const paid = await failure(
+      ensure("create", account(), "staging", {
+        answers: {
+          "queues create smog-staging-email": {
+            code: 1,
+            stderr:
+              "✘ [ERROR] Queues are only available on the Workers Paid plan. [code: 100129]",
+          },
+        },
+      })
+    );
+    expect(paid).toContain("Workers Paid");
   });
 });
 
 describe("ensureResources --check", () => {
   test("fails with the exact wrangler commands for what is missing, and creates nothing", async () => {
     const state = account({ queues: new Set(["smog-production-email"]) });
-    const { calls, lines, result } = await ensure("check", state, "production");
+    const { calls, output, result } = await ensure(
+      "check",
+      state,
+      "production"
+    );
 
     expect(result.ok).toBe(false);
     expect(result.created).toEqual([]);
@@ -274,7 +525,6 @@ describe("ensureResources --check", () => {
       "smog-production-media",
       "cors:smog-production-media",
     ]);
-    const output = lines.join("\n");
     expect(output).toContain(
       "bunx wrangler queues create smog-production-email-dlq"
     );
@@ -289,6 +539,28 @@ describe("ensureResources --check", () => {
     ).toBe(false);
   });
 
+  test("fails on a production CORS that does not match SITE_URL (I2)", async () => {
+    const state = account();
+    await ensure("create", state, "production");
+    const { output, result } = await ensure("check", state, "production", {
+      plan: {
+        ...productionPlan(),
+        buckets: [
+          {
+            corsOrigin: "https://smog.vlaanderen",
+            name: "smog-production-media",
+          },
+        ],
+      },
+    });
+    expect(result).toEqual({
+      created: [],
+      missing: ["cors-mismatch:smog-production-media"],
+      ok: false,
+    });
+    expect(output).toContain("https://smog.vlaanderen");
+  });
+
   test("passes when everything exists", async () => {
     const state = account();
     await ensure("create", state, "production");
@@ -299,13 +571,11 @@ describe("ensureResources --check", () => {
 
 describe("ensureResources --dry-run", () => {
   test("prints the plan and never calls wrangler", async () => {
-    const { calls, lines, result } = await ensure("dry-run", account());
+    const { calls, output, result } = await ensure("dry-run", account());
     expect(calls).toEqual([]);
     expect(result.ok).toBe(true);
-    expect(lines.join("\n")).toContain(
-      "bunx wrangler queues info smog-staging-email"
-    );
-    expect(lines.join("\n")).toContain(
+    expect(output).toContain("bunx wrangler queues info smog-staging-email");
+    expect(output).toContain(
       "bunx wrangler r2 bucket cors set smog-staging-media"
     );
   });

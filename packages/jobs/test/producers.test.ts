@@ -23,10 +23,12 @@ const UUID = /^[0-9a-f-]{36}$/;
 /** A queue that fails its first `failures` sends, and records the rest. */
 function flakyQueue<T>(failures: number) {
   const sent: T[] = [];
+  const options: unknown[] = [];
   let calls = 0;
   const queue: QueueProducer<T> = {
-    send: (body) => {
+    send: (body, sendOptions) => {
       calls += 1;
+      options.push(sendOptions);
       if (calls <= failures) {
         return Promise.reject(new Error(`queue down (${calls})`));
       }
@@ -34,7 +36,7 @@ function flakyQueue<T>(failures: number) {
       return Promise.resolve();
     },
   };
-  return { calls: () => calls, queue, sent };
+  return { calls: () => calls, options, queue, sent };
 }
 
 const waits: number[] = [];
@@ -103,6 +105,23 @@ describe("enqueueEmail", () => {
       )
     ).rejects.toThrow("128 KB");
     expect(flaky.calls()).toBe(0);
+  });
+});
+
+describe("the message format (M7)", () => {
+  it("sends JSON, so the 128 KB guard measures what the queue stores", async () => {
+    const emails = flakyQueue<EmailMessage>(0);
+    await enqueueEmail(emails.queue, EMAIL, { sleep });
+    const events = flakyQueue<EventMessage>(0);
+    await enqueueEvent(
+      events.queue,
+      { paymentId: "p-1", type: "payment.settled" },
+      { sleep }
+    );
+    expect([...emails.options, ...events.options]).toEqual([
+      { contentType: "json" },
+      { contentType: "json" },
+    ]);
   });
 });
 

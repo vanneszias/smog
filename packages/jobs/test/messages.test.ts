@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  EMAIL_IDEMPOTENCY_KEY_MAX,
   EMAIL_MESSAGE_MAX_BYTES,
   emailMessageSchema,
   eventMessageSchema,
@@ -30,9 +31,24 @@ describe("emailMessageSchema", () => {
       { ...EMAIL, id: undefined },
       { ...EMAIL, props: "x" },
       { ...EMAIL, idempotencyKey: "" },
+      // `email:sent:<key>` must stay under KV's 512-byte key limit (M6).
+      { ...EMAIL, idempotencyKey: "k".repeat(EMAIL_IDEMPOTENCY_KEY_MAX + 1) },
     ]) {
       expect(emailMessageSchema.safeParse(bad).success).toBe(false);
     }
+  });
+
+  it("caps the idempotency key so the KV marker key fits in 512 bytes", () => {
+    expect(EMAIL_IDEMPOTENCY_KEY_MAX).toBe(480);
+    expect(
+      `email:sent:${"k".repeat(EMAIL_IDEMPOTENCY_KEY_MAX)}`.length
+    ).toBeLessThan(512);
+    expect(
+      emailMessageSchema.safeParse({
+        ...EMAIL,
+        idempotencyKey: "k".repeat(EMAIL_IDEMPOTENCY_KEY_MAX),
+      }).success
+    ).toBe(true);
   });
 
   it("caps the message at Cloudflare's 128 KB", () => {
