@@ -16,11 +16,17 @@ Also for the owner:
 - **Store links:** the app banner uses text and icons, not the official App Store / Google Play badges. The badges are a design choice.
 - **Complaint links:** the English and French pages link to the home page of the Belgian Data Protection Authority, not to its complaint page. Verify these deep links online before swapping them in: `https://www.dataprotectionauthority.be/citizen/actions/lodge-a-complaint` and `https://www.autoriteprotectiondonnees.be/citoyen/agir/introduire-une-plainte`.
 
-## Promises that need work before cutover
+## Retention promises: implemented (phase 6 task 5)
 
-The text states retention periods that must be true on day one (PROGRESS carries them into phase 6):
-- admin logs are kept for at most 3 years: needs a scheduled purge of `audit_log`;
-- expired sessions, codes and links are erased within 30 days: needs a scheduled purge of expired `session` and `verification` rows.
+The text states retention periods that must be true on day one. A daily purge (Cron Trigger `15 3 * * *` UTC, `runRetentionPurge`) now keeps them, and deletes nothing else:
+- admin logs (`audit_log`) older than 3 × 365 days are deleted;
+- expired sessions, sign-in codes and links (`session`, `verification`) are deleted at the first daily run after they expire, so well within 30 days;
+- sponsor re-edit and renewal links (`sponsorship_token`) are deleted 29 days after they were used or expired, so within 30 days;
+- sponsor logos: an uploaded logo that no sponsorship uses is deleted after 24 hours (an abandoned checkout or a replaced logo); the logo of a sponsorship that ended more than 30 days ago is deleted only when no sponsorship that paid for it can still use it (an expired sponsorship, or a rejected or cancelled one whose payment took no money). The fact that a logo was paid for stays in the payment data.
+- No sponsor, sponsorship, payment, invoice or review-trail row is deleted (kept as long as needed for the contract and up to 10 years).
+- Unpaid sponsorship requests: a checkout payment still open after 24 hours is cancelled at Mollie (or, if it never reached Mollie, locally). If Mollie cannot be asked (no key, or it does not know the payment), it is left open and logged rather than cancelled, because money may still arrive; the operator resolves it.
+
+An operator can preview the counts in a deployed environment without deleting anything: `bun run retention --env <staging|production> --dry-run`. Before the first production run, check that the expired sessions' `expires_at` values it prints are epoch milliseconds (about 1.7e12).
 
 ## Privacy policy
 
@@ -72,7 +78,7 @@ The text states retention periods that must be true on day one (PROGRESS carries
 **Section 9: Bewaartermijnen**
 - **P19.** Removed: "Gastaccounts … na 12 maanden inactiviteit verwijderd".
 - **P20.** Kept:
-  - admin logs for at most 3 years (needs the purge, see above);
+  - admin logs for at most 3 years (the daily purge, see above);
   - unpaid requests cancelled after 24 hours;
   - payment, sponsor and invoice data for up to 10 years;
   - analytics data for the retention period set in OpenPanel.
@@ -81,7 +87,7 @@ The text states retention periods that must be true on day one (PROGRESS carries
   - a **session** expires 7 days after the Service was last used, or at sign-out;
   - **sign-in codes and links** are single-use and valid for 5 minutes;
   - **verification and reset links** are valid for 1 hour;
-  - expired sessions, codes and links are **erased within 30 days** (needs the purge, see above).
+  - expired sessions, codes and links are **erased within 30 days** (the daily purge, see above).
 
 **Section 10: Accountverwijdering (rewritten)**
 - **P22.** Old:

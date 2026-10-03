@@ -14,6 +14,7 @@ import {
 const INVALID_STATE_KEYS = {
   alreadySettled: "sponsorship.errors.alreadySettled",
   gestureTaken: "sponsorship.errors.gestureTaken",
+  logoExpired: "sponsorship.errors.logoExpired",
   logoInvalid: "sponsorship.errors.logoInvalid",
   noLogo: "sponsorship.errors.noLogo",
   notRefunded: "sponsorship.errors.notRefunded",

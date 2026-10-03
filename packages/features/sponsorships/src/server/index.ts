@@ -74,6 +74,18 @@ export {
   revokeTokensStatement,
 } from "./statements";
 export {
+  type ExpirySweepResult,
+  REMINDER_WINDOW_MS,
+  type ReminderSweepResult,
+  type RetentionPurgeResult,
+  runExpirySweep,
+  runReminderSweep,
+  runRetentionPurge,
+  runStaleSweep,
+  STALE_PAYMENT_AGE_MS,
+  type StaleSweepResult,
+} from "./sweeps";
+export {
   eventStatement,
   InvalidTransitionError,
   isStaleTransition,

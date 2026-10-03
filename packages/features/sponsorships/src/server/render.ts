@@ -69,12 +69,22 @@ export interface RenderJobPlan {
  * sponsorship, or `null` when it is not rendering or already has a
  * `queued`/`running` job. In-batch guards make a race between two
  * creators fail one of them (`createRenderJob` answers `null` then).
+ *
+ * `resubmitted` (the re-edit, phase 6 task 5): the same batch first moves
+ * the sponsorship `changes_requested → rendering` with these values, so
+ * the read expects `changes_requested` and the job's input takes the new
+ * display name and logo. The in-batch guards still check `rendering` at
+ * that point of the batch.
  */
 export async function createRenderJobStatements(
   db: Db,
-  input: { now: Date; sponsorshipId: string }
+  input: {
+    now: Date;
+    resubmitted?: { displayName: string; logoKey: string | null };
+    sponsorshipId: string;
+  }
 ): Promise<RenderJobPlan | null> {
-  const { now, sponsorshipId } = input;
+  const { now, resubmitted, sponsorshipId } = input;
   const [row] = await db
     .select({
       active: sql<number>`${activeJobExists(ref("sponsorship", sponsorship.id))}`,
@@ -90,14 +100,15 @@ export async function createRenderJobStatements(
     .innerJoin(gesture, eq(gesture.id, sponsorship.gestureId))
     .where(eq(sponsorship.id, sponsorshipId))
     .limit(1);
-  if (row?.status !== "rendering" || row.active) {
+  const expected = resubmitted ? "changes_requested" : "rendering";
+  if (row?.status !== expected || row.active) {
     return null;
   }
   const renderJobId = newId();
   const attempt = (row.lastAttempt ?? 0) + 1;
   const jobInput = renderInputSchema.parse({
-    displayName: row.displayName,
-    logoKey: row.logoKey,
+    displayName: resubmitted?.displayName ?? row.displayName,
+    logoKey: resubmitted ? resubmitted.logoKey : row.logoKey,
     sourcePlaybackId: row.playbackId,
     v: RENDER_INPUT_VERSION,
   });

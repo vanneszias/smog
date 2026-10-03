@@ -57,6 +57,8 @@ export const SPONSORSHIP_STATUS_TONES = {
  * - `paymentProvider`: Mollie failed while creating the payment.
  * - `alreadySettled`: a repeated checkout whose payment is no longer open.
  * - `logoInvalid`: the uploaded logo is missing, too large or not an image.
+ * - `logoExpired`: a re-edit's upload is gone (an upload no sponsorship
+ *   references is purged after 24 h): upload it again.
  * - `noLogo`: a re-edit sent a logo for a sponsorship without one.
  * - `notRenewable`: the sponsorship can no longer be renewed.
  * - `gestureTaken`: a request for changes on a rejected sponsorship whose
@@ -72,6 +74,7 @@ export const INVALID_STATE_REASONS = [
   "paymentProvider",
   "alreadySettled",
   "logoInvalid",
+  "logoExpired",
   "noLogo",
   "notRenewable",
   "gestureTaken",

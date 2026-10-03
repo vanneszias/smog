@@ -15,5 +15,5 @@ export const PHASE6_PENDING: Readonly<Record<Phase6Pending, boolean>> = {
   /** Task 4: checkout, payment status, the webhook, the fake render. */
   checkout: false,
   /** Task 5: `reedit.get` / `reedit.submit`. */
-  reedit: true,
+  reedit: false,
 };
