@@ -10,7 +10,7 @@ import { e2eSeed, ORIGIN } from "./helpers";
  * and the detail page. No `expect` here (as `admin.ts`).
  */
 
-export const SAMPLE_PLAYBACK_ID =
+const SAMPLE_PLAYBACK_ID =
   "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
 const DAY = 86_400_000;
 const IN_REVIEW = {
@@ -46,7 +46,7 @@ async function uploadLogo(page: Page): Promise<string> {
  * The flow spec's gestures: its tests approve, request changes and mark
  * paid, so it seeds them fresh and resets them afterwards.
  */
-export const FLOW_SLUGS = ["vogel", "koffie", "eten", "drinken"] as const;
+const FLOW_SLUGS = ["vogel", "koffie", "eten", "drinken"] as const;
 
 export const FLOW_IDS = {
   eten: "e2e-adm-eten-0",
