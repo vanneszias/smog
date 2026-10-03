@@ -1,5 +1,6 @@
 import { env as bindings } from "cloudflare:workers";
 import { createDb, type Db } from "@smog/db/client";
+import { enqueueOutputs, type JobQueues } from "@smog/jobs";
 import {
   createMollie,
   getPayment,
@@ -8,11 +9,7 @@ import {
 } from "@smog/payments";
 import { MOLLIE_PAYMENT_ID } from "@smog/payments/schema";
 import { checkRateLimit } from "@smog/rpc";
-import {
-  enqueueOutputs,
-  type SponsorshipQueues,
-  settlePayment,
-} from "@smog/sponsorships/server";
+import { settlePayment } from "@smog/sponsorships/server";
 import { readCappedBody } from "@smog/utils";
 import { siteEnv } from "./auth";
 
@@ -24,7 +21,7 @@ import { siteEnv } from "./auth";
  * signs nothing: the body is only a pointer. The payment is re-fetched
  * with our key and settled (`settlePayment`, idempotent by the stored
  * status), then every event and email of the result is enqueued, whatever
- * the outcome. Nothing is kept per request. The answers:
+ * the outcome. The answers:
  * - 400: a missing or malformed id (counted);
  * - 200: an id Mollie does not know (counted), or a payment that is not
  *   ours, with nothing done;
@@ -32,29 +29,39 @@ import { siteEnv } from "./auth";
  *   after the settle, so Mollie retries and the retry re-derives them;
  * - 500: our own processing failed (Mollie retries; settling is idempotent);
  * - 200 otherwise.
- * Only the counted answers (400 and Mollie's 404) spend the caller's
- * `RL_API` budget, so genuine retries are never throttled; past it the
- * answer is 429.
+ * A 2xx has an empty body (the outcome is in `x-smog-webhook`); an error
+ * answers `{ code }`. Only the counted answers (400, 413 and Mollie's 404)
+ * spend the caller's `RL_API` budget, so genuine retries are never
+ * throttled; past it the answer is 429.
+ *
+ * A verified id is never limited, so its payer could replay the webhook at
+ * will: an `already` outcome re-enqueues `payment.settled` at most once a
+ * minute per payment (KV `mollie:fanout:<paymentId>`, written only after
+ * a successful enqueue, so a 503's retry always resends).
  */
 
 /** Mollie sends one short form field; the old handler's JSON fits too. */
 const MOLLIE_WEBHOOK_MAX_BYTES = 4096;
+/** KV's shortest TTL: one `already` fan-out per payment per minute. */
+const FANOUT_MARKER_TTL_S = 60;
 
 export interface MollieWebhookDeps {
   db: Db;
+  /** The fan-out marker (`mollie:fanout:<paymentId>`). */
+  kv: KVNamespace;
   /** Whether this caller may fail once more (`RL_API` per IP). */
   limit: (key: string) => Promise<boolean>;
   /** `null` without `MOLLIE_API_KEY` (staging until its key is set). */
   mollie: MollieClient | null;
   now?: () => Date;
-  queues: SponsorshipQueues;
+  queues: JobQueues;
 }
 
 function answer(status: number, code: string): Response {
-  return Response.json(
-    { code },
-    { headers: { "cache-control": "no-store" }, status }
-  );
+  const headers = { "cache-control": "no-store", "x-smog-webhook": code };
+  return status >= 200 && status < 300
+    ? new Response(null, { headers, status })
+    : Response.json({ code }, { headers, status });
 }
 
 /** `id` from the form body, or from a JSON one. */
@@ -71,6 +78,28 @@ function paymentId(bytes: Uint8Array, contentType: string): string | null {
     id = new URLSearchParams(text).get("id");
   }
   return typeof id === "string" && MOLLIE_PAYMENT_ID.test(id) ? id : null;
+}
+
+function fanoutKey(ourPaymentId: string): string {
+  return `mollie:fanout:${ourPaymentId}`;
+}
+
+/** Whether an `already` fan-out for this payment went out in the last minute. */
+async function recentFanout(kv: KVNamespace, id: string): Promise<boolean> {
+  try {
+    return (await kv.get(fanoutKey(id))) !== null;
+  } catch (error) {
+    console.error("[payments] Failed to read the fan-out marker:", error);
+    return false;
+  }
+}
+
+async function markFanout(kv: KVNamespace, id: string): Promise<void> {
+  try {
+    await kv.put(fanoutKey(id), "1", { expirationTtl: FANOUT_MARKER_TTL_S });
+  } catch (error) {
+    console.error("[payments] Failed to write the fan-out marker:", error);
+  }
 }
 
 export async function handleMollieWebhook(
@@ -123,6 +152,13 @@ export async function handleMollieWebhook(
     console.warn(`[payments] A Mollie webhook for ${id}, which is not ours`);
     return answer(200, "NOT_OURS");
   }
+  const already = result.outcome === "already";
+  if (already && (await recentFanout(deps.kv, result.paymentId))) {
+    console.log(
+      `[payments] Mollie webhook ${id}: already, fanned out in the last minute`
+    );
+    return answer(200, "OK");
+  }
   try {
     await enqueueOutputs(deps.queues, result, { onFailure: "throw" });
   } catch (error) {
@@ -132,6 +168,9 @@ export async function handleMollieWebhook(
     );
     return answer(503, "ENQUEUE_FAILED");
   }
+  if (already) {
+    await markFanout(deps.kv, result.paymentId);
+  }
   console.log(
     `[payments] Mollie webhook ${id}: ${result.outcome} (payment ${result.paymentId})`
   );
@@ -139,7 +178,7 @@ export async function handleMollieWebhook(
 }
 
 /**
- * The webhook as the routes serve it: this Worker's D1, its queues,
+ * The webhook as the routes serve it: this Worker's D1, KV and queues,
  * `RL_API` for the counted failures, and a Mollie client from env.
  * `legacy` is the old `/webhooks/mollie` path (spec §15), kept for 30 days
  * after cutover (a PROGRESS carry): never a redirect, which Mollie would
@@ -152,9 +191,10 @@ export async function serveMollieWebhook(
   if (legacy) {
     console.warn("[mollie] legacy webhook path used");
   }
-  const { db, rateLimits, worker } = siteEnv();
+  const { db, kv, rateLimits, worker } = siteEnv();
   return await handleMollieWebhook(request, {
     db: createDb(db),
+    kv,
     limit: (key) => checkRateLimit(rateLimits.RL_API, key),
     mollie: createMollie(worker),
     queues: { email: bindings.EMAIL_QUEUE, events: bindings.EVENTS_QUEUE },

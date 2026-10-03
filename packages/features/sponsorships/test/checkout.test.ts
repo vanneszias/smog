@@ -1,10 +1,13 @@
+import { env } from "cloudflare:workers";
 import {
+  gesture as gestureTable,
   invoiceRequest,
   payment,
   paymentItem,
   sponsor,
   sponsorship,
 } from "@smog/db";
+import { createDb } from "@smog/db/client";
 import { makeGesture } from "@smog/db/testing";
 import {
   createFakeMollie,
@@ -24,7 +27,9 @@ import {
   statusOf,
   testDb,
 } from "./helpers";
-import { GIF, media, putLogo } from "./logos";
+import { GIF, media, PNG, putLogo } from "./logos";
+
+const LOGO_KEY = /^logos\/[0-9a-f-]{36}$/;
 
 const db = testDb();
 let fake: FakeMollie;
@@ -58,13 +63,47 @@ function checkoutInput(
   };
 }
 
+/**
+ * A D1 binding that runs `hook` once, just before the first batch: what
+ * another request could do between the checkout's reads and its write.
+ */
+function d1Before(hook: () => Promise<void>): D1Database {
+  let ran = false;
+  return new Proxy(env.DB, {
+    get(target, key, receiver) {
+      if (key === "batch") {
+        return async (statements: D1PreparedStatement[]) => {
+          if (!ran) {
+            ran = true;
+            await hook();
+          }
+          return await target.batch(statements);
+        };
+      }
+      const value = Reflect.get(target, key, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
 function checkout(
   input: unknown,
-  overrides: Parameters<typeof callAt>[2] = {}
+  overrides: Parameters<typeof callAt>[2] = {},
+  beforeBatch?: () => Promise<void>
 ): Promise<CheckoutAnswer> {
-  return callAt<CheckoutAnswer>("checkout", input, overrides, {
-    mollieFetch: fake.fetch,
-  });
+  return callAt<CheckoutAnswer>(
+    "checkout",
+    input,
+    beforeBatch
+      ? { ...overrides, db: createDb(d1Before(beforeBatch)) }
+      : overrides,
+    { mollieFetch: fake.fetch }
+  );
+}
+
+async function logoKeys(): Promise<string[]> {
+  const listed = await media().list({ prefix: "logos/" });
+  return listed.objects.map((object) => object.key).sort();
 }
 
 async function codeOf(promise: Promise<unknown>) {
@@ -137,11 +176,20 @@ describe("sponsorships.checkout (ruling 5)", () => {
     expect(rows.map((r) => r.gestureId).sort()).toEqual(
       gestures.map((g) => g.id).sort()
     );
+    // The verified logo was copied to a key no client can write (I-2), and
+    // the upload key is gone.
+    const storedKey = rows[0]?.logoKey ?? "";
+    expect(storedKey).toMatch(LOGO_KEY);
+    expect(storedKey).not.toBe(logoKey);
+    expect(await media().head(logoKey)).toBeNull();
+    const copy = await media().get(storedKey);
+    expect(copy?.httpMetadata?.contentType).toBe("image/png");
+    expect(new Uint8Array((await copy?.arrayBuffer()) ?? [])).toEqual(PNG);
     for (const s of rows) {
       expect(s).toMatchObject({
         displayName: "Acme",
         endsAt: null,
-        logoKey,
+        logoKey: storedKey,
         startsAt: null,
         status: "awaiting_payment",
       });
@@ -345,6 +393,71 @@ describe("sponsorships.checkout (ruling 5)", () => {
     expect((await codeOf(checkout(input))).data).toEqual({
       reason: "logoInvalid",
     });
+  });
+
+  it("keeps the upload and drops the copy when the batch fails, so a retry can use the logo", async () => {
+    const taken = await makeGesture(db);
+    await seedCheckout(db, { gestures: [taken], status: "in_review" });
+    const logoKey = await putLogo();
+    const before = await logoKeys();
+    const lost = await codeOf(checkout(checkoutInput([taken.id], { logoKey })));
+    expect(lost.code).toBe("GESTURE_UNAVAILABLE");
+    expect(await media().head(logoKey)).not.toBeNull();
+    expect(await logoKeys()).toEqual(before);
+    const free = await makeGesture(db);
+    expect(
+      (await codeOf(checkout(checkoutInput([free.id], { logoKey })))).code
+    ).toBe("ok");
+  });
+
+  it("answers GESTURE_UNAVAILABLE when a gesture is unpublished between the check and the batch (the in-batch guard)", async () => {
+    const gesture = await makeGesture(db);
+    const input = checkoutInput([gesture.id]);
+    const result = await codeOf(
+      checkout(input, {}, async () => {
+        await db
+          .update(gestureTable)
+          .set({ publishedAt: null })
+          .where(eq(gestureTable.id, gesture.id));
+      })
+    );
+    expect(result).toEqual({
+      code: "GESTURE_UNAVAILABLE",
+      data: { gestureIds: [gesture.id] },
+    });
+    await nothingWritten(input.checkoutId, [gesture.id]);
+    expect(fake.requests).toEqual([]);
+  });
+
+  it("refuses a replay whose gestures or total differ from the stored payment", async () => {
+    const [a, b] = [await makeGesture(db), await makeGesture(db)];
+    const input = checkoutInput([a.id]);
+    await checkout(input);
+    expect(
+      await codeOf(
+        checkout({
+          ...input,
+          expectedTotalCents: 10_000,
+          gestureIds: [a.id, b.id],
+        })
+      )
+    ).toEqual({ code: "INVALID_STATE", data: { reason: "alreadySettled" } });
+    expect(
+      await codeOf(
+        checkout({ ...input, expectedTotalCents: 5000, gestureIds: [b.id] })
+      )
+    ).toEqual({ code: "INVALID_STATE", data: { reason: "alreadySettled" } });
+    expect(
+      await codeOf(
+        checkout({
+          ...input,
+          expectedTotalCents: 6000,
+          logoKey: await putLogo(),
+        })
+      )
+    ).toEqual({ code: "INVALID_STATE", data: { reason: "alreadySettled" } });
+    // The same input still answers the same.
+    expect((await codeOf(checkout(input))).code).toBe("ok");
   });
 
   it("is guarded: Turnstile missing → TURNSTILE_FAILED, RL_SPONSOR exhausted → RATE_LIMITED", async () => {

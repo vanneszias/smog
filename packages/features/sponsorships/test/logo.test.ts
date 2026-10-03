@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { LOGO_MAX_BYTES } from "../src/schema/wizard";
 import {
+  claimLogo,
   LOGO_UPLOAD_TTL_MS,
   logoUploadUrl,
   signLogoUpload,
   sniffLogoType,
-  verifyLogoObject,
   verifyLogoUpload,
 } from "../src/server/logo";
 import { callAt, SITE_URL } from "./helpers";
@@ -86,7 +86,7 @@ describe("the signed fallback upload URL", () => {
   it("is a same-origin PUT with exp and sig when there are no R2 tokens", async () => {
     const answer = await logoUploadUrl(
       { BETTER_AUTH_SECRET: SECRET, SITE_URL },
-      { contentType: "image/webp", key: KEY, now: NOW }
+      { contentType: "image/webp", key: KEY, now: NOW, size: 1234 }
     );
     const url = new URL(answer.uploadUrl);
     expect(url.origin).toBe(SITE_URL);
@@ -110,10 +110,10 @@ describe("the signed fallback upload URL", () => {
     ).toBe("ok");
   });
 
-  it("is an R2 presigned PUT (300 s, Content-Type signed) with the R2 tokens", async () => {
+  it("is an R2 presigned PUT (300 s, Content-Type and Content-Length signed) with the R2 tokens", async () => {
     const answer = await logoUploadUrl(
       { BETTER_AUTH_SECRET: SECRET, SITE_URL, ...R2 },
-      { contentType: "image/png", key: KEY, now: NOW }
+      { contentType: "image/png", key: KEY, now: NOW, size: 1234 }
     );
     const url = new URL(answer.uploadUrl);
     expect(url.origin).toBe(
@@ -123,7 +123,7 @@ describe("the signed fallback upload URL", () => {
     expect(url.searchParams.get("X-Amz-Algorithm")).toBe("AWS4-HMAC-SHA256");
     expect(url.searchParams.get("X-Amz-Expires")).toBe("300");
     expect(url.searchParams.get("X-Amz-SignedHeaders")).toBe(
-      "content-type;host"
+      "content-length;content-type;host"
     );
     expect(url.searchParams.get("X-Amz-Credential")).toContain(
       "test-access-key/"
@@ -174,37 +174,47 @@ describe("sponsorships.uploadLogo", () => {
   });
 });
 
-describe("verifyLogoObject (the checkout's check, bug 23)", () => {
-  it("accepts a stored PNG, JPEG and WebP", async () => {
-    expect(await verifyLogoObject(media(), await putLogo(PNG))).toBe(true);
-    expect(
-      await verifyLogoObject(media(), await putLogo(JPEG, "image/jpeg"))
-    ).toBe(true);
-    expect(
-      await verifyLogoObject(media(), await putLogo(WEBP, "image/webp"))
-    ).toBe(true);
+describe("claimLogo (the checkout's check and copy, bug 23, I-2)", () => {
+  it("copies a valid PNG, JPEG and WebP to a fresh key, leaving the upload for the caller", async () => {
+    for (const [bytes, type] of [
+      [PNG, "image/png"],
+      [JPEG, "image/jpeg"],
+      [WEBP, "image/webp"],
+    ] as const) {
+      // biome-ignore lint/performance/noAwaitInLoops: one fixture at a time.
+      const upload = await putLogo(bytes, type);
+      const claimed = await claimLogo(media(), upload);
+      expect(claimed).toMatch(LOGO_KEY);
+      expect(claimed).not.toBe(upload);
+      const copy = await media().get(claimed ?? "");
+      expect(copy?.httpMetadata?.contentType).toBe(type);
+      expect(copy?.customMetadata?.uploadedAt).toEqual(expect.any(String));
+      expect(new Uint8Array((await copy?.arrayBuffer()) ?? [])).toEqual(bytes);
+      expect(await media().head(upload)).not.toBeNull();
+    }
   });
 
-  it("refuses and deletes a mismatched type, a renamed GIF and a file over 2 MiB", async () => {
+  it("refuses and deletes a mismatched type, a renamed GIF and a file over 2 MiB, copying nothing", async () => {
     const mismatched = await putLogo(JPEG, "image/png");
     const gif = await putLogo(GIF, "image/png");
     const gifType = await putLogo(GIF, "image/gif");
     const big = new Uint8Array(LOGO_MAX_BYTES + 1);
     big.set(PNG);
     const large = await putLogo(big);
+    const before = (await media().list({ prefix: "logos/" })).objects.length;
     for (const key of [mismatched, gif, gifType, large]) {
       // biome-ignore lint/performance/noAwaitInLoops: one check per fixture, in order.
-      expect(await verifyLogoObject(media(), key)).toBe(false);
+      expect(await claimLogo(media(), key)).toBeNull();
       expect(await media().head(key)).toBeNull();
     }
+    expect((await media().list({ prefix: "logos/" })).objects.length).toBe(
+      before - 4
+    );
   });
 
   it("refuses a key that does not exist", async () => {
     expect(
-      await verifyLogoObject(
-        media(),
-        "logos/00000000-0000-4000-8000-0000000000ff"
-      )
-    ).toBe(false);
+      await claimLogo(media(), "logos/00000000-0000-4000-8000-0000000000ff")
+    ).toBeNull();
   });
 });

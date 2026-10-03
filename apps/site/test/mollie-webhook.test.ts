@@ -3,6 +3,7 @@ import { MAINTENANCE_KV_KEY } from "@smog/config/maintenance";
 import { createPayment } from "@smog/payments";
 import { createFakeMollie, type FakeMollie } from "@smog/payments/testing";
 import { renderStarterFor } from "@smog/sponsorships/server";
+import { DAY_MS } from "@smog/utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   handleMollieWebhook,
@@ -43,7 +44,7 @@ afterEach(() => {
 });
 
 function deps(overrides: Partial<MollieWebhookDeps> = {}): MollieWebhookDeps {
-  return { db, limit, mollie: fake.mollie, queues, ...overrides };
+  return { db, kv: kv(), limit, mollie: fake.mollie, queues, ...overrides };
 }
 
 function form(id: string, headers: Record<string, string> = {}): Request {
@@ -63,15 +64,30 @@ async function deliver(
   overrides: Partial<MollieWebhookDeps> = {}
 ): Promise<{ code: string; status: number }> {
   const response = await handleMollieWebhook(request, deps(overrides));
-  const { code } = (await response.json()) as { code: string };
+  const code = response.headers.get("x-smog-webhook") ?? "";
+  if (response.ok) {
+    // A 2xx has an empty body (M-8).
+    expect(await response.text()).toBe("");
+  } else {
+    expect(await response.json()).toEqual({ code });
+  }
   return { code, status: response.status };
 }
 
-/** Runs the events consumer on every `EVENTS_QUEUE` message so far. */
-async function drainEvents(): Promise<void> {
+/**
+ * Runs the events consumer on every `EVENTS_QUEUE` message so far; its
+ * emails go to `email` (a recording queue by default, or the real one).
+ */
+async function drainEvents(
+  options: { email?: RecordingQueue | Queue; now?: Date } = {}
+): Promise<void> {
   const consumer = {
     db,
-    queues: { email: recordingQueue(), events: recordingQueue() },
+    now: () => options.now ?? new Date(),
+    queues: {
+      email: options.email ?? recordingQueue(),
+      events: recordingQueue(),
+    },
     renderStarter: renderStarterFor("container", { db }),
     siteUrl: ORIGIN,
   };
@@ -218,6 +234,52 @@ describe("the Mollie webhook (ruling 2)", () => {
     expect(queues.events.messages).toEqual([settled(checkout.paymentId)]);
   });
 
+  it("re-enqueues an `already` fan-out at most once a minute per payment (M-1)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const checkout = await checkoutVia(fake, { count: 1 });
+    fake.setStatus(checkout.mollieId, "paid");
+    await deliver(form(checkout.mollieId));
+    expect(queues.events.messages).toHaveLength(1);
+    // A failed `already` enqueue writes no marker: Mollie's retry resends.
+    const down = {
+      email: recordingQueue(),
+      events: recordingQueue({ fail: true }),
+    };
+    expect(
+      (await deliver(form(checkout.mollieId), { queues: down })).status
+    ).toBe(503);
+    await deliver(form(checkout.mollieId));
+    expect(queues.events.messages).toHaveLength(2);
+    // Now marked: replays within the minute answer 200 and enqueue nothing.
+    await deliver(form(checkout.mollieId));
+    await deliver(form(checkout.mollieId));
+    expect(queues.events.messages).toHaveLength(2);
+    await kv().delete(`mollie:fanout:${checkout.paymentId}`);
+    await deliver(form(checkout.mollieId));
+    expect(queues.events.messages).toHaveLength(3);
+  });
+
+  it("a refund webhook 30 days after payment fans out again but sends no email (I-1)", async () => {
+    const admin = await makeAdmin();
+    const checkout = await checkoutVia(fake, { count: 1 });
+    fake.setStatus(checkout.mollieId, "paid");
+    await deliver(form(checkout.mollieId));
+    const first = recordingQueue();
+    await drainEvents({ email: first });
+    expect(first.messages.length).toBeGreaterThan(0);
+    const later = new Date(Date.now() + 30 * DAY_MS);
+    fake.refund(checkout.mollieId, 5000);
+    expect(
+      (await deliver(form(checkout.mollieId), { now: () => later })).status
+    ).toBe(200);
+    expect(queues.events.messages).toEqual([settled(checkout.paymentId)]);
+    const again = recordingQueue();
+    await drainEvents({ email: again, now: later });
+    expect(again.messages).toEqual([]);
+    expect(JSON.stringify(again.messages)).not.toContain(admin.email);
+    expect(await jobsOf(checkout.sponsorshipIds)).toHaveLength(1);
+  });
+
   it("a replay and a concurrent storm leave one state and, through the consumer, one render job per item", async () => {
     const checkout = await checkoutVia(fake);
     fake.setStatus(checkout.mollieId, "paid");
@@ -230,9 +292,11 @@ describe("the Mollie webhook (ruling 2)", () => {
       // biome-ignore lint/performance/noAwaitInLoops: one trail per sponsorship.
       expect(await trailTypes(id)).toEqual(["created", "payment_paid"]);
     }
-    // Every delivery enqueues payment.settled (ruling 6); the consumer is
-    // idempotent: one job per item, however many messages run.
-    expect(queues.events.messages.length).toBe(7);
+    // Each delivery may enqueue payment.settled (ruling 6; the fan-out
+    // marker skips some `already` ones); the consumer is idempotent: one
+    // job per item, however many messages run.
+    expect(queues.events.messages.length).toBeGreaterThanOrEqual(1);
+    expect(queues.events.messages.length).toBeLessThanOrEqual(7);
     await drainEvents();
     const jobs = await jobsOf(checkout.sponsorshipIds);
     expect(jobs).toHaveLength(2);

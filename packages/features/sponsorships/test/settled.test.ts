@@ -1,4 +1,5 @@
-import { invoiceRequest, renderJob, sponsorship } from "@smog/db";
+import { invoiceRequest, payment, renderJob, sponsorship } from "@smog/db";
+import { DAY_MS } from "@smog/utils";
 import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { handlePaymentSettled, queuedRenderJob } from "../src/server/settled";
@@ -153,6 +154,33 @@ describe("handlePaymentSettled (the payment.settled fan-out)", () => {
         to: `${seeded.sponsorId}@example.com`,
       },
     ]);
+  });
+
+  it("sends the emails only within 6 days of paid_at (inside the 7-day KV marker); jobs always", async () => {
+    await makeAdmin(db);
+    const seeded = await seedCheckout(db, {
+      count: 1,
+      paymentStatus: "paid",
+      status: "rendering",
+    });
+    await db
+      .update(payment)
+      .set({ paidAt: NOW })
+      .where(eq(payment.id, seeded.paymentId));
+    const at = (days: number) =>
+      handlePaymentSettled(db, {
+        now: new Date(NOW.getTime() + days * DAY_MS),
+        paymentId: seeded.paymentId,
+        siteUrl: SITE_URL,
+      });
+    // A refund or chargeback webhook 30 days later re-sends nothing.
+    const late = await at(30);
+    expect(late.notify).toEqual([]);
+    // The render job is still created and requested.
+    expect(late.events).toHaveLength(1);
+    expect(await jobsOf(seeded.sponsorshipIds)).toHaveLength(1);
+    expect((await at(6)).notify).toEqual([]);
+    expect((await at(5.9)).notify.length).toBeGreaterThan(0);
   });
 
   it("does nothing for a payment that is not paid", async () => {

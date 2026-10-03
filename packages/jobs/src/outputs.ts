@@ -1,21 +1,21 @@
 /**
- * Enqueues what a settle (or another service) returns, after its batch
- * committed (ruling 8): the `payment.settled` / `render.requested` events
- * on `EVENTS_QUEUE` and the keyed emails on `EMAIL_QUEUE`. Every output is
- * enqueued whatever the outcome; a retry re-derives them from D1 and the
- * idempotency keys make the resends safe (task 3 fix round 1, I-1).
+ * What a feature service returns for its caller to enqueue after its D1
+ * batch committed (phase 6 ruling 8): events for `EVENTS_QUEUE` and keyed
+ * emails for `EMAIL_QUEUE`. Every feature and the site put them on the
+ * queues with `enqueueOutputs`, and every caller takes the queues from the
+ * rpc context's env (`RpcEnv`) or the Worker's bindings: one way in.
  */
 import type { OutboxEmail } from "@smog/email";
+import type { EmailMessage, EventMessage } from "./messages";
 import {
-  type EmailMessage,
   type EnqueueOptions,
-  type EventMessage,
   enqueueEmail,
   enqueueEvent,
   type QueueProducer,
-} from "@smog/jobs";
+} from "./producers";
 
-export interface SponsorshipQueues {
+/** The two queue bindings (either may be missing in a broken config). */
+export interface JobQueues {
   email?: QueueProducer<EmailMessage> | undefined;
   events?: QueueProducer<EventMessage> | undefined;
 }
@@ -26,7 +26,7 @@ export interface Outputs {
 }
 
 function missing(name: string, onFailure: EnqueueOptions["onFailure"]) {
-  const error = new Error(`[sponsorships] The ${name} binding is missing`);
+  const error = new Error(`[jobs] The ${name} binding is missing`);
   console.error(error.message);
   if (onFailure === "throw") {
     throw error;
@@ -34,13 +34,14 @@ function missing(name: string, onFailure: EnqueueOptions["onFailure"]) {
 }
 
 /**
- * Enqueues `outputs`, events first. With `onFailure: "throw"` (the Mollie
- * webhook, the events consumer) a queue that stays down or is not bound
- * throws, so the caller answers 503 or retries; otherwise it is logged and
- * the answer is `false`.
+ * Enqueues `outputs`, events first, each message with the producers' 3
+ * in-process retries. In `throw` mode (the Mollie webhook, the events
+ * consumer) a queue that stays down, or is not bound, throws, so the
+ * caller answers 503 or retries and re-derives the outputs; by default it
+ * is logged and the answer is `false` (admin actions, crons, polls).
  */
 export async function enqueueOutputs(
-  queues: SponsorshipQueues,
+  queues: JobQueues,
   outputs: Outputs,
   options: EnqueueOptions = {}
 ): Promise<boolean> {

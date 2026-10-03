@@ -10,13 +10,14 @@
 import { ORPCError } from "@orpc/server";
 import { gesture, payment, paymentItem, sponsorship } from "@smog/db";
 import type { Db } from "@smog/db/client";
+import { enqueueOutputs } from "@smog/jobs";
 import { getPayment } from "@smog/payments";
 import { MOLLIE_PAYMENT_ID } from "@smog/payments/schema";
 import type { RpcContext } from "@smog/rpc";
 import { asc, eq } from "drizzle-orm";
 import type { PaymentStatusView } from "../schema/status";
 import { mollieFor } from "./checkout";
-import { enqueueOutputs } from "./dispatch";
+
 import type { SponsorshipsDeps, SponsorshipsImplementer } from "./procedure";
 import { settlePayment } from "./settle";
 

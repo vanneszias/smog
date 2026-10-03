@@ -1,11 +1,14 @@
 import { env as bindings } from "cloudflare:workers";
 import { createDb, type Db } from "@smog/db/client";
-import { eventMessageSchema, type RenderStarter } from "@smog/jobs";
 import {
   enqueueOutputs,
+  eventMessageSchema,
+  type JobQueues,
+  type RenderStarter,
+} from "@smog/jobs";
+import {
   handlePaymentSettled,
   queuedRenderJob,
-  type SponsorshipQueues,
 } from "@smog/sponsorships/server";
 import { siteEnv } from "@/server/auth";
 import { renderStarter } from "@/worker/render";
@@ -28,7 +31,7 @@ import { renderStarter } from "@/worker/render";
 export interface EventsDeps {
   db: Db;
   now?: () => Date;
-  queues: SponsorshipQueues;
+  queues: JobQueues;
   renderStarter: RenderStarter;
   siteUrl: string;
 }

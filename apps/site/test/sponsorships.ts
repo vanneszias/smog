@@ -69,7 +69,12 @@ async function all<T>(sql: string, ...params: unknown[]): Promise<T[]> {
 /** A checkout of `count` new gestures (or `gestures`), as the wizard makes it. */
 export async function checkoutVia(
   fake: FakeMollie,
-  options: { count?: number; email?: string; gestures?: Gesture[] } = {}
+  options: {
+    count?: number;
+    email?: string;
+    gestures?: Gesture[];
+    logoKey?: string;
+  } = {}
 ): Promise<CheckedOut> {
   const db = testDb();
   const gestures =
@@ -90,14 +95,15 @@ export async function checkoutVia(
         name: "Alex Sponsor",
       },
       displayName: "Acme BV",
-      expectedTotalCents: gestures.length * 5000,
+      expectedTotalCents: gestures.length * (options.logoKey ? 6000 : 5000),
       gestureIds: gestures.map((g) => g.id),
       locale: "nl",
+      ...(options.logoKey ? { logoKey: options.logoKey } : {}),
     },
     {
       context: makeRpcContext({
         db,
-        env: { MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY },
+        env: { MEDIA: env.MEDIA, MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY },
         kv: kv(),
       }),
       path: ["sponsorships", "checkout"],
@@ -119,6 +125,14 @@ export async function checkoutVia(
     paymentId: checkoutId,
     sponsorshipIds: items.map((item) => item.sponsorship_id),
   };
+}
+
+export async function logoKeysOf(sponsorshipIds: readonly string[]) {
+  const rows = await all<{ logo_key: string | null }>(
+    "SELECT logo_key FROM sponsorship WHERE id IN (SELECT value FROM json_each(?))",
+    JSON.stringify(sponsorshipIds)
+  );
+  return rows.map((row) => row.logo_key);
 }
 
 export async function paymentStatusOf(paymentId: string): Promise<string> {

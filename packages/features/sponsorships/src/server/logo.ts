@@ -193,14 +193,22 @@ function r2Credentials(env: LogoUploadEnv) {
 /**
  * The PUT the browser makes for `key`: an `aws4fetch` presigned URL on
  * `<account>.r2.cloudflarestorage.com/<bucket>/<key>` (300 s, with the
- * `Content-Type` signed, so another type is a 403) when the R2 tokens are
- * set; otherwise the signed same-origin fallback.
+ * `Content-Type` and the declared `Content-Length` signed, so another type
+ * or size is a 403; the browser sets the length from the file itself) when
+ * the R2 tokens are set; otherwise the signed same-origin fallback, whose
+ * route caps the size at 2 MiB and takes one upload per key.
  */
 export async function logoUploadUrl(
   env: LogoUploadEnv,
-  input: { contentType: LogoContentType; key: string; now: number }
+  input: {
+    contentType: LogoContentType;
+    key: string;
+    now: number;
+    /** The declared size in bytes (at most 2 MiB, the schema). */
+    size: number;
+  }
 ): Promise<LogoUpload> {
-  const { contentType, key, now } = input;
+  const { contentType, key, now, size } = input;
   const expiresAt = now + LOGO_UPLOAD_TTL_MS;
   const headers = { "content-type": contentType };
   const r2 = r2Credentials(env);
@@ -215,7 +223,7 @@ export async function logoUploadUrl(
     url.searchParams.set("X-Amz-Expires", String(LOGO_UPLOAD_TTL_MS / 1000));
     const signed = await client.sign(url.toString(), {
       aws: { allHeaders: true, signQuery: true },
-      headers,
+      headers: { ...headers, "content-length": String(size) },
       method: "PUT",
     });
     return { expiresAt, headers, key, uploadUrl: signed.url };
@@ -234,46 +242,69 @@ export async function logoUploadUrl(
   return { expiresAt, headers, key, uploadUrl: url.toString() };
 }
 
-async function deleteLogo(media: R2Bucket, key: string): Promise<void> {
+/** Deletes a logo object; a failure is logged (the daily purge removes it). */
+export async function deleteLogo(media: R2Bucket, key: string): Promise<void> {
   try {
     await media.delete(key);
   } catch (error) {
-    // The daily purge removes an unreferenced logo after 24 h anyway.
     console.error(`[sponsorships] Failed to delete the logo ${key}:`, error);
   }
 }
 
-/**
- * The checkout's check of an uploaded logo (ruling 10, bug 23): it exists,
- * is at most 2 MiB, has one of the three types, and its first 12 bytes are
- * that type's signature. A logo that fails is deleted.
- */
-export async function verifyLogoObject(
+/** The bytes and type of an upload, when it is a valid logo. */
+async function readValidLogo(
   media: R2Bucket,
   key: string
-): Promise<boolean> {
+): Promise<{
+  bytes: Uint8Array<ArrayBuffer>;
+  contentType: LogoContentType;
+} | null> {
   const head = await media.head(key);
-  if (!head) {
-    return false;
+  const declared = head?.httpMetadata?.contentType;
+  if (!(head && head.size > 0 && head.size <= LOGO_MAX_BYTES)) {
+    return null;
   }
-  const declared = head.httpMetadata?.contentType;
-  let valid = head.size > 0 && head.size <= LOGO_MAX_BYTES;
-  if (valid && isLogoContentType(declared)) {
-    const object = await media.get(key, {
-      range: { length: LOGO_SNIFF_BYTES, offset: 0 },
-    });
-    const bytes = object
-      ? new Uint8Array(await object.arrayBuffer())
-      : new Uint8Array(0);
-    valid = sniffLogoType(bytes) === declared;
-  } else {
-    valid = false;
+  if (!isLogoContentType(declared)) {
+    return null;
   }
-  if (!valid) {
+  const object = await media.get(key);
+  if (!object) {
+    return null;
+  }
+  const bytes = new Uint8Array(await object.arrayBuffer());
+  // The bytes read now are the ones checked and copied: an upload URL
+  // still valid can replace the upload, never the copy.
+  return bytes.byteLength <= LOGO_MAX_BYTES && sniffLogoType(bytes) === declared
+    ? { bytes, contentType: declared }
+    : null;
+}
+
+/**
+ * The checkout's check of an uploaded logo (ruling 10, bug 23, fix round
+ * 1 I-2): it exists, is at most 2 MiB, has one of the three types, and
+ * starts with that type's signature. A valid logo is copied to a fresh
+ * `logos/<uuid>` that no client has a URL for, and that key is the one
+ * stored: whatever a still-valid upload URL writes later never reaches the
+ * render. Answers the new key, or `null` (the upload is then deleted). The
+ * caller deletes the upload once its batch committed, or the copy when it
+ * failed (so a retry can use the same upload).
+ */
+export async function claimLogo(
+  media: R2Bucket,
+  key: string
+): Promise<string | null> {
+  const logo = await readValidLogo(media, key);
+  if (!logo) {
     console.warn(`[sponsorships] Refused the logo ${key}; deleting it`);
     await deleteLogo(media, key);
+    return null;
   }
-  return valid;
+  const claimed = `${LOGO_KEY_PREFIX}${newId()}`;
+  await media.put(claimed, logo.bytes, {
+    customMetadata: { uploadedAt: new Date().toISOString() },
+    httpMetadata: { contentType: logo.contentType },
+  });
+  return claimed;
 }
 
 /** `sponsorships.uploadLogo` (ruling 10): `RL_SPONSOR` only (the guards). */
@@ -285,6 +316,7 @@ export function logoProcedures(os: SponsorshipsImplementer) {
           contentType: input.contentType,
           key: `${LOGO_KEY_PREFIX}${newId()}`,
           now: Date.now(),
+          size: input.size,
         })
     ),
   };

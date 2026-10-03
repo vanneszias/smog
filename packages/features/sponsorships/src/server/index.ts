@@ -8,11 +8,6 @@
  */
 export { getAvailability } from "./availability";
 export {
-  enqueueOutputs,
-  type Outputs,
-  type SponsorshipQueues,
-} from "./dispatch";
-export {
   type AfterCommit,
   approveStatements,
   cancelPaymentStatements,
@@ -31,6 +26,7 @@ export {
   isLogoContentType,
   LOGO_KEY_PREFIX,
   r2Origin,
+  signLogoUpload,
   sniffLogoType,
   verifyLogoUpload,
 } from "./logo";
