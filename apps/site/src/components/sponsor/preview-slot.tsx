@@ -42,7 +42,7 @@ function useMounted(): boolean {
   );
 }
 
-export interface PreviewControls {
+interface PreviewControls {
   onEnding: () => void;
   onToggle: () => void;
   playing: boolean;
