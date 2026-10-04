@@ -8,7 +8,7 @@ import { handleMuxWebhook, type MuxWebhookOptions } from "./webhook-handler";
 const SECRET = "mux-webhook-render-secret";
 const URL_ = "https://smog.test/api/webhooks/mux";
 const JOB = "00000000-0000-4000-8000-0000000000cc";
-const PASSTHROUGH = `render-job:${JOB}`;
+const PASSTHROUGH = `render-job:production:${JOB}`;
 
 let sequence = 0;
 
@@ -56,6 +56,7 @@ async function deliver(
     method: "POST",
   });
   const response = await handleMuxWebhook(request, {
+    environment: "production",
     kv,
     limit: () => Promise.resolve(true),
     secret: SECRET,
@@ -339,6 +340,84 @@ describe("handleMuxWebhook for render-job events", () => {
       status: 200,
     });
     expect(kv.size()).toBe(0);
+  });
+
+  it.each([
+    ["another env's", `render-job:staging:${JOB}`],
+    ["an untagged (phase 7)", `render-job:${JOB}`],
+  ])(
+    "ignores %s render event: no hook, no delete, no KV (phase 8 ruling 4)",
+    async (_label, passthrough) => {
+      const fake = createFakeMux();
+      const asset = fake.addAsset({ passthrough, uploadId: "theirs" });
+      const kv = createMemoryKv();
+      const { forwarded, onRenderEvent } = recorder();
+      let asked = 0;
+      const hooks = {
+        isCurrentUpload: () => {
+          asked += 1;
+          return Promise.resolve(false);
+        },
+        mux: fake.mux,
+        onRenderEvent,
+      };
+      const errored = event("video.upload.errored", {
+        error: { message: "Bad file", type: "invalid_input" },
+        id: "theirs",
+        new_asset_settings: { passthrough },
+        status: "errored",
+      });
+      for (const body of [
+        assetReady("theirs", asset.id, passthrough),
+        errored,
+      ]) {
+        // biome-ignore lint/performance/noAwaitInLoops: deliveries in order.
+        expect(await deliver(body, kv, hooks)).toEqual({
+          code: "IGNORED",
+          status: 200,
+        });
+      }
+      expect(asked).toBe(0);
+      expect(forwarded).toEqual([]);
+      expect(fake.assets.has(asset.id)).toBe(true);
+      expect(fake.requests).toEqual([]);
+      expect(kv.size()).toBe(0);
+    }
+  );
+
+  it("ignores this env's video.upload.asset_created (not routed, ruling 9)", async () => {
+    const kv = createMemoryKv();
+    const { forwarded, onRenderEvent } = recorder();
+    const created = event("video.upload.asset_created", {
+      asset_id: "as-created",
+      id: "up-created",
+      new_asset_settings: { passthrough: PASSTHROUGH },
+      status: "asset_created",
+    });
+    expect(await deliver(created, kv, { onRenderEvent })).toEqual({
+      code: "IGNORED",
+      status: 200,
+    });
+    expect(forwarded).toEqual([]);
+    expect(kv.size()).toBe(0);
+  });
+
+  it("asks this env's hook about its own job, which deletes an unknown job's asset", async () => {
+    const fake = createFakeMux();
+    const asset = fake.addAsset({ passthrough: PASSTHROUGH, uploadId: "x" });
+    const kv = createMemoryKv();
+    const { forwarded, onRenderEvent } = recorder();
+    // The site's hook (`isCurrentRenderUpload`) answers false for a job
+    // this env does not know (phase 8 ruling 12).
+    expect(
+      await deliver(assetReady("x", asset.id), kv, {
+        isCurrentUpload: () => Promise.resolve(false),
+        mux: fake.mux,
+        onRenderEvent,
+      })
+    ).toEqual({ code: "SUPERSEDED", status: 200 });
+    expect(forwarded).toEqual([]);
+    expect(fake.assets.has(asset.id)).toBe(false);
   });
 
   it("leaves gesture uploads to the KV record, never to the hook", async () => {

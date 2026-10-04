@@ -6,7 +6,8 @@
  * Never imported by client code: it is the only place the Mux token is
  * used. Phase 7 adds what the render Workflow needs: the playback-id
  * lookup, master access, the render upload and its cancel, the rendition
- * fallback and the render-job webhook events.
+ * fallback and the render-job webhook events. Phase 8 tags render
+ * passthroughs with the env and adds the static renditions.
  */
 
 export {
@@ -15,6 +16,8 @@ export {
   listAssets,
   type MuxAsset,
   type MuxAssetSummary,
+  type StaticRenditionFile,
+  type StaticRenditions,
 } from "./assets";
 export {
   createMux,
@@ -39,6 +42,13 @@ export { createRenderUpload, type RenderUploadOptions } from "./render-upload";
 export { renditionUrls } from "./renditions";
 export { firstReachable } from "./source";
 export {
+  enableStaticRendition,
+  STATIC_RENDITION_STATES,
+  type StaticRenditionResolution,
+  type StaticRenditionState,
+  staticRenditionState,
+} from "./static-renditions";
+export {
   type MuxKv,
   type MuxUploadState,
   readUploadState,
@@ -51,6 +61,7 @@ export {
   gestureUploadPassthrough,
   getUpload,
   isGestureUpload,
+  isRenderJobPassthrough,
   type MuxUpload,
   RENDER_JOB_PREFIX,
   renderJobIdOf,

@@ -6,6 +6,7 @@ import {
   cancelUpload,
   createDirectUpload,
   isGestureUpload,
+  isRenderJobPassthrough,
   RENDER_JOB_PREFIX,
   renderJobIdOf,
   renderJobPassthrough,
@@ -16,39 +17,53 @@ const SITE_ORIGIN = "https://smog.test";
 
 const render = (test = false) => ({
   corsOrigin: SITE_ORIGIN,
+  environment: "staging" as const,
   renderJobId: JOB_ID,
   test,
 });
 
-describe("render-job passthroughs", () => {
-  it("round-trips the job id", () => {
-    const passthrough = renderJobPassthrough(JOB_ID);
-    expect(passthrough).toBe(`${RENDER_JOB_PREFIX}${JOB_ID}`);
-    expect(renderJobIdOf(passthrough)).toBe(JOB_ID);
+describe("render-job passthroughs (phase 8 ruling 4)", () => {
+  it("round-trips the job id within its env", () => {
+    const passthrough = renderJobPassthrough("production", JOB_ID);
+    expect(passthrough).toBe(`${RENDER_JOB_PREFIX}production:${JOB_ID}`);
+    expect(renderJobIdOf(passthrough, "production")).toBe(JOB_ID);
+    expect(isRenderJobPassthrough(passthrough)).toBe(true);
     expect(isGestureUpload(passthrough)).toBe(false);
   });
 
+  it("is null for another env's job and for the untagged phase 7 form", () => {
+    const staging = renderJobPassthrough("staging", JOB_ID);
+    expect(renderJobIdOf(staging, "production")).toBeNull();
+    expect(renderJobIdOf(staging, "dev")).toBeNull();
+    expect(renderJobIdOf(`render-job:${JOB_ID}`, "production")).toBeNull();
+    // Both are still render jobs' passthroughs: never a gesture upload's.
+    expect(isRenderJobPassthrough(`render-job:${JOB_ID}`)).toBe(true);
+  });
+
   it("is null for anything else", () => {
-    expect(renderJobIdOf(null)).toBeNull();
-    expect(renderJobIdOf(undefined)).toBeNull();
-    expect(renderJobIdOf("render-job:")).toBeNull();
-    expect(renderJobIdOf("render:job-1")).toBeNull();
-    expect(renderJobIdOf("gesture-upload:abc")).toBeNull();
+    expect(renderJobIdOf(null, "dev")).toBeNull();
+    expect(renderJobIdOf(undefined, "dev")).toBeNull();
+    expect(renderJobIdOf("render-job:", "dev")).toBeNull();
+    expect(renderJobIdOf("render-job:dev:", "dev")).toBeNull();
+    expect(renderJobIdOf("render:job-1", "dev")).toBeNull();
+    expect(renderJobIdOf("gesture-upload:abc", "dev")).toBeNull();
+    expect(isRenderJobPassthrough("gesture-upload:abc")).toBe(false);
+    expect(isRenderJobPassthrough(null)).toBe(false);
   });
 });
 
 describe("createRenderUpload", () => {
-  it("sends the passthrough, public playback and the site origin as cors_origin, without master_access", async () => {
+  it("sends the env-tagged passthrough, public playback and the site origin as cors_origin, without master_access", async () => {
     const fake = createFakeMux();
     const upload = await createRenderUpload(fake.mux, render());
     expect(upload.url).toStartWith("https://");
     expect(upload.status).toBe("waiting");
-    expect(upload.passthrough).toBe(`render-job:${JOB_ID}`);
+    expect(upload.passthrough).toBe(`render-job:staging:${JOB_ID}`);
     expect(fake.requests.at(-1)).toEqual({
       body: {
         cors_origin: SITE_ORIGIN,
         new_asset_settings: {
-          passthrough: `render-job:${JOB_ID}`,
+          passthrough: `render-job:staging:${JOB_ID}`,
           playback_policies: ["public"],
         },
         timeout: 3600,
@@ -85,7 +100,9 @@ describe("createRenderUpload", () => {
     });
     expect(put.status).toBe(200);
     const assetId = fake.uploads.get(upload.id)?.assetId as string;
-    expect(fake.assets.get(assetId)?.passthrough).toBe(`render-job:${JOB_ID}`);
+    expect(fake.assets.get(assetId)?.passthrough).toBe(
+      `render-job:staging:${JOB_ID}`
+    );
     expect(fake.assets.get(assetId)?.file).toEqual(
       new Uint8Array([0, 0, 0, 24])
     );

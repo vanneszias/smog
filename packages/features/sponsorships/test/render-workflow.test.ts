@@ -283,6 +283,26 @@ async function expectFailed(
 }
 
 describe("runRenderJob: the happy path (ruling 4)", () => {
+  it("tags the upload with this env, a real upload outside dev (phase 8 ruling 4)", async () => {
+    const job = await queuedJob();
+    const step = createFakeStep();
+    masterReadyAt(step, job.gestureAssetId);
+    deliverReady(step, job.renderJobId);
+
+    const outcome = await runRenderJob(
+      step,
+      deps({ environment: "production" }),
+      job
+    );
+
+    expect(outcome).toEqual({ outcome: "completed" });
+    const [upload] = [...world.fake.uploads.values()];
+    expect(upload).toMatchObject({
+      passthrough: `render-job:production:${job.renderJobId}`,
+      test: false,
+    });
+  });
+
   it("renders, waits for the asset and commits: queued → running → succeeded, in_review", async () => {
     const job = await queuedJob({ logo: true });
     const step = createFakeStep();
@@ -309,7 +329,7 @@ describe("runRenderJob: the happy path (ruling 4)", () => {
     // The upload: the passthrough, a dev test upload, the site origin.
     expect(upload).toMatchObject({
       corsOrigin: SITE_URL,
-      passthrough: `render-job:${job.renderJobId}`,
+      passthrough: `render-job:dev:${job.renderJobId}`,
       test: true,
     });
     // The renderer got the master, the logo as a data URL and the upload URL.

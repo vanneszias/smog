@@ -32,8 +32,14 @@ import type { EventMessage } from "@smog/jobs";
 import type { MolliePayment } from "@smog/payments";
 import { DAY_MS } from "@smog/utils";
 import { and, asc, eq, ne, sql } from "drizzle-orm";
+import { REJECTED_VIDEO_RETENTION_DAYS } from "../schema/retention";
 import type { InvalidStateReason } from "../schema/status";
 import { REEDIT_TOKEN_TTL_MS } from "../schema/tokens";
+import {
+  readRejectedAt,
+  rejectedBoundGuard,
+  rejectedVideoCutoff,
+} from "./rejected-video";
 import { isRenewable, renewStatements } from "./settle";
 import {
   issueTokenStatements,
@@ -243,6 +249,13 @@ function linkUrl(
  * Request changes (A-07): from `in_review` or `rejected`, issuing a 7 day
  * re-edit token that revokes the open ones. The sponsor gets no email
  * (parity): the admin copies the link.
+ *
+ * From `rejected` it is bounded in time (phase 8 ruling 13): refused with
+ * `rejectedTooLongAgo` once the rejection is `REJECTED_VIDEO_RETENTION_DAYS`
+ * old, when the daily purge deletes the video. The age runs from the
+ * latest `rejected` event, else a migrated row's `legacy` `reviewedAt`;
+ * without either there is no bound. The read refuses, and the batch's
+ * `rejectedBoundGuard` holds the same rule (`isRejectedTooLongAgo`).
  */
 export async function requestChangesStatements(
   db: Db,
@@ -260,6 +273,15 @@ export async function requestChangesStatements(
       `The gesture of sponsorship ${sponsorshipId} was sponsored again`
     );
   }
+  if (view.status === "rejected") {
+    const rejectedAt = await readRejectedAt(db, sponsorshipId);
+    if (rejectedAt !== null && rejectedAt <= rejectedVideoCutoff(now)) {
+      throw new SponsorshipActionError(
+        "rejectedTooLongAgo",
+        `Sponsorship ${sponsorshipId} was rejected ${REJECTED_VIDEO_RETENTION_DAYS} days ago or more`
+      );
+    }
+  }
   const issued = await issueTokenStatements(db, {
     actorId,
     expiresAt: new Date(now.getTime() + REEDIT_TOKEN_TTL_MS),
@@ -271,6 +293,9 @@ export async function requestChangesStatements(
     after: [],
     expiresAt: issued.expiresAt.getTime(),
     statements: [
+      ...(view.status === "rejected"
+        ? [rejectedBoundGuard(db, sponsorshipId, now)]
+        : []),
       ...transitionStatements(db, {
         actorId,
         data: {

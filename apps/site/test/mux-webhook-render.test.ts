@@ -1,9 +1,12 @@
 /**
- * The Mux webhook's render events (phase 7 ruling 9, W-02): a
- * `render-job:` event reaches its waiting Workflow instance through the
- * real route; an unknown instance is `gone` (200); a superseded upload's
- * asset is deleted and not forwarded, while a committed one is never
- * deleted; without the binding (`fake` mode) a render event is ignored.
+ * The Mux webhook's render events (phase 7 ruling 9, W-02): this env's
+ * `render-job:dev:` event reaches its waiting Workflow instance through
+ * the real route (which passes `ENVIRONMENT`); an unknown instance is
+ * `gone` (200); a superseded upload's asset, or an unknown job's, is
+ * deleted and not forwarded, while a committed one is never deleted;
+ * another env's or an untagged render event is ignored and touches
+ * nothing (phase 8 ruling 4); without the binding (`fake` mode) a render
+ * event is ignored.
  */
 import { introspectWorkflowInstance } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
@@ -36,13 +39,14 @@ function binding(): Workflow {
 function assetReady(
   renderJobId: string,
   uploadId: string,
-  assetId = `asset${crypto.randomUUID().replaceAll("-", "")}`
+  assetId = `asset${crypto.randomUUID().replaceAll("-", "")}`,
+  passthrough = `render-job:dev:${renderJobId}`
 ) {
   return {
     created_at: new Date().toISOString(),
     data: {
       id: assetId,
-      passthrough: `render-job:${renderJobId}`,
+      passthrough,
       playback_ids: [{ id: `pb-${assetId}`, policy: "public" }],
       status: "ready",
       upload_id: uploadId,
@@ -143,34 +147,62 @@ describe("POST /api/webhooks/mux: render events", () => {
     expect(await response.json()).toEqual({ code: "GONE" });
   });
 
-  it("an event of an unknown job is not deleted (another env's) and answers gone", async () => {
+  it("an event of an unknown job of this env deletes its asset (phase 8 ruling 12)", async () => {
     const fake = createFakeMux();
-    const asset = fake.addAsset({ passthrough: "render-job:other" });
+    const jobId = crypto.randomUUID();
+    const asset = fake.addAsset({ passthrough: `render-job:dev:${jobId}` });
     const response = await handleMuxWebhook(
-      await signed(assetReady(crypto.randomUUID(), "uploadX", asset.id)),
+      await signed(assetReady(jobId, "uploadX", asset.id)),
       {
         ...renderWebhookHooks(binding(), db),
+        environment: "dev",
         kv: createMemoryKv(),
         limit: () => Promise.resolve(true),
         mux: fake.mux,
         secret: MUX_WEBHOOK_TEST_SECRET,
       }
     );
-    expect(await response.json()).toEqual({ code: "GONE" });
-    expect(fake.assets.has(asset.id)).toBe(true);
+    expect(await response.json()).toEqual({ code: "SUPERSEDED" });
+    expect(fake.assets.has(asset.id)).toBe(false);
   });
+
+  it.each([
+    ["another env's", (id: string) => `render-job:staging:${id}`],
+    ["an untagged (phase 7)", (id: string) => `render-job:${id}`],
+  ])(
+    "%s render event is ignored through the real route and touches nothing",
+    async (_label, passthrough) => {
+      // A job this env knows: the tag alone keeps it out.
+      const job = await renderingJob();
+      await setUpload(job.renderJobId, "uploadTheirs");
+      const response = await exports.default.fetch(
+        await signed(
+          assetReady(
+            job.renderJobId,
+            "uploadTheirs",
+            undefined,
+            passthrough(job.renderJobId)
+          )
+        )
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ code: "IGNORED" });
+      expect((await renderJobRow(job.renderJobId))?.mux_asset_id).toBeNull();
+    }
+  );
 
   it("a superseded upload's asset is deleted and not forwarded", async () => {
     const job = await renderingJob();
     await setUpload(job.renderJobId, "uploadCurrent");
     const fake = createFakeMux();
     const asset = fake.addAsset({
-      passthrough: `render-job:${job.renderJobId}`,
+      passthrough: `render-job:dev:${job.renderJobId}`,
     });
     const response = await handleMuxWebhook(
       await signed(assetReady(job.renderJobId, "uploadOld", asset.id)),
       {
         ...renderWebhookHooks(binding(), db),
+        environment: "dev",
         kv: createMemoryKv(),
         limit: () => Promise.resolve(true),
         mux: fake.mux,
@@ -185,7 +217,7 @@ describe("POST /api/webhooks/mux: render events", () => {
     const job = await renderingJob();
     const fake = createFakeMux();
     const asset = fake.addAsset({
-      passthrough: `render-job:${job.renderJobId}`,
+      passthrough: `render-job:dev:${job.renderJobId}`,
     });
     await env.DB?.prepare(
       "UPDATE render_job SET status = 'succeeded', mux_upload_id = ?, mux_asset_id = ? WHERE id = ?"
@@ -196,6 +228,7 @@ describe("POST /api/webhooks/mux: render events", () => {
       await signed(assetReady(job.renderJobId, "uploadDone", asset.id)),
       {
         ...renderWebhookHooks(binding(), db),
+        environment: "dev",
         kv: createMemoryKv(),
         limit: () => Promise.resolve(true),
         mux: fake.mux,
@@ -214,6 +247,7 @@ describe("POST /api/webhooks/mux: render events", () => {
       await signed(assetReady(job.renderJobId, "uploadFake")),
       {
         ...hooks,
+        environment: "dev",
         kv: createMemoryKv(),
         limit: () => Promise.resolve(true),
         secret: MUX_WEBHOOK_TEST_SECRET,
@@ -239,6 +273,7 @@ describe("POST /api/webhooks/mux: render events", () => {
           },
           db
         ),
+        environment: "dev",
         kv: createMemoryKv(),
         limit: () => Promise.resolve(true),
         secret: MUX_WEBHOOK_TEST_SECRET,

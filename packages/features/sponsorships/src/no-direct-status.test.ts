@@ -27,6 +27,11 @@ const WRITERS: Readonly<Record<string, { reason: string; status: boolean }>> = {
       "the retention purge clears logo_key on sponsorships that ended 30 days ago (ruling 9)",
     status: false,
   },
+  "packages/features/sponsorships/src/server/sweeps.ts": {
+    reason:
+      "the retention purge clears video_asset_id and video_playback_id of videos rejected 30 days ago (phase 8 ruling 13)",
+    status: false,
+  },
   "packages/features/sponsorships/src/server/transition.ts": {
     reason: "transitionStatements, the only status writer",
     status: true,

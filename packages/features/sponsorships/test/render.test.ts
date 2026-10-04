@@ -308,7 +308,7 @@ describe("the render seam (ruling 7)", () => {
     ).toBe(false);
   });
 
-  it("isCurrentRenderUpload: a failed job's upload is not current; an unknown job is", async () => {
+  it("isCurrentRenderUpload: neither a failed job's upload nor an unknown job is current (phase 8 ruling 12)", async () => {
     const id = await rendering();
     const job = await createRenderJob(db, { now: NOW, sponsorshipId: id });
     const renderJobId = job?.renderJobId as string;
@@ -337,7 +337,7 @@ describe("the render seam (ruling 7)", () => {
         renderJobId: newId(),
         uploadId: "upload-1",
       })
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("setRenderUpload stores the upload only while running, and leaves updated_at alone", async () => {

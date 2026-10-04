@@ -84,8 +84,8 @@ describe("runRetentionPurge (J-04)", () => {
     const kept = await audit(new Date(now.getTime() - AUDIT_RETENTION_MS + 1));
     await audit(new Date(now.getTime() - AUDIT_RETENTION_MS - 1));
 
-    const first = await runRetentionPurge({ db, kv, media, now });
-    const second = await runRetentionPurge({ db, kv, media, now });
+    const first = await runRetentionPurge({ db, kv, media, mux: null, now });
+    const second = await runRetentionPurge({ db, kv, media, mux: null, now });
 
     expect(first.audit_log).toBe(1);
     expect(second.audit_log).toBe(0);
@@ -125,8 +125,8 @@ describe("runRetentionPurge (J-04)", () => {
       },
     ]);
 
-    const first = await runRetentionPurge({ db, kv, media, now });
-    const second = await runRetentionPurge({ db, kv, media, now });
+    const first = await runRetentionPurge({ db, kv, media, mux: null, now });
+    const second = await runRetentionPurge({ db, kv, media, mux: null, now });
 
     expect([first.session, first.verification]).toEqual([1, 1]);
     expect([second.session, second.verification]).toEqual([0, 0]);
@@ -152,13 +152,19 @@ describe("runRetentionPurge (J-04)", () => {
     await put(orphan);
 
     // Uploaded just now: a checkout may still come (24 h).
-    const fresh = await runRetentionPurge({ db, kv, media, now: new Date() });
+    const fresh = await runRetentionPurge({
+      db,
+      kv,
+      media,
+      mux: null,
+      now: new Date(),
+    });
     expect(fresh.logosDeleted).toBe(0);
     expect(await keys()).toEqual([orphan, usedKey].sort());
 
     const now = later();
-    const first = await runRetentionPurge({ db, kv, media, now });
-    const second = await runRetentionPurge({ db, kv, media, now });
+    const first = await runRetentionPurge({ db, kv, media, mux: null, now });
+    const second = await runRetentionPurge({ db, kv, media, mux: null, now });
 
     expect(first.logosDeleted).toBe(1);
     expect(second.logosDeleted).toBe(0);
@@ -193,8 +199,8 @@ describe("runRetentionPurge (J-04)", () => {
     await put(endedKey);
     await put(recentKey);
 
-    const first = await runRetentionPurge({ db, kv, media, now });
-    const second = await runRetentionPurge({ db, kv, media, now });
+    const first = await runRetentionPurge({ db, kv, media, mux: null, now });
+    const second = await runRetentionPurge({ db, kv, media, mux: null, now });
 
     expect(first).toMatchObject({ logosDeleted: 1, logosReleased: 1 });
     expect(second).toMatchObject({ logosDeleted: 0, logosReleased: 0 });
@@ -234,7 +240,7 @@ describe("runRetentionPurge (J-04)", () => {
     await setUpdated(endedId, new Date(0));
     await put(key);
 
-    const result = await runRetentionPurge({ db, kv, media, now });
+    const result = await runRetentionPurge({ db, kv, media, mux: null, now });
 
     expect(result).toMatchObject({ logosDeleted: 0, logosReleased: 0 });
     expect((await sponsorshipRow(db, endedId)).logoKey).toBe(key);
@@ -250,7 +256,7 @@ describe("runRetentionPurge (J-04)", () => {
       await Promise.all(orphans.slice(at, at + 50).map(put));
     }
 
-    const result = await runRetentionPurge({ db, kv, media, now });
+    const result = await runRetentionPurge({ db, kv, media, mux: null, now });
 
     expect(result.logosDeleted).toBe(1005);
     expect(await keys()).toEqual([]);
@@ -272,12 +278,22 @@ describe("runRetentionPurge (J-04)", () => {
     await put(endedKey);
     await put(orphan);
 
-    const dry = await runRetentionPurge({ db, dryRun: true, kv, media, now });
+    const dry = await runRetentionPurge({
+      db,
+      dryRun: true,
+      kv,
+      media,
+      mux: null,
+      now,
+    });
 
     expect(dry).toEqual({
       audit_log: 1,
       logosDeleted: 2,
       logosReleased: 1,
+      rejectedVideosDeleted: 0,
+      rejectedVideosFailed: 0,
+      rejectedVideosRemaining: 0,
       session: 0,
       sponsorship_token: 0,
       verification: 0,
@@ -286,7 +302,7 @@ describe("runRetentionPurge (J-04)", () => {
     expect((await sponsorshipRow(db, endedId)).logoKey).toBe(endedKey);
     expect(await keys()).toEqual([endedKey, orphan].sort());
 
-    const real = await runRetentionPurge({ db, kv, media, now });
+    const real = await runRetentionPurge({ db, kv, media, mux: null, now });
     // The released logo becomes an orphan in the same run, and the dry run
     // counted it too (M-3).
     expect(real).toEqual(dry);
@@ -297,7 +313,13 @@ describe("runRetentionPurge (J-04)", () => {
     const now = new Date("2026-10-03T03:15:00.000Z");
     await audit(new Date(now.getTime() - AUDIT_RETENTION_MS - 1));
 
-    const result = await runRetentionPurge({ db, kv, media: undefined, now });
+    const result = await runRetentionPurge({
+      db,
+      kv,
+      media: undefined,
+      mux: null,
+      now,
+    });
 
     expect(result).toMatchObject({ audit_log: 1, logosDeleted: 0 });
   });
@@ -315,7 +337,7 @@ describe("runRetentionPurge (J-04)", () => {
       .mockImplementation(() => undefined);
 
     await expect(
-      runRetentionPurge({ db, kv, media: failing, now })
+      runRetentionPurge({ db, kv, media: failing, mux: null, now })
     ).rejects.toThrow("R2 is down");
 
     expect(error).toHaveBeenCalledWith(
@@ -357,7 +379,7 @@ describe("which logos the purge may release (fix round 1, I-1)", () => {
     const rejected = await ended("rejected", "paid");
     const flagged = await ended("cancelled", "refund_needed");
 
-    const result = await runRetentionPurge({ db, kv, media, now });
+    const result = await runRetentionPurge({ db, kv, media, mux: null, now });
 
     expect(result).toMatchObject({ logosDeleted: 0, logosReleased: 0 });
     expect((await sponsorshipRow(db, rejected.id)).logoKey).toBe(rejected.key);
@@ -371,7 +393,7 @@ describe("which logos the purge may release (fix round 1, I-1)", () => {
     const unpaid = await ended("cancelled", "canceled");
     const failed = await ended("rejected", "failed");
 
-    const result = await runRetentionPurge({ db, kv, media, now });
+    const result = await runRetentionPurge({ db, kv, media, mux: null, now });
 
     expect(result).toMatchObject({ logosDeleted: 3, logosReleased: 3 });
     for (const { id } of [expired, unpaid, failed]) {
@@ -406,7 +428,7 @@ describe("which logos the purge may release (fix round 1, I-1)", () => {
       kept.push(key);
     }
 
-    const result = await runRetentionPurge({ db, kv, media, now });
+    const result = await runRetentionPurge({ db, kv, media, mux: null, now });
 
     expect(result).toMatchObject({ logosDeleted: 0, logosReleased: 0 });
     expect(await keys()).toEqual(kept.sort());

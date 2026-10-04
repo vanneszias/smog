@@ -7,7 +7,8 @@
  * render upload), the asset becomes ready (or errored, see
  * `/__fake/next-outcome`) after `readyAfterMs`, and the matching signed
  * webhooks are POSTed when `webhook` is set. Turning master access on
- * readies the master after `readyAfterMs` too; its URL
+ * readies the master after `readyAfterMs` too, and so does a new static
+ * rendition (`POST …/static-renditions`, phase 8); the master's URL
  * (`/master/<assetId>/master.mp4?signature=…`) serves the file PUT to the
  * asset's upload, or else `masterFile` (byte ranges supported, as the
  * renderer's reads need).
@@ -70,6 +71,8 @@ export interface FakeMuxServer {
 
 const UPLOAD_PUT = /^\/upload\/([^/]+)$/;
 const MASTER_ACCESS_PUT = /^\/video\/v1\/assets\/([^/]+)\/master-access$/;
+const STATIC_RENDITIONS_POST =
+  /^\/video\/v1\/assets\/([^/]+)\/static-renditions$/;
 const MASTER_GET = /^\/master\/([^/]+)\/master\.mp4$/;
 const RANGE = /^bytes=(\d*)-(\d*)$/;
 
@@ -273,15 +276,8 @@ export function startFakeMuxServer(
         return master(current, request, masterId);
       }
       const response = await current.fetch(request);
-      if (request.method === "PUT" && response.ok) {
-        const uploadId = decoded(UPLOAD_PUT, url.pathname);
-        if (uploadId !== null) {
-          settle(current, uploadId);
-        }
-        const assetId = decoded(MASTER_ACCESS_PUT, url.pathname);
-        if (assetId !== null) {
-          prepareMaster(current, assetId);
-        }
+      if (response.ok) {
+        afterwards(current, request.method, url.pathname);
       }
       return response;
     },
@@ -302,6 +298,40 @@ export function startFakeMuxServer(
       const asset = mux.assets.get(assetId);
       if (asset?.masterAccess === "temporary") {
         mux.readyMaster(assetId);
+      }
+    }, readyAfterMs);
+  }
+
+  /**
+   * What a successful API call starts: a file PUT settles its upload,
+   * master access and a static rendition get ready `readyAfterMs` later.
+   */
+  function afterwards(mux: FakeMux, method: string, pathname: string): void {
+    if (method === "POST") {
+      const assetId = decoded(STATIC_RENDITIONS_POST, pathname);
+      if (assetId !== null) {
+        prepareStaticRendition(mux, assetId);
+      }
+      return;
+    }
+    if (method !== "PUT") {
+      return;
+    }
+    const uploadId = decoded(UPLOAD_PUT, pathname);
+    if (uploadId !== null) {
+      settle(mux, uploadId);
+    }
+    const assetId = decoded(MASTER_ACCESS_PUT, pathname);
+    if (assetId !== null) {
+      prepareMaster(mux, assetId);
+    }
+  }
+
+  /** A static rendition was requested: ready `readyAfterMs` later. */
+  function prepareStaticRendition(mux: FakeMux, assetId: string): void {
+    setTimeout(() => {
+      if (mux.assets.has(assetId)) {
+        mux.readyStaticRendition(assetId);
       }
     }, readyAfterMs);
   }

@@ -83,16 +83,26 @@ describe("renderAssetOf", () => {
 
   it("finds the job's ready render asset", () => {
     const found = renderAssetOf(
-      [asset(null), asset("render-job:other"), asset("render-job:job-1")],
+      [
+        asset(null),
+        asset("render-job:dev:other"),
+        asset("render-job:dev:job-1"),
+      ],
       "job-1"
     );
-    expect(found?.id).toBe("asset-render-job:job-1");
+    expect(found?.id).toBe("asset-render-job:dev:job-1");
   });
 
   it("ignores a gesture upload and an asset that is not ready", () => {
     expect(
       renderAssetOf(
-        [asset("gesture-upload:job-1"), asset("render-job:job-1", "errored")],
+        [
+          asset("gesture-upload:job-1"),
+          asset("render-job:dev:job-1", "errored"),
+          // Another env's, or the untagged phase 7 form (ruling 4).
+          asset("render-job:staging:job-1"),
+          asset("render-job:job-1"),
+        ],
         "job-1"
       )
     ).toBeNull();

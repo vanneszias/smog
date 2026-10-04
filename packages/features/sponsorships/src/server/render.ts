@@ -387,9 +387,10 @@ const CURRENT_UPLOAD_STATUSES: readonly RenderJobStatus[] = [
  * or the sponsorship's `video_asset_id` (a committed asset is never
  * deleted).
  *
- * An unknown job answers `true` too: its asset is not this env's to delete
- * (staging and production may share a Mux environment until phase 8
- * separates them), and forwarding it finds no instance (`gone`).
+ * An unknown job answers `false` (phase 8 rulings 4 and 12, review M-3):
+ * the webhook asks only about this env's own jobs (`render-job:<env>:`),
+ * so a job this env does not know will never be committed, and its asset
+ * is deleted. Another env's events never get here.
  */
 export async function isCurrentRenderUpload(
   db: Db,
@@ -397,7 +398,7 @@ export async function isCurrentRenderUpload(
 ): Promise<boolean> {
   const job = await readRenderJob(db, input.renderJobId);
   if (!job) {
-    return true;
+    return false;
   }
   return (
     (job.muxUploadId === input.uploadId &&

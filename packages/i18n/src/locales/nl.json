@@ -1807,6 +1807,7 @@
       "noLogo": "Deze sponsoring heeft geen logo, dus je kunt er geen toevoegen.",
       "notRenewable": "Deze sponsoring kan niet meer verlengd worden.",
       "gestureTaken": "Dit gebaar wordt intussen door iemand anders gesponsord.",
+      "rejectedTooLongAgo": "Deze sponsoring werd 30 dagen of langer geleden afgewezen. Je kunt geen aanpassing meer vragen: de video wordt verwijderd.",
       "noVideo": "De video is nog niet klaar.",
       "paid": "Deze betaling is al betaald en kan niet geannuleerd worden.",
       "notRefunded": "Mollie meldt nog geen terugbetaling. Betaal eerst terug in het Mollie-dashboard.",

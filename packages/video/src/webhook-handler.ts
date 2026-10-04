@@ -1,6 +1,12 @@
+import type { Environment } from "@smog/config/env/worker";
+import { readCappedBody } from "@smog/utils";
 import { deleteAsset } from "./assets";
 import type { Mux } from "./client";
-import { type RenderMuxEvent, toRenderMuxEvent } from "./render-events";
+import {
+  type RenderMuxEvent,
+  renderJobPassthroughOf,
+  toRenderMuxEvent,
+} from "./render-events";
 import {
   applyMuxEvent,
   eventUploadId,
@@ -10,12 +16,20 @@ import {
   UPLOAD_STATE_TTL_SECONDS,
   writeUploadState,
 } from "./upload-state";
+import { renderJobIdOf } from "./uploads";
 import { type MuxEvent, MuxSignatureError, verifyMuxWebhook } from "./webhooks";
 
 /** Mux events are a few KiB; anything past 1 MiB is not one. */
 export const MUX_WEBHOOK_MAX_BYTES = 1024 * 1024;
 
 export interface MuxWebhookOptions {
+  /**
+   * This Worker's env (`ENVIRONMENT`, phase 8 ruling 4). Only a
+   * `render-job:<environment>:<id>` event is this env's render event;
+   * another env's, or the untagged phase 7 `render-job:<id>`, is answered
+   * `IGNORED` and touches no asset, no hook and no KV.
+   */
+  environment: Environment;
   /**
    * Whether a render job's asset (`asset.ready` or `asset.errored`) may
    * still be, or already was, committed (phase 7 ruling 9, B-3, as amended
@@ -62,64 +76,11 @@ export interface MuxWebhookOptions {
   secret: string | undefined;
 }
 
-const DIGITS = /^\d+$/;
-
 function answer(status: number, code: string): Response {
   return Response.json(
     { code },
     { headers: { "cache-control": "no-store" }, status }
   );
-}
-
-/**
- * Reads at most `MUX_WEBHOOK_MAX_BYTES`: a larger `content-length` is
- * refused before any read, and a chunked body is cancelled once past the
- * cap.
- */
-async function readCapped(
-  request: Request
-): Promise<Uint8Array<ArrayBuffer> | 400 | 413> {
-  const declared = request.headers.get("content-length");
-  if (declared !== null) {
-    if (!DIGITS.test(declared)) {
-      return 400;
-    }
-    if (Number(declared) > MUX_WEBHOOK_MAX_BYTES) {
-      return 413;
-    }
-  }
-  if (!request.body) {
-    return new Uint8Array(0);
-  }
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    let chunk: Awaited<ReturnType<typeof reader.read>>;
-    try {
-      // biome-ignore lint/performance/noAwaitInLoops: a stream is read chunk by chunk.
-      chunk = await reader.read();
-    } catch {
-      return 400;
-    }
-    if (chunk.done) {
-      break;
-    }
-    size += chunk.value.byteLength;
-    if (size > MUX_WEBHOOK_MAX_BYTES) {
-      await reader.cancel();
-      return 413;
-    }
-    chunks.push(chunk.value);
-  }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  // The bytes as received: the signature covers exactly these.
-  return bytes;
 }
 
 /**
@@ -225,11 +186,13 @@ async function routeRenderEvent(
 
 /**
  * `POST /api/webhooks/mux`. In order: the secret (503 without one; Mux
- * retries), the capped raw body (413), the signature over those bytes and
- * its 5-minute window (400, logged without the body). Only a rejected
+ * retries), the capped raw body (`readCappedBody`: 413, or 400 for a
+ * malformed `content-length` or a body cut off), the signature over those
+ * bytes and its 5-minute window (400, logged without the body). Only a rejected
  * delivery counts against the per-IP limit (429 past it), so genuine Mux
- * traffic is never throttled. A render job's event (`render-job:`
- * passthrough) goes to `routeRenderEvent`. Any other verified event that
+ * traffic is never throttled. This env's render job event
+ * (`render-job:<environment>:` passthrough) goes to `routeRenderEvent`;
+ * another env's or an untagged one is `IGNORED`. Any other verified event that
  * is not about a gesture upload is a 200 and touches no KV; a gesture
  * upload's event is applied once per event id
  * (`mux:event:<id>`, 24 h) to KV `mux:upload:<uploadId>`. There is no
@@ -238,6 +201,7 @@ async function routeRenderEvent(
 export async function handleMuxWebhook(
   request: Request,
   {
+    environment,
     isCurrentUpload,
     kv,
     limit,
@@ -258,14 +222,18 @@ export async function handleMuxWebhook(
     (await limit(`mux-webhook:${ip}`))
       ? answer(status, code)
       : answer(429, "RATE_LIMITED");
-  const body = await readCapped(request);
-  if (body === 400 || body === 413) {
-    console.warn(`[video] Refused a Mux webhook body (${body})`);
-    return await reject(body, body === 413 ? "TOO_LARGE" : "BAD_REQUEST");
+  // The bytes as received: the signature covers exactly these.
+  const body = await readCappedBody(request, MUX_WEBHOOK_MAX_BYTES);
+  if (!body.ok) {
+    console.warn(`[video] Refused a Mux webhook body (${body.status})`);
+    return await reject(
+      body.status,
+      body.status === 413 ? "TOO_LARGE" : "BAD_REQUEST"
+    );
   }
   let event: MuxEvent;
   try {
-    event = await verifyMuxWebhook(body, request.headers, secret, now());
+    event = await verifyMuxWebhook(body.bytes, request.headers, secret, now());
   } catch (error) {
     if (error instanceof MuxSignatureError) {
       console.warn(`[video] Rejected a Mux webhook: ${error.reason}`);
@@ -273,7 +241,7 @@ export async function handleMuxWebhook(
     }
     throw error;
   }
-  const render = toRenderMuxEvent(event);
+  const render = toRenderMuxEvent(event, environment);
   if (render) {
     return await routeRenderEvent(event, render, {
       isCurrentUpload,
@@ -281,6 +249,17 @@ export async function handleMuxWebhook(
       mux,
       onRenderEvent,
     });
+  }
+  const renderPassthrough = renderJobPassthroughOf(event);
+  if (renderPassthrough !== null) {
+    // This env's render event of a type that is not routed
+    // (`video.upload.asset_created`), or another env's or an untagged
+    // phase 7 one: never this env's to forward or delete (ruling 4).
+    const own = renderJobIdOf(renderPassthrough, environment) !== null;
+    console.log(
+      `[video] Mux event ${event.id} (${event.type}): ${own ? "a render job event that is not routed" : "a render job of another env"}, ignored`
+    );
+    return answer(200, "IGNORED");
   }
   if (!applyMuxEvent(null, event, 0)) {
     // Not a gesture upload's event: nothing to store, so nothing to dedupe.

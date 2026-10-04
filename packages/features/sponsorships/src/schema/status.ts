@@ -63,6 +63,8 @@ export const SPONSORSHIP_STATUS_TONES = {
  * - `notRenewable`: the sponsorship can no longer be renewed.
  * - `gestureTaken`: a request for changes on a rejected sponsorship whose
  *   gesture was sponsored again (the partial unique index).
+ * - `rejectedTooLongAgo`: a request for changes on a sponsorship rejected
+ *   `REJECTED_VIDEO_RETENTION_DAYS` or more ago (phase 8 ruling 13).
  * - `noVideo`: approve before the video exists.
  * - `paid`: cancel of a payment Mollie reports paid.
  * - `notRefunded`: record a refund Mollie does not report.
@@ -78,6 +80,7 @@ export const INVALID_STATE_REASONS = [
   "noLogo",
   "notRenewable",
   "gestureTaken",
+  "rejectedTooLongAgo",
   "noVideo",
   "paid",
   "notRefunded",
@@ -101,6 +104,7 @@ export const INVALID_STATE_REASON_KEYS = {
   paid: "sponsorship.errors.paid",
   paymentProvider: "sponsorship.errors.paymentProvider",
   paymentsUnavailable: "sponsorship.errors.paymentsUnavailable",
+  rejectedTooLongAgo: "sponsorship.errors.rejectedTooLongAgo",
   stale: "sponsorship.errors.stale",
   tooMany: "sponsorship.errors.tooMany",
 } as const satisfies Record<InvalidStateReason, TranslationKey>;

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { toRenderMuxEvent } from "./render-events";
+import { renderJobPassthroughOf, toRenderMuxEvent } from "./render-events";
 import type { MuxEvent } from "./webhooks";
 
 const JOB = "00000000-0000-4000-8000-0000000000bb";
-const PASSTHROUGH = `render-job:${JOB}`;
+const PASSTHROUGH = `render-job:production:${JOB}`;
 
 function event(type: string, data: Record<string, unknown>): MuxEvent {
   return { data, id: `ev-${type}`, type };
@@ -22,7 +22,8 @@ describe("toRenderMuxEvent", () => {
           ],
           status: "ready",
           upload_id: "up-1",
-        })
+        }),
+        "production"
       )
     ).toEqual({
       assetId: "as-1",
@@ -42,7 +43,8 @@ describe("toRenderMuxEvent", () => {
           passthrough: PASSTHROUGH,
           status: "errored",
           upload_id: "up-2",
-        })
+        }),
+        "production"
       )
     ).toEqual({
       assetId: "as-2",
@@ -61,7 +63,8 @@ describe("toRenderMuxEvent", () => {
           id: "up-3",
           new_asset_settings: { passthrough: PASSTHROUGH },
           status: "errored",
-        })
+        }),
+        "production"
       )
     ).toEqual({
       error: "Bad file",
@@ -75,7 +78,8 @@ describe("toRenderMuxEvent", () => {
           id: "up-4",
           new_asset_settings: { passthrough: PASSTHROUGH },
           status: "cancelled",
-        })
+        }),
+        "production"
       )
     ).toEqual({
       renderJobId: JOB,
@@ -118,7 +122,48 @@ describe("toRenderMuxEvent", () => {
       noUpload,
       unreadable,
     ]) {
-      expect(toRenderMuxEvent(candidate)).toBeNull();
+      expect(toRenderMuxEvent(candidate, "production")).toBeNull();
     }
+  });
+
+  it("is null for another env's job and for the untagged phase 7 form (ruling 4)", () => {
+    const ready = (passthrough: string) =>
+      event("video.asset.ready", {
+        id: "as-9",
+        passthrough,
+        status: "ready",
+        upload_id: "up-9",
+      });
+    const cancelled = (passthrough: string) =>
+      event("video.upload.cancelled", {
+        id: "up-10",
+        new_asset_settings: { passthrough },
+        status: "cancelled",
+      });
+    for (const passthrough of [
+      `render-job:staging:${JOB}`,
+      `render-job:dev:${JOB}`,
+      `render-job:${JOB}`,
+    ]) {
+      expect(toRenderMuxEvent(ready(passthrough), "production")).toBeNull();
+      expect(toRenderMuxEvent(cancelled(passthrough), "production")).toBeNull();
+      // Still a render job's event: the webhook ignores it explicitly.
+      expect(renderJobPassthroughOf(ready(passthrough))).toBe(passthrough);
+      expect(renderJobPassthroughOf(cancelled(passthrough))).toBe(passthrough);
+    }
+    expect(toRenderMuxEvent(ready(PASSTHROUGH), "production")).toMatchObject({
+      renderJobId: JOB,
+    });
+  });
+
+  it("renderJobPassthroughOf is null for a gesture upload or no passthrough", () => {
+    expect(
+      renderJobPassthroughOf(
+        event("video.asset.ready", { id: "a", passthrough: "gesture-upload:x" })
+      )
+    ).toBeNull();
+    expect(
+      renderJobPassthroughOf(event("video.asset.ready", { id: "a" }))
+    ).toBeNull();
   });
 });

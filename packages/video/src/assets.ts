@@ -8,6 +8,21 @@ import {
 
 const playbackIdSchema = z.object({ id: z.string(), policy: z.string() });
 
+/**
+ * One static rendition file (`static_renditions.files[]`). Strings, not
+ * enums: a status or name Mux adds later must not make the asset
+ * unreadable. The `static_renditions` API gives each file its own
+ * `status`; the deprecated `mp4_support` lists `low.mp4` … `high.mp4` (or
+ * `capped-1080p.mp4`), whose readiness was the object's `status`.
+ */
+export const muxStaticRenditionFileSchema = z.object({
+  ext: z.string().nullish(),
+  id: z.string().nullish(),
+  name: z.string().nullish(),
+  resolution: z.string().nullish(),
+  status: z.string().nullish(),
+});
+
 export const muxAssetDataSchema = z.object({
   aspect_ratio: z.string().nullish(),
   /** Unix seconds, as a string. */
@@ -29,8 +44,16 @@ export const muxAssetDataSchema = z.object({
     .object({ status: z.string().nullish(), url: z.string().nullish() })
     .nullish(),
   master_access: z.string().nullish(),
+  /** The deprecated MP4 setting (`none`, `standard`, `capped-1080p`, …). */
+  mp4_support: z.string().nullish(),
   passthrough: z.string().nullish(),
   playback_ids: z.array(playbackIdSchema).nullish(),
+  static_renditions: z
+    .object({
+      files: z.array(muxStaticRenditionFileSchema).nullish(),
+      status: z.string().nullish(),
+    })
+    .nullish(),
   status: z.enum(ASSET_STATUSES),
   upload_id: z.string().nullish(),
 });
@@ -44,11 +67,39 @@ export interface MuxAsset {
   duration: number | null;
   error: string | null;
   id: string;
+  /** The deprecated `mp4_support`, or `null` when Mux did not send one. */
+  mp4Support: string | null;
   passthrough: string | null;
   /** The first `public` playback id; `null` when it has none. */
   playbackId: string | null;
+  /** `static_renditions` (see `staticRenditionState`). */
+  staticRenditions: StaticRenditions | null;
   status: AssetStatus;
   uploadId: string | null;
+}
+
+export interface StaticRenditionFile {
+  id: string | null;
+  name: string | null;
+  resolution: string | null;
+  status: string | null;
+}
+
+export interface StaticRenditions {
+  files: StaticRenditionFile[];
+  /** The object's own status (the deprecated `mp4_support` sets it). */
+  status: string | null;
+}
+
+export function toStaticRenditionFile(
+  file: z.infer<typeof muxStaticRenditionFileSchema>
+): StaticRenditionFile {
+  return {
+    id: file.id ?? null,
+    name: file.name ?? null,
+    resolution: file.resolution ?? null,
+    status: file.status ?? null,
+  };
 }
 
 /** The first public playback id of an asset (signed ones never play on the site). */
@@ -68,8 +119,17 @@ function toMuxAsset(data: MuxAssetData): MuxAsset {
       ? data.errors.messages?.join(" ") || data.errors.type || null
       : null,
     id: data.id,
+    mp4Support: data.mp4_support ?? null,
     passthrough: data.passthrough ?? null,
     playbackId: publicPlaybackId(data.playback_ids),
+    staticRenditions: data.static_renditions
+      ? {
+          files: (data.static_renditions.files ?? []).map(
+            toStaticRenditionFile
+          ),
+          status: data.static_renditions.status ?? null,
+        }
+      : null,
     status: data.status,
     uploadId: data.upload_id ?? null,
   };

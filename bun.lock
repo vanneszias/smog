@@ -807,6 +807,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@smog/config": "workspace:*",
+        "@smog/utils": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
