@@ -67,7 +67,7 @@
     "migrate:convex": "bun -F @smog/migrate-convex cli",
     "mobile:release-check": "bun scripts/mobile-release-check.ts",
     "release:check": "bun run release:check:core && bun run release:check:tests && bun run release:check:mobile && bun run release:check:render",
-    "release:check:core": "bun run check:ci && bun run boundaries && bun scripts/release-config-check.ts && bun run check-types && bun run build && bun -F @smog/site deploy:dry:render && bun -F @smog/site deploy:dry && bun run knip && bun run audit",
+    "release:check:core": "bun run check:ci && bun run boundaries && bun scripts/release-config-check.ts && bun run check-types && bun run build && bun -F @smog/site deploy:dry:render && bun -F @smog/site deploy:dry && bun scripts/check-deploy-config.ts --env staging --offline && bun run knip && bun run audit",
     "release:check:mobile": "bun run mobile:release-check",
     "release:check:render": "bun scripts/release-check-render.ts",
     "release:check:tests": "bun run test",

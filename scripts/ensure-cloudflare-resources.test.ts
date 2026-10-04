@@ -6,7 +6,7 @@ import {
   type DeployEnv,
   type EnsureMode,
   ensureResources,
-  PRODUCTION_SITE_URL_PLACEHOLDER,
+  isPlaceholderOrigin,
   parseEnsureArgs,
   planResources,
   type ResourcePlan,
@@ -196,6 +196,32 @@ async function failure(promise: Promise<unknown>): Promise<string> {
   }
   throw new Error("expected a failure");
 }
+
+describe("isPlaceholderOrigin (phase 8 ruling 2)", () => {
+  test("a workers.dev host needs <script>.<subdomain>.workers.dev", () => {
+    expect(
+      isPlaceholderOrigin("https://smog-site-production.workers.dev")
+    ).toBe(true);
+    expect(isPlaceholderOrigin("https://workers.dev")).toBe(true);
+    expect(isPlaceholderOrigin("https://a.b.c.workers.dev")).toBe(true);
+    expect(isPlaceholderOrigin(STAGING_ORIGIN)).toBe(false);
+    expect(
+      isPlaceholderOrigin("https://smog-site-production.zias.workers.dev")
+    ).toBe(false);
+    expect(isPlaceholderOrigin("https://SMOG.ZIAS.WORKERS.DEV.")).toBe(false);
+  });
+
+  test("any other host is not a placeholder", () => {
+    expect(isPlaceholderOrigin("https://app.smog.vlaanderen")).toBe(false);
+    expect(isPlaceholderOrigin(LAUNCH_ORIGIN)).toBe(false);
+    expect(isPlaceholderOrigin("https://notworkers.dev")).toBe(false);
+  });
+
+  test("an unparsable origin is a placeholder", () => {
+    expect(isPlaceholderOrigin("")).toBe(true);
+    expect(isPlaceholderOrigin("not a url")).toBe(true);
+  });
+});
 
 describe("planResources", () => {
   test("reads the queues, DLQs and bucket of an env from wrangler.jsonc", () => {
@@ -392,17 +418,48 @@ describe("ensureResources --create", () => {
     }
   });
 
-  test("refuses production while SITE_URL is the placeholder", async () => {
-    expect(planResources(WRANGLER, "production").buckets[0]?.corsOrigin).toBe(
-      PRODUCTION_SITE_URL_PLACEHOLDER
-    );
-    const message = await failure(
-      ensure("create", account(), "production", {
-        plan: planResources(WRANGLER, "production"),
+  test("refuses a workers.dev origin without the account subdomain (the four-label rule)", async () => {
+    const placeholder = "https://smog-site-production.workers.dev";
+    const messages = await Promise.all(
+      (["staging", "production"] as const).map((env) => {
+        const plan = planResources(WRANGLER, env);
+        return failure(
+          ensure("create", account(), env, {
+            plan: {
+              ...plan,
+              buckets: plan.buckets.map((bucket) => ({
+                ...bucket,
+                corsOrigin: placeholder,
+              })),
+            },
+          })
+        );
       })
     );
-    expect(message).toContain("[provision]");
-    expect(message).toContain("placeholder");
+    for (const message of messages) {
+      expect(message).toContain("[provision]");
+      expect(message).toContain("placeholder");
+      expect(message).toContain("<script>.<subdomain>.workers.dev");
+    }
+  });
+
+  test("staging's own host still passes --create", async () => {
+    expect(planResources(WRANGLER, "staging").buckets[0]?.corsOrigin).toBe(
+      STAGING_ORIGIN
+    );
+    const { result } = await ensure("create", account(), "staging");
+    expect(result.ok).toBe(true);
+  });
+
+  test("production's workers.dev origin in wrangler.jsonc is not a placeholder", async () => {
+    const plan = planResources(WRANGLER, "production");
+    expect(plan.buckets[0]?.corsOrigin).toBe(
+      "https://smog-site-production.zias.workers.dev"
+    );
+    const { result } = await ensure("create", account(), "production", {
+      plan,
+    });
+    expect(result.ok).toBe(true);
   });
 });
 

@@ -17,7 +17,8 @@ import { join } from "node:path";
  *   allow the PUT from `SITE_URL` fails the run with the command that
  *   fixes it, and is never overwritten. Production needs
  *   `SMOG_PROVISION_PRODUCTION=1` as well (the repository variable of the
- *   same name, `deploy.yml`) and a `SITE_URL` that is not the placeholder.
+ *   same name, `deploy.yml`). Any env needs a `SITE_URL` that is not a
+ *   placeholder (`isPlaceholderOrigin`: the four-label workers.dev rule).
  * - `--check` creates nothing and fails, printing the exact commands, when
  *   anything is missing (`deploy.yml` runs it for production by default).
  * - `--dry-run` calls nothing and prints every command it could run.
@@ -77,13 +78,29 @@ function strings(...values: unknown[]): string[] {
   return values.filter((value): value is string => typeof value === "string");
 }
 
+const WORKERS_DEV = "workers.dev";
+const TRAILING_DOT = /\.$/;
+
 /**
- * Production's `SITE_URL` until the launch domain is known
- * (`wrangler.jsonc`). The bucket's CORS cannot be set from it: it would
- * allow the logo PUT from an origin nobody uses.
+ * Whether `origin` cannot be a deployed site (phase 8 ruling 2): a
+ * workers.dev host is always `<script>.<subdomain>.workers.dev`, four
+ * labels, so `smog-site-production.workers.dev` (the old production
+ * placeholder) can never be one. Any other host may be a launch origin.
+ * The bucket's CORS cannot be set from a placeholder: it would allow the
+ * logo PUT from an origin nobody uses.
  */
-export const PRODUCTION_SITE_URL_PLACEHOLDER =
-  "https://smog-site-production.workers.dev";
+export function isPlaceholderOrigin(origin: string): boolean {
+  let host: string;
+  try {
+    host = new URL(origin).hostname.toLowerCase().replace(TRAILING_DOT, "");
+  } catch {
+    return true;
+  }
+  if (host !== WORKERS_DEV && !host.endsWith(`.${WORKERS_DEV}`)) {
+    return false;
+  }
+  return host.split(".").length !== 4;
+}
 
 /** What `env.<env>` of `wrangler.jsonc` needs to exist before a deploy. */
 export function planResources(source: string, env: DeployEnv): ResourcePlan {
@@ -656,15 +673,12 @@ export async function ensureResources(
   if (mode === "dry-run") {
     return dryRun(options);
   }
-  if (
-    env === "production" &&
-    mode === "create" &&
-    plan.buckets.some(
-      (bucket) => bucket.corsOrigin === PRODUCTION_SITE_URL_PLACEHOLDER
-    )
-  ) {
+  const placeholder = plan.buckets.find((bucket) =>
+    isPlaceholderOrigin(bucket.corsOrigin)
+  );
+  if (mode === "create" && placeholder) {
     throw new Error(
-      `[provision] production SITE_URL is still the placeholder ${PRODUCTION_SITE_URL_PLACEHOLDER}: set the launch origin in wrangler.jsonc before creating the production bucket (its CORS is set from it)`
+      `[provision] ${env} SITE_URL ${placeholder.corsOrigin} is a placeholder (a workers.dev origin is <script>.<subdomain>.workers.dev): set the real origin in wrangler.jsonc before creating the ${env} bucket (its CORS is set from it)`
     );
   }
   if (options.pipeline) {
@@ -731,7 +745,8 @@ async function spawn(command: string[]): Promise<WranglerResult> {
   return { code, stderr, stdout };
 }
 
-const bunxWrangler: WranglerRunner = (args) =>
+/** `bunx wrangler <args>` from `apps/site` (also `check-deploy-config.ts`). */
+export const bunxWrangler: WranglerRunner = (args) =>
   spawn(["bunx", "wrangler", ...args]);
 
 const bunDocker: CommandRunner = (args) => spawn(["docker", ...args]);

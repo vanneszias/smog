@@ -2,10 +2,12 @@ import { describe, expect, test } from "bun:test";
 import {
   ENVIRONMENTS,
   MOLLIE_DEFAULT_API_URL,
+  PROVIDER_SECRET_GROUPS,
   parseWorkerBindings,
   parseWorkerEnv,
   parseWorkerVars,
   publicAuthConfig,
+  RECOMMENDED_WORKER_CONFIG,
   RENDER_LOCAL_DEFAULT_URL,
   REQUIRED_WORKER_CONFIG,
   requiredWorkerConfig,
@@ -507,6 +509,47 @@ describe("REQUIRED_WORKER_CONFIG (ruling 12)", () => {
       }
     }
     expect(workerEnvSchema).toBeDefined();
+  });
+});
+
+describe("the provider groups and the recommended config (phase 8 ruling 1)", () => {
+  test("Google is a pair and Apple a trio, all secrets", () => {
+    expect(PROVIDER_SECRET_GROUPS).toEqual([
+      {
+        name: "Google sign-in",
+        secrets: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+      },
+      {
+        name: "Sign in with Apple",
+        secrets: [
+          "APPLE_CLIENT_ID",
+          "APPLE_CLIENT_SECRET",
+          "APPLE_APP_BUNDLE_IDENTIFIER",
+        ],
+      },
+    ]);
+  });
+
+  test("recommends the providers and the OpenPanel pair", () => {
+    expect(RECOMMENDED_WORKER_CONFIG).toEqual([
+      ...PROVIDER_SECRET_GROUPS,
+      {
+        name: "OpenPanel relay",
+        secrets: ["OPENPANEL_CLIENT_ID", "OPENPANEL_CLIENT_SECRET"],
+      },
+    ]);
+  });
+
+  test("names only secrets, none of them required anywhere", () => {
+    const required = ENVIRONMENTS.flatMap(
+      (env) => requiredWorkerConfig(env, "container").secrets
+    );
+    for (const group of RECOMMENDED_WORKER_CONFIG) {
+      for (const key of group.secrets) {
+        expect(Object.keys(workerSecretsSchema.shape)).toContain(key);
+        expect(required).not.toContain(key);
+      }
+    }
   });
 });
 

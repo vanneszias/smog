@@ -53,6 +53,17 @@ const RELEASE_LANES = ["core", "tests", "mobile", "render"];
 /** The render gate's flag, a GitHub environment variable (phase 7 ruling 2). */
 const RENDER_FLAG = "SMOG_RENDER_PIPELINE";
 const ENSURE_COMMAND = "scripts/ensure-cloudflare-resources.ts";
+/** The deploy config check (phase 8 ruling 1). */
+const CONFIG_CHECK_COMMAND = "scripts/check-deploy-config.ts";
+/** The staging GitHub environment variable that makes staging enforce it. */
+const REQUIRE_SECRETS_FLAG = "SMOG_REQUIRE_SECRETS";
+const SHELL_IF = /^\s*(if|elif)\b/;
+const SHELL_ELSE = /^\s*(else|elif|fi)\b/;
+const STAGING_TEST = /"?\$CLOUDFLARE_ENV"?\s*=\s*"?staging"?/;
+const REQUIRE_SECRETS_TEST = /"?\$SMOG_REQUIRE_SECRETS"?\s*!=\s*"?1"?/;
+const STAGING_WARN_ONLY = /--env\s+"?staging"?\s/;
+const ENFORCING_RUN =
+  /scripts\/check-deploy-config\.ts\s+--env\s+"\$CLOUDFLARE_ENV"\s*$/;
 const MIGRATIONS_COMMAND = "wrangler d1 migrations apply DB";
 const TOP_LEVEL_BINDINGS = ["d1_databases", "kv_namespaces", "r2_buckets"];
 const DEPLOY_ENVS = ["staging", "production"];
@@ -334,6 +345,7 @@ function checkDeploySteps(
     errors.push(`${file}: the D1 migrations must run before the deploy`);
   }
   errors.push(...checkEnsureStep(steps, migrations, file));
+  errors.push(...checkConfigCheckStep(steps, file));
   errors.push(...checkRenderFlag(steps, file));
   if (
     steps.some(
@@ -404,6 +416,111 @@ function checkEnsureStep(
   return errors;
 }
 
+/** The `--warn-only` run lines and the `if` each one sits under. */
+function warnOnlyBranches(
+  run: string
+): { condition: string | null; line: string }[] {
+  const lines = run.split("\n");
+  return lines.flatMap((line, at) => {
+    if (!line.includes("--warn-only")) {
+      return [];
+    }
+    let condition: string | null = null;
+    for (let index = at - 1; index >= 0; index -= 1) {
+      const candidate = lines[index] ?? "";
+      if (SHELL_IF.test(candidate)) {
+        condition = candidate;
+        break;
+      }
+      if (SHELL_ELSE.test(candidate)) {
+        break;
+      }
+    }
+    return [{ condition, line }];
+  });
+}
+
+function checkWarnOnlyRuns(run: string, file: string): string[] {
+  return warnOnlyBranches(run).flatMap(({ condition, line }) => {
+    const errors: string[] = [];
+    if (!STAGING_WARN_ONLY.test(line)) {
+      errors.push(
+        `${file}: --warn-only may only be passed with a literal --env staging (production never warns only): ${line.trim()}`
+      );
+    }
+    if (
+      !(
+        condition &&
+        STAGING_TEST.test(condition) &&
+        REQUIRE_SECRETS_TEST.test(condition)
+      )
+    ) {
+      errors.push(
+        `${file}: the --warn-only run must sit under an if that tests staging and "$${REQUIRE_SECRETS_FLAG}" != "1"`
+      );
+    }
+    if (!line.includes("||")) {
+      errors.push(
+        `${file}: staging's --warn-only run must end with \`|| …\`, so even a crash of the check keeps the deploy green`
+      );
+    }
+    return errors;
+  });
+}
+
+/**
+ * The deploy config check (phase 8 ruling 1): it runs first, before the
+ * resources step and the migrations, so nothing is created while a secret
+ * is missing. Production always enforces: the only `--warn-only` run is
+ * literally `--env staging`, under an `if` that tests staging and
+ * SMOG_REQUIRE_SECRETS, and falls back with `||` so even a crash of the
+ * script keeps staging green. An enforcing run exists for the rest.
+ */
+function checkConfigCheckStep(steps: Step[], file: string): string[] {
+  const at = findStepIndex(steps, CONFIG_CHECK_COMMAND);
+  if (at === -1) {
+    return [
+      `${file}: no step runs \`${CONFIG_CHECK_COMMAND}\` (the deploy config check)`,
+    ];
+  }
+  const errors: string[] = [];
+  const ensure = findStepIndex(steps, ENSURE_COMMAND);
+  const migrations = findStepIndex(steps, MIGRATIONS_COMMAND);
+  if (ensure !== -1 && at > ensure) {
+    errors.push(
+      `${file}: \`${CONFIG_CHECK_COMMAND}\` must run before \`${ENSURE_COMMAND}\` (nothing is created before a missing secret is found)`
+    );
+  }
+  if (migrations !== -1 && at > migrations) {
+    errors.push(
+      `${file}: \`${CONFIG_CHECK_COMMAND}\` must run before the D1 migrations`
+    );
+  }
+  const step = steps[at];
+  const run = step?.run ?? "";
+  if (!(step?.if ?? "").includes("steps.secrets.outputs.enabled == 'true'")) {
+    errors.push(
+      `${file}: the deploy config check must be skipped like the other steps (if: steps.secrets.outputs.enabled == 'true')`
+    );
+  }
+  const flag = `\${{ vars.${REQUIRE_SECRETS_FLAG} }}`;
+  if (step?.env?.[REQUIRE_SECRETS_FLAG] !== flag) {
+    errors.push(
+      `${file}: the deploy config check must pass ${REQUIRE_SECRETS_FLAG}: ${flag} (staging enforces once the owner sets it)`
+    );
+  }
+  errors.push(...checkWarnOnlyRuns(run, file));
+  const enforcing = run
+    .split("\n")
+    .some((line) => ENFORCING_RUN.test(line) && !line.includes("--warn-only"));
+  if (!enforcing) {
+    errors.push(
+      `${file}: the deploy config check needs an enforcing run (\`bun ${CONFIG_CHECK_COMMAND} --env "$CLOUDFLARE_ENV"\`) for production and an opted-in staging`
+    );
+  }
+  return errors;
+}
+
 /**
  * The render gate's flag reaches the two steps that read it (phase 7
  * ruling 2): the resources step (its Workflows and Containers probes) and
@@ -421,6 +538,15 @@ function checkRenderFlag(steps: Step[], file: string): string[] {
       `${file}: the "${step.name ?? command}" step must pass ${RENDER_FLAG}: ${expected} (the render gate)`,
     ];
   });
+}
+
+/** The deploy config check's step of `deploy.yml` alone (phase 8 ruling 1). */
+export function checkDeployConfigStep(source: string): string[] {
+  const workflow = parseWorkflow(source, "deploy.yml");
+  if (typeof workflow === "string") {
+    return [workflow];
+  }
+  return checkConfigCheckStep(workflow.jobs?.deploy?.steps ?? [], "deploy.yml");
 }
 
 export function checkDeployWorkflow(
@@ -687,6 +813,12 @@ export function checkReleaseScripts(source: string): string[] {
 const STAGING_DRY_RUN = "bun -F @smog/site deploy:dry";
 /** The same with staging forced to `container` (the gate-on path). */
 const GATE_ON_DRY_RUN = "bun -F @smog/site deploy:dry:render";
+/**
+ * The deploy config check on staging's files, without wrangler (phase 8
+ * ruling 1). Production is not checked offline: its placeholders are
+ * expected until launch.
+ */
+const OFFLINE_CONFIG_CHECK = `bun ${CONFIG_CHECK_COMMAND} --env staging --offline`;
 
 /**
  * `release:check:core` builds the staging config and runs the deploy guard
@@ -694,13 +826,22 @@ const GATE_ON_DRY_RUN = "bun -F @smog/site deploy:dry:render";
  * credentials and no network), so a render gate regression fails CI before
  * a develop push deploys it; and the gate-on dry run (`deploy:dry:render`,
  * fix wave C-1), so the `container` path is built and guarded on every push
- * before the owner flips staging.
+ * before the owner flips staging; and, after the dry run, the deploy config
+ * check of staging's files (`--offline`, phase 8 ruling 1).
  */
 function checkStagingDryRun(core: string): string[] {
   const commands = core.split("&&").map((command) => command.trim());
-  return [STAGING_DRY_RUN, GATE_ON_DRY_RUN]
+  const errors = [STAGING_DRY_RUN, GATE_ON_DRY_RUN, OFFLINE_CONFIG_CHECK]
     .filter((wanted) => !commands.includes(wanted))
     .map((wanted) => `package.json: release:check:core must run \`${wanted}\``);
+  const dryRun = commands.indexOf(STAGING_DRY_RUN);
+  const configCheck = commands.indexOf(OFFLINE_CONFIG_CHECK);
+  if (dryRun !== -1 && configCheck !== -1 && configCheck < dryRun) {
+    errors.push(
+      `package.json: release:check:core must run \`${OFFLINE_CONFIG_CHECK}\` after \`${STAGING_DRY_RUN}\``
+    );
+  }
+  return errors;
 }
 
 /**
