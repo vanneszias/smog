@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { workerSecretsSchema } from "@smog/config/env/worker";
+import { WORKERS_POOL_TEST_OPTIONS } from "@smog/config/testing/vitest";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vitest/config";
 import { unstable_readConfig } from "wrangler";
@@ -73,6 +74,7 @@ export default defineConfig(async () => ({
   ],
   resolve: { alias: { "@": SRC } },
   test: {
+    ...WORKERS_POOL_TEST_OPTIONS,
     // test/warm-up.ts pays the first (slow) transform of the server entry
     // under `hookTimeout`, so a hung test still fails after 60 s.
     hookTimeout: 180_000,

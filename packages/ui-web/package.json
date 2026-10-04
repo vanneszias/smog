@@ -9,7 +9,7 @@
   },
   "scripts": {
     "check-types": "tsc -b",
-    "test": "bun test --timeout=20000"
+    "test": "bun ../../scripts/test-deadline.ts -- bun test --timeout=20000"
   },
   "dependencies": {
     "@mux/mux-player-react": "3.13.4",

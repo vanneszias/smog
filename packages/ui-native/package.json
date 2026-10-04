@@ -10,7 +10,7 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
-    "test": "jest"
+    "test": "bun ../../scripts/test-deadline.ts -- jest"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "5.2.14",

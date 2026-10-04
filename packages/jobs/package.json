@@ -9,7 +9,7 @@
   },
   "scripts": {
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",
-    "test": "vitest run"
+    "test": "bun ../../scripts/test-deadline.ts -- vitest run"
   },
   "dependencies": {
     "@smog/config": "workspace:*",

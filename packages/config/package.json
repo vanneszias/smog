@@ -11,11 +11,12 @@
     "./env/mobile": "./src/env/mobile.ts",
     "./env/render": "./src/env/render.ts",
     "./testing/happy-dom": "./src/testing/happy-dom.ts",
+    "./testing/vitest": "./src/testing/vitest.ts",
     "./maintenance": "./src/maintenance.ts"
   },
   "scripts": {
     "check-types": "tsc -b",
-    "test": "bun test"
+    "test": "bun ../../scripts/test-deadline.ts -- bun test"
   },
   "dependencies": {
     "zod": "catalog:"

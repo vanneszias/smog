@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
+import { WORKERS_POOL_TEST_OPTIONS } from "@smog/config/testing/vitest";
 import { defineConfig } from "vitest/config";
 
 const MIGRATIONS_DIR = fileURLToPath(
@@ -16,13 +17,10 @@ export default defineConfig(async () => ({
     }),
   ],
   test: {
+    ...WORKERS_POOL_TEST_OPTIONS,
     // The service tests (D1) run in workerd; `src/**/*.test.tsx` (hooks)
     // run on Bun (`bun test src`).
     include: ["test/**/*.test.ts"],
     setupFiles: ["@smog/db/testing/apply-migrations"],
-    // Vitest's 5 s default is passed by D1-heavy tests (scrypt, 500-row
-    // seeds) when the whole turbo test run shares the cores; a hung test
-    // still fails, after 30 s.
-    testTimeout: 30_000,
   },
 }));

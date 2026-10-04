@@ -14,7 +14,7 @@
   },
   "scripts": {
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json && tsc -p tsconfig.bun.json",
-    "test": "vitest run && bun test guard src"
+    "test": "bun ../../scripts/test-deadline.ts -- vitest run && bun ../../scripts/test-deadline.ts -- bun test guard src"
   },
   "dependencies": {
     "@better-auth/core": "1.7.6",

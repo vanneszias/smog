@@ -1,4 +1,5 @@
 import { cloudflareTest } from "@cloudflare/vitest-plugin";
+import { WORKERS_POOL_TEST_OPTIONS } from "@smog/config/testing/vitest";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -8,7 +9,7 @@ export default defineConfig({
     }),
   ],
   test: {
+    ...WORKERS_POOL_TEST_OPTIONS,
     include: ["test/**/*.test.ts"],
-    testTimeout: 30_000,
   },
 });
