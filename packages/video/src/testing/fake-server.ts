@@ -121,6 +121,39 @@ function decoded(pattern: RegExp, pathname: string): string | null {
   return id === undefined ? null : decodeURIComponent(id);
 }
 
+/**
+ * The one range of a `Range: bytes=…` header, or `null` to serve the
+ * whole file: no header, or an invalid one (`bytes=-`, a reversed
+ * `a-b`), which RFC 9110 says to ignore. `"unsatisfiable"` → 416.
+ */
+function parseRange(
+  header: string | null,
+  size: number
+): { end: number; start: number } | "unsatisfiable" | null {
+  const match = header?.match(RANGE);
+  const from = match?.[1] ?? "";
+  const to = match?.[2] ?? "";
+  if (!match || (from === "" && to === "")) {
+    return null;
+  }
+  if (from === "") {
+    return Number(to) === 0 || size === 0
+      ? "unsatisfiable"
+      : { end: size - 1, start: Math.max(0, size - Number(to)) };
+  }
+  const start = Number(from);
+  if (to !== "" && Number(to) < start) {
+    return null;
+  }
+  if (start >= size) {
+    return "unsatisfiable";
+  }
+  return {
+    end: to === "" ? size - 1 : Math.min(Number(to), size - 1),
+    start,
+  };
+}
+
 /** `bytes` as an MP4, honouring one `Range: bytes=a-b` (206 / 416). */
 function serveBytes(request: Request, bytes: Uint8Array): Response {
   const size = bytes.byteLength;
@@ -128,32 +161,21 @@ function serveBytes(request: Request, bytes: Uint8Array): Response {
     "accept-ranges": "bytes",
     "content-type": "video/mp4",
   };
-  const match = request.headers.get("range")?.match(RANGE);
-  let start = 0;
-  let end = size - 1;
-  let status = 200;
-  if (match) {
-    const from = match[1] ?? "";
-    const to = match[2] ?? "";
-    if (from === "") {
-      start = Math.max(0, size - Number(to));
-    } else {
-      start = Number(from);
-      end = to === "" ? size - 1 : Math.min(Number(to), size - 1);
-    }
-    if (start > end || start >= size) {
-      return new Response(null, {
-        headers: { ...headers, "content-range": `bytes */${size}` },
-        status: 416,
-      });
-    }
+  const range = parseRange(request.headers.get("range"), size);
+  if (range === "unsatisfiable") {
+    return new Response(null, {
+      headers: { ...headers, "content-range": `bytes */${size}` },
+      status: 416,
+    });
+  }
+  const { end, start } = range ?? { end: size - 1, start: 0 };
+  if (range) {
     headers["content-range"] = `bytes ${start}-${end}/${size}`;
-    status = 206;
   }
   headers["content-length"] = String(end - start + 1);
   return new Response(
     request.method === "HEAD" ? null : bytes.slice(start, end + 1),
-    { headers, status }
+    { headers, status: range ? 206 : 200 }
   );
 }
 

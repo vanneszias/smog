@@ -43,6 +43,7 @@ export {
   readUploadState,
 } from "./upload-state";
 export {
+  type CancelUploadResult,
   cancelUpload,
   createDirectUpload,
   GESTURE_UPLOAD_PREFIX,

@@ -144,20 +144,32 @@ function isRefusal(error: unknown): boolean {
   );
 }
 
+/** What `cancelUpload` found. */
+export interface CancelUploadResult {
+  /**
+   * The upload's asset when it already had one (`already-final`). Nobody
+   * else will delete it: the caller must (phase 7 task 5 review, I-3).
+   */
+  assetId: string | null;
+  state: "cancelled" | "already-final";
+}
+
 /**
  * `PUT /video/v1/uploads/:id/cancel`. Mux cancels only an upload that is
  * still `waiting` (then no asset is ever created from it), so:
- * - `"cancelled"`: Mux cancelled it;
- * - `"already-final"`: Mux does not know it (404), or refused the cancel and
+ * - `cancelled`: Mux cancelled it;
+ * - `already-final`: Mux does not know it (404), or refused the cancel and
  *   the upload is indeed past `waiting` (`asset_created`, errored,
- *   cancelled, timed out). Its asset, if any, is the caller's to delete.
+ *   cancelled, timed out). `assetId` is its asset, if any, which the
+ *   caller deletes.
  *
- * Anything else (an outage, a refusal while still `waiting`) throws.
+ * Anything else (an outage, 401/403/429, a refusal while still `waiting`)
+ * throws.
  */
 export async function cancelUpload(
   mux: Mux,
   uploadId: string
-): Promise<"cancelled" | "already-final"> {
+): Promise<CancelUploadResult> {
   const path = `/video/v1/uploads/${encodeURIComponent(uploadId)}/cancel`;
   try {
     const data = await muxRequest(mux, path, {
@@ -165,9 +177,10 @@ export async function cancelUpload(
       nullOn404: true,
       schema: muxUploadDataSchema,
     });
-    return data === null || data.status !== "cancelled"
-      ? "already-final"
-      : "cancelled";
+    return {
+      assetId: data?.asset_id ?? null,
+      state: data?.status === "cancelled" ? "cancelled" : "already-final",
+    };
   } catch (error) {
     if (!isRefusal(error)) {
       throw error;
@@ -177,7 +190,7 @@ export async function cancelUpload(
       console.log(
         `[video] Upload ${uploadId} is ${upload?.status ?? "unknown"}: nothing to cancel`
       );
-      return "already-final";
+      return { assetId: upload?.assetId ?? null, state: "already-final" };
     }
     throw error;
   }

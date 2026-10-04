@@ -18,8 +18,8 @@ interface FakeRequest {
 
 export interface FakeUpload {
   assetId: string | null;
-  /** `null` for a render upload (the PUT is server side). */
-  corsOrigin: string | null;
+  /** Required, as in Mux's create-upload schema (the fake refuses a body without it). */
+  corsOrigin: string;
   error: { message: string; type: string } | null;
   id: string;
   passthrough: string | null;
@@ -131,7 +131,7 @@ function notFound(): Response {
 function uploadJson(upload: FakeUpload) {
   return {
     asset_id: upload.assetId ?? undefined,
-    cors_origin: upload.corsOrigin ?? undefined,
+    cors_origin: upload.corsOrigin,
     error: upload.error ?? undefined,
     id: upload.id,
     new_asset_settings: {
@@ -251,7 +251,11 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     const asset = mustAsset(assetId);
     asset.status = "ready";
     asset.policy = "public";
-    asset.playbackId ??= options.playbackId ?? randomId(32);
+    // A render's asset gets its own id: only gesture and picker assets share
+    // the fixed sample id, so a render never resolves as its own source.
+    asset.playbackId ??= asset.passthrough?.startsWith("render-job:")
+      ? randomId(32)
+      : (options.playbackId ?? randomId(32));
     asset.aspectRatio ??= "3:4";
     asset.duration ??= 4.5;
     return asset;
@@ -296,14 +300,29 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
 
   function createUploadRoute(body: unknown): Response {
     const settings = body as {
-      cors_origin?: string;
+      cors_origin?: unknown;
       new_asset_settings?: { passthrough?: string };
       test?: boolean;
     };
+    // Mux's create-upload schema requires cors_origin (@mux/mux-node 15.5.0).
+    if (
+      typeof settings.cors_origin !== "string" ||
+      settings.cors_origin === ""
+    ) {
+      return json(
+        {
+          error: {
+            messages: ["cors_origin is required"],
+            type: "invalid_parameters",
+          },
+        },
+        400
+      );
+    }
     const id = randomId();
     const upload: FakeUpload = {
       assetId: null,
-      corsOrigin: settings.cors_origin ?? null,
+      corsOrigin: settings.cors_origin,
       error: null,
       id,
       passthrough: settings.new_asset_settings?.passthrough ?? null,
@@ -348,7 +367,11 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     return notFound();
   }
 
-  /** `GET /video/v1/playback-ids/:id`: the asset behind a playback id. */
+  /**
+   * `GET /video/v1/playback-ids/:id`: the asset behind a playback id. With
+   * a fixed `playbackId` option (e2e) every gesture and picker asset shares
+   * it, so the first one inserted answers; render assets get their own.
+   */
   function playbackIdRoute(playbackId: string): Response {
     const asset = [...assets.values()].find(
       (candidate) => candidate.playbackId === playbackId && candidate.policy
@@ -381,7 +404,9 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
       asset.master = null;
     } else if (access === "temporary") {
       asset.masterAccess = "temporary";
-      asset.master ??= { status: "preparing" };
+      if (!asset.master || asset.master.status === "errored") {
+        asset.master = { status: "preparing" };
+      }
     } else {
       return json(
         {

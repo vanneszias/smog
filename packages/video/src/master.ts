@@ -37,10 +37,12 @@ function assetPath(assetId: string): string {
 
 /**
  * Turns temporary master access on (`PUT …/master-access`), unless it is
- * on already: idempotent, so a replayed step sends no second PUT. Mux
- * turns it off again after 24 h.
- * - `"enabled"`: this call turned it on;
- * - `"already-on"`: it was on;
+ * on already: idempotent, so a replayed step sends no second PUT (the first
+ * PUT makes `master` exist). Mux drops the master once its URL expires
+ * after 24 h.
+ * - `"enabled"`: this call turned it on (also when the flag still said
+ *   `temporary` but there was no `master`, or it had errored);
+ * - `"already-on"`: it was on, with a master that is preparing or ready;
  * - `"missing"`: Mux does not know the asset.
  */
 export async function enableMasterAccess(
@@ -54,7 +56,13 @@ export async function enableMasterAccess(
   if (asset === null) {
     return "missing";
   }
-  if (asset.master_access === "temporary") {
+  // The flag alone is not trusted: Mux drops `master` when the 24 h URL
+  // expires, and an errored master needs a new request.
+  if (
+    asset.master_access === "temporary" &&
+    asset.master &&
+    asset.master.status !== "errored"
+  ) {
     return "already-on";
   }
   await muxRequest(mux, `${assetPath(assetId)}/master-access`, {

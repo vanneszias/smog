@@ -100,11 +100,28 @@ describe("the fake Mux server for renders", () => {
     const head = await fetch(url, { method: "HEAD" });
     expect(head.status).toBe(200);
     expect(head.headers.get("content-length")).toBe("64");
+
+    const suffix = await fetch(url, { headers: { range: "bytes=-4" } });
+    expect(suffix.status).toBe(206);
+    expect(suffix.headers.get("content-range")).toBe("bytes 60-63/64");
+
+    const beyond = await fetch(url, { headers: { range: "bytes=100-" } });
+    expect(beyond.status).toBe(416);
+    expect(beyond.headers.get("content-range")).toBe("bytes */64");
+
+    // An invalid range is ignored (RFC 9110): the whole file.
+    for (const range of ["bytes=-", "bytes=5-2"]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one range at a time.
+      const ignored = await fetch(url, { headers: { range } });
+      expect(ignored.status).toBe(200);
+      expect(ignored.headers.get("content-length")).toBe("64");
+    }
   });
 
   it("takes a render's server-side PUT and serves the rendered file as its master", async () => {
     emitted.length = 0;
     const upload = await createRenderUpload(mux, {
+      corsOrigin: "http://localhost:5173",
       renderJobId: "job-1",
       test: true,
     });
@@ -131,11 +148,12 @@ describe("the fake Mux server for renders", () => {
 
   it("cancels a waiting upload over HTTP, and a second cancel finds it final", async () => {
     const waiting = await createRenderUpload(mux, {
+      corsOrigin: "http://localhost:5173",
       renderJobId: "job-2",
       test: false,
     });
-    expect(await cancelUpload(mux, waiting.id)).toBe("cancelled");
-    expect(await cancelUpload(mux, waiting.id)).toBe("already-final");
+    expect((await cancelUpload(mux, waiting.id)).state).toBe("cancelled");
+    expect((await cancelUpload(mux, waiting.id)).state).toBe("already-final");
   });
 
   it("answers 404 for the master of an unknown asset", async () => {

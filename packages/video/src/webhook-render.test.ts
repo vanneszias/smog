@@ -149,9 +149,13 @@ describe("handleMuxWebhook for render-job events", () => {
     const asset = fake.addAsset({ passthrough: PASSTHROUGH, uploadId: "old" });
     const kv = createMemoryKv();
     const { forwarded, onRenderEvent } = recorder();
-    const asked: [string, string][] = [];
-    const isCurrentUpload = (renderJobId: string, uploadId: string) => {
-      asked.push([renderJobId, uploadId]);
+    const asked: [string, string, string][] = [];
+    const isCurrentUpload = (
+      renderJobId: string,
+      uploadId: string,
+      assetId: string
+    ) => {
+      asked.push([renderJobId, uploadId, assetId]);
       return Promise.resolve(false);
     };
     const ready = assetReady("old", asset.id);
@@ -162,7 +166,7 @@ describe("handleMuxWebhook for render-job events", () => {
         onRenderEvent,
       })
     ).toEqual({ code: "SUPERSEDED", status: 200 });
-    expect(asked).toEqual([[JOB, "old"]]);
+    expect(asked).toEqual([[JOB, "old", asset.id]]);
     expect(forwarded).toEqual([]);
     expect(fake.assets.has(asset.id)).toBe(false);
     // The redelivery deletes nothing more.
@@ -190,7 +194,62 @@ describe("handleMuxWebhook for render-job events", () => {
     expect(fake.assets.has(asset.id)).toBe(true);
   });
 
-  it("asks isCurrentUpload only for asset.ready", async () => {
+  it("deletes a non-current asset.errored's asset too, and does not forward it", async () => {
+    const fake = createFakeMux();
+    const asset = fake.addAsset({
+      passthrough: PASSTHROUGH,
+      status: "errored",
+      uploadId: "old",
+    });
+    const kv = createMemoryKv();
+    const { forwarded, onRenderEvent } = recorder();
+    const errored = event("video.asset.errored", {
+      errors: { messages: ["bad"], type: "invalid_input" },
+      id: asset.id,
+      passthrough: PASSTHROUGH,
+      status: "errored",
+      upload_id: "old",
+    });
+    expect(
+      await deliver(errored, kv, {
+        isCurrentUpload: () => Promise.resolve(false),
+        mux: fake.mux,
+        onRenderEvent,
+      })
+    ).toEqual({ code: "SUPERSEDED", status: 200 });
+    expect(forwarded).toEqual([]);
+    expect(fake.assets.has(asset.id)).toBe(false);
+  });
+
+  it("answers 503 when the forward succeeded but the marker write failed, and forwards the retry", async () => {
+    const memory = createMemoryKv();
+    let failPut = true;
+    const kv = {
+      ...memory,
+      put: (
+        key: string,
+        value: string,
+        options?: { expirationTtl?: number }
+      ) => {
+        if (failPut) {
+          failPut = false;
+          return Promise.reject(new Error("kv"));
+        }
+        return memory.put(key, value, options);
+      },
+    };
+    const { forwarded, onRenderEvent } = recorder();
+    const ready = assetReady("up-12", "as-12");
+    expect(
+      await deliver(ready, kv as typeof memory, { onRenderEvent })
+    ).toEqual({ code: "UNAVAILABLE", status: 503 });
+    expect(
+      await deliver(ready, kv as typeof memory, { onRenderEvent })
+    ).toEqual({ code: "OK", status: 200 });
+    expect(forwarded).toHaveLength(2);
+  });
+
+  it("asks isCurrentUpload only for asset events", async () => {
     const kv = createMemoryKv();
     const { forwarded, onRenderEvent } = recorder();
     let asked = 0;
@@ -210,21 +269,55 @@ describe("handleMuxWebhook for render-job events", () => {
     expect(forwarded).toHaveLength(1);
   });
 
-  it("swallows a failed delete of a non-current asset", async () => {
+  it("answers 503 without a marker when the delete fails, so Mux retries it", async () => {
     const fake = createFakeMux();
+    const asset = fake.addAsset({ passthrough: PASSTHROUGH, uploadId: "old" });
     const kv = createMemoryKv();
     const broken: Mux = {
       ...fake.mux,
       fetch: () => Promise.reject(new Error("network")),
     };
-    const ready = assetReady("old", "as-9");
+    const ready = assetReady("old", asset.id);
+    const hooks = {
+      isCurrentUpload: () => Promise.resolve(false),
+      onRenderEvent: recorder().onRenderEvent,
+    };
+    expect(await deliver(ready, kv, { ...hooks, mux: broken })).toEqual({
+      code: "UNAVAILABLE",
+      status: 503,
+    });
+    expect(await kv.get(muxEventKey(ready.id))).toBeNull();
+    expect(fake.assets.has(asset.id)).toBe(true);
+    expect(await deliver(ready, kv, { ...hooks, mux: fake.mux })).toEqual({
+      code: "SUPERSEDED",
+      status: 200,
+    });
+    expect(fake.assets.has(asset.id)).toBe(false);
+  });
+
+  it("treats an asset Mux no longer knows as deleted (404)", async () => {
+    const fake = createFakeMux();
+    const kv = createMemoryKv();
     expect(
-      await deliver(ready, kv, {
+      await deliver(assetReady("old", "as-gone"), kv, {
         isCurrentUpload: () => Promise.resolve(false),
-        mux: broken,
+        mux: fake.mux,
         onRenderEvent: recorder().onRenderEvent,
       })
     ).toEqual({ code: "SUPERSEDED", status: 200 });
+  });
+
+  it("logs and keeps a superseded asset when Mux is not configured", async () => {
+    const kv = createMemoryKv();
+    const ready = assetReady("old", "as-10");
+    expect(
+      await deliver(ready, kv, {
+        isCurrentUpload: () => Promise.resolve(false),
+        mux: null,
+        onRenderEvent: recorder().onRenderEvent,
+      })
+    ).toEqual({ code: "SUPERSEDED", status: 200 });
+    expect(await kv.get(muxEventKey(ready.id))).toBe("1");
   });
 
   it("answers 503 when isCurrentUpload throws", async () => {

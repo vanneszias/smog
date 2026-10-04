@@ -65,6 +65,26 @@ describe("enableMasterAccess", () => {
     expect(fake.assets.get(asset.id)?.masterAccess).toBe("temporary");
   });
 
+  it("re-enables a stale flag: temporary without a master, or an errored master", async () => {
+    const fake = createFakeMux();
+    const expired = fake.addAsset({ master: null, masterAccess: "temporary" });
+    const errored = fake.addAsset({
+      master: { status: "errored" },
+      masterAccess: "temporary",
+    });
+    expect(await enableMasterAccess(fake.mux, expired.id)).toBe("enabled");
+    expect(await enableMasterAccess(fake.mux, expired.id)).toBe("already-on");
+    expect(await enableMasterAccess(fake.mux, errored.id)).toBe("enabled");
+    expect(fake.assets.get(errored.id)?.master).toEqual({
+      status: "preparing",
+    });
+    const puts = fake.requests.filter((request) => request.method === "PUT");
+    expect(puts.map((request) => request.path)).toEqual([
+      `/video/v1/assets/${expired.id}/master-access`,
+      `/video/v1/assets/${errored.id}/master-access`,
+    ]);
+  });
+
   it("is missing for an unknown asset and sends no PUT", async () => {
     const fake = createFakeMux();
     expect(await enableMasterAccess(fake.mux, "gone")).toBe("missing");

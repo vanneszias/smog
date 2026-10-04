@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import { firstReachable, renditionUrls } from "./source";
 
 describe("renditionUrls", () => {
@@ -43,6 +43,34 @@ describe("firstReachable", () => {
     expect(await firstReachable([highest, high], missing.fetch)).toBe(high);
     const broken = fakeFetch({ [highest]: new Error("reset"), [high]: 200 });
     expect(await firstReachable([highest, high], broken.fetch)).toBe(high);
+  });
+
+  it("gives up on a request that hangs past the timeout, logging no URL", async () => {
+    const signed =
+      "https://master.mux.com/secret-token/master.mp4?signature=s3cr3t";
+    const hang = (_input: RequestInfo | URL, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () =>
+          reject(init.signal?.reason)
+        );
+      });
+    const warnings: string[] = [];
+    const warn = spyOn(console, "warn").mockImplementation(
+      (...args: unknown[]) => {
+        warnings.push(args.map(String).join(" "));
+      }
+    );
+    try {
+      expect(await firstReachable([signed], hang, { timeoutMs: 20 })).toBe(
+        null
+      );
+    } finally {
+      warn.mockRestore();
+    }
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("master.mp4");
+    expect(warnings[0]).not.toContain("secret-token");
+    expect(warnings[0]).not.toContain("signature");
   });
 
   it("is null when none answers 200", async () => {

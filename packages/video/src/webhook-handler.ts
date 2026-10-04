@@ -17,23 +17,36 @@ export const MUX_WEBHOOK_MAX_BYTES = 1024 * 1024;
 
 export interface MuxWebhookOptions {
   /**
-   * Whether a render job's `asset.ready` may still be (or already was)
-   * committed (phase 7 ruling 9, B-3). The site reads one `render_job`
-   * row: `true` when its `mux_upload_id` is `uploadId` and it is
-   * `queued`, `running` **or `succeeded`**. `false` (superseded by a later
-   * attempt, or the job failed) deletes the asset and forwards nothing.
-   * `succeeded` must count as current: a late or redelivered `asset.ready`
-   * after the commit would otherwise delete the committed video. Asked
-   * only for `asset.ready`; without it every render event is forwarded.
+   * Whether a render job's asset (`asset.ready` or `asset.errored`) may
+   * still be, or already was, committed (phase 7 ruling 9, B-3, as amended
+   * in DECISIONS). The site reads one `render_job` row and answers `true`
+   * when:
+   * - its `mux_upload_id` is `uploadId` and it is `queued`, `running` **or
+   *   `succeeded`** (a late or redelivered event after the commit must
+   *   never delete the committed video); or
+   * - `assetId` is the job's `mux_asset_id` or the sponsorship's
+   *   `video_asset_id` (defence in depth: a committed asset is never
+   *   deleted, whatever the upload ids say).
+   *
+   * `false` (superseded by a later attempt, or the job failed) deletes the
+   * asset and forwards nothing. Not asked for `upload.*` events; without
+   * it every render event is forwarded.
    */
-  isCurrentUpload?: (renderJobId: string, uploadId: string) => Promise<boolean>;
+  isCurrentUpload?: (
+    renderJobId: string,
+    uploadId: string,
+    assetId: string
+  ) => Promise<boolean>;
   kv: MuxKv;
   /**
    * The per-IP rate limit (`checkRateLimit` on `RL_API`); `false` when
    * over it. Mux retries a 429 with backoff for up to 24 h.
    */
   limit: (key: string) => Promise<boolean>;
-  /** Deletes a superseded render's asset; without it the asset is only logged. */
+  /**
+   * Deletes a superseded render's asset; without it (Mux not configured)
+   * the asset is only logged.
+   */
   mux?: Mux | null;
   /** `Date.now()` unless a test pins it. */
   now?: () => number;
@@ -125,36 +138,52 @@ async function record(kv: MuxKv, event: MuxEvent, now: number): Promise<void> {
   }
 }
 
-/** Deletes a superseded render's asset: logged and swallowed (404 is done). */
+/**
+ * Deletes a superseded render's asset. 404 counts as done (`deleteAsset`);
+ * any other failure throws, so the delivery is a 503 without a marker and
+ * Mux retries it (DECISIONS, amending ruling 9's "logged and swallowed").
+ * Without a Mux client there is nothing to retry with: logged and kept.
+ */
 async function dropAsset(
   mux: Mux | null | undefined,
-  assetId: string | undefined
+  assetId: string
 ): Promise<void> {
-  if (!assetId) {
-    return;
-  }
   if (!mux) {
     console.warn(
       `[video] Superseded render asset ${assetId} kept: Mux is not configured`
     );
     return;
   }
-  try {
-    await deleteAsset(mux, assetId);
-    console.log(`[video] Deleted superseded render asset ${assetId}`);
-  } catch (error) {
-    console.error(
-      `[video] Failed to delete superseded render asset ${assetId}:`,
-      error
-    );
+  await deleteAsset(mux, assetId);
+  console.log(`[video] Deleted superseded render asset ${assetId}`);
+}
+
+/**
+ * Whether the event is about an asset that will never be committed (asked
+ * only for `asset.*` events, and only when the site gave the hook).
+ */
+async function isSuperseded(
+  render: RenderMuxEvent,
+  isCurrentUpload: MuxWebhookOptions["isCurrentUpload"]
+): Promise<string | null> {
+  const { assetId } = render;
+  if (!(isCurrentUpload && assetId && render.type.startsWith("asset."))) {
+    return null;
   }
+  const current = await isCurrentUpload(
+    render.renderJobId,
+    render.uploadId,
+    assetId
+  );
+  return current ? null : assetId;
 }
 
 /**
  * A render job's event (phase 7 ruling 9), applied once per event id. A
- * non-current `asset.ready` has its asset deleted and is not forwarded;
- * any other event goes to `onRenderEvent`. The dedupe marker is written
- * only after that succeeded, and a failure is a 503 so Mux retries.
+ * non-current `asset.ready` or `asset.errored` has its asset deleted and
+ * is not forwarded; any other event goes to `onRenderEvent`. The dedupe
+ * marker is written only after that succeeded; any failure (KV, a hook,
+ * the delete) is a 503 so Mux retries.
  */
 async function routeRenderEvent(
   event: MuxEvent,
@@ -178,12 +207,9 @@ async function routeRenderEvent(
       return answer(200, "DUPLICATE");
     }
     let code: "GONE" | "OK" | "SUPERSEDED";
-    if (
-      render.type === "asset.ready" &&
-      isCurrentUpload &&
-      !(await isCurrentUpload(render.renderJobId, render.uploadId))
-    ) {
-      await dropAsset(mux, render.assetId);
+    const superseded = await isSuperseded(render, isCurrentUpload);
+    if (superseded) {
+      await dropAsset(mux, superseded);
       code = "SUPERSEDED";
     } else {
       code = (await onRenderEvent(render)) === "gone" ? "GONE" : "OK";
