@@ -1,5 +1,6 @@
 import { readExportDirectory } from "../src/cli/read-export";
 import type { ExportFiles } from "../src/core/export-schema";
+import { SPONSORSHIP_SECRETS } from "./sponsorship-fixtures";
 
 /** The minimal export fixture (one row per table, phase 8 task 5). */
 export const FIXTURE_DIR = new URL("./fixtures/export", import.meta.url)
@@ -55,4 +56,6 @@ export const FIXTURE_SECRETS = [
   "192.0.2.10",
   "FixtureAgent",
   "user_01FIXTUREADA",
+  // The sponsorship rows (task 8).
+  ...SPONSORSHIP_SECRETS,
 ] as const;

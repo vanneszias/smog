@@ -128,7 +128,7 @@ describe("plan on the minimal fixture", () => {
       gesture_list_items: 1,
       gesture_lists: 1,
       gestures: 1,
-      sponsorships: 1,
+      sponsorships: 12,
       user_consents: 1,
       user_favorites: 1,
       users: 1,
