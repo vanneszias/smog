@@ -138,6 +138,62 @@ describe("applyRenderGate", () => {
     });
   });
 
+  describe("SMOG_DRY_RENDER_MODE (the core lane's gate-on dry run, fix wave C-1)", () => {
+    test("container in staging, with the flag, builds the gate-on config and sets the var", () => {
+      const bindings = renderBindings("staging");
+      expect(
+        applyRenderGate({
+          dryMode: "container",
+          env: "staging",
+          flag: "1",
+          renderMode: "fake",
+        })
+      ).toEqual({
+        add: { workflows: bindings.workflows, ...bindings.container },
+        vars: { RENDER_MODE: "container" },
+      });
+    });
+
+    test("still needs the flag, as a real container build does", () => {
+      expect(
+        applyRenderGate({
+          dryMode: "container",
+          env: "staging",
+          renderMode: "fake",
+        })
+      ).toEqual({ error: RENDER_PIPELINE_FLAG_ERROR });
+    });
+
+    test("an empty value is unset", () => {
+      expect(
+        applyRenderGate({ dryMode: "", env: "staging", renderMode: "fake" })
+      ).toEqual({ add: {} });
+    });
+
+    test("is refused for dev and for any mode but container", () => {
+      expect(
+        applyRenderGate({
+          dryMode: "container",
+          env: "dev",
+          flag: "1",
+          renderMode: "fake",
+        })
+      ).toEqual({
+        error:
+          "[render] SMOG_DRY_RENDER_MODE is for staging and production dry runs only (CLOUDFLARE_ENV=dev)",
+      });
+      expect(
+        applyRenderGate({
+          dryMode: "local",
+          env: "staging",
+          renderMode: "fake",
+        })
+      ).toEqual({
+        error: '[render] SMOG_DRY_RENDER_MODE must be container (got "local")',
+      });
+    });
+  });
+
   describe("SMOG_DEV_RENDER_MODE (dev's local mode)", () => {
     test("local in dev sets the var and adds the binding", () => {
       expect(
