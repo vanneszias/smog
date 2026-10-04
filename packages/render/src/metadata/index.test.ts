@@ -173,4 +173,58 @@ describe("readSourceMetadata", () => {
       expect(failure.message).not.toContain("mux.com");
     }
   });
+
+  it("disposes the input when the signal aborts, and rejects with the abort", async () => {
+    const controller = new AbortController();
+    let release: (duration: number) => void = () => undefined;
+    const input: FakeInput = {
+      ...fakeInput({}),
+      computeDuration: () =>
+        new Promise<number>((resolve) => {
+          release = resolve;
+        }),
+    };
+    input.dispose = () => {
+      input.disposed += 1;
+    };
+    const reading = readSourceMetadata(URL_, {
+      openInput: () => input,
+      signal: controller.signal,
+    });
+    controller.abort();
+    expect(input.disposed).toBeGreaterThanOrEqual(1);
+    release(2);
+    const failure = await reading.then(
+      () => null,
+      (error: unknown) => error
+    );
+    expect(failure).toBeInstanceOf(DOMException);
+    expect((failure as DOMException).name).toBe("AbortError");
+  });
+
+  it("opens nothing for a signal that has already aborted", async () => {
+    const opened: string[] = [];
+    const failure = await readSourceMetadata(URL_, {
+      openInput: (url) => {
+        opened.push(url);
+        return fakeInput({});
+      },
+      signal: AbortSignal.abort(),
+    }).then(
+      () => null,
+      (error: unknown) => error
+    );
+    expect(opened).toEqual([]);
+    expect((failure as DOMException).name).toBe("AbortError");
+  });
+
+  it("reads as before with a signal that never aborts", async () => {
+    const input = fakeInput({ duration: 2 });
+    const metadata = await readSourceMetadata(URL_, {
+      openInput: () => input,
+      signal: new AbortController().signal,
+    });
+    expect(metadata.durationInFrames).toBe(60);
+    expect(input.disposed).toBe(1);
+  });
 });

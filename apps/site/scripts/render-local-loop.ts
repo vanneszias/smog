@@ -24,8 +24,9 @@
  * `RenderSponsorshipVideo` Workflow (source lookup, master access, the
  * polls, the logo, the render, the upload, the Mux webhook, the commit).
  * It waits for `in_review`, checks the committed playback id and the job,
- * reads the uploaded file with mediabunny (H.264 at the source's size and
- * frame count ± 1) and saves it to `packages/render/.render-out/` (or
+ * checks the uploaded file with `@smog/render/testing/video`, the check
+ * `test:render` uses (H.264 at the source's size and frame count ± 1),
+ * and saves it to `packages/render/.render-out/` (or
  * `RENDER_LOOP_OUT_DIR`). Everything it made is removed at the end, and
  * on Ctrl+C or SIGTERM too (exit 130 or 143); its servers run in their
  * own process groups, so the site is still up to remove its fixtures.
@@ -40,11 +41,14 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  checkRenderedVideo,
+  readRenderedVideo,
+} from "@smog/render/testing/video";
+import {
   type FakeMuxServer,
   startFakeMuxServer,
 } from "@smog/video/testing/server";
 import { type Subprocess, sleep, spawn } from "bun";
-import { ALL_FORMATS, BufferSource, Input } from "mediabunny";
 
 const SITE_DIR = fileURLToPath(new URL("..", import.meta.url));
 const RENDER_DIR = fileURLToPath(
@@ -67,7 +71,6 @@ const SOURCE = { frames: 60, height: 640, width: 360 } as const;
 const STARTUP_MS = 4 * 60_000;
 const RENDER_DEADLINE_MS = 10 * 60_000;
 const POLL_MS = 2000;
-const FRAME_TOLERANCE = 1;
 
 /** `Cookie` from `Set-Cookie` headers: each cookie's name and value. */
 export function cookieHeader(setCookies: readonly string[]): string {
@@ -99,63 +102,6 @@ export function renderAssetOf<T extends AssetLike>(
     }
   }
   return null;
-}
-
-export interface RenderedVideo {
-  codec: string | null;
-  frames: number;
-  height: number;
-  width: number;
-}
-
-/** What is wrong with the rendered file against the source (empty: nothing). */
-export function checkRenderedVideo(
-  video: RenderedVideo | null,
-  source: { frames: number; height: number; width: number }
-): string[] {
-  if (!video) {
-    return ["no video track"];
-  }
-  const problems: string[] = [];
-  if (video.codec !== "avc") {
-    problems.push(`codec ${video.codec}, expected avc (H.264)`);
-  }
-  if (video.width !== source.width || video.height !== source.height) {
-    problems.push(
-      `size ${video.width} × ${video.height}, expected ${source.width} × ${source.height}`
-    );
-  }
-  if (Math.abs(video.frames - source.frames) > FRAME_TOLERANCE) {
-    problems.push(
-      `${video.frames} frames, expected ${source.frames} ± ${FRAME_TOLERANCE}`
-    );
-  }
-  return problems;
-}
-
-/** The file's first video track, read with mediabunny (packets = frames). */
-async function readRenderedVideo(
-  bytes: Uint8Array
-): Promise<RenderedVideo | null> {
-  const input = new Input({
-    formats: ALL_FORMATS,
-    source: new BufferSource(bytes),
-  });
-  try {
-    const track = await input.getPrimaryVideoTrack();
-    if (!track) {
-      return null;
-    }
-    const stats = await track.computePacketStats();
-    return {
-      codec: track.codec,
-      frames: stats.packetCount,
-      height: await track.getDisplayHeight(),
-      width: await track.getDisplayWidth(),
-    };
-  } finally {
-    input.dispose();
-  }
 }
 
 function log(message: string): void {

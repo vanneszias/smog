@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./renditions": "./src/renditions.ts",
     "./schema": "./src/schema.ts",
     "./testing": "./src/testing/index.ts",
     "./testing/server": "./src/testing/fake-server.ts"

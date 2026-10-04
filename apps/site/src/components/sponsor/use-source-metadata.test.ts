@@ -1,11 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import type { SourceMetadata } from "@smog/render/metadata";
+import type { SourceMetadata } from "@smog/render/metadata/mp4";
+import { renditionUrls } from "@smog/video/renditions";
 import { renderHook, waitFor } from "@testing-library/react";
-import {
-  forgetSources,
-  renditionUrls,
-  useSourceMetadata,
-} from "./use-source-metadata";
+import { forgetSources, useSourceMetadata } from "./use-source-metadata";
 
 const META: SourceMetadata = {
   durationInFrames: 60,

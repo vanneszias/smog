@@ -33,6 +33,8 @@ import {
 } from "./sponsorships";
 
 const ORIGIN = "http://localhost:5173";
+/** How long the slow render may take to store its upload on the job. */
+const UPLOAD_STORED_WITHIN_MS = 20_000;
 
 function binding(): Workflow {
   if (!env.RENDER_WORKFLOW) {
@@ -214,8 +216,14 @@ describe("RenderSponsorshipVideo (introspected)", () => {
     await starter().start(job);
     // The render is running once its upload is stored on the job: the
     // wait is not reached until the flag releases the renderer.
+    // Bounded (review M-8): a regression fails with its own message, not
+    // with the generic test timeout.
     let uploadId: string | null = null;
+    const deadline = Date.now() + UPLOAD_STORED_WITHIN_MS;
     while (uploadId === null) {
+      if (Date.now() > deadline) {
+        throw new Error("[test] the render step stored no upload");
+      }
       // biome-ignore lint/performance/noAwaitInLoops: polling D1 until the render step stored its upload.
       uploadId = (await renderJobRow(job.renderJobId))?.mux_upload_id ?? null;
       await scheduler.wait(20);

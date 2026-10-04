@@ -36,7 +36,8 @@ export {
   toRenderMuxEvent,
 } from "./render-events";
 export { createRenderUpload, type RenderUploadOptions } from "./render-upload";
-export { firstReachable, renditionUrls } from "./source";
+export { renditionUrls } from "./renditions";
+export { firstReachable } from "./source";
 export {
   type MuxKv,
   type MuxUploadState,

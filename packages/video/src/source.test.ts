@@ -1,5 +1,6 @@
 import { describe, expect, it, spyOn } from "bun:test";
-import { firstReachable, renditionUrls } from "./source";
+import { renditionUrls } from "./renditions";
+import { firstReachable } from "./source";
 
 describe("renditionUrls", () => {
   it("lists highest.mp4, then high.mp4", () => {

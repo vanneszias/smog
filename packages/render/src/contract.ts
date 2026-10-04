@@ -3,7 +3,9 @@
  * ruling 7). It is stored in `render_job.input`, validated when the job is
  * created and again when phase 7's Workflow starts it. Phase 7 may add
  * optional fields; a breaking change bumps `v`. Client safe (no renderer):
- * the wizard's static preview draws the same layout from these constants.
+ * the wizard's steps read its constants, and its preview mounts the
+ * composition itself (`@smog/render/composition` in the Remotion Player),
+ * which draws the layout from them as the render does.
  */
 import { DISPLAY_NAME_MAX } from "@smog/config/constants";
 import { tokens } from "@smog/styles/tokens";

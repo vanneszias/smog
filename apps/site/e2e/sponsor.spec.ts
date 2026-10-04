@@ -211,6 +211,10 @@ async function fillDetails(
 const INTRO = "Met de warme steun van:";
 const PICKER = "Kies het gebaar voor het voorbeeld";
 const HIGHEST_MP4 = /^https:\/\/stream\.mux\.com\/[^/]+\/highest\.mp4(?:#.*)?$/;
+/** The Player's lazy module: Vite's dev source, or the built chunk. */
+const PREVIEW_MODULE =
+  /\/(?:src\/components\/sponsor\/sponsor-preview\.tsx|assets\/sponsor-preview-[^/]+\.js)(?:\?.*)?$/;
+const UNAVAILABLE = "Het voorbeeld kan nu niet getoond worden.";
 
 /** The sponsor preview's frame, named by its gesture. */
 function preview(page: Page, gesture: string) {
@@ -459,6 +463,37 @@ test("an MP4 that does not load: the image fallback, the overlay and the note", 
   await expect(frame.getByText(INTRO)).toBeVisible();
   await expect(frame.getByText("Bakkerij Jansen")).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
+});
+
+test("the Player's module does not load: the poster and a note, and the payment still goes (fix wave I-1)", async ({
+  page,
+}) => {
+  await openWizard(page);
+  // A deploy replaced the hashed chunk, or the connection dropped it.
+  let refused = 0;
+  await page.route(PREVIEW_MODULE, async (route) => {
+    refused += 1;
+    await route.abort();
+  });
+  await choose(page, ["Mama"]);
+  await fillDetails(page);
+  await expect(page.getByText(UNAVAILABLE, { exact: false })).toBeVisible();
+  expect(refused).toBeGreaterThan(0);
+  const frame = preview(page, "Mama");
+  await expect(
+    frame.locator('img[src^="https://image.mux.com/"]')
+  ).toBeVisible();
+  await expect(frame.locator("video")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Afspelen" })).toHaveCount(0);
+  expect(await blockingViolations(page)).toEqual([]);
+  // The review step is whole: the payment goes to the checkout.
+  await payAtMollie(page, "Fail");
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "De betaling is niet gelukt",
+    })
+  ).toBeVisible({ timeout: 30_000 });
 });
 
 test("the review step's preview is accessible at 390 and 1280, light and dark", async ({
@@ -726,11 +761,25 @@ async function stubbedStates(
     gesture: { name: "Broer", slug: "broer" },
     hasLogo: true,
   });
+  // The kept logo, as the route answers it (fix wave I-2): the re-edit
+  // preview shows the logo the render keeps.
+  await page.route("**/api/sponsor/reedit-logo", (route) =>
+    route.fulfill({
+      body: PNG,
+      contentType: "image/png",
+      headers: { "cache-control": "private, no-store" },
+    })
+  );
   await page.goto(`/sponsor/edit?token=${REEDIT_TOKEN}`);
   await expect(
     page.getByRole("heading", { level: 1, name: "Werk je video bij" })
   ).toBeVisible();
+  await previewReady(page);
+  await expect(
+    preview(page, "Broer").locator('img[src^="blob:"]')
+  ).toBeVisible();
   await each("07-edit");
+  await page.unroute("**/api/sponsor/reedit-logo");
   await page.unroute("**/api/rpc/sponsorships/reedit/get**");
   await page.route("**/api/rpc/sponsorships/reedit/get**", (route) =>
     route.fulfill({

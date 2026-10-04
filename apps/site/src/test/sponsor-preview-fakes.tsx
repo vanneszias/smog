@@ -1,7 +1,8 @@
 /**
  * The wizard preview's boundaries, faked for happy-dom (phase 7 task 8):
  * `@remotion/player`'s `Player` (it needs a real browser to play), the
- * source metadata reader (`@smog/render/metadata`, which would fetch Mux)
+ * source metadata reader (`@smog/render/metadata/mp4`, which would fetch
+ * Mux), the poster's size (`readPosterSize`, which would load it)
  * and the overlay font loader (`@smog/render/composition`, happy-dom loads
  * no font). Import this module before the components: `mock.module` is
  * process wide in `bun test`, so every test file that renders the preview
@@ -9,13 +10,14 @@
  * `beforeEach` starts each test clean.
  */
 import { mock } from "bun:test";
-import type { SourceMetadata } from "@smog/render/metadata";
+import type { SourceMetadata } from "@smog/render/metadata/mp4";
 import {
   type ReactNode,
   type Ref,
   useEffect,
   useImperativeHandle,
 } from "react";
+import type { PosterSize } from "../components/sponsor/poster-size";
 
 type Listener = (event: { detail: unknown }) => void;
 
@@ -96,8 +98,15 @@ function FakePlayer(props: FakePlayerProps): ReactNode {
 
 /** The metadata answer per URL: the metadata, or the error it throws. */
 export const sources = new Map<string, SourceMetadata | Error>();
-/** Every URL `readSourceMetadata` was asked to read, in order. */
+/** Every URL `readMp4Metadata` was asked to read, in order. */
 export const reads: string[] = [];
+
+/**
+ * The poster size per URL (the image fallback's composition size), or the
+ * error the read throws, or `"hang"` (it never answers); a URL not set
+ * answers 720 × 960 (3:4).
+ */
+export const posters = new Map<string, PosterSize | Error | "hang">();
 
 export const font: {
   fails: boolean;
@@ -105,6 +114,7 @@ export const font: {
   loaded: boolean;
   loads: number;
   release: () => void;
+  texts: (string | undefined)[];
 } = {
   /** When set, a load rejects. */
   fails: false,
@@ -116,6 +126,8 @@ export const font: {
   loads: 0,
   /** Resolves the pending load (by default it resolves at once). */
   release: (): void => undefined,
+  /** The text each load was for (`undefined`: every subset). */
+  texts: [],
 };
 
 export function resetPreviewFakes(): void {
@@ -127,6 +139,8 @@ export function resetPreviewFakes(): void {
   player.props = null;
   sources.clear();
   reads.length = 0;
+  posters.clear();
+  font.texts = [];
   font.fails = false;
   font.loaded = false;
   font.loads = 0;
@@ -135,13 +149,13 @@ export function resetPreviewFakes(): void {
 }
 
 const composition = await import("@smog/render/composition");
-const metadata = await import("@smog/render/metadata");
+const metadata = await import("@smog/render/metadata/mp4");
 
 mock.module("@remotion/player", () => ({ Player: FakePlayer }));
 
-mock.module("@smog/render/metadata", () => ({
+mock.module("@smog/render/metadata/mp4", () => ({
   ...metadata,
-  readSourceMetadata: (url: string): Promise<SourceMetadata> => {
+  readMp4Metadata: (url: string): Promise<SourceMetadata> => {
     reads.push(url);
     const answer = sources.get(url) ?? new Error("not found");
     return answer instanceof Error
@@ -153,8 +167,9 @@ mock.module("@smog/render/metadata", () => ({
 mock.module("@smog/render/composition", () => ({
   ...composition,
   isOverlayFontLoaded: (): boolean => font.loaded,
-  loadOverlayFont: (): Promise<void> => {
+  loadOverlayFont: (text?: string): Promise<void> => {
     font.loads += 1;
+    font.texts.push(text);
     if (font.fails) {
       return Promise.reject(new Error("font failed"));
     }
@@ -171,5 +186,17 @@ mock.module("@smog/render/composition", () => ({
         resolve();
       };
     });
+  },
+}));
+
+mock.module("../components/sponsor/poster-size", () => ({
+  readPosterSize: (src: string): Promise<PosterSize> => {
+    const answer = posters.get(src) ?? { height: 960, width: 720 };
+    if (answer === "hang") {
+      return new Promise(() => undefined);
+    }
+    return answer instanceof Error
+      ? Promise.reject(answer)
+      : Promise.resolve(answer);
   },
 }));

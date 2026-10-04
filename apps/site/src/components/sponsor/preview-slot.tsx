@@ -3,7 +3,11 @@ import { Button, cn } from "@smog/ui-web";
 import { muxThumbnailUrl } from "@smog/utils";
 import { Pause, Play, SkipForward } from "lucide-react";
 import {
+  Component,
+  type ComponentType,
+  type ErrorInfo,
   type FocusEvent,
+  type LazyExoticComponent,
   lazy,
   type ReactNode,
   Suspense,
@@ -24,6 +28,24 @@ export interface SponsorPreviewProps {
   playbackId: string;
 }
 
+/** The lazy preview module's shape. */
+export interface PreviewModule {
+  SponsorPreview: ComponentType<SponsorPreviewProps>;
+}
+
+export type LazyPreview = LazyExoticComponent<
+  ComponentType<SponsorPreviewProps>
+>;
+
+/** A lazy preview component over a module loader (tests pass their own). */
+export function lazyPreview(load: () => Promise<PreviewModule>): LazyPreview {
+  return lazy(() =>
+    load().then((module) => ({
+      default: module.SponsorPreview,
+    }))
+  );
+}
+
 /**
  * The Remotion Player preview is client-only (phase 7 ruling 8, I-6): Vite
  * replaces `import.meta.env.SSR` per environment, so the Worker build drops
@@ -34,11 +56,7 @@ export interface SponsorPreviewProps {
  */
 const LazySponsorPreview = import.meta.env.SSR
   ? null
-  : lazy(() =>
-      import("./sponsor-preview").then((module) => ({
-        default: module.SponsorPreview,
-      }))
-    );
+  : lazyPreview(() => import("./sponsor-preview"));
 
 const noopSubscribe = (): (() => void) => () => undefined;
 
@@ -145,7 +163,7 @@ export function PreviewFrame({
       )}
       <p
         aria-live="polite"
-        className="text-body-sm text-foreground-muted outline-none"
+        className="rounded-sm text-body-sm text-foreground-muted focus:outline-2 focus:outline-focus-ring focus:outline-offset-2"
         ref={noteRef}
         tabIndex={-1}
       >
@@ -173,24 +191,92 @@ export function PreviewPosterImage({
   );
 }
 
+interface PreviewBoundaryProps {
+  children: ReactNode;
+  fallback: ReactNode;
+}
+
 /**
- * How the sponsored video ends, for one gesture (S-10): the Remotion
- * Player over the gesture's MP4 once the lazy module has loaded, the
- * poster before.
+ * Keeps a preview failure inside the preview (fix wave I-1): the lazy
+ * chunk that does not load (a deploy replaced its hash, a dropped mobile
+ * connection) or an error the Player throws outside the composition (the
+ * composition's own go to its `errorFallback`). Without it the error
+ * reaches the route, and the review step, Turnstile and Pay go with it.
+ * React has no hook for this, hence the class.
  */
-export function SponsorPreviewSlot(props: SponsorPreviewProps): ReactNode {
+class PreviewBoundary extends Component<
+  PreviewBoundaryProps,
+  { failed: boolean }
+> {
+  override state: { failed: boolean } = { failed: false };
+
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
+
+  override componentDidCatch(error: unknown, info: ErrorInfo): void {
+    console.error(
+      "[sponsorPreview] Failed to load the preview:",
+      error,
+      info.componentStack
+    );
+  }
+
+  override render(): ReactNode {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
+export interface PreviewSlotProps extends SponsorPreviewProps {
+  /** The lazy preview; `null` on the server (the poster only). */
+  preview: LazyPreview | null;
+}
+
+/**
+ * The slot over a given lazy preview: the poster until it has loaded, the
+ * poster with the "unavailable" note and no controls when it fails (to
+ * load, or to render). One boundary per gesture, so another gesture
+ * renders afresh after a Player error; a chunk that failed stays failed
+ * for the page (React keeps the lazy import's rejection).
+ */
+export function PreviewSlot({
+  preview: Preview,
+  ...props
+}: PreviewSlotProps): ReactNode {
+  const { t } = useTranslation();
   const mounted = useMounted();
   const poster = (
     <PreviewFrame className={props.className} controls={null} name={props.name}>
       <PreviewPosterImage playbackId={props.playbackId} />
     </PreviewFrame>
   );
-  if (!mounted || LazySponsorPreview === null) {
+  if (!mounted || Preview === null) {
     return poster;
   }
-  return (
-    <Suspense fallback={poster}>
-      <LazySponsorPreview key={props.playbackId} {...props} />
-    </Suspense>
+  const unavailable = (
+    <PreviewFrame
+      className={props.className}
+      controls={false}
+      name={props.name}
+      note={t("sponsor.preview.unavailable")}
+    >
+      <PreviewPosterImage playbackId={props.playbackId} />
+    </PreviewFrame>
   );
+  return (
+    <PreviewBoundary fallback={unavailable} key={props.playbackId}>
+      <Suspense fallback={poster}>
+        <Preview {...props} />
+      </Suspense>
+    </PreviewBoundary>
+  );
+}
+
+/**
+ * How the sponsored video ends, for one gesture (S-10): the Remotion
+ * Player over the gesture's MP4 once the lazy module has loaded, the
+ * poster before, and the poster with a note if it cannot load.
+ */
+export function SponsorPreviewSlot(props: SponsorPreviewProps): ReactNode {
+  return <PreviewSlot {...props} preview={LazySponsorPreview} />;
 }

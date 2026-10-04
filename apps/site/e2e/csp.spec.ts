@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { join } from "node:path";
 import {
   type APIRequestContext,
   expect,
@@ -13,6 +15,7 @@ import {
   waitForApp,
 } from "./helpers";
 import { signInAsAdmin } from "./maintenance";
+import { uploadLogo } from "./sponsorships";
 
 /** The preview's MP4 (Remotion appends a media fragment). */
 const MUX_MP4 = /^https:\/\/stream\.mux\.com\/[^/]+\/highest\.mp4(?:#.*)?$/;
@@ -66,6 +69,9 @@ const NAAM_IN_DE_VIDEO = /^Naam in de video/;
 const LOGO_TOEVOEGEN = /^Logo toevoegen/;
 const VOLLEDIGE_NAAM = /^Volledige naam/;
 const E_MAIL = /^E-mail$/;
+/** The kept-logo test's re-edit link (43 URL-safe characters, as minted). */
+const KEPT_LOGO_TOKEN = "e2eCspKeptLogoTokenForTheCspSpec".padEnd(43, "0");
+const DAY = 86_400_000;
 /** A 1x1 transparent PNG. */
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
@@ -551,6 +557,82 @@ test.describe("CSP (enforced in dev)", () => {
       await page.waitForURL(CHECKOUT_URL);
       // The page that left reported any violation to the console too.
       expect(csp).toEqual([]);
+    });
+
+    test("/sponsor/edit?token= keeps the paid logo: the same-origin read, its headers and the blob: image in the Player (fix wave I-2)", async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      // A real logo in R2 (the public upload's signed fallback), on a
+      // paid sponsorship waiting for its re-edit.
+      await e2eSeed(page.request, [{ op: "resetSponsorships", slugs: [SLUG] }]);
+      const logoKey = await uploadLogo(
+        page,
+        join(import.meta.dirname, "fixtures", "logo.png")
+      );
+      await e2eSeed(page.request, [
+        {
+          displayName: "Logo Bewaard",
+          gestureSlugs: [SLUG],
+          id: "e2e-csp-kept-logo",
+          logo: true,
+          logoKey,
+          op: "sponsorshipCheckout",
+          paymentStatus: "paid",
+          status: "changes_requested",
+          token: {
+            expiresAt: Date.now() + 7 * DAY,
+            hash: createHash("sha256").update(KEPT_LOGO_TOKEN).digest("hex"),
+            purpose: "reedit",
+          },
+        },
+      ]);
+      const csp = await watchCsp(page);
+      await stubMux(page);
+      await stubMuxRenditions(page);
+      const read = page.waitForResponse(
+        (candidate) =>
+          candidate.request().method() === "POST" &&
+          candidate.url().endsWith("/api/sponsor/reedit-logo"),
+        { timeout: 30_000 }
+      );
+      const response = await page.goto(
+        `/sponsor/edit?token=${KEPT_LOGO_TOKEN}`
+      );
+      expect(response?.status()).toBe(200);
+      expect(response?.headers()["content-security-policy"] ?? "").toMatch(
+        NONCE_SOURCE
+      );
+      await waitForApp(page);
+      const logo = await read;
+      expect(logo.status()).toBe(200);
+      expect(logo.headers()["content-type"]).toBe("image/png");
+      expect(logo.headers()["cache-control"]).toBe("private, no-store");
+      expect(logo.headers()["cross-origin-resource-policy"]).toBe(
+        "same-origin"
+      );
+      // The token went in the body, never in the read's URL.
+      expect(logo.url()).not.toContain(KEPT_LOGO_TOKEN);
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Werk je video bij" })
+      ).toBeVisible();
+      const frame = page.getByRole("img", { name: "Voorbeeld voor Paard" });
+      await expect(
+        page.getByRole("button", { name: "Toon het einde" })
+      ).toBeEnabled({ timeout: 30_000 });
+      await expect(frame.getByText("Logo Bewaard")).toBeVisible();
+      // The kept logo, drawn by the composition from an object URL
+      // (`img-src blob:`): the 160 × 160 fixture, decoded.
+      await expect
+        .poll(() =>
+          frame
+            .locator('img[src^="blob:"]')
+            .evaluate((image: HTMLImageElement) => image.naturalWidth)
+        )
+        .toBe(160);
+      await page.waitForLoadState("networkidle");
+      expect(await violations(page, csp)).toEqual([]);
+      await e2eSeed(page.request, [{ op: "resetSponsorships", slugs: [SLUG] }]);
     });
   });
 

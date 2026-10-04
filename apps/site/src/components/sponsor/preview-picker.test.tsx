@@ -53,6 +53,15 @@ describe("PreviewPicker (phase 7 ruling 8)", () => {
     expect(poster?.getAttribute("alt")).toBe("");
   });
 
+  test("a long name wraps onto two lines instead of being cut, and its title holds it whole (M-6)", () => {
+    renderPicker();
+    const label = toggle("Broer").querySelector("span");
+    expect(label?.className).toContain("line-clamp-2");
+    expect(label?.className).toContain("wrap-anywhere");
+    expect(label?.className).not.toContain("truncate");
+    expect(toggle("Broer").getAttribute("title")).toBe("Broer");
+  });
+
   test("a click switches the gesture and keeps the focus on the toggle", () => {
     renderPicker();
     act(() => toggle("Zus").focus());

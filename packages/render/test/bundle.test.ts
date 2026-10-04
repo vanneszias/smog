@@ -19,6 +19,9 @@ const WOFF2 = /\.woff2$/;
 /** The Player's runtime, left to the site's own build. */
 const EXTERNAL = [/^react(\/|$)/, /^react-dom(\/|$)/, /^remotion(\/|$)/];
 const BUNDLE_TIMEOUT_MS = 180_000;
+/** A bundled `mediabunny` demuxer directory (`isobmff`, `matroska`, `ogg`, …). */
+const MEDIABUNNY_DEMUXER =
+  /\/\/#region \S*mediabunny\/dist\/modules\/src\/([a-z0-9-]+)\//g;
 
 const dirs: string[] = [];
 
@@ -109,6 +112,44 @@ describe("the Vite build of ./composition (the Player's side)", () => {
         const name = font.slice(font.lastIndexOf("/") + 1);
         expect(source).toContain(name);
       }
+    },
+    BUNDLE_TIMEOUT_MS
+  );
+});
+
+describe("the Vite build of ./metadata/mp4 (the Player's reader)", () => {
+  it(
+    "bundles the MP4 demuxer only (fix wave M-3)",
+    async () => {
+      const outDir = await tempDir("smog-render-mp4-");
+      await build({
+        build: {
+          emptyOutDir: true,
+          minify: false,
+          outDir,
+          rolldownOptions: {
+            input: join(PACKAGE_DIR, "src/metadata/mp4.ts"),
+            preserveEntrySignatures: "exports-only",
+          },
+        },
+        configFile: false,
+        logLevel: "silent",
+        root: PACKAGE_DIR,
+      });
+      const source = (
+        await Promise.all(
+          (
+            await filesUnder(outDir)
+          )
+            .filter((file) => file.endsWith(".js"))
+            .map((file) => readFile(file, "utf8"))
+        )
+      ).join("\n");
+      // Unminified, each module keeps its `//#region <path>` marker.
+      const demuxers = new Set(
+        [...source.matchAll(MEDIABUNNY_DEMUXER)].map((match) => match[1])
+      );
+      expect([...demuxers]).toEqual(["isobmff"]);
     },
     BUNDLE_TIMEOUT_MS
   );

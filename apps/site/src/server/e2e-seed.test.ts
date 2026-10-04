@@ -219,6 +219,44 @@ describe("the e2e seed endpoint's operations", () => {
     expect(seen.some((entry) => STATUS_UPDATE.test(entry.sql))).toBe(false);
   });
 
+  test("a checkout seed with a token links it to its first sponsorship (the kept-logo e2e)", () => {
+    const { db, seen } = recordingDb();
+    const hash = "b".repeat(64);
+    const statements = seedStatements(db, {
+      displayName: "Logo Bewaard",
+      gestureSlugs: ["paard"],
+      id: "e2e-csp-reedit",
+      logo: true,
+      logoKey: "logos/0b5c9c3e-6d1f-4c39-a7d2-2f7e5d1c9a10",
+      op: "sponsorshipCheckout",
+      paymentStatus: "paid",
+      status: "changes_requested",
+      token: { expiresAt: 1_800_000_000_000, hash, purpose: "reedit" },
+    });
+    // The sponsor, the payment, the gesture's three rows, then the token.
+    expect(statements).toHaveLength(2 + 3 + 1);
+    const token = seen.at(-1);
+    expect(token?.sql).toContain("INSERT INTO sponsorship_token");
+    expect(token?.values).toEqual([
+      "e2e-csp-reedit-0",
+      "e2e-csp-reedit-0",
+      "reedit",
+      hash,
+      1_800_000_000_000,
+    ]);
+    expect(
+      e2eSeedSchema.safeParse({
+        displayName: "x",
+        gestureSlugs: ["paard", "kat"],
+        id: "e2e-two",
+        op: "sponsorshipCheckout",
+        paymentStatus: "paid",
+        status: "changes_requested",
+        token: { expiresAt: 1, hash, purpose: "reedit" },
+      }).success
+    ).toBe(false);
+  });
+
   test("a checkout seed refuses ids, keys and amounts it does not own", () => {
     const base = {
       displayName: "x",

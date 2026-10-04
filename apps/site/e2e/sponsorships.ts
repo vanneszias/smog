@@ -18,11 +18,15 @@ const IN_REVIEW = {
   videoPlaybackId: SAMPLE_PLAYBACK_ID,
 } as const;
 
-/** Stores a logo through the public upload (the signed fallback in dev). */
-async function uploadLogo(page: Page): Promise<string> {
-  const body = await readFile(
-    join(import.meta.dirname, "../public/icon-192.png")
-  );
+/**
+ * Stores a PNG logo through the public upload (the signed fallback in dev)
+ * and answers its key: the site icon, or the PNG at `path`.
+ */
+export async function uploadLogo(
+  page: Page,
+  path = join(import.meta.dirname, "../public/icon-192.png")
+): Promise<string> {
+  const body = await readFile(path);
   const upload = await adminRpc<{
     headers: { "content-type": string };
     key: string;

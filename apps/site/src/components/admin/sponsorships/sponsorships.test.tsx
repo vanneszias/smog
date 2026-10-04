@@ -969,6 +969,19 @@ describe("SponsorshipDetail", () => {
       )
     );
     expect(document.activeElement?.getAttribute("aria-live")).toBe("polite");
+    // Focus visible (WCAG 2.4.7, review M-7): the focused announcement is
+    // on screen with the focus ring, not a visually hidden region.
+    const focused = document.activeElement as HTMLElement;
+    expect(focused.className).not.toContain("sr-only");
+    expect(focused.className).toContain("focus:outline-focus-ring");
+  });
+
+  test("no empty live region on a detail page without a failed render (review M-7)", async () => {
+    await showDetail(detail({}, { status: "in_review" }));
+    const empty = [
+      ...document.querySelectorAll('[role="status"][aria-live="polite"]'),
+    ].filter((element) => (element.textContent ?? "") === "");
+    expect(empty).toHaveLength(0);
   });
 
   test("a refused retry render (another admin was first) shows the reason", async () => {

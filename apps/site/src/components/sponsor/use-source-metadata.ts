@@ -1,25 +1,18 @@
 import {
-  type MetadataInput,
-  readSourceMetadata,
+  readMp4Metadata,
   type SourceMetadata,
-} from "@smog/render/metadata";
-import { ALL_FORMATS, Input, UrlSource } from "mediabunny";
+} from "@smog/render/metadata/mp4";
+import { renditionUrls } from "@smog/video/renditions";
 import { useEffect, useState } from "react";
 
 /**
  * The gesture's source for the wizard's Player (phase 7 ruling 8): Mux's
- * public static renditions, read in the browser with `readSourceMetadata`
- * (`mediabunny`). Only `sponsor-preview.tsx` imports this module, so
- * `mediabunny` stays in the Player's lazy chunk.
+ * public static renditions (`renditionUrls`, the list the render's
+ * fallback source tries too), read in the browser with `readMp4Metadata`
+ * (`mediabunny`, its MP4 demuxer only; fix wave M-3 and M-4). Only
+ * `sponsor-preview.tsx` imports this module, so `mediabunny` stays in the
+ * Player's lazy chunk.
  */
-
-const MUX_STREAM_ORIGIN = "https://stream.mux.com";
-
-/** `highest.mp4`, then `high.mp4` (the render's fallback source tries the same). */
-export function renditionUrls(playbackId: string): string[] {
-  const base = `${MUX_STREAM_ORIGIN}/${encodeURIComponent(playbackId)}`;
-  return [`${base}/highest.mp4`, `${base}/high.mp4`];
-}
 
 export type SourceState =
   | { status: "loading" }
@@ -34,21 +27,12 @@ export type ReadRendition = (
   signal: AbortSignal
 ) => Promise<SourceMetadata>;
 
-/** A `mediabunny` input whose fetches stop when the signal aborts. */
-function openInput(url: string, signal: AbortSignal): MetadataInput {
-  const input = new Input({
-    formats: ALL_FORMATS,
-    // The next rendition, then the image fallback, are the retries.
-    source: new UrlSource(url, { getRetryDelay: () => null }),
-  });
-  signal.addEventListener("abort", () => input.dispose(), { once: true });
-  return input;
-}
-
+/**
+ * The shared reader; an abort disposes its input, so its fetches stop. The
+ * next rendition, then the image fallback, are the retries.
+ */
 const readRendition: ReadRendition = (url, signal) =>
-  readSourceMetadata(url, {
-    openInput: (source) => openInput(source, signal),
-  });
+  readMp4Metadata(url, { signal });
 
 /** What each playback id gave, for the page's life (failures too). */
 const settled = new Map<string, Settled>();

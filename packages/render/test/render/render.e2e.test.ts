@@ -16,7 +16,10 @@
  * line scores about 0 against the magenta fixture. The counts at several
  * ΔE cut-offs are logged. The long-name render uses a logo of about 2 MiB
  * (the size limit). The last frames are saved as PNGs for the parity
- * review (a CI artifact).
+ * review (a CI artifact). A third render uses the 3:4 fixture (the gesture
+ * library's shape, 810 × 1080 scaled down to 360 × 480; fix wave M-5).
+ * The MP4 check is `@smog/render/testing/video`, which the site's local
+ * render loop shares (fix wave M-4).
  */
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { randomUUID } from "node:crypto";
@@ -25,13 +28,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type Subprocess, spawn } from "bun";
-import { ALL_FORMATS, BufferSource, Input } from "mediabunny";
 import {
   RENDER_LOGO_MAX_BYTES,
   RENDER_OVERLAY_LAYOUT,
   type RenderRequest,
   renderResultSchema,
 } from "../../src/contract";
+import {
+  checkRenderedVideo,
+  readRenderedVideo,
+} from "../../src/testing/rendered-video";
 import {
   countNear,
   encodePng,
@@ -47,12 +53,16 @@ import {
 
 const PACKAGE_DIR = fileURLToPath(new URL("../..", import.meta.url));
 const FIXTURE = join(PACKAGE_DIR, "test/fixtures/source-2s.mp4");
+const FIXTURE_3X4 = join(PACKAGE_DIR, "test/fixtures/source-3x4-2s.mp4");
 const OUT_DIR = process.env.RENDER_OUT_DIR || join(PACKAGE_DIR, ".render-out");
 const LOCAL_PORT = Number(process.env.RENDER_TEST_PORT || 3092);
 const STARTUP_MS = 5 * 60_000;
 
 /** The fixture: 2 s at 30 fps, 360 × 640 (`bun -F @smog/render fixture`). */
 const SOURCE = { frames: 60, height: 640, width: 360 } as const;
+/** The 3:4 fixture: the same clip cropped to 360 × 480. */
+const SOURCE_3X4 = { frames: 60, height: 480, width: 360 } as const;
+type Source = typeof SOURCE | typeof SOURCE_3X4;
 /** A 35-character name (`DISPLAY_NAME_MAX`), the longest a sponsor can type. */
 const LONG_NAME = "Bakkerij Van den Broeck & Zonen bv.";
 /** A short name in another script: line 1 keeps its base size. */
@@ -61,14 +71,24 @@ const GREEN = hexToRgb(RENDER_OVERLAY_LAYOUT.text.color);
 const MAX_DELTA_E = 10;
 const MIN_GREEN_SHORT_NAME = 300;
 const MIN_GREEN_LONG_NAME = 100;
+/**
+ * At 3:4 line 1 is 3.8 % of 480 px (18 px, against 24 px at 9:16), with
+ * thinner strokes that chroma subsampling greys more: about 150 measured,
+ * so the long name's floor applies.
+ */
+const MIN_GREEN_SHORT_NAME_3X4 = MIN_GREEN_LONG_NAME;
 const LOGGED_DELTA_E = [6, 8, 10, 12, 15] as const;
 const TRAILING_SLASHES = /\/+$/;
 
 /** Line 1's brand-green pixels, logged at several ΔE cut-offs. */
-function greenInLine1(frame: RgbFrame, label: string): number {
+function greenInLine1(
+  frame: RgbFrame,
+  label: string,
+  size: Source = SOURCE
+): number {
   const { fontSize, y } = RENDER_OVERLAY_LAYOUT.text;
-  const top = Math.floor(y * SOURCE.height);
-  const bottom = Math.ceil((y + 1.2 * fontSize) * SOURCE.height);
+  const top = Math.floor(y * size.height);
+  const bottom = Math.ceil((y + 1.2 * fontSize) * size.height);
   const counts = LOGGED_DELTA_E.map((maxDeltaE) => ({
     count: countNear(frame, GREEN, { bottom, maxDeltaE, top }),
     maxDeltaE,
@@ -128,7 +148,10 @@ beforeAll(async () => {
   expect(logo.byteLength).toBeLessThanOrEqual(RENDER_LOGO_MAX_BYTES);
   expect(logo.byteLength).toBeGreaterThan(RENDER_LOGO_MAX_BYTES * 0.95);
   logoDataUrl = `data:image/png;base64,${Buffer.from(logo).toString("base64")}`;
-  source = serveFiles({ "/source-2s.mp4": FIXTURE });
+  source = serveFiles({
+    "/source-2s.mp4": FIXTURE,
+    "/source-3x4-2s.mp4": FIXTURE_3X4,
+  });
 
   if (process.env.RENDER_SERVER_URL) {
     serverUrl = process.env.RENDER_SERVER_URL.replace(TRAILING_SLASHES, "");
@@ -162,7 +185,11 @@ afterAll(async () => {
 });
 
 async function render(
-  overrides: { displayName: string; logoDataUrl: string | null },
+  overrides: {
+    displayName: string;
+    logoDataUrl: string | null;
+    sourceFile?: string;
+  },
   name: string
 ) {
   const sink = serveUploadSink();
@@ -176,7 +203,7 @@ async function render(
       },
       logoDataUrl: overrides.logoDataUrl,
       renderJobId: randomUUID(),
-      sourceUrl: `${source.url}/source-2s.mp4`,
+      sourceUrl: `${source.url}/${overrides.sourceFile ?? "source-2s.mp4"}`,
       uploadUrl: `${sink.url}/upload/${name}`,
       v: 1,
     };
@@ -227,22 +254,9 @@ describe("a real render", () => {
     }
 
     // The file: H.264, the source's even size, its frame count ± 1.
-    const input = new Input({
-      formats: ALL_FORMATS,
-      source: new BufferSource(upload.body),
-    });
-    try {
-      const track = await input.getPrimaryVideoTrack();
-      expect(track?.codec).toBe("avc");
-      expect(await track?.getDisplayWidth()).toBe(SOURCE.width);
-      expect(await track?.getDisplayHeight()).toBe(SOURCE.height);
-      const stats = await track?.computePacketStats();
-      expect(
-        Math.abs((stats?.packetCount ?? 0) - SOURCE.frames)
-      ).toBeLessThanOrEqual(1);
-    } finally {
-      input.dispose();
-    }
+    expect(
+      checkRenderedVideo(await readRenderedVideo(upload.body), SOURCE)
+    ).toEqual([]);
 
     // The last frame: line 1 is there, shrunk with the long name.
     const still = join(OUT_DIR, "render-last-frame.png");
@@ -267,5 +281,32 @@ describe("a real render", () => {
     expect(greenInLine1(frame, "short name")).toBeGreaterThanOrEqual(
       MIN_GREEN_SHORT_NAME
     );
+  });
+
+  it("renders the 3:4 fixture (the gesture library's shape) at its own size", async () => {
+    const { mp4, result, upload } = await render(
+      {
+        displayName: "Bakkerij Jansen",
+        logoDataUrl: null,
+        sourceFile: "source-3x4-2s.mp4",
+      },
+      "render-3x4"
+    );
+    expect(result).toMatchObject({
+      frames: SOURCE_3X4.frames,
+      height: SOURCE_3X4.height,
+      width: SOURCE_3X4.width,
+    });
+    expect(
+      checkRenderedVideo(await readRenderedVideo(upload.body), SOURCE_3X4)
+    ).toEqual([]);
+    const { frame } = lastFrame(
+      mp4,
+      SOURCE_3X4,
+      join(OUT_DIR, "render-3x4-last-frame.png")
+    );
+    expect(
+      greenInLine1(frame, "3:4 short name", SOURCE_3X4)
+    ).toBeGreaterThanOrEqual(MIN_GREEN_SHORT_NAME_3X4);
   });
 });
