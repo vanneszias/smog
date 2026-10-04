@@ -1975,7 +1975,8 @@
       "failed": {
         "title": "De betaling is niet gelukt",
         "description": "Er werd niets aangerekend en de gebaren zijn weer vrij. Je kunt het opnieuw proberen.",
-        "renewalDescription": "Er werd niets aangerekend en je sponsoring loopt gewoon verder tot de huidige einddatum. Gebruik de link in je e-mail om het opnieuw te proberen."
+        "renewalDescription": "Er werd niets aangerekend en je sponsoring loopt gewoon verder tot {{date}}. Gebruik de link in je e-mail om het opnieuw te proberen.",
+        "renewalDescriptionUndated": "Er werd niets aangerekend en je sponsoring loopt gewoon verder tot de huidige einddatum. Gebruik de link in je e-mail om het opnieuw te proberen."
       },
       "canceled": {
         "title": "De betaling is geannuleerd"

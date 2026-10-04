@@ -8,7 +8,13 @@
  * gestures and the amounts.
  */
 import { ORPCError } from "@orpc/server";
-import { gesture, payment, paymentItem, sponsorship } from "@smog/db";
+import {
+  gesture,
+  type PaymentStatus,
+  payment,
+  paymentItem,
+  sponsorship,
+} from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { enqueueOutputs } from "@smog/jobs";
 import { getPayment } from "@smog/payments";
@@ -18,7 +24,6 @@ import { asc, eq } from "drizzle-orm";
 import type { PaymentStatusView } from "../schema/status";
 import { mollieFor } from "./checkout";
 import { markFanout } from "./fanout-marker";
-
 import type { SponsorshipsDeps, SponsorshipsImplementer } from "./procedure";
 import { settlePayment } from "./settle";
 
@@ -26,6 +31,13 @@ import { settlePayment } from "./settle";
 const STATUS_REFETCH_INTERVAL_MS = 5000;
 /** KV's shortest TTL; the marker's timestamp decides the 5 s. */
 const MARKER_TTL_S = 60;
+
+/** A renewal in these did not go through: the page names the current end. */
+const UNPAID_RENEWAL_STATUSES: ReadonlySet<PaymentStatus> = new Set([
+  "failed",
+  "canceled",
+  "expired",
+]);
 
 function markerKey(paymentId: string): string {
   return `sponsorships:status-refetch:${paymentId}`;
@@ -146,12 +158,19 @@ async function statusView(
   if (!first) {
     throw new ORPCError("NOT_FOUND", { defined: true, status: 404 });
   }
+  const renewalEnd =
+    first.kind === "renewal" && first.endsAt ? first.endsAt.getTime() : null;
   const renewedUntil =
-    first.kind === "renewal" && first.status === "paid" && first.endsAt
-      ? first.endsAt.getTime()
+    renewalEnd !== null && first.status === "paid" ? renewalEnd : undefined;
+  // A renewal that did not go through: the sponsorship runs on until its
+  // current end, which the page names (phase 6 close-out).
+  const endsAt =
+    renewalEnd !== null && UNPAID_RENEWAL_STATUSES.has(first.status)
+      ? renewalEnd
       : undefined;
   return {
     displayName: first.displayName,
+    ...(endsAt === undefined ? {} : { endsAt }),
     items: rows.map((row) => ({
       gestureName: row.gestureName,
       gestureSlug: row.gestureSlug,

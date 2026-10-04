@@ -1975,7 +1975,8 @@
       "failed": {
         "title": "The payment did not go through",
         "description": "Nothing was charged and the gestures are free again. You can try again.",
-        "renewalDescription": "Nothing was charged and your sponsorship keeps running until its current end date. Use the link in your email to try again."
+        "renewalDescription": "Nothing was charged and your sponsorship keeps running until {{date}}. Use the link in your email to try again.",
+        "renewalDescriptionUndated": "Nothing was charged and your sponsorship keeps running until its current end date. Use the link in your email to try again."
       },
       "canceled": {
         "title": "The payment was cancelled"
