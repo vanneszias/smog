@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join, posix } from "node:path";
+import { PRODUCTION_LAUNCH_ORIGIN } from "@smog/config/constants";
 import {
   ENVIRONMENTS,
   type Environment,
@@ -1094,6 +1095,7 @@ const HANDLE_ALL_URLS = "delegate_permission/common.handle_all_urls";
 /** Play's app-signing key, as Play Console shows it (inventory P-20). */
 const SHA256_FINGERPRINT = /^(?:[A-F0-9]{2}:){31}[A-F0-9]{2}$/;
 const INDENTED = /^\s/;
+const APPLINKS_PREFIX = /^applinks:/;
 
 function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
@@ -1266,6 +1268,189 @@ export function checkAppLinks(
   ];
 }
 
+const EAS_FILE = "apps/mobile/eas.json";
+/** Each EAS build profile and the site env whose origin it is built for. */
+const EAS_PROFILES = {
+  development: "dev",
+  production: "production",
+  staging: "staging",
+} as const satisfies Record<string, Environment>;
+/** The only keys a profile's `env` may hold: public, reviewed in git. */
+const EAS_ENV_KEYS = [
+  "EXPO_PUBLIC_API_URL",
+  "EXPO_PUBLIC_ENVIRONMENT",
+  "EXPO_PUBLIC_SITE_HOST",
+];
+
+interface EasProfilesResult {
+  errors: string[];
+  warnings: string[];
+}
+
+function siteUrls(wrangler: string): Partial<Record<Environment, string>> {
+  const config: unknown = Bun.JSONC.parse(wrangler);
+  const envs = isRecord(config) && isRecord(config.env) ? config.env : {};
+  const urls: Partial<Record<Environment, string>> = {};
+  for (const name of ENVIRONMENTS) {
+    const env = envs[name];
+    const vars = isRecord(env) && isRecord(env.vars) ? env.vars : {};
+    if (typeof vars.SITE_URL === "string") {
+      urls[name] = vars.SITE_URL;
+    }
+  }
+  return urls;
+}
+
+function hostOf(origin: string): string | undefined {
+  return URL.canParse(origin) ? new URL(origin).hostname : undefined;
+}
+
+function checkEasProfile(
+  name: keyof typeof EAS_PROFILES,
+  profile: unknown,
+  origin: { label: string; url: string }
+): string[] {
+  if (!isRecord(profile)) {
+    return [`${EAS_FILE}: build.${name} is missing`];
+  }
+  const env = isRecord(profile.env) ? profile.env : {};
+  const at = `${EAS_FILE}: build.${name}.env`;
+  const errors = Object.keys(env)
+    .filter((key) => !EAS_ENV_KEYS.includes(key))
+    .map(
+      (key) =>
+        `${at}.${key} belongs in the EAS environment variables, not in git`
+    );
+  if (env.EXPO_PUBLIC_ENVIRONMENT !== EAS_PROFILES[name]) {
+    errors.push(`${at}.EXPO_PUBLIC_ENVIRONMENT must be ${EAS_PROFILES[name]}`);
+  }
+  if (env.EXPO_PUBLIC_API_URL !== origin.url) {
+    errors.push(
+      `${at}.EXPO_PUBLIC_API_URL must be ${origin.url} (${origin.label})`
+    );
+  }
+  const host = hostOf(origin.url);
+  if (env.EXPO_PUBLIC_SITE_HOST !== host) {
+    errors.push(`${at}.EXPO_PUBLIC_SITE_HOST must be ${host}`);
+  }
+  return errors;
+}
+
+/**
+ * The EAS profiles build for the site's origins (phase 8 ruling 3):
+ * development and staging for their env's `SITE_URL`, production for
+ * `PRODUCTION_LAUNCH_ORIGIN` (a warning while that is not production's
+ * `SITE_URL`, which the domain path allows for a while). `app.config.ts`
+ * falls back to staging's host, and versions are remote whenever a profile
+ * auto-increments (EAS cannot write into a dynamic `app.config.ts`).
+ */
+export function checkEasProfiles({
+  eas,
+  fallbackHost,
+  launchOrigin,
+  wrangler,
+}: {
+  eas: string;
+  fallbackHost: string | undefined;
+  launchOrigin: string;
+  wrangler: string;
+}): EasProfilesResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const parsed = parseJson(eas, EAS_FILE, errors);
+  if (errors.length > 0) {
+    return { errors, warnings };
+  }
+  const urls = siteUrls(wrangler);
+  const build = isRecord(parsed) && isRecord(parsed.build) ? parsed.build : {};
+  const cli = isRecord(parsed) && isRecord(parsed.cli) ? parsed.cli : {};
+  for (const name of Object.keys(EAS_PROFILES) as Array<
+    keyof typeof EAS_PROFILES
+  >) {
+    const env = EAS_PROFILES[name];
+    const origin =
+      name === "production"
+        ? { label: "PRODUCTION_LAUNCH_ORIGIN", url: launchOrigin }
+        : { label: `${env}'s SITE_URL`, url: urls[env] ?? "" };
+    errors.push(...checkEasProfile(name, build[name], origin));
+  }
+  const production = isRecord(build.production) ? build.production : {};
+  if (isRecord(build.production) && production.distribution !== "store") {
+    errors.push(`${EAS_FILE}: build.production.distribution must be "store"`);
+  }
+  if (production.developmentClient === true) {
+    errors.push(
+      `${EAS_FILE}: build.production must not be a developmentClient build`
+    );
+  }
+  for (const [name, profile] of Object.entries(build)) {
+    if (
+      isRecord(profile) &&
+      profile.autoIncrement !== undefined &&
+      profile.autoIncrement !== false &&
+      cli.appVersionSource !== "remote"
+    ) {
+      errors.push(
+        `${EAS_FILE}: cli.appVersionSource must be "remote" while build.${name} has autoIncrement (app.config.ts is dynamic)`
+      );
+    }
+  }
+  const stagingHost = hostOf(urls.staging ?? "");
+  if (fallbackHost !== stagingHost) {
+    errors.push(
+      `${APP_CONFIG}: the fallback host must be staging's host ${stagingHost}, not ${fallbackHost}`
+    );
+  }
+  if (launchOrigin !== urls.production) {
+    warnings.push(
+      `PRODUCTION_LAUNCH_ORIGIN (${launchOrigin}) differs from production's SITE_URL (${urls.production}): the production app is built for another origin than the site deploys to`
+    );
+  }
+  return { errors, warnings };
+}
+
+const EAS_UPDATE_WRAPPER = "../../scripts/eas-update.ts";
+const DIRECT_EAS_UPDATE = /\beas\s+update\b/;
+
+function packageScripts(source: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(source);
+  return isRecord(parsed) && isRecord(parsed.scripts) ? parsed.scripts : {};
+}
+
+/**
+ * `eas update` does not read a build profile's `env`, so an OTA update must
+ * go through `scripts/eas-update.ts`, which loads the profile's origin keys.
+ * No root or mobile script may call `eas update` itself, and the mobile
+ * `update` script is the wrapper.
+ */
+export function checkEasUpdateScripts({
+  mobile,
+  root,
+}: {
+  mobile: string;
+  root: string;
+}): string[] {
+  const direct = (file: string, source: string): string[] =>
+    Object.entries(packageScripts(source))
+      .filter(
+        ([, run]) => typeof run === "string" && DIRECT_EAS_UPDATE.test(run)
+      )
+      .map(
+        ([name]) =>
+          `${file}: script "${name}" calls eas update directly; use scripts/eas-update.ts (bun -F @smog/mobile update -- --profile <profile>)`
+      );
+  const { update } = packageScripts(mobile);
+  return [
+    ...direct("package.json", root),
+    ...direct("apps/mobile/package.json", mobile),
+    ...(typeof update === "string" && update.includes(EAS_UPDATE_WRAPPER)
+      ? []
+      : [
+          `apps/mobile/package.json: script "update" must run ${EAS_UPDATE_WRAPPER}`,
+        ]),
+  ];
+}
+
 /** Evaluates `app.config.ts` the way Expo does (no base config). */
 function loadAppConfig(root: string): unknown {
   const module = require(join(root, APP_CONFIG)) as {
@@ -1277,7 +1462,32 @@ function loadAppConfig(root: string): unknown {
   return module.default({ config: {} });
 }
 
-export function checkReleaseConfig(root: string): string[] {
+/** The host `app.config.ts` links to when no profile sets one. */
+function appConfigFallbackHost(root: string): string | undefined {
+  const saved = process.env.EXPO_PUBLIC_SITE_HOST;
+  delete process.env.EXPO_PUBLIC_SITE_HOST;
+  try {
+    const config = loadAppConfig(root);
+    const ios = isRecord(config) && isRecord(config.ios) ? config.ios : {};
+    const [domain] = asArray(ios.associatedDomains);
+    return typeof domain === "string"
+      ? domain.replace(APPLINKS_PREFIX, "")
+      : undefined;
+  } finally {
+    if (saved !== undefined) {
+      process.env.EXPO_PUBLIC_SITE_HOST = saved;
+    }
+  }
+}
+
+/**
+ * Every release-config error; warnings (which never fail the check) go into
+ * `warnings` when given.
+ */
+export function checkReleaseConfig(
+  root: string,
+  warnings: string[] = []
+): string[] {
   const read = (path: string): string => readFileSync(join(root, path), "utf8");
   const wrangler = read("apps/site/wrangler.jsonc");
   const wranglerErrors = checkWranglerConfig(wrangler);
@@ -1302,6 +1512,13 @@ export function checkReleaseConfig(root: string): string[] {
       );
   const resourceErrors =
     wranglerErrors.length === 0 ? checkWranglerResources(wrangler) : [];
+  const eas = checkEasProfiles({
+    eas: read(EAS_FILE),
+    fallbackHost: appConfigFallbackHost(root),
+    launchOrigin: PRODUCTION_LAUNCH_ORIGIN,
+    wrangler,
+  });
+  warnings.push(...eas.warnings);
   return [
     ...checkCiWorkflow(read(".github/workflows/ci.yml")),
     ...checkRenderLaneBuild(read(".github/workflows/ci.yml")),
@@ -1317,17 +1534,26 @@ export function checkReleaseConfig(root: string): string[] {
       wrangler,
     }),
     ...appLinkErrors,
+    ...eas.errors,
+    ...checkEasUpdateScripts({
+      mobile: read("apps/mobile/package.json"),
+      root: read("package.json"),
+    }),
   ];
 }
 
 if (import.meta.main) {
   const root = process.argv[2] ?? join(import.meta.dir, "..");
   let errors: string[];
+  const warnings: string[] = [];
   try {
-    errors = checkReleaseConfig(root);
+    errors = checkReleaseConfig(root, warnings);
   } catch (error) {
     console.error("[releaseConfig] Failed to read the release config:", error);
     throw error;
+  }
+  for (const warning of warnings) {
+    console.log(`::warning::[releaseConfig] ${warning}`);
   }
   if (errors.length > 0) {
     for (const error of errors) {

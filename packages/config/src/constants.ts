@@ -28,3 +28,14 @@ export const DEFAULT_LOCALE: Locale = "nl";
  * (`consent_event.policy_version`). Bump it with every policy change.
  */
 export const CONSENT_POLICY_VERSION = "2026-09-29";
+
+/**
+ * The origin the production app is built for (`apps/mobile/eas.json`'s
+ * production profile; phase 8 ruling 3). It equals production's `SITE_URL`
+ * on the workers.dev path; on the domain path the owner may move it first,
+ * for an app review on the domain (the cutover runbook).
+ * `scripts/release-config-check.ts` holds the profile to it, and warns while
+ * it differs from `SITE_URL`.
+ */
+export const PRODUCTION_LAUNCH_ORIGIN =
+  "https://smog-site-production.zias.workers.dev";
