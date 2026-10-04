@@ -38,6 +38,10 @@ import {
   type SponsorshipReceivedProps,
   sponsorshipReceived,
 } from "./templates/transactional/sponsorship-received";
+import {
+  type WeMovedProps,
+  weMoved,
+} from "./templates/transactional/we-moved";
 import { type WelcomeProps, welcome } from "./templates/transactional/welcome";
 import type { EmailTemplate } from "./templates/types";
 
@@ -54,6 +58,7 @@ export interface EmailTemplateProps {
   "transactional/renewal-reminder": RenewalReminderProps;
   "transactional/sponsorship-live": SponsorshipLiveProps;
   "transactional/sponsorship-received": SponsorshipReceivedProps;
+  "transactional/we-moved": WeMovedProps;
   "transactional/welcome": WelcomeProps;
 }
 
@@ -73,6 +78,7 @@ const TEMPLATES: {
   "transactional/renewal-reminder": renewalReminder,
   "transactional/sponsorship-live": sponsorshipLive,
   "transactional/sponsorship-received": sponsorshipReceived,
+  "transactional/we-moved": weMoved,
   "transactional/welcome": welcome,
 };
 

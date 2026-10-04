@@ -353,3 +353,98 @@ describe("the admin emails", () => {
     expect(email.text).toContain(sampleRefund.url);
   });
 });
+
+describe("we_moved (E-13, phase 8 ruling 15)", () => {
+  const NEW_ORIGIN = "https://smog-site-production.zias.workers.dev";
+
+  const SUBJECT: Record<Locale, string> = {
+    en: "SMOG has moved",
+    fr: "SMOG a déménagé",
+    nl: "SMOG is verhuisd",
+  };
+  const NEW_ADDRESS: Record<Locale, string> = {
+    en: "SMOG & Co has a new address:",
+    fr: "SMOG & Co a une nouvelle adresse :",
+    nl: "SMOG & Co heeft een nieuw adres:",
+  };
+  /** One phrase per required part: the old password, each way in, the data, the app. */
+  const PARTS: Record<Locale, readonly string[]> = {
+    en: [
+      "Your old password no longer works",
+      "a code we email you",
+      "a sign-in link by email",
+      "Google or Apple",
+      "Forgot your password",
+      "favourite gestures and your lists",
+      "update the app",
+    ],
+    fr: [
+      "Votre ancien mot de passe ne fonctionne plus",
+      "un code que nous vous envoyons",
+      "un lien de connexion par e-mail",
+      "Google ou Apple",
+      "Mot de passe oublié",
+      "gestes favoris et vos listes",
+      "mettez l'application à jour",
+    ],
+    nl: [
+      "Je oude wachtwoord werkt niet meer",
+      "een code die we je mailen",
+      "een aanmeldlink per e-mail",
+      "Google of Apple",
+      "Wachtwoord vergeten",
+      "favoriete gebaren en je lijsten",
+      "Werk de app dan bij",
+    ],
+  };
+
+  it.each(LOCALES)(
+    "says where SMOG now lives when the origin is new (%s)",
+    async (locale) => {
+      const email = await renderEmail(
+        "transactional/we-moved",
+        { url: NEW_ORIGIN },
+        locale
+      );
+      expect(email.subject).toBe(SUBJECT[locale]);
+      const text = plain(email.text);
+      expect(text).toContain(NEW_ADDRESS[locale]);
+      expect(text).toContain("smog-site-production.zias.workers.dev");
+      for (const part of PARTS[locale]) {
+        expect(text).toContain(part);
+      }
+      expect(email.html).toContain(`href="${NEW_ORIGIN}/sign-in"`);
+    }
+  );
+
+  it.each(LOCALES)(
+    "leaves the new-address sentence out on the old origin (%s)",
+    async (locale) => {
+      for (const url of [
+        "https://app.smog.vlaanderen",
+        "https://app.smog.vlaanderen/",
+      ]) {
+        // biome-ignore lint/performance/noAwaitInLoops: two renders, one after the other.
+        const email = await renderEmail(
+          "transactional/we-moved",
+          { url },
+          locale
+        );
+        const text = plain(email.text);
+        expect(text).not.toContain(NEW_ADDRESS[locale]);
+        for (const part of PARTS[locale]) {
+          expect(text).toContain(part);
+        }
+        expect(email.html).toContain(
+          'href="https://app.smog.vlaanderen/sign-in"'
+        );
+      }
+    }
+  );
+
+  it("refuses a url that is not http(s)", async () => {
+    await expect(
+      renderEmail("transactional/we-moved", { url: "javascript:x" }, "nl")
+    ).rejects.toBeInstanceOf(EmailRenderError);
+  });
+});

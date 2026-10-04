@@ -27,6 +27,7 @@ describe("EMAIL_SAMPLES", () => {
       "transactional/renewal-reminder": true,
       "transactional/sponsorship-live": true,
       "transactional/sponsorship-received": true,
+      "transactional/we-moved": true,
       "transactional/welcome": true,
     };
     expect([...EMAIL_TEMPLATE_IDS].sort()).toEqual(

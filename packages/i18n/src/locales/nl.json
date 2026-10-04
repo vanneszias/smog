@@ -632,7 +632,21 @@
         "steps": "Betaal het bedrag terug in het Mollie-dashboard. Staat de terugbetaling daarna niet in het beheer? Registreer ze dan bij de betaling.",
         "button": "Openen in Mollie"
       },
-      "weMoved": {}
+      "weMoved": {
+        "subject": "SMOG is verhuisd",
+        "preheader": "Je account, je favorieten en je lijsten zijn mee verhuisd. Zo meld je je aan.",
+        "heading": "SMOG is verhuisd",
+        "body": "SMOG & Co draait op een nieuw systeem. Je account is mee verhuisd, met je favoriete gebaren en je lijsten.",
+        "newAddress": "SMOG & Co heeft een nieuw adres:",
+        "signInTitle": "Je oude wachtwoord werkt niet meer. Meld je aan met:",
+        "signInCode": "een code die we je mailen",
+        "signInLink": "een aanmeldlink per e-mail",
+        "signInProvider": "Google of Apple, als je daar hetzelfde e-mailadres gebruikt",
+        "signInReset": "of kies ‘Wachtwoord vergeten’ en stel een nieuw wachtwoord in",
+        "app": "Gebruik je de app? Werk de app dan bij naar de nieuwste versie: de oude versie werkt niet meer.",
+        "button": "Aanmelden",
+        "footer": "Je krijgt deze e-mail één keer, omdat je een account hebt bij SMOG & Co."
+      }
     }
   },
   "devTools": {
@@ -1469,7 +1483,8 @@
         "renewalReminder": "Herinnering verlenging",
         "adminNewSponsorship": "Nieuwe sponsoring (beheer)",
         "adminRenderFailed": "Video mislukt (beheer)",
-        "adminRefundNeeded": "Terugbetaling nodig (beheer)"
+        "adminRefundNeeded": "Terugbetaling nodig (beheer)",
+        "weMoved": "We zijn verhuisd"
       },
       "locale": "Taal",
       "width": "Breedte",

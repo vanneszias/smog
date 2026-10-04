@@ -638,7 +638,21 @@
         "steps": "Remboursez le montant dans le tableau de bord Mollie. Si le remboursement n'apparaît pas ensuite dans l'administration, enregistrez-le sur le paiement.",
         "button": "Ouvrir dans Mollie"
       },
-      "weMoved": {}
+      "weMoved": {
+        "subject": "SMOG a déménagé",
+        "preheader": "Votre compte, vos favoris et vos listes ont déménagé avec nous. Voici comment vous connecter.",
+        "heading": "SMOG a déménagé",
+        "body": "SMOG & Co fonctionne désormais sur un nouveau système. Votre compte a déménagé avec nous, avec vos gestes favoris et vos listes.",
+        "newAddress": "SMOG & Co a une nouvelle adresse\u00a0:",
+        "signInTitle": "Votre ancien mot de passe ne fonctionne plus. Connectez-vous avec\u00a0:",
+        "signInCode": "un code que nous vous envoyons par e-mail",
+        "signInLink": "un lien de connexion par e-mail",
+        "signInProvider": "Google ou Apple, si vous y utilisez la même adresse e-mail",
+        "signInReset": "ou choisissez « Mot de passe oublié » et définissez un nouveau mot de passe",
+        "app": "Vous utilisez l'application\u00a0? Alors mettez l'application à jour vers la dernière version\u00a0: l'ancienne version ne fonctionne plus.",
+        "button": "Se connecter",
+        "footer": "Vous recevez cet e-mail une seule fois, parce que vous avez un compte chez SMOG & Co."
+      }
     }
   },
   "devTools": {
@@ -1500,7 +1514,8 @@
         "renewalReminder": "Rappel de renouvellement",
         "adminNewSponsorship": "Nouveau parrainage (admin)",
         "adminRenderFailed": "Échec de la vidéo (admin)",
-        "adminRefundNeeded": "Remboursement nécessaire (admin)"
+        "adminRefundNeeded": "Remboursement nécessaire (admin)",
+        "weMoved": "Nous avons déménagé"
       },
       "locale": "Langue",
       "width": "Largeur",
