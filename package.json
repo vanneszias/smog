@@ -68,8 +68,8 @@
     "release:check:mobile": "bun run mobile:release-check",
     "release:check:tests": "bun run test",
     "retention": "bun scripts/retention.ts",
-    "test": "turbo run test test:scripts",
-    "test:scripts": "bun test ./scripts"
+    "test": "turbo run test test:scripts --log-order=stream",
+    "test:scripts": "bun scripts/test-deadline.ts -- bun test ./scripts"
   },
   "overrides": {
     "undici": "7.29.1"

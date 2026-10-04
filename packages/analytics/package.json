@@ -14,7 +14,7 @@
   },
   "scripts": {
     "check-types": "tsc -b",
-    "test": "bun test ./src/server && bun test --timeout=20000 --preload @smog/config/testing/happy-dom --path-ignore-patterns='src/server/**' src"
+    "test": "bun ../../scripts/test-deadline.ts -- bun test ./src/server && bun ../../scripts/test-deadline.ts -- bun test --timeout=20000 --preload @smog/config/testing/happy-dom --path-ignore-patterns='src/server/**' src"
   },
   "dependencies": {
     "@smog/config": "workspace:*",

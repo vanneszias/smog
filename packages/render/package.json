@@ -15,7 +15,7 @@
     "check-types": "tsc -b && tsc -p tsconfig.server.json",
     "fixture": "bun src/server/fixture.ts",
     "serve": "PORT=3002 RENDER_ENVIRONMENT=dev RENDER_ALLOW_HTTP=1 bun src/server/main.ts",
-    "test": "bun test --path-ignore-patterns='test/render/**'",
+    "test": "bun ../../scripts/test-deadline.ts -- bun test --path-ignore-patterns='test/render/**'",
     "test:render": "bun test ./test/render"
   },
   "dependencies": {
