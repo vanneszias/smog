@@ -9,7 +9,8 @@
  *   is never purged (controller ruling; the runbook lists those assets for
  *   the owner).
  * - `rejectedAtSql`: that, else a migrated row's `legacy` event's
- *   `data.legacy.reviewedAt` (Convex's epoch ms, or an ISO 8601 string),
+ *   `data.legacy.reviewedAt` (Convex's epoch ms as a number or a string
+ *   of digits, or an ISO 8601 string),
  *   else NULL: no bound applies.
  */
 import {
@@ -37,7 +38,7 @@ export function rejectedEventAtSql(id: SQL | string): SQL {
 function legacyReviewedAtSql(id: SQL | string): SQL {
   const data = ref("ev", sponsorshipEvent.data);
   const path = "$.legacy.reviewedAt";
-  return sql`(SELECT CASE json_type(${data}, ${path}) WHEN 'integer' THEN json_extract(${data}, ${path}) WHEN 'real' THEN CAST(json_extract(${data}, ${path}) AS INTEGER) WHEN 'text' THEN CAST(unixepoch(json_extract(${data}, ${path}), 'subsec') * 1000 AS INTEGER) END FROM ${sponsorshipEvent} AS ${EVENT} WHERE ${ref("ev", sponsorshipEvent.sponsorshipId)} = ${id} AND ${ref("ev", sponsorshipEvent.type)} = 'legacy' ORDER BY ${ref("ev", sponsorshipEvent.createdAt)} DESC LIMIT 1)`;
+  return sql`(SELECT CASE json_type(${data}, ${path}) WHEN 'integer' THEN json_extract(${data}, ${path}) WHEN 'real' THEN CAST(json_extract(${data}, ${path}) AS INTEGER) WHEN 'text' THEN CASE WHEN json_extract(${data}, ${path}) GLOB '[0-9]*' AND json_extract(${data}, ${path}) NOT GLOB '*[^0-9]*' THEN CAST(json_extract(${data}, ${path}) AS INTEGER) ELSE CAST(unixepoch(json_extract(${data}, ${path}), 'subsec') * 1000 AS INTEGER) END END FROM ${sponsorshipEvent} AS ${EVENT} WHERE ${ref("ev", sponsorshipEvent.sponsorshipId)} = ${id} AND ${ref("ev", sponsorshipEvent.type)} = 'legacy' ORDER BY ${ref("ev", sponsorshipEvent.createdAt)} DESC LIMIT 1)`;
 }
 
 /** When the sponsorship was rejected (ruling 13's order), epoch ms or NULL. */

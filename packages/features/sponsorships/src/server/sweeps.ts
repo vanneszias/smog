@@ -809,8 +809,19 @@ function rejectedVideoWhere(cutoff: number): SQL {
   ) as SQL;
 }
 
-/** The purge's page: at most `REJECTED_VIDEO_PURGE_PER_RUN` rows. */
-export function rejectedVideoQuery(db: Db, now: Date) {
+/**
+ * A page of the purge, oldest rejection first, without the rows this run
+ * already failed on (`skip`), at most `limit` (`REJECTED_VIDEO_PURGE_PER_RUN`)
+ * rows. The order sorts the eligible rows only (a temporary B-tree, after
+ * the index seek), which stay few: at most the rejections of a night's
+ * backlog.
+ */
+export function rejectedVideoQuery(
+  db: Db,
+  now: Date,
+  skip: readonly string[] = [],
+  limit: number = REJECTED_VIDEO_PURGE_PER_RUN
+) {
   return db
     .select({
       gestureAssetId: gesture.muxAssetId,
@@ -819,8 +830,17 @@ export function rejectedVideoQuery(db: Db, now: Date) {
     })
     .from(sponsorship)
     .innerJoin(gesture, eq(gesture.id, sponsorship.gestureId))
-    .where(rejectedVideoWhere(rejectedVideoCutoff(now)))
-    .limit(REJECTED_VIDEO_PURGE_PER_RUN);
+    .where(
+      and(
+        rejectedVideoWhere(rejectedVideoCutoff(now)),
+        not(inList(sponsorship.id, skip))
+      )
+    )
+    .orderBy(
+      asc(rejectedEventAtSql(ref("sponsorship", sponsorship.id))),
+      asc(sponsorship.id)
+    )
+    .limit(limit);
 }
 
 async function countRejectedVideos(db: Db, now: Date): Promise<number> {
@@ -870,12 +890,13 @@ type RejectedVideoCounts = Pick<
 /**
  * The rejected video's retention (phase 8 ruling 13): for each rejected
  * sponsorship whose `rejected` event is `REJECTED_VIDEO_RETENTION_DAYS`
- * old or more, at most `REJECTED_VIDEO_PURGE_PER_RUN` per run, the Mux
+ * old or more, oldest first, at most `REJECTED_VIDEO_PURGE_PER_RUN` per run, the Mux
  * asset is deleted (`deleteAsset`; 404 counts as done), then
  * `video_asset_id` and `video_playback_id` are cleared in a guarded batch.
  * An asset a gesture or a running sponsorship still uses is not deleted,
  * only unlinked. A Mux failure leaves the row as it is, so the next night
- * retries it. Without a Mux client nothing is deleted. Logs
+ * retries it; this run looks past it (at most twice
+ * `REJECTED_VIDEO_PURGE_PER_RUN` rows tried per run). Without a Mux client nothing is deleted. Logs
  * `[retention] rejected videos { deleted, failed, remaining }`.
  */
 async function purgeRejectedVideos(
@@ -898,18 +919,42 @@ async function purgeRejectedVideos(
     counts.rejectedVideosRemaining = eligible - counts.rejectedVideosDeleted;
     return counts;
   }
-  const rows = await rejectedVideoQuery(db, now);
-  if (rows.length > 0 && !mux) {
-    console.warn(
-      "[sponsorships] The Mux credentials are not set: the rejected videos are kept"
-    );
+  if (!mux) {
+    counts.rejectedVideosRemaining = await countRejectedVideos(db, now);
+    if (counts.rejectedVideosRemaining > 0) {
+      console.warn(
+        "[sponsorships] The Mux credentials are not set: the rejected videos are kept"
+      );
+    }
+    return counts;
   }
-  for (const row of mux ? rows : []) {
-    // biome-ignore lint/performance/noAwaitInLoops: one asset at a time, bounded per run.
-    if (await purgeRejectedVideo(db, mux as Mux, row)) {
-      counts.rejectedVideosDeleted += 1;
-    } else {
-      counts.rejectedVideosFailed += 1;
+  // Pages, oldest rejection first; a row that fails is skipped for the
+  // rest of the run (review M1), so persistent failures cannot stall the
+  // others. At most PER_RUN deleted, and 2 × PER_RUN Mux calls, per run.
+  const skip: string[] = [];
+  for (;;) {
+    const room = Math.min(
+      REJECTED_VIDEO_PURGE_PER_RUN - counts.rejectedVideosDeleted,
+      2 * REJECTED_VIDEO_PURGE_PER_RUN -
+        counts.rejectedVideosDeleted -
+        counts.rejectedVideosFailed
+    );
+    if (room <= 0) {
+      break;
+    }
+    // biome-ignore lint/performance/noAwaitInLoops: each page reads what the last one left.
+    const rows = await rejectedVideoQuery(db, now, skip, room);
+    for (const row of rows) {
+      // biome-ignore lint/performance/noAwaitInLoops: one asset at a time, bounded per run.
+      if (await purgeRejectedVideo(db, mux, row)) {
+        counts.rejectedVideosDeleted += 1;
+      } else {
+        counts.rejectedVideosFailed += 1;
+        skip.push(row.id);
+      }
+    }
+    if (rows.length < room) {
+      break;
     }
   }
   counts.rejectedVideosRemaining = await countRejectedVideos(db, now);

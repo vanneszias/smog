@@ -188,6 +188,34 @@ describe("POST /api/webhooks/mux: render events", () => {
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({ code: "IGNORED" });
       expect((await renderJobRow(job.renderJobId))?.mux_asset_id).toBeNull();
+
+      // With this env's hooks and a Mux client (the route has none in
+      // tests), the asset survives and Mux is never called (review N1).
+      const fake = createFakeMux();
+      const asset = fake.addAsset({
+        passthrough: passthrough(job.renderJobId),
+      });
+      const hooked = await handleMuxWebhook(
+        await signed(
+          assetReady(
+            job.renderJobId,
+            "uploadTheirs",
+            asset.id,
+            passthrough(job.renderJobId)
+          )
+        ),
+        {
+          ...renderWebhookHooks(binding(), db),
+          environment: "dev",
+          kv: createMemoryKv(),
+          limit: () => Promise.resolve(true),
+          mux: fake.mux,
+          secret: MUX_WEBHOOK_TEST_SECRET,
+        }
+      );
+      expect(await hooked.json()).toEqual({ code: "IGNORED" });
+      expect(fake.assets.has(asset.id)).toBe(true);
+      expect(fake.requests).toEqual([]);
     }
   );
 

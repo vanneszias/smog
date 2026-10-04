@@ -163,8 +163,23 @@ describe("requestChanges from rejected is bounded (ruling 13)", () => {
     expect(await statusOf(db, id)).toBe("rejected");
   });
 
-  it("uses a migrated row's legacy reviewedAt when there is no rejected event (epoch ms or ISO)", async () => {
-    const [old, recent, iso] = (await rejected(3)) as [string, string, string];
+  it("uses a migrated row's legacy reviewedAt when there is no rejected event (epoch ms, a numeric string or ISO)", async () => {
+    const [old, recent, iso, digits] = (await rejected(4)) as [
+      string,
+      string,
+      string,
+      string,
+    ];
+    await event(digits, "legacy", daysBefore(400), {
+      legacy: {
+        reviewedAt: String(daysBefore(31).getTime()),
+        status: "rejected",
+      },
+    });
+    expect(await readRejectedAt(db, digits)).toBe(daysBefore(31).getTime());
+    await expect(requestChanges(digits)).rejects.toMatchObject({
+      reason: "rejectedTooLongAgo",
+    });
     await event(old, "legacy", daysBefore(400), {
       legacy: { reviewedAt: daysBefore(31).getTime(), status: "rejected" },
     });
@@ -330,6 +345,121 @@ describe("the rejected video purge (ruling 13, in runRetentionPurge)", () => {
     expect((await sponsorshipRow(db, id)).videoAssetId).toBeNull();
   });
 
+  it("deletes the oldest rejections first", async () => {
+    const ids = await rejected(REJECTED_VIDEO_PURGE_PER_RUN + 2);
+    // Ages 40..61 days, in an order unrelated to the ids.
+    const ages = ids.map((_, i) => 40 + ((i * 7) % ids.length));
+    for (const [i, id] of ids.entries()) {
+      // biome-ignore lint/performance/noAwaitInLoops: fixtures, in order.
+      await event(id, "rejected", daysBefore(ages[i] as number));
+      await withVideo(id);
+    }
+
+    expect((await purge()).rejectedVideosRemaining).toBe(2);
+
+    const kept: number[] = [];
+    for (const id of ids) {
+      // biome-ignore lint/performance/noAwaitInLoops: a few rows.
+      if ((await sponsorshipRow(db, id)).videoAssetId !== null) {
+        kept.push(ages[ids.indexOf(id)] as number);
+      }
+    }
+    // The two youngest rejections wait for the next night.
+    expect(kept.sort((a, b) => a - b)).toEqual([40, 41]);
+  });
+
+  it("looks past videos whose Mux delete fails, so they cannot stall the rest (review M1)", async () => {
+    const ids = await rejected(REJECTED_VIDEO_PURGE_PER_RUN + 1);
+    const failing = new Set<string>();
+    for (const [i, id] of ids.entries()) {
+      // The 20 oldest fail at Mux every time; the youngest does not.
+      // biome-ignore lint/performance/noAwaitInLoops: fixtures, in order.
+      await event(id, "rejected", daysBefore(60 - i));
+      const { assetId } = await withVideo(id);
+      if (i < REJECTED_VIDEO_PURGE_PER_RUN) {
+        failing.add(assetId);
+      }
+    }
+    const youngest = ids.at(-1) as string;
+    const broken = {
+      ...mux.mux,
+      fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+        const path = new URL(String(input)).pathname;
+        const id = decodeURIComponent(path.split("/").pop() ?? "");
+        return init?.method === "DELETE" && failing.has(id)
+          ? Promise.resolve(new Response("nope", { status: 400 }))
+          : mux.fetch(input, init);
+      },
+    };
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const result = await runRetentionPurge({
+      db,
+      kv: undefined,
+      media: undefined,
+      mux: broken,
+      now: NOW,
+    });
+
+    expect(result).toMatchObject({
+      rejectedVideosDeleted: 1,
+      rejectedVideosFailed: REJECTED_VIDEO_PURGE_PER_RUN,
+      rejectedVideosRemaining: REJECTED_VIDEO_PURGE_PER_RUN,
+    });
+    expect((await sponsorshipRow(db, youngest)).videoAssetId).toBeNull();
+  });
+
+  it("a Mux delete that succeeded before the D1 clear failed is finished by the next run (404)", async () => {
+    const [id] = (await rejected()) as [string];
+    await event(id, "rejected", daysBefore(31));
+    const video = await withVideo(id);
+    // The row moves away right after Mux deleted the asset, so the
+    // guarded clear fails this run.
+    const racing = {
+      ...mux.mux,
+      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+        const response = await mux.fetch(input, init);
+        if (init?.method === "DELETE") {
+          await env.DB.prepare(
+            "UPDATE sponsorship SET status = 'changes_requested' WHERE id = ?"
+          )
+            .bind(id)
+            .run();
+        }
+        return response;
+      },
+    };
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const first = await runRetentionPurge({
+      db,
+      kv: undefined,
+      media: undefined,
+      mux: racing,
+      now: NOW,
+    });
+    expect(first).toMatchObject({
+      rejectedVideosDeleted: 0,
+      rejectedVideosFailed: 1,
+    });
+    expect(mux.assets.has(video.assetId)).toBe(false);
+    expect((await sponsorshipRow(db, id)).videoAssetId).toBe(video.assetId);
+
+    // Back to rejected (a fixture): the next run gets a 404 and clears.
+    await env.DB.prepare(
+      "UPDATE sponsorship SET status = 'rejected' WHERE id = ?"
+    )
+      .bind(id)
+      .run();
+    const second = await purge();
+    expect(second).toMatchObject({
+      rejectedVideosDeleted: 1,
+      rejectedVideosFailed: 0,
+      rejectedVideosRemaining: 0,
+    });
+    expect((await sponsorshipRow(db, id)).videoAssetId).toBeNull();
+  });
+
   it("clears the ids of an asset Mux no longer knows (404)", async () => {
     const [id] = (await rejected()) as [string];
     await event(id, "rejected", daysBefore(31));
@@ -393,7 +523,7 @@ describe("the rejected video purge (ruling 13, in runRetentionPurge)", () => {
   });
 
   it("seeks sponsorship_status_ends_at_idx and the event index (query plan)", async () => {
-    const { params, sql } = rejectedVideoQuery(db, NOW).toSQL();
+    const { params, sql } = rejectedVideoQuery(db, NOW, ["skipped"]).toSQL();
     const plan = await env.DB.prepare(`EXPLAIN QUERY PLAN ${sql}`)
       .bind(...params)
       .all<{ detail: string }>();
@@ -412,7 +542,13 @@ describe("the rejected video purge (ruling 13, in runRetentionPurge)", () => {
           d.includes("sponsorship_event_sponsorship_created_idx")
       )
     ).toBe(true);
-    expect(details.some((d) => d.startsWith("SCAN"))).toBe(false);
-    expect(details.some((d) => d.includes("TEMP B-TREE"))).toBe(false);
+    // The only scan is the bound skip list (`json_each`), never a table.
+    expect(
+      details.filter((d) => d.startsWith("SCAN") && !d.includes("json_each"))
+    ).toEqual([]);
+    // Only the oldest-rejection-first order sorts, over the eligible rows.
+    expect(
+      details.filter((d) => d.includes("TEMP B-TREE")).map((d) => d.trim())
+    ).toEqual(["USE TEMP B-TREE FOR ORDER BY"]);
   });
 });
