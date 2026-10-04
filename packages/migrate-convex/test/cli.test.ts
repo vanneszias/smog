@@ -13,14 +13,15 @@ function capture() {
 }
 
 describe("migrate:convex", () => {
-  test("prints the usage for help (exit 0) and with no command (exit 2)", () => {
+  test("prints the usage for help (exit 0) and with no command (exit 2)", async () => {
     for (const [argv, code] of [
       [["help"], 0],
       [["--help"], 0],
       [[], 2],
     ] as const) {
       const { lines, out } = capture();
-      expect(main(argv, out)).toBe(code);
+      // biome-ignore lint/performance/noAwaitInLoops: one case after another, each with its own output.
+      expect(await main(argv, out)).toBe(code);
       expect(lines.log).toEqual([USAGE]);
     }
   });
@@ -37,20 +38,31 @@ describe("migrate:convex", () => {
     }
   });
 
-  test("refuses an unknown command with the usage (exit 2)", () => {
+  test("refuses an unknown command with the usage (exit 2)", async () => {
     const { lines, out } = capture();
-    expect(main(["import"], out)).toBe(2);
+    expect(await main(["import"], out)).toBe(2);
     expect(lines.error[0]).toStartWith(
       "[migrate-convex] Unknown command: import"
     );
   });
 
-  test("says which task builds a command that is not there yet (exit 1)", () => {
-    const { lines, out } = capture();
-    expect(main(["plan", "--export", "x.zip"], out)).toBe(1);
-    expect(lines.error).toEqual([
-      "[migrate-convex] `plan` is not built yet (phase 8 task 5).",
-    ]);
+  test("says which task builds a command that is not there yet (exit 1)", async () => {
+    for (const [command, task] of [
+      ["apply", 10],
+      ["mux", 9],
+      ["we-moved", 9],
+    ] as const) {
+      const { lines, out } = capture();
+      // biome-ignore lint/performance/noAwaitInLoops: one case after another, each with its own output.
+      expect(await main([command, "--env", "dev"], out)).toBe(1);
+      expect(lines.error).toEqual([
+        `[migrate-convex] \`${command}\` is not built yet (phase 8 task ${task}).`,
+      ]);
+    }
+  });
+
+  test("says every path must be absolute", () => {
+    expect(USAGE).toContain("Every path must be absolute");
   });
 
   test("runs as a script", () => {

@@ -1,3 +1,4 @@
+// biome-ignore-all lint/performance/noBarrelFile: the package entry point (`@smog/migrate-convex`): the core's API for the transforms (tasks 7 and 8), the CLI commands (tasks 9 and 10) and the integration suite.
 /**
  * `@smog/migrate-convex` core: the Convex → D1 mapping as pure TypeScript
  * (phase 8 ruling 6). It runs under `bun test` and in workerd, so it uses
@@ -6,7 +7,141 @@
  * `drizzle-orm` (`test/core-rules.test.ts`). Everything that touches the
  * file system, wrangler or a network lives in `src/cli`.
  *
- * The export schemas, ids, pseudonymiser, transforms, report and SQL
- * emitter arrive with phase 8 tasks 5, 7, 8 and 10.
+ * Task 5 built the export schemas, the ids, the pseudonymiser, B1's
+ * gesture video rule, the inputs, the report, the SQL emitter and `plan`;
+ * the transforms arrive with tasks 7 and 8, wired in by task 10.
  */
-export {};
+export {
+  type EmitInput,
+  type Emitted,
+  emitPlan,
+  FILE_BYTES_MAX,
+  FILE_GROUPS,
+  FILE_STATEMENTS_MAX,
+  type FileGroup,
+  FTS_CHUNK,
+  ftsRebuildStatements,
+  type InputHashes,
+  insertRow,
+  type LegacyTable,
+  legacyIdRef,
+  type Manifest,
+  type ManifestFile,
+  mergeResetKeys,
+  type RawSql,
+  RESET_CHUNK,
+  RESET_GROUP,
+  RESET_KEY_COLUMNS,
+  RESET_TABLES,
+  type ResetKeys,
+  type ResetTable,
+  type ResetUser,
+  rawSql,
+  renderManifest,
+  renderSql,
+  resetStatements,
+  type SqlFile,
+  type SqlValue,
+  sqlLiteral,
+  unwritableText,
+} from "./emit";
+export {
+  type AdminLogRow,
+  adminLogSchema,
+  type CategoryRow,
+  CONVEX_SPONSORSHIP_STATUSES,
+  type ConvexExport,
+  type ConvexSponsorshipStatus,
+  categorySchema,
+  EXPORT_SCHEMAS,
+  EXPORT_TABLES,
+  type ExportFiles,
+  type ExportTable,
+  type GestureListItemRow,
+  type GestureListRow,
+  type GestureRow,
+  gestureListItemSchema,
+  gestureListSchema,
+  gestureSchema,
+  type SponsorshipRow,
+  sponsorshipSchema,
+  TABLE_DOMAINS,
+  TABLE_LIST,
+  type UserConsentRow,
+  type UserFavoriteRow,
+  type UserRow,
+  userConsentSchema,
+  userFavoriteSchema,
+  userSchema,
+  type ValidatedExport,
+  validateExport,
+} from "./export-schema";
+export {
+  type GesturePlayback,
+  type GesturePlaybackWarning,
+  type GesturePlaybackWarningCode,
+  type PlaybackGesture,
+  type PlaybackSponsorship,
+  resolveGesturePlayback,
+  resolveGesturePlaybacks,
+} from "./gesture-video";
+export { legacyKey, legacyUuid, legacyUuids } from "./ids";
+export {
+  InputError,
+  type MuxMap,
+  type MuxMapEntry,
+  muxMapEntrySchema,
+  muxMapSchema,
+  type OverlayOverrides,
+  overlayOverridesSchema,
+  parseCsv,
+  parseMuxMap,
+  parseOverlayOverrides,
+  parseWorkosUsers,
+  RENDITION_STATES,
+  type RenditionState,
+  type WorkosUser,
+} from "./inputs";
+export {
+  hashExport,
+  type InputText,
+  type PlanInputs,
+  type PlanOutput,
+  type PlanRequest,
+  plan,
+  TRANSFORMS,
+  type Transform,
+  type TransformContext,
+  type TransformResult,
+} from "./plan";
+export {
+  buildReport,
+  type DetailValue,
+  type ExportSummary,
+  mergeSections,
+  PlanBlocker,
+  REPORT_DOMAINS,
+  type Report,
+  type ReportDomain,
+  type ReportIssue,
+  type ReportSection,
+  renderReportJson,
+  renderReportMarkdown,
+  SEVERITIES,
+  type Severity,
+  section,
+} from "./report";
+export {
+  isTarget,
+  type PseudoNameKind,
+  type Pseudonymiser,
+  pseudoEmail,
+  pseudoName,
+  pseudonymiser,
+  pseudoShareToken,
+  STAGING_EMAIL_DOMAIN,
+  STAGING_TEXT,
+  STAGING_TEXT_KEYS,
+  TARGETS,
+  type Target,
+} from "./target";
