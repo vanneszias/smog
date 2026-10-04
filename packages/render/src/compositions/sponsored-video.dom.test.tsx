@@ -222,9 +222,12 @@ describe("SponsoredVideo in a Thumbnail", () => {
         .map(({ url }) => url)
         .sort()
     );
-    // The frame was held while the font loaded, and released once.
+    // The frame was held while the font loaded, and released once (the
+    // release runs in an effect, so it can land after the text shows).
     expect(delayed.length).toBeGreaterThan(0);
-    expect([...handles.continued].sort()).toEqual([...delayed].sort());
+    await waitFor(() => {
+      expect([...handles.continued].sort()).toEqual([...delayed].sort());
+    });
     expect(handles.cancelled).toEqual([]);
     unmount();
   });
