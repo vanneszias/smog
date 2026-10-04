@@ -5,6 +5,8 @@
  * - `d1 execute DB --json --command <sql>` or `--file <path>`;
  * - `kv key get <key> --text` and `kv key put <key> <value>` on the `KV`
  *   binding;
+ * - `secret list --format json` (names only; `we-moved` reads which
+ *   sign-in providers production has, phase 8 task 9 review);
  * - always `--env <env>`, with `--local` for `dev` and `--remote` for
  *   `staging` and `production`.
  *
@@ -62,6 +64,8 @@ export interface Wrangler {
   /** The value of `key` in `KV`, or null when there is none. */
   kvGet: (key: string) => Promise<string | null>;
   kvPut: (key: string, value: string) => Promise<void>;
+  /** The names of the Worker's secrets (`secret list`; never the values). */
+  secretNames: () => Promise<string[]>;
 }
 
 export class WranglerError extends Error {
@@ -240,8 +244,36 @@ export function createWrangler(
         );
       }
     },
+    async secretNames() {
+      const result = await run([
+        "secret",
+        "list",
+        "--env",
+        env,
+        "--format",
+        "json",
+      ]);
+      if (result.code !== 0) {
+        throw new WranglerError(
+          `wrangler secret list failed on ${env} (exit ${result.code}): ${failureReason(result)}`,
+          result.code
+        );
+      }
+      const parsed = secretListSchema.safeParse(
+        parseWranglerJson(result.stdout)
+      );
+      if (!parsed.success) {
+        throw new WranglerError(
+          `wrangler secret list on ${env} printed JSON of an unexpected shape`,
+          1
+        );
+      }
+      return parsed.data.map((secret) => secret.name).sort();
+    },
   };
 }
+
+const secretListSchema = z.array(z.looseObject({ name: z.string() }));
 
 const SITE_DIR = join(import.meta.dir, "..", "..", "..", "..", "apps", "site");
 
@@ -287,6 +319,8 @@ export interface FakeWranglerOptions {
   readonly d1?: (query: FakeD1Query) => readonly (readonly D1Row[])[];
   /** The KV's initial keys. */
   readonly kv?: Readonly<Record<string, string>>;
+  /** The secret names `secret list` prints. */
+  readonly secrets?: readonly string[];
   /** Printed after stdout, as an update notice would be. */
   readonly trailer?: string;
 }
@@ -376,6 +410,13 @@ export function createFakeWrangler(
     const env = option(args, "--env") ?? "";
     if (!isWranglerEnv(env)) {
       return answer(1, "", "fake: no --env");
+    }
+    if (args[0] === "secret" && args[1] === "list") {
+      const list = (options.secrets ?? []).map((name) => ({
+        name,
+        type: "secret_text",
+      }));
+      return answer(0, wrap(`${JSON.stringify(list, null, 2)}\n`));
     }
     const remote = args.includes("--remote");
     if (remote === args.includes("--local")) {

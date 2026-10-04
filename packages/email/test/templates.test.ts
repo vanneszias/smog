@@ -373,7 +373,6 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
       "Your old password no longer works",
       "a code we email you",
       "a sign-in link by email",
-      "Google or Apple",
       "Forgot your password",
       "favourite gestures and your lists",
       "update the app",
@@ -382,7 +381,6 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
       "Votre ancien mot de passe ne fonctionne plus",
       "un code que nous vous envoyons",
       "un lien de connexion par e-mail",
-      "Google ou Apple",
       "Mot de passe oublié",
       "gestes favoris et vos listes",
       "mettez l'application à jour",
@@ -391,7 +389,6 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
       "Je oude wachtwoord werkt niet meer",
       "een code die we je mailen",
       "een aanmeldlink per e-mail",
-      "Google of Apple",
       "Wachtwoord vergeten",
       "favoriete gebaren en je lijsten",
       "Werk de app dan bij",
@@ -403,7 +400,7 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
     async (locale) => {
       const email = await renderEmail(
         "transactional/we-moved",
-        { url: NEW_ORIGIN },
+        { providers: ["google", "apple"], url: NEW_ORIGIN },
         locale
       );
       expect(email.subject).toBe(SUBJECT[locale]);
@@ -427,7 +424,7 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
         // biome-ignore lint/performance/noAwaitInLoops: two renders, one after the other.
         const email = await renderEmail(
           "transactional/we-moved",
-          { url },
+          { providers: [], url },
           locale
         );
         const text = plain(email.text);
@@ -442,9 +439,36 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
     }
   );
 
+  it.each([
+    [["google", "apple"], "Google of Apple, als", []],
+    [["google"], "Google, als", ["Apple"]],
+    [["apple"], "Apple, als", ["Google"]],
+    [[], null, ["Google", "Apple"]],
+  ] as const)(
+    "names only the configured providers (%j)",
+    async (providers, line, absent) => {
+      const email = await renderEmail(
+        "transactional/we-moved",
+        { providers, url: NEW_ORIGIN },
+        "nl"
+      );
+      const text = plain(email.text);
+      if (line) {
+        expect(text).toContain(line);
+      }
+      for (const name of absent) {
+        expect(text).not.toContain(name);
+      }
+    }
+  );
+
   it("refuses a url that is not http(s)", async () => {
     await expect(
-      renderEmail("transactional/we-moved", { url: "javascript:x" }, "nl")
+      renderEmail(
+        "transactional/we-moved",
+        { providers: [], url: "javascript:x" },
+        "nl"
+      )
     ).rejects.toBeInstanceOf(EmailRenderError);
   });
 });

@@ -227,3 +227,33 @@ describe("the wrangler runner, against the fake", () => {
     ).toBe(1);
   });
 });
+
+describe("secretNames", () => {
+  test("lists the secret names through a banner, sorted", async () => {
+    const fake = createFakeWrangler({
+      banner: "wrangler 4\n",
+      secrets: ["TURNSTILE_SECRET_KEY", "GOOGLE_CLIENT_ID"],
+    });
+    const wrangler = createWrangler("production", fake.run);
+    expect(await wrangler.secretNames()).toEqual([
+      "GOOGLE_CLIENT_ID",
+      "TURNSTILE_SECRET_KEY",
+    ]);
+    expect(fake.calls).toEqual([
+      ["secret", "list", "--env", "production", "--format", "json"],
+    ]);
+  });
+
+  test("names a failing secret list", async () => {
+    const wrangler = createWrangler("production", () =>
+      Promise.resolve({
+        code: 1,
+        stderr: "[ERROR] Authentication error",
+        stdout: "",
+      })
+    );
+    await expect(wrangler.secretNames()).rejects.toThrow(
+      "wrangler secret list failed on production (exit 1): [ERROR] Authentication error"
+    );
+  });
+});

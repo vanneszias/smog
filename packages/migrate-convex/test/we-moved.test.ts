@@ -32,6 +32,18 @@ const TOKEN = "fake-cloudflare-token-value";
 const ACCOUNT = "fake-account-id";
 const QUEUE_ID = "queue-email-production-id";
 const SITE = "https://smog-site-production.example";
+/**
+ * An invented, non-reserved domain: `we-moved` refuses the reserved ones
+ * (`.test`, `.example`, …) as a sign of a staging or fixture import.
+ */
+const MAIL_DOMAIN = "smog-fixture-mail.be";
+const ALL_PROVIDER_SECRETS = [
+  "APPLE_CLIENT_ID",
+  "APPLE_CLIENT_SECRET",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+  "TURNSTILE_SECRET_KEY",
+];
 
 function fakeTimer(): { sleeps: number[]; timer: Timer } {
   let now = Date.parse("2026-10-04T12:00:00.000Z");
@@ -81,7 +93,7 @@ function fakeQueuesApi(options: FakeQueuesOptions = {}) {
     ],
   ];
   const batches: { content_type: string; body: WeMovedMessage }[][] = [];
-  const requests: { method: string; path: string }[] = [];
+  const requests: { method: string; path: string; signal: boolean }[] = [];
   let posts = 0;
   const fetchImpl: WeMovedContext["fetch"] = (input, init) =>
     Promise.resolve(answer(input, init));
@@ -89,7 +101,11 @@ function fakeQueuesApi(options: FakeQueuesOptions = {}) {
     const url = new URL(String(input));
     const method = init?.method ?? "GET";
     const path = url.pathname.replace(new URL(CLOUDFLARE_API).pathname, "");
-    requests.push({ method, path: `${path}${url.search}` });
+    requests.push({
+      method,
+      path: `${path}${url.search}`,
+      signal: init?.signal instanceof AbortSignal,
+    });
     const headers = new Headers(init?.headers);
     if (headers.get("authorization") !== `Bearer ${TOKEN}`) {
       return Response.json(
@@ -142,7 +158,7 @@ function recipients(count: number): Recipient[] {
   return Array.from({ length: count }, (_, index) => {
     const n = String(index).padStart(4, "0");
     return {
-      email: `person.${n}@example.test`,
+      email: `person.${n}@${MAIL_DOMAIN}`,
       id: `user-${n}`,
       locale: LOCALE_CYCLE[index % LOCALE_CYCLE.length] ?? null,
     };
@@ -188,7 +204,8 @@ function setup(
   env: WeMovedContext["env"] = {
     CLOUDFLARE_ACCOUNT_ID: ACCOUNT,
     CLOUDFLARE_API_TOKEN: TOKEN,
-  }
+  },
+  secrets: readonly string[] = ALL_PROVIDER_SECRETS
 ) {
   const wrangler = createFakeWrangler({
     d1: (query) => {
@@ -199,6 +216,7 @@ function setup(
       });
       return [rows];
     },
+    secrets,
   });
   const { sleeps, timer } = fakeTimer();
   const context: WeMovedContext = {
@@ -252,6 +270,77 @@ describe("we-moved refusals", () => {
   });
 });
 
+describe("we-moved recipients (task 9 review)", () => {
+  test("refuses the whole run when any address is a placeholder, naming only the count", async () => {
+    for (const email of [
+      "0b6c6d4e-6c43-4e1c-9a59-8a1b4c0d9e01@staging.invalid",
+      "ada.fixture@example.test",
+      "x@smog.example",
+      "x@example.com",
+      "x@mail.example.org",
+      "x@localhost",
+    ]) {
+      const rows = [
+        ...recipients(2),
+        { email, id: "user-placeholder", locale: null },
+      ];
+      const { context, queues } = setup(rows);
+      const { all, out } = capture();
+      // biome-ignore lint/performance/noAwaitInLoops: one address after the other.
+      await expect(
+        runWeMoved({ ...RUN, apply: true, outDir: dir }, context, out)
+      ).rejects.toThrow("1 of 3 recipient(s) have a placeholder address");
+      expect(queues.requests).toEqual([]);
+      expect(all()).not.toContain(email);
+    }
+  });
+
+  test("reads only users that are not banned", () => {
+    expect(RECIPIENTS_SQL).toBe(
+      "SELECT id, email, locale FROM user WHERE legacy_id IS NOT NULL AND (banned IS NULL OR banned = 0) ORDER BY id"
+    );
+  });
+
+  test("names only the providers production has, and warns about a half-configured one", async () => {
+    const { context, queues } = setup(
+      recipients(1),
+      fakeQueuesApi(),
+      undefined,
+      ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "APPLE_CLIENT_ID"]
+    );
+    const { lines, out } = capture();
+    await runWeMoved({ ...RUN, apply: true, outDir: dir }, context, out);
+    expect(queues.batches.flat()[0]?.body.props).toEqual({
+      providers: ["google"],
+      url: SITE,
+    });
+    expect(lines.log.join("\n")).toContain(
+      "Sign-in providers named in the email: google"
+    );
+    expect(lines.error).toContain(
+      "[migrate-convex] warning: apple has only part of its secrets in production; the email does not name it."
+    );
+  });
+
+  test("names no provider when production has none", async () => {
+    const { context, queues } = setup(
+      recipients(1),
+      fakeQueuesApi(),
+      undefined,
+      []
+    );
+    const { lines, out } = capture();
+    await runWeMoved({ ...RUN, apply: true, outDir: dir }, context, out);
+    expect(queues.batches.flat()[0]?.body.props).toEqual({
+      providers: [],
+      url: SITE,
+    });
+    expect(lines.log.join("\n")).toContain(
+      "Sign-in providers named in the email: none"
+    );
+  });
+});
+
 describe("we-moved dry run", () => {
   test("reads the recipients and the queue id, prints counts and one masked sample, queues nothing", async () => {
     const rows = recipients(3);
@@ -261,7 +350,11 @@ describe("we-moved dry run", () => {
     expect(await runWeMoved({ ...RUN, outDir: dir }, context, out)).toBe(0);
 
     expect(queues.requests).toEqual([
-      { method: "GET", path: `/accounts/${ACCOUNT}/queues?page=1` },
+      {
+        method: "GET",
+        path: `/accounts/${ACCOUNT}/queues?page=1`,
+        signal: true,
+      },
     ]);
     expect(queues.batches).toEqual([]);
     expect(existsSync(join(dir, WE_MOVED_LEDGER))).toBe(false);
@@ -271,7 +364,10 @@ describe("we-moved dry run", () => {
     );
     expect(log).toContain('the "new address" sentence is shown');
     expect(log).toContain("nl subject: SMOG is verhuisd");
-    expect(log).toContain('"to":"p***@e***.test"');
+    expect(log).toContain('"to":"p***@s***.be"');
+    expect(log).toContain(
+      "Sign-in providers named in the email: google, apple"
+    );
     expect(log).toContain('"idempotencyKey":"we_moved:user-0000"');
     expect(log).toContain("Run again with --apply");
     for (const row of rows) {
@@ -329,10 +425,12 @@ describe("we-moved --apply", () => {
       expect(entry.body).toMatchObject({
         idempotencyKey: `we_moved:${rows[index]?.id}`,
         locale: rows[index]?.locale ?? "nl",
-        props: { url: SITE },
+        props: { providers: ["google", "apple"], url: SITE },
         template: "transactional/we-moved",
       });
     }
+    // Every request carries a timeout.
+    expect(queues.requests.every((request) => request.signal)).toBe(true);
     const ledger = JSON.parse(readFileSync(join(dir, WE_MOVED_LEDGER), "utf8"));
     expect(Object.keys(ledger.entries)).toHaveLength(250);
     expect(ledger.entries["user-0000"].messageId).toBe(sent[0]?.body.id);
@@ -438,14 +536,14 @@ describe("batches", () => {
   test("buildMessages maps a missing locale to nl", () => {
     const { messages } = buildMessages(
       [{ email: " a@example.test ", id: "u1", locale: null }],
-      SITE,
+      { providers: ["google"], url: SITE },
       () => "00000000-0000-4000-8000-000000000001"
     );
     expect(messages[0]?.message).toEqual({
       id: "00000000-0000-4000-8000-000000000001",
       idempotencyKey: "we_moved:u1",
       locale: "nl",
-      props: { url: SITE },
+      props: { providers: ["google"], url: SITE },
       template: "transactional/we-moved",
       to: "a@example.test",
     });

@@ -78,6 +78,18 @@ describe("migrate:convex", () => {
       ["mux", "list"],
       ["mux", "scan", "--export", "export.zip", "--out", "/tmp/out"],
       ["mux", "renditions", "--map", "mux-map.json"],
+      ["mux", "renditions", "--map", "/tmp/m.json", "--get-rate", "0"],
+      ["mux", "renditions", "--map", "/tmp/m.json", "--get-rate", "5"],
+      [
+        "mux",
+        "scan",
+        "--export",
+        "/tmp/e",
+        "--out",
+        "/tmp/o",
+        "--get-rate",
+        "x",
+      ],
     ]) {
       const { lines, out } = capture();
       // biome-ignore lint/performance/noAwaitInLoops: one case after another, each with its own output.

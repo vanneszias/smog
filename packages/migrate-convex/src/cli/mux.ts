@@ -25,8 +25,12 @@
  *   `mp4_support` is its own outcome, `legacyMp4Conflict` (DECISIONS):
  *   nothing is changed on that asset, and the owner decides.
  *
- * Both throttle every Mux call to 4 per second and wait out a 429's
- * `Retry-After`. `mux renditions --apply` keeps `renditions-ledger.json`
+ * Both throttle Mux's two rate-limit buckets apart (task 9 review): POSTs
+ * at most 1 per second (the POST bucket's refill), GETs at `--get-rate`
+ * per second (2 by default; a low-priority token refills only 1 per
+ * second, a high-priority one 5), and wait out a 429's `Retry-After`. The
+ * owner runs them with a **low-priority** Mux token, so they never drain
+ * the buckets the live site's uploads use. `mux renditions --apply` keeps `renditions-ledger.json`
  * beside the map: an asset whose rendition was requested is not looked at
  * again, so an interrupted run resumes. `MUX_TOKEN_ID` and
  * `MUX_TOKEN_SECRET` come from the process env and are never printed;
@@ -60,8 +64,11 @@ import {
   throttled,
 } from "./remote";
 
-/** Mux calls per second (ruling 5). */
-const MUX_CALLS_PER_SECOND = 4;
+/** Mux POSTs per second: the POST bucket refills at 1 per second. */
+const MUX_POSTS_PER_SECOND = 1;
+/** Mux GETs per second by default (`--get-rate`; ruling 5 allows at most 4). */
+export const MUX_GET_RATE_DEFAULT = 2;
+export const MUX_GET_RATE_MAX = 4;
 
 /** What a playback id is to the export (see the module comment). */
 const MUX_ROLES = [
@@ -81,6 +88,8 @@ export interface MuxOutput {
 export interface MuxContext {
   readonly env: ProcessEnv;
   readonly fetch: MuxFetch;
+  /** GETs per second (`--get-rate`); `MUX_GET_RATE_DEFAULT` when absent. */
+  readonly getRate?: number;
   readonly timer: Timer;
 }
 
@@ -114,15 +123,28 @@ function muxRateLimit(error: unknown): RateLimited | null {
     : null;
 }
 
-/** A Mux call through the throttle, waiting out 429s. */
+/** A Mux call through its bucket's throttle, waiting out 429s. */
 type MuxCall = <T>(call: () => Promise<T>) => Promise<T>;
 
-function muxCaller(context: MuxContext, out: MuxOutput): MuxCall {
-  const throttle = new Throttle(MUX_CALLS_PER_SECOND, context.timer);
-  return (call) =>
-    throttled(throttle, context.timer, muxRateLimit, call, (seconds) =>
-      out.log(`${PREFIX} Mux answered 429; waiting ${seconds} s.`)
-    );
+/** One throttle per Mux rate-limit bucket. */
+interface MuxCalls {
+  readonly get: MuxCall;
+  readonly post: MuxCall;
+}
+
+function muxCaller(context: MuxContext, out: MuxOutput): MuxCalls {
+  const through =
+    (throttle: Throttle): MuxCall =>
+    (call) =>
+      throttled(throttle, context.timer, muxRateLimit, call, (seconds) =>
+        out.log(`${PREFIX} Mux answered 429; waiting ${seconds} s.`)
+      );
+  return {
+    get: through(
+      new Throttle(context.getRate ?? MUX_GET_RATE_DEFAULT, context.timer)
+    ),
+    post: through(new Throttle(MUX_POSTS_PER_SECOND, context.timer)),
+  };
 }
 
 // --- mux scan ---------------------------------------------------------------
@@ -204,9 +226,10 @@ function zeroRoles(): Record<MuxRole, number> {
 async function scanMux(
   data: Pick<ConvexExport, "gestures" | "sponsorships">,
   mux: Mux,
-  call: MuxCall,
+  calls: MuxCalls,
   out: MuxOutput
 ): Promise<ScanResult> {
+  const call = calls.get;
   const ids = exportPlaybackIds(data);
   const entries = new Map<string, ScanEntry | null>();
   const foundByRole = zeroRoles();
@@ -388,7 +411,7 @@ interface RenditionsResult {
 
 interface RenditionStep {
   readonly at: () => string;
-  readonly call: MuxCall;
+  readonly calls: MuxCalls;
   readonly ledger: Ledger<RenditionLedgerEntry>;
   readonly mux: Mux;
 }
@@ -399,8 +422,8 @@ async function renditionFor(
   apply: boolean,
   step: RenditionStep
 ): Promise<{ detail?: string; outcome: RenditionOutcome }> {
-  const { call, ledger, mux } = step;
-  const asset = await call(() => getAsset(mux, assetId));
+  const { calls, ledger, mux } = step;
+  const asset = await calls.get(() => getAsset(mux, assetId));
   if (!asset) {
     return { outcome: "missing" };
   }
@@ -418,7 +441,7 @@ async function renditionFor(
   }
   let entry: RenditionLedgerEntry;
   try {
-    const file = await call(() =>
+    const file = await calls.post(() =>
       enableStaticRendition(mux, assetId, "highest")
     );
     if (!file) {
@@ -460,7 +483,7 @@ async function renditionFor(
 async function muxRenditions(
   options: MuxRenditionsOptions,
   mux: Mux,
-  call: MuxCall,
+  calls: MuxCalls,
   timer: Timer
 ): Promise<RenditionsResult> {
   const targets = renditionTargets(options.mapText);
@@ -474,7 +497,7 @@ async function muxRenditions(
   const ids: Partial<Record<RenditionOutcome, string[]>> = {};
   const step: RenditionStep = {
     at: () => new Date(timer.now()).toISOString(),
-    call,
+    calls,
     ledger,
     mux,
   };

@@ -15,7 +15,12 @@ import { validateExport } from "../core/export-schema";
 import { InputError } from "../core/inputs";
 import { plan } from "../core/plan";
 import { isTarget, type Target } from "../core/target";
-import { runMuxRenditions, runMuxScan } from "./mux";
+import {
+  MUX_GET_RATE_DEFAULT,
+  MUX_GET_RATE_MAX,
+  runMuxRenditions,
+  runMuxScan,
+} from "./mux";
 import { readExport } from "./read-export";
 import { type ProcessEnv, realTimer, type Timer } from "./remote";
 import { runWeMoved } from "./we-moved";
@@ -36,15 +41,16 @@ Commands:
       it to get byte-identical plans from the same inputs.
   apply --env <dev|staging|production> --out <dir> [--dry-run] [--yes] [--reset]
       Preflight, then apply a plan to D1 (production needs --yes).
-  mux scan --export <zip|dir> --out <dir>
+  mux scan --export <zip|dir> --out <dir> [--get-rate <n>]
       Look up every playback id of the export in Mux (read-only) and write
       mux-map.json (plan's --mux-map) and mux-scan.json to --out.
-      Needs MUX_TOKEN_ID and MUX_TOKEN_SECRET (production's Mux environment).
-  mux renditions --map <mux-map.json> [--apply]
+  mux renditions --map <mux-map.json> [--apply] [--get-rate <n>]
       Request a \`highest\` static rendition on each gesture asset of the map
       that has none (billable; dry without --apply). Ledger:
-      renditions-ledger.json beside the map. Needs MUX_TOKEN_ID and
-      MUX_TOKEN_SECRET.
+      renditions-ledger.json beside the map.
+      Both need MUX_TOKEN_ID and MUX_TOKEN_SECRET: a LOW-PRIORITY token of
+      production's Mux environment. POSTs go at most 1 per second; GETs at
+      --get-rate per second (default 2, at most 4).
   we-moved --out <dir> --env production [--apply]
       Queue the one-time "we moved" email to every migrated account
       (production only, for a production plan; dry without --apply).
@@ -218,25 +224,46 @@ const planCommand: Command = async (argv, out) => {
   return 0;
 };
 
+/** `--get-rate`: Mux GETs per second, above 0 and at most `MUX_GET_RATE_MAX`. */
+function getRate(options: ParsedOptions): number {
+  const text = options.values.get("--get-rate");
+  if (text === undefined) {
+    return MUX_GET_RATE_DEFAULT;
+  }
+  const rate = Number(text);
+  if (!Number.isFinite(rate) || rate <= 0 || rate > MUX_GET_RATE_MAX) {
+    throw new UsageError(
+      `--get-rate must be a number above 0 and at most ${MUX_GET_RATE_MAX}`
+    );
+  }
+  return rate;
+}
+
 const muxCommand: Command = async (argv, out, context) => {
   const [sub, ...rest] = argv;
   if (sub === "scan") {
-    const options = parseOptions(rest, ["--export", "--out"], []);
+    const options = parseOptions(rest, ["--export", "--out", "--get-rate"], []);
     const exportPath = absolutePath(options, "--export", true);
     const outDir = absolutePath(options, "--out", true);
+    const rate = getRate(options);
     const { data } = validateExport(await readExport(exportPath));
-    return await runMuxScan({ data, outDir }, context, out);
+    return await runMuxScan(
+      { data, outDir },
+      { ...context, getRate: rate },
+      out
+    );
   }
   if (sub === "renditions") {
-    const options = parseOptions(rest, ["--map"], ["--apply"]);
+    const options = parseOptions(rest, ["--map", "--get-rate"], ["--apply"]);
     const mapPath = absolutePath(options, "--map", true);
+    const rate = getRate(options);
     return await runMuxRenditions(
       {
         apply: options.flags.has("--apply"),
         mapPath,
         mapText: readFileSync(mapPath, "utf8"),
       },
-      context,
+      { ...context, getRate: rate },
       out
     );
   }

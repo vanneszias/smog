@@ -152,7 +152,10 @@ describe("processEmailMessage", () => {
       id: crypto.randomUUID(),
       idempotencyKey: `we_moved:${crypto.randomUUID()}`,
       locale: "fr",
-      props: { url: "https://smog-site-production.zias.workers.dev" },
+      props: {
+        providers: ["google"],
+        url: "https://smog-site-production.zias.workers.dev",
+      },
       template: "transactional/we-moved",
       to: "alex@smog.example",
     };

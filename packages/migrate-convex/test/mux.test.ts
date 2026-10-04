@@ -223,7 +223,7 @@ describe("mux scan", () => {
     ).toBe(true);
   });
 
-  test("throttles to 4 calls per second and waits out a 429's Retry-After", async () => {
+  test("throttles GETs to 2 per second by default and waits out a 429's Retry-After", async () => {
     addAsset({ playbackId: "orig-1" });
     server.fake.failNext(429, { "retry-after": "7" });
     const { sleeps, timer } = fakeTimer();
@@ -232,10 +232,11 @@ describe("mux scan", () => {
     await runMuxScan({ data: EXPORT, outDir: dir }, context(timer), out);
 
     expect(sleeps).toContain(7000);
-    // Every other wait is the throttle's 250 ms gap.
-    expect(sleeps.filter((ms) => ms !== 7000).every((ms) => ms <= 250)).toBe(
-      true
-    );
+    // Every other wait is at most the GET throttle's 500 ms gap.
+    const gaps = sleeps.filter((ms) => ms !== 7000);
+    expect(gaps.length).toBeGreaterThan(0);
+    expect(gaps.every((ms) => ms <= 500)).toBe(true);
+    expect(gaps).toContain(500);
     // 4 lookups and 1 asset GET (1 found), plus the retried call.
     expect(server.fake.requests).toHaveLength(6);
     expect(lines.log).toContain(
@@ -498,6 +499,74 @@ describe("mux renditions", () => {
     expect(posts()).toEqual([
       `/video/v1/assets/${absent.id}/static-renditions`,
     ]);
+  });
+});
+
+describe("the rate-limit buckets (task 9 review)", () => {
+  /** The virtual time of each request, by method. */
+  function timed(timer: Timer): {
+    fetch: MuxContext["fetch"];
+    times: { method: string; at: number }[];
+  } {
+    const times: { method: string; at: number }[] = [];
+    return {
+      fetch: (input, init) => {
+        times.push({ at: timer.now(), method: init?.method ?? "GET" });
+        return fetch(input, init);
+      },
+      times,
+    };
+  }
+
+  test("--apply posts at most once per second, apart from the GETs", async () => {
+    const assets = [1, 2, 3].map((n) => addAsset({ playbackId: `p-${n}` }));
+    const mapPath = join(dir, "mux-map.json");
+    const mapText = JSON.stringify(
+      Object.fromEntries(
+        assets.map((asset, n) => [
+          `p-${n}`,
+          { assetId: asset.id, roles: ["gesture"] },
+        ])
+      )
+    );
+    const { timer } = fakeTimer();
+    const { fetch: timedFetch, times } = timed(timer);
+
+    await runMuxRenditions(
+      { apply: true, mapPath, mapText },
+      context(timer, timedFetch),
+      capture().out
+    );
+
+    const posts = times.filter((entry) => entry.method === "POST");
+    const gets = times.filter((entry) => entry.method === "GET");
+    expect(posts).toHaveLength(3);
+    for (const [index, entry] of posts.entries()) {
+      if (index > 0) {
+        expect(entry.at - (posts[index - 1]?.at ?? 0)).toBeGreaterThanOrEqual(
+          1000
+        );
+      }
+    }
+    for (const [index, entry] of gets.entries()) {
+      if (index > 0) {
+        expect(entry.at - (gets[index - 1]?.at ?? 0)).toBeGreaterThanOrEqual(
+          500
+        );
+      }
+    }
+  });
+
+  test("--get-rate sets the GET pace", async () => {
+    addAsset({ playbackId: "orig-1" });
+    const { sleeps, timer } = fakeTimer();
+    await main(
+      ["mux", "scan", "--export", FIXTURE_DIR, "--out", dir, "--get-rate", "1"],
+      capture().out,
+      context(timer)
+    );
+    expect(sleeps).toContain(1000);
+    expect(sleeps.every((ms) => ms <= 1000)).toBe(true);
   });
 });
 

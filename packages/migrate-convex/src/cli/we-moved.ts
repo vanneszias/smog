@@ -7,7 +7,15 @@
  *   folder whose `manifest.json` was not made for `production` (B2).
  * - **Recipients** are read from production's D1 at send time through
  *   the importer's wrangler runner: `SELECT id, email, locale FROM user
- *   WHERE legacy_id IS NOT NULL`.
+ *   WHERE legacy_id IS NOT NULL`, without banned users (task 9 review).
+ *   One placeholder address among them (`.invalid`, `.test`, `.example`,
+ *   `.localhost`, `example.com|org|net`: a staging or fixture import)
+ *   refuses the whole run before anything is sent; only the count is
+ *   printed.
+ * - **The sign-in line** names Google and Apple only when production has
+ *   them: their secrets, read with `wrangler secret list` (names only),
+ *   enabled as `@smog/auth` enables them (both halves of a pair). The dry
+ *   run prints the result for the owner to confirm.
  * - **The send** goes through the Cloudflare Queues HTTP API to the
  *   production email queue (`env.production`'s `EMAIL_QUEUE` producer in
  *   `apps/site/wrangler.jsonc`), whose id comes from `GET
@@ -15,8 +23,11 @@
  *   is an `emailMessageSchema` message (`transactional/we-moved`, the
  *   user's locale, `props.url` = production's `SITE_URL`,
  *   `idempotencyKey: we_moved:<userId>`), sent with `content_type:
- *   "json"`, in batches of at most 100 messages and 256 KB. The email
- *   consumer renders and sends it like any other.
+ *   "json"`, in batches of at most 100 messages and 256 KB, each request
+ *   aborted after 30 s. A batch that timed out may still have been
+ *   accepted: it is not in the ledger, so a re-run sends it again and the
+ *   consumer's `email:sent:<key>` drops the repeats. The email consumer
+ *   renders and sends it like any other.
  * - **Dry by default.** Without `--apply` it reads the recipients and the
  *   queue id, and prints the counts, the batches and one sample with the
  *   address masked. With it, `we-moved-ledger.json` in the plan folder
@@ -29,7 +40,12 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { emailLocale, renderEmail, WE_MOVED_OLD_ORIGIN } from "@smog/email";
+import {
+  emailLocale,
+  renderEmail,
+  WE_MOVED_OLD_ORIGIN,
+  type WeMovedProvider,
+} from "@smog/email";
 import {
   EMAIL_MESSAGE_MAX_BYTES,
   emailMessageSchema,
@@ -51,7 +67,43 @@ import type { Wrangler } from "./wrangler";
 const WE_MOVED_TEMPLATE = "transactional/we-moved";
 export const WE_MOVED_LEDGER = "we-moved-ledger.json";
 export const RECIPIENTS_SQL =
-  "SELECT id, email, locale FROM user WHERE legacy_id IS NOT NULL ORDER BY id";
+  "SELECT id, email, locale FROM user WHERE legacy_id IS NOT NULL AND (banned IS NULL OR banned = 0) ORDER BY id";
+
+/** How long one Cloudflare API request may take. */
+export const CLOUDFLARE_REQUEST_TIMEOUT_MS = 30_000;
+
+/** Reserved and fixture domains (RFC 2606, RFC 6761): never a real recipient. */
+const PLACEHOLDER_DOMAIN =
+  /(^|\.)(invalid|test|example|localhost)$|(^|\.)example\.(com|org|net)$/;
+
+/** Whether `email`'s domain is a placeholder (`@staging.invalid`, `@example.test`, …). */
+export function isPlaceholderAddress(email: string): boolean {
+  const domain = email.trim().toLowerCase().split("@").at(-1) ?? "";
+  return PLACEHOLDER_DOMAIN.test(domain);
+}
+
+/** The providers production enables, from its secret names, as `@smog/auth` does. */
+export function enabledProviders(secretNames: readonly string[]): {
+  partial: string[];
+  providers: WeMovedProvider[];
+} {
+  const has = new Set(secretNames);
+  const pairs: [WeMovedProvider, string[]][] = [
+    ["google", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]],
+    ["apple", ["APPLE_CLIENT_ID", "APPLE_CLIENT_SECRET"]],
+  ];
+  const providers: WeMovedProvider[] = [];
+  const partial: string[] = [];
+  for (const [provider, names] of pairs) {
+    const present = names.filter((name) => has.has(name));
+    if (present.length === names.length) {
+      providers.push(provider);
+    } else if (present.length > 0) {
+      partial.push(provider);
+    }
+  }
+  return { partial, providers };
+}
 
 /** The Queues HTTP API's batch limits: 100 messages, 256 KB (read as 256 000 bytes). */
 export const QUEUES_BATCH_MAX_MESSAGES = 100;
@@ -197,7 +249,7 @@ export interface BuiltMessages {
 /** One `emailMessageSchema` message per recipient (`newId` makes the message ids). */
 export function buildMessages(
   recipients: readonly Recipient[],
-  siteUrl: string,
+  props: { providers: readonly WeMovedProvider[]; url: string },
   newId: () => string = () => crypto.randomUUID()
 ): BuiltMessages {
   const invalid: string[] = [];
@@ -207,7 +259,7 @@ export function buildMessages(
       id: newId(),
       idempotencyKey: `we_moved:${recipient.id}`,
       locale: emailLocale({ userLocale: recipient.locale }),
-      props: { url: siteUrl },
+      props: { providers: [...props.providers], url: props.url },
       template: WE_MOVED_TEMPLATE,
       to: recipient.email.trim(),
     });
@@ -342,6 +394,7 @@ async function cloudflareRequest(
           : { "content-type": "application/json" }),
       },
       method: init.method,
+      signal: AbortSignal.timeout(CLOUDFLARE_REQUEST_TIMEOUT_MS),
       ...(init.body === undefined ? {} : { body: init.body }),
     }
   );
@@ -446,13 +499,27 @@ export async function runWeMoved(
   const site = readSiteConfig(
     readFileSync(context.wranglerConfigPath ?? SITE_WRANGLER_CONFIG, "utf8")
   );
+  const { partial, providers } = enabledProviders(
+    await context.wrangler.secretNames()
+  );
   const recipients = await readRecipients(context.wrangler);
+  const placeholders = recipients.filter((recipient) =>
+    isPlaceholderAddress(recipient.email)
+  ).length;
+  if (placeholders > 0) {
+    throw new InputError(
+      `${placeholders} of ${recipients.length} recipient(s) have a placeholder address (.invalid, .test, .example, .localhost, example.com/org/net): production's D1 holds a staging or fixture import. Nothing was queued.`
+    );
+  }
   const ledger = Ledger.open(
     join(options.outDir, WE_MOVED_LEDGER),
     ledgerEntrySchema
   );
   const pending = recipients.filter((recipient) => !ledger.get(recipient.id));
-  const { invalid, messages } = buildMessages(pending, site.siteUrl);
+  const { invalid, messages } = buildMessages(pending, {
+    providers,
+    url: site.siteUrl,
+  });
   const batches = batchMessages(messages);
   const throttle = new Throttle(CLOUDFLARE_CALLS_PER_SECOND, context.timer);
   const call: CloudflareCall = (fn) =>
@@ -468,7 +535,7 @@ export async function runWeMoved(
   const sample = messages[0]?.message;
   const preview = await renderEmail(
     WE_MOVED_TEMPLATE,
-    { url: site.siteUrl },
+    { providers, url: site.siteUrl },
     "nl"
   );
   out.log(
@@ -477,6 +544,14 @@ export async function runWeMoved(
   out.log(
     `${PREFIX} Address in the email: ${site.siteUrl} (the "new address" sentence is ${site.siteUrl === WE_MOVED_OLD_ORIGIN ? "left out" : "shown"}); nl subject: ${preview.subject}`
   );
+  out.log(
+    `${PREFIX} Sign-in providers named in the email: ${providers.length > 0 ? providers.join(", ") : "none"} (from production's secrets; confirm before --apply).`
+  );
+  if (partial.length > 0) {
+    out.error(
+      `${PREFIX} warning: ${partial.join(", ")} has only part of its secrets in production; the email does not name it.`
+    );
+  }
   if (invalid.length > 0) {
     out.error(
       `${PREFIX} warning: no usable address for user(s) ${invalid.join(", ")}; they get no email.`

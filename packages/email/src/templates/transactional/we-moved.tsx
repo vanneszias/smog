@@ -6,9 +6,38 @@ import type { EmailTemplate } from "../types";
 /** The old system's origin (phase 8 ruling 15): no "new address" on it. */
 export const WE_MOVED_OLD_ORIGIN = "https://app.smog.vlaanderen";
 
+/** A social sign-in provider production has configured. */
+export type WeMovedProvider = "google" | "apple";
+
 export interface WeMovedProps {
+  /**
+   * The social sign-ins production offers (`we-moved` reads them from
+   * production's secrets, as `@smog/auth` enables them): the provider
+   * line names only these, and is left out without any.
+   */
+  providers: readonly WeMovedProvider[];
   /** The site (`SITE_URL`): where the account now lives. */
   url: string;
+}
+
+const PROVIDER_LINE = {
+  apple: "email.transactional.weMoved.signInApple",
+  both: "email.transactional.weMoved.signInGoogleApple",
+  google: "email.transactional.weMoved.signInGoogle",
+} as const;
+
+function providerLine(
+  providers: readonly WeMovedProvider[]
+): (typeof PROVIDER_LINE)[keyof typeof PROVIDER_LINE] | null {
+  const google = providers.includes("google");
+  const apple = providers.includes("apple");
+  if (google && apple) {
+    return PROVIDER_LINE.both;
+  }
+  if (google) {
+    return PROVIDER_LINE.google;
+  }
+  return apple ? PROVIDER_LINE.apple : null;
 }
 
 /**
@@ -16,15 +45,17 @@ export interface WeMovedProps {
  * account at cutover by `migrate:convex we-moved`. The copy derives from
  * `SITE_URL`: the "new address" sentence shows only when its origin is
  * not the old `https://app.smog.vlaanderen` (dropped on the domain path).
- * It says how to sign in without the old password, that favorites and
- * lists moved, and that the app needs an update. No name: the recipients
- * come from D1 as id, email and locale only.
+ * It says how to sign in without the old password (Google and Apple only
+ * when production has them), that favorites and lists moved, and that the
+ * app needs an update. No name: the recipients come from D1 as id, email
+ * and locale only.
  */
 export const weMoved: EmailTemplate<WeMovedProps> = {
-  render: ({ url }, context) => {
+  render: ({ providers, url }, context) => {
     const { t } = context;
     const site = new URL(url);
     const moved = site.origin !== WE_MOVED_OLD_ORIGIN;
+    const providerKey = providerLine(providers);
     return (
       <EmailLayout
         context={context}
@@ -46,7 +77,7 @@ export const weMoved: EmailTemplate<WeMovedProps> = {
           steps={[
             t("email.transactional.weMoved.signInCode"),
             t("email.transactional.weMoved.signInLink"),
-            t("email.transactional.weMoved.signInProvider"),
+            ...(providerKey ? [t(providerKey)] : []),
             t("email.transactional.weMoved.signInReset"),
           ]}
           title={t("email.transactional.weMoved.signInTitle")}
