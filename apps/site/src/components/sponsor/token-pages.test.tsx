@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderSite, rpcError } from "@/test/render";
 // The preview's Player and Mux reads, faked (before the page loads it).
@@ -44,10 +50,37 @@ const realFetch = globalThis.fetch;
 
 /**
  * The kept-logo read (`POST /api/sponsor/reedit-logo`) answered with
- * `status` (a PNG on 200); the rpc client has its own fetch.
+ * `status` (a PNG on 200); the rpc client has its own fetch. A refusal's
+ * body says when the page let it go: `discarded` resolves once its body is
+ * cancelled (the refused branch), and `consumed` once it is read instead
+ * (what a broken branch, keeping the error body as a logo, would do), so a
+ * test can wait until the answer has been handled, not just sent.
  */
 function stubKeptLogo(status: number) {
   const requests: { body: unknown; method: string; url: string }[] = [];
+  let discard: () => void = () => undefined;
+  let consume: () => void = () => undefined;
+  const discarded = new Promise<void>((resolve) => {
+    discard = resolve;
+  });
+  const consumed = new Promise<void>((resolve) => {
+    consume = resolve;
+  });
+  const refusal = (): Response => {
+    const bytes = new TextEncoder().encode('{"code":"NOT_FOUND"}');
+    const body = new ReadableStream<Uint8Array>({
+      cancel: () => discard(),
+      pull: (controller) => {
+        controller.enqueue(bytes);
+        controller.close();
+        consume();
+      },
+    });
+    return new Response(body, {
+      headers: { "content-type": "application/json" },
+      status,
+    });
+  };
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     requests.push({
       body: JSON.parse(String(init?.body ?? "null")),
@@ -59,10 +92,10 @@ function stubKeptLogo(status: number) {
         ? new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), {
             headers: { "content-type": "image/png" },
           })
-        : Response.json({ code: "NOT_FOUND" }, { status })
+        : refusal()
     );
   }) as typeof fetch;
-  return { requests };
+  return { consumed, discarded, requests };
 }
 
 /** A re-edit link on Broer, with or without a paid logo. */
@@ -230,6 +263,16 @@ describe("the re-edit page (S-19)", () => {
     const refused = stubKeptLogo(404);
     await renderSite(() => <Edit />, { api: reeditWithLogo(true) });
     await waitFor(() => expect(refused.requests).toHaveLength(1));
+    // Settled, not only sent (review M-8): the refusal's body was let go
+    // unread, before its body could be kept as a logo.
+    const handled = await Promise.race([
+      refused.discarded.then(() => "discarded"),
+      refused.consumed.then(() => "consumed"),
+    ]);
+    expect(handled).toBe("discarded");
+    await act(async () => {
+      await Promise.resolve();
+    });
     await waitFor(() => expect(player.props).not.toBeNull());
     expect(player.props?.inputProps.logoUrl).toBeNull();
   });

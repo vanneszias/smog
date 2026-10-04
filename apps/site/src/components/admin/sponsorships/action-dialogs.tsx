@@ -468,8 +468,8 @@ export function SponsorshipActions({
  * button behind a confirm dialog, then a toast and a polite live-region
  * announcement. Shown in the status card and in the render jobs section.
  * Focus returns to the button when the dialog closes; once the refetched
- * detail has moved on (the button is gone), it moves to the announcement
- * instead of falling back to the page.
+ * detail has moved on (the button is gone), it moves to the announcement,
+ * then shown in the button's place, instead of falling back to the page.
  */
 export function RetryRender({
   detail,
@@ -540,15 +540,25 @@ export function RetryRender({
           </Button>
         </div>
       ) : null}
-      <p
-        aria-live="polite"
-        className="sr-only"
-        ref={region}
-        role="status"
-        tabIndex={-1}
-      >
-        {announcement}
-      </p>
+      {/* Only where it can speak: on a failed render (ready before the
+          announcement, so it is read), and after a retry. Once the button
+          is gone the announcement shows, so the focus it gets is visible
+          (WCAG 2.4.7, review M-7). */}
+      {failed || announcement ? (
+        <p
+          aria-live="polite"
+          className={
+            failed
+              ? "sr-only"
+              : "rounded-sm text-body-sm text-foreground-muted focus:outline-2 focus:outline-focus-ring focus:outline-offset-2"
+          }
+          ref={region}
+          role="status"
+          tabIndex={-1}
+        >
+          {announcement}
+        </p>
+      ) : null}
       <AlertDialog
         className="wrap-anywhere"
         confirmLabel={t("admin.sponsorships.retryRender.action")}

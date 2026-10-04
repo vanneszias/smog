@@ -19,25 +19,76 @@ import {
   useRef,
   useState,
 } from "react";
+import { type PosterSize, readPosterSize } from "./poster-size";
 import {
   PreviewFrame,
   PreviewPosterImage,
   type SponsorPreviewProps,
 } from "./preview-slot";
 import { useObjectUrl } from "./use-object-url";
-import { useSourceMetadata } from "./use-source-metadata";
+import { type SourceState, useSourceMetadata } from "./use-source-metadata";
 
 /**
  * When neither MP4 of the gesture loads (assets uploaded by the old system
  * have no static renditions until phase 8): the same composition over the
- * gesture's poster for a fixed 6 s, so the overlay is still exact. A 3:4
- * frame, the poster's own shape.
+ * gesture's poster for a fixed 6 s, so the overlay is still exact. The
+ * poster is fetched at this width; the composition takes its natural size
+ * (rounded down to even, as the render rounds the source), so the frame
+ * has the gesture's own shape whatever it is (fix wave M-5).
  */
 const IMAGE_FALLBACK = {
   durationInFrames: 6 * RENDER_FPS,
-  height: 960,
-  width: 720,
+  posterWidth: 720,
 } as const;
+
+function evenFloor(size: number): number {
+  return Math.floor(size / 2) * 2;
+}
+
+type PosterState =
+  | { status: "loading" }
+  | { size: PosterSize; status: "ready" }
+  | { status: "failed" };
+
+/**
+ * The poster's natural size once `src` is set (the image fallback is
+ * needed), even, or `failed` when it does not load or has no usable size.
+ */
+function usePosterSize(src: string | null): PosterState {
+  const [result, setResult] = useState<{
+    src: string;
+    state: PosterState;
+  } | null>(null);
+  useEffect(() => {
+    if (src === null) {
+      return;
+    }
+    const controller = new AbortController();
+    readPosterSize(src, controller.signal).then(
+      ({ height, width }) => {
+        const size = { height: evenFloor(height), width: evenFloor(width) };
+        setResult({
+          src,
+          state:
+            size.width >= 2 && size.height >= 2
+              ? { size, status: "ready" }
+              : { status: "failed" },
+        });
+      },
+      (error: unknown) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        console.warn("[sponsorPreview] Failed to read the poster:", error);
+        setResult({ src, state: { status: "failed" } });
+      }
+    );
+    return () => controller.abort();
+  }, [src]);
+  return result !== null && result.src === src
+    ? result.state
+    : { status: "loading" };
+}
 
 /** What the Player shows: the video, the image fallback, or only the poster. */
 type Stage = "video" | "image" | "poster";
@@ -48,21 +99,24 @@ type FontState = "loading" | "ready" | "failed";
 
 /**
  * The overlay font is loaded before the Player mounts (ruling 6), so the
- * first frame already has its text. Once loaded it is loaded for the page,
- * so a later preview (another gesture) starts `ready`, with no loading
- * state. A failed load mounts no Player: the overlay would only fail into
- * the video fallback, whose note would name the wrong cause (review M-1).
+ * first frame already has its text: the subsets `text` (the name shown)
+ * needs, not all of them (fix wave M-2). Once loaded they are loaded for
+ * the page, so a later preview (another gesture) starts `ready`, with no
+ * loading state. A name that needs another subset later loads it while the
+ * Player stays (the overlay waits for it too). A failed load mounts no
+ * Player: the overlay would only fail into the video fallback, whose note
+ * would name the wrong cause (review M-1).
  */
-function useOverlayFont(): FontState {
+function useOverlayFont(text: string): FontState {
   const [state, setState] = useState<FontState>(() =>
-    isOverlayFontLoaded() ? "ready" : "loading"
+    isOverlayFontLoaded(text) ? "ready" : "loading"
   );
   useEffect(() => {
-    if (state !== "loading") {
+    if (state === "failed" || isOverlayFontLoaded(text)) {
       return;
     }
     let active = true;
-    loadOverlayFont().then(
+    loadOverlayFont(text).then(
       () => {
         if (active) {
           setState("ready");
@@ -81,7 +135,7 @@ function useOverlayFont(): FontState {
     return () => {
       active = false;
     };
-  }, [state]);
+  }, [state, text]);
   return state;
 }
 
@@ -143,6 +197,69 @@ function usePlayerHandle(): {
   return { attach, handle, playing };
 }
 
+interface Failed {
+  image: boolean;
+  video: boolean;
+}
+
+/**
+ * What the Player shows, or `null` while something loads: the video once
+ * its metadata read and while it plays; else the image fallback once its
+ * poster's size is known; else (or when the font failed) only the poster.
+ */
+function previewStage({
+  failed,
+  font,
+  poster,
+  source,
+}: {
+  failed: Failed;
+  font: FontState;
+  poster: PosterState;
+  source: SourceState;
+}): Stage | null {
+  if (font === "failed") {
+    return "poster";
+  }
+  if (font === "loading" || source.status === "loading") {
+    return null;
+  }
+  if (source.status === "ready" && !failed.video) {
+    return "video";
+  }
+  if (failed.image || poster.status === "failed") {
+    return "poster";
+  }
+  return poster.status === "ready" ? "image" : null;
+}
+
+type PreviewMedia = Pick<
+  SponsoredVideoProps,
+  "background" | "durationInFrames" | "height" | "width"
+>;
+
+/** The composition's background, size and length for a stage. */
+function previewMedia(
+  stage: Stage | null,
+  source: SourceState,
+  poster: { size: PosterSize | null; url: string }
+): PreviewMedia | null {
+  if (stage === "video" && source.status === "ready") {
+    return {
+      background: { kind: "video", src: source.src },
+      ...source.metadata,
+    };
+  }
+  if (stage === "image" && poster.size) {
+    return {
+      background: { kind: "image", src: poster.url },
+      durationInFrames: IMAGE_FALLBACK.durationInFrames,
+      ...poster.size,
+    };
+  }
+  return null;
+}
+
 /**
  * `SponsorPreview` (S-10, phase 7 ruling 8): the real `SponsoredVideo`
  * composition in `@remotion/player`, over the gesture's Mux MP4, with the
@@ -158,46 +275,36 @@ export function SponsorPreview({
   playbackId,
 }: SponsorPreviewProps): ReactNode {
   const { t } = useTranslation();
-  const font = useOverlayFont();
+  const shownName = useLastValidName(displayName);
+  const font = useOverlayFont(shownName ?? "");
   const source = useSourceMetadata(playbackId);
   const logoUrl = useObjectUrl(logo);
-  const shownName = useLastValidName(displayName);
-  const [failed, setFailed] = useState<{ image: boolean; video: boolean }>({
+  const [failed, setFailed] = useState<Failed>({
     image: false,
     video: false,
   });
   const { attach, handle, playing } = usePlayerHandle();
+  const posterUrl = muxThumbnailUrl(playbackId, {
+    width: IMAGE_FALLBACK.posterWidth,
+  });
+  const needsImage =
+    font === "ready" &&
+    source.status !== "loading" &&
+    (source.status !== "ready" || failed.video) &&
+    !failed.image;
+  const poster = usePosterSize(needsImage ? posterUrl : null);
 
-  let stage: Stage | null = null;
-  if (font === "failed") {
-    stage = "poster";
-  } else if (font === "ready" && source.status !== "loading") {
-    if (source.status === "ready" && !failed.video) {
-      stage = "video";
-    } else {
-      stage = failed.image ? "poster" : "image";
-    }
-  }
+  const stage = previewStage({ failed, font, poster, source });
 
+  const posterSize = poster.status === "ready" ? poster.size : null;
   const props = useMemo((): SponsoredVideoProps | null => {
-    if (stage === null || stage === "poster" || shownName === null) {
+    const media = previewMedia(stage, source, {
+      size: posterSize,
+      url: posterUrl,
+    });
+    if (media === null || shownName === null) {
       return null;
     }
-    const media =
-      stage === "video" && source.status === "ready"
-        ? {
-            background: { kind: "video", src: source.src } as const,
-            ...source.metadata,
-          }
-        : {
-            background: {
-              kind: "image",
-              src: muxThumbnailUrl(playbackId, {
-                width: IMAGE_FALLBACK.width,
-              }),
-            } as const,
-            ...IMAGE_FALLBACK,
-          };
     const parsed = sponsoredVideoPropsSchema.safeParse({
       background: media.background,
       displayName: shownName,
@@ -207,7 +314,7 @@ export function SponsorPreview({
       width: media.width,
     });
     return parsed.success ? parsed.data : null;
-  }, [logoUrl, playbackId, shownName, source, stage]);
+  }, [logoUrl, posterSize, posterUrl, shownName, source, stage]);
 
   const onFail = useCallback(() => {
     setFailed((current) =>
@@ -265,7 +372,9 @@ export function SponsorPreview({
     | null = null;
   if (props === null && stage !== null) {
     controls = false;
-  } else if (props !== null) {
+  } else if (props !== null || failed.video) {
+    // Also while the image fallback reads its poster's size after the
+    // video failed: a disabled button would drop the focus (review M-3).
     // Enabled from the first frame on, and through a remount (the image
     // fallback replacing the video), so a focused button keeps its focus
     // (review M-3); without a Player handle they do nothing.

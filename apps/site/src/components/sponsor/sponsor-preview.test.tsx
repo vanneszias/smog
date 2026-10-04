@@ -22,6 +22,7 @@ import {
   emitPlayer,
   font,
   player,
+  posters,
   reads,
   resetPreviewFakes,
   sources,
@@ -29,7 +30,9 @@ import {
 
 const { SponsoredVideo } = await import("@smog/render/composition");
 const { SponsorPreview } = await import("./sponsor-preview");
-const { SponsorPreviewSlot } = await import("./preview-slot");
+const { lazyPreview, PreviewSlot, SponsorPreviewSlot } = await import(
+  "./preview-slot"
+);
 const { forgetSources } = await import("./use-source-metadata");
 const { renderToString } = await import("react-dom/server");
 
@@ -43,11 +46,13 @@ const META = {
   width: 360,
 };
 const BLOB_URL = /^blob:/;
+const UNAVAILABLE_NOTE =
+  "The preview cannot be shown right now. The final video is made with your name and logo as entered.";
 const FALLBACK_NOTE =
   "The video cannot be played here, so the preview shows a still of the gesture. The final video uses the full clip, with this ending.";
 /** A static import of the Player's stack (the lazy import is `import(…)`). */
 const HEAVY_IMPORT =
-  /from "(?:remotion|@remotion\/[^"]+|mediabunny|@smog\/render\/(?:composition|metadata)|\.\/use-source-metadata|\.\/sponsor-preview)"/;
+  /from "(?:remotion|@remotion\/[^"]+|mediabunny|@smog\/render\/(?:composition|metadata(?:\/mp4)?)|\.\/use-source-metadata|\.\/sponsor-preview)"/;
 
 interface PreviewProps {
   displayName?: string;
@@ -170,6 +175,37 @@ describe("SponsorPreview (phase 7 ruling 8)", () => {
     ).toBeDefined();
   });
 
+  test("the image fallback takes the poster's own shape, rounded down to even (M-5)", async () => {
+    posters.set(THUMBNAIL, { height: 1281, width: 721 });
+    render(<Preview />);
+    const props = await mounted();
+    expect(props.inputProps).toMatchObject({
+      background: { kind: "image", src: THUMBNAIL },
+      durationInFrames: 180,
+      height: 1280,
+      width: 720,
+    });
+    expect(props).toMatchObject({
+      compositionHeight: 1280,
+      compositionWidth: 720,
+    });
+  });
+
+  test("a poster whose size cannot be read: the poster and the fallback note, no Player", async () => {
+    posters.set(THUMBNAIL, new Error("poster offline"));
+    render(<Preview />);
+    await screen.findByText(FALLBACK_NOTE);
+    expect(screen.queryByTestId("remotion-player")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Play" })).toBeNull();
+  });
+
+  test("the overlay font is loaded for the name the preview shows (M-2)", async () => {
+    sources.set(HIGHEST, META);
+    render(<Preview displayName="Пекарня" />);
+    await mounted();
+    expect(font.texts).toEqual(["Пекарня"]);
+  });
+
   test("a video that fails to play falls back to the image", async () => {
     sources.set(HIGHEST, META);
     player.failing.add(HIGHEST);
@@ -238,6 +274,19 @@ describe("SponsorPreview (phase 7 ruling 8)", () => {
     expect(button("Play").hasAttribute("disabled")).toBe(false);
   });
 
+  test("while the image fallback reads its poster, a focused Play keeps the focus", async () => {
+    sources.set(HIGHEST, META);
+    posters.set(THUMBNAIL, "hang");
+    const { rerender } = render(<Preview />);
+    await mounted();
+    act(() => button("Play").focus());
+    player.failing.add(HIGHEST);
+    rerender(<Preview displayName="Bakkerij Jansen " />);
+    await screen.findByText("Loading the preview…");
+    expect(document.activeElement).toBe(button("Play"));
+    expect(button("Play").hasAttribute("disabled")).toBe(false);
+  });
+
   test("when every fallback fails, the focus moves from the controls to the note", async () => {
     sources.set(HIGHEST, META);
     const { rerender } = render(<Preview />);
@@ -249,6 +298,9 @@ describe("SponsorPreview (phase 7 ruling 8)", () => {
     const note = await screen.findByText(FALLBACK_NOTE);
     await waitFor(() => expect(document.activeElement).toBe(note));
     expect(screen.queryByRole("button", { name: "Play" })).toBeNull();
+    // The focused note shows its focus (WCAG 2.4.7, review M-7).
+    expect(note.className).not.toContain("outline-none");
+    expect(note.className).toContain("focus:outline-focus-ring");
   });
 
   test("Play replays from the start, Pause pauses, the label follows the Player", async () => {
@@ -361,6 +413,83 @@ describe("SponsorPreviewSlot (phase 7 ruling 8, I-6)", () => {
     expect(player.props).toBeNull();
     expect(font.loads).toBe(0);
     expect(reads).toEqual([]);
+  });
+
+  function slotWith(preview: ReturnType<typeof lazyPreview>): ReactNode {
+    return (
+      <I18nextProvider i18n={createI18n("en")}>
+        <PreviewSlot
+          displayName="Bakkerij Jansen"
+          logo={null}
+          name="Broer"
+          playbackId="pb-1"
+          preview={preview}
+        />
+      </I18nextProvider>
+    );
+  }
+
+  /** Runs `body` with `console.error` recorded (React reports caught errors too). */
+  async function withErrors(
+    body: (errors: unknown[][]) => Promise<void>
+  ): Promise<void> {
+    const original = console.error;
+    const errors: unknown[][] = [];
+    console.error = (...args: unknown[]) => {
+      errors.push(args);
+    };
+    try {
+      await body(errors);
+    } finally {
+      console.error = original;
+    }
+  }
+
+  test("a preview module that does not load: the poster and the unavailable note, logged (I-1)", async () => {
+    await withErrors(async (errors) => {
+      const chunk = new Error("Failed to fetch dynamically imported module");
+      render(slotWith(lazyPreview(() => Promise.reject(chunk))));
+      await screen.findByText(UNAVAILABLE_NOTE);
+      const box = screen.getByRole("img", { name: "Preview for Broer" });
+      expect(box.querySelector("img")?.getAttribute("src")).toContain(
+        "https://image.mux.com/pb-1/thumbnail.webp"
+      );
+      expect(screen.queryByRole("button", { name: "Play" })).toBeNull();
+      expect(screen.queryByTestId("remotion-player")).toBeNull();
+      expect(
+        errors.some(
+          ([message, error]) =>
+            message === "[sponsorPreview] Failed to load the preview:" &&
+            error === chunk
+        )
+      ).toBe(true);
+    });
+  });
+
+  test("an error the Player throws outside the composition: the same fallback, the page stays (I-1)", async () => {
+    await withErrors(async (errors) => {
+      function Throwing(): ReactNode {
+        throw new Error("the Player broke");
+      }
+      render(
+        <div>
+          {slotWith(
+            lazyPreview(() => Promise.resolve({ SponsorPreview: Throwing }))
+          )}
+          <button type="button">Continue to payment</button>
+        </div>
+      );
+      await screen.findByText(UNAVAILABLE_NOTE);
+      expect(
+        screen.getByRole("button", { name: "Continue to payment" })
+      ).toBeDefined();
+      expect(
+        errors.some(
+          ([message]) =>
+            message === "[sponsorPreview] Failed to load the preview:"
+        )
+      ).toBe(true);
+    });
   });
 
   test("the SSR branch: with import.meta.env.SSR true the build drops the lazy import", async () => {

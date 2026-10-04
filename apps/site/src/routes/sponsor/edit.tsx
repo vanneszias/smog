@@ -1,6 +1,6 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { Page } from "@/components/learning/page";
+import { Page, RouteError } from "@/components/learning/page";
 import { ReeditView } from "@/components/sponsor/reedit-view";
 import { pageMeta } from "@/lib/head";
 import { validateTokenSearch } from "@/lib/sponsor-search";
@@ -10,6 +10,8 @@ const rootApi = getRouteApi("__root__");
 
 export const Route = createFileRoute("/sponsor/edit")({
   component: EditPage,
+  // A failure that escapes the page keeps the page and its language (I-1).
+  errorComponent: RouteError,
   head: ({ matches }) =>
     tokenPageHead(pageMeta(matches, "sponsor.edit.eyebrow")),
   headers: tokenPageHeaders,

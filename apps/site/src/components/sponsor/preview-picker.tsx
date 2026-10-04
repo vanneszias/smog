@@ -116,6 +116,8 @@ export function PreviewPicker({
             onFocus={onFocus}
             onKeyDown={onKeyDown}
             tabIndex={index === tabStop ? 0 : -1}
+            // The whole name on hover, past the two-line clamp (M-6).
+            title={gesture.name}
             type="button"
           >
             <img
@@ -127,7 +129,10 @@ export function PreviewPicker({
               src={muxThumbnailUrl(gesture.playbackId, { width: 160 })}
               width={160}
             />
-            <span className="truncate px-0.5 text-caption">{gesture.name}</span>
+            {/* Two lines, broken anywhere: "Goedemorgen" fits whole. */}
+            <span className="wrap-anywhere line-clamp-2 px-0.5 text-caption">
+              {gesture.name}
+            </span>
           </button>
         );
       })}

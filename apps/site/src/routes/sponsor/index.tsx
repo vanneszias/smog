@@ -1,6 +1,6 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { Page } from "@/components/learning/page";
+import { Page, RouteError } from "@/components/learning/page";
 import { SponsorWizard } from "@/components/sponsor/wizard";
 import { seoHead, shellHead } from "@/lib/head";
 import { preselectSlugs, validateSponsorSearch } from "@/lib/sponsor-search";
@@ -9,6 +9,8 @@ const rootApi = getRouteApi("__root__");
 
 export const Route = createFileRoute("/sponsor/")({
   component: SponsorPage,
+  // A failure that escapes the wizard keeps the page and its language (I-1).
+  errorComponent: RouteError,
   head: ({ matches }) => {
     const { t } = shellHead(matches);
     return seoHead(matches, {
