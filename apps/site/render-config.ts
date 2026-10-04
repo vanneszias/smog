@@ -21,10 +21,14 @@ import { RENDER_MODES, type RenderMode } from "@smog/config/env/worker";
  * `wrangler deploy` register the Workflow after the script upload: an
  * unconfirmed permission would fail the deploy half done. Hence the gate.
  *
- * Turning the flag off again after a deploy with it leaves the container
- * application idle. It does not delete the `SmogRenderer` class: no
- * migration is sent and `src/worker.ts` keeps exporting it. Deleting it
- * would need a `deleted_classes` migration.
+ * Turning the pipeline off again is two steps, in this order: the env's
+ * `RENDER_MODE` back to `fake` first, then the flag removed (the flag
+ * alone, with `container` still committed, fails every build on purpose).
+ * That leaves the container application idle. It does not delete the
+ * `SmogRenderer` class: no migration is sent and `src/worker.ts` keeps
+ * exporting it. Deleting it would need a `deleted_classes` migration. Jobs
+ * in flight should drain first; the watchdog fails a `running` one left
+ * past the ceiling (`workflowUnavailable`) and releases its upload.
  *
  * The paths are absolute because the plugin applies this result after it
  * has resolved the file's own container paths (`customizeWorkerConfig` →
@@ -121,15 +125,21 @@ function isRenderMode(value: unknown): value is RenderMode {
  * `vars.RENDER_MODE`; `flag` is `SMOG_RENDER_PIPELINE`; `devMode` is
  * `SMOG_DEV_RENDER_MODE`, which picks dev's mode when `vite dev` starts
  * (`.dev.vars` is read at runtime, too late for the binding) and also sets
- * the var.
+ * the var. `dryMode` is `SMOG_DRY_RENDER_MODE`: `container` builds a
+ * staging or production config as if its `RENDER_MODE` were `container`,
+ * without editing `wrangler.jsonc`, for the core lane's gate-on dry run
+ * (`deploy:dry:render`, fix wave C-1). The deploy guard refuses such a
+ * build unless it runs with `--dry-run`, so it never reaches a real deploy.
  */
 export function applyRenderGate({
   devMode,
+  dryMode,
   env,
   flag,
   renderMode,
 }: {
   devMode?: string;
+  dryMode?: string;
   env: RenderEnv;
   flag?: string;
   renderMode: unknown;
@@ -141,6 +151,20 @@ export function applyRenderGate({
   }
   let mode = renderMode;
   let vars: { RENDER_MODE: RenderMode } | undefined;
+  if (dryMode) {
+    if (env === "dev") {
+      return {
+        error: `[render] SMOG_DRY_RENDER_MODE is for staging and production dry runs only (CLOUDFLARE_ENV=${env})`,
+      };
+    }
+    if (dryMode !== "container") {
+      return {
+        error: `[render] SMOG_DRY_RENDER_MODE must be container (got ${JSON.stringify(dryMode)})`,
+      };
+    }
+    mode = dryMode;
+    vars = { RENDER_MODE: dryMode };
+  }
   if (devMode) {
     if (env !== "dev") {
       return {

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   CLIENT_SECRET_MARKERS,
   checkClientHasNoSecrets,
+  checkDryRenderOverride,
   checkRenderConfig,
   checkServerHasNoRenderer,
   RENDERER_SERVER_MARKERS,
@@ -112,6 +113,35 @@ const EXISTING = new Set([
   "/repo",
 ]);
 const exists = (path: string) => EXISTING.has(path);
+
+describe("checkDryRenderOverride (phase 7 fix wave, infra C-1)", () => {
+  it("refuses a SMOG_DRY_RENDER_MODE build outside a dry run", () => {
+    expect(() =>
+      checkDryRenderOverride({ SMOG_DRY_RENDER_MODE: "container" }, [
+        "bun",
+        "scripts/deploy-guard.ts",
+      ])
+    ).toThrow(
+      "[deploy-guard] SMOG_DRY_RENDER_MODE=container is for dry runs only (deploy:dry:render): unset it to deploy"
+    );
+  });
+
+  it("lets it through with --dry-run, and any build without it", () => {
+    expect(() =>
+      checkDryRenderOverride({ SMOG_DRY_RENDER_MODE: "container" }, [
+        "bun",
+        "scripts/deploy-guard.ts",
+        "--dry-run",
+      ])
+    ).not.toThrow();
+    expect(() =>
+      checkDryRenderOverride({}, ["bun", "scripts/deploy-guard.ts"])
+    ).not.toThrow();
+    expect(() =>
+      checkDryRenderOverride({ SMOG_DRY_RENDER_MODE: "" }, ["bun"])
+    ).not.toThrow();
+  });
+});
 
 describe("checkRenderConfig (phase 7 ruling 2)", () => {
   it("passes fake without any render binding (staging today)", () => {

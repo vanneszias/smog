@@ -27,7 +27,13 @@ import {
 } from "./action-dialogs";
 import { EventTrail } from "./event-trail";
 import { InvoiceBox } from "./invoice-box";
-import { renderJobLabel, tokenPurposeLabel, useDay, useMoney } from "./labels";
+import {
+  renderFailureHint,
+  renderJobLabel,
+  tokenPurposeLabel,
+  useDay,
+  useMoney,
+} from "./labels";
 import { PaymentCard } from "./payment-card";
 import { StatusBadge } from "./status-badge";
 
@@ -317,6 +323,11 @@ function RenderJobs({ detail }: { detail: AdminSponsorshipDetail }): ReactNode {
                 <span className="break-words text-body-sm text-danger-strong">
                   {job.error}
                 </span>
+              ) : null}
+              {renderFailureHint(t, job.error) ? (
+                <Text as="span" size="body-sm" tone="muted">
+                  {renderFailureHint(t, job.error)}
+                </Text>
               ) : null}
             </li>
           ))}

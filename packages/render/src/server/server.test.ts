@@ -157,7 +157,7 @@ function fakeUploader(
 }
 
 function fakeMetadata(
-  options: { error?: Error } = {}
+  options: { durationInSeconds?: number; error?: Error } = {}
 ): MetadataPort & { urls: string[] } {
   const urls: string[] = [];
   return {
@@ -166,8 +166,8 @@ function fakeMetadata(
       return options.error
         ? Promise.reject(options.error)
         : Promise.resolve({
-            durationInFrames: 60,
-            durationInSeconds: 2,
+            durationInFrames: Math.ceil((options.durationInSeconds ?? 2) * 30),
+            durationInSeconds: options.durationInSeconds ?? 2,
             height: 640,
             width: 360,
           });
@@ -567,6 +567,31 @@ describe("POST /render failures", () => {
     });
     expect(renderer.calls).toHaveLength(0);
     expect(await readdir(tmp)).toEqual([]);
+  });
+
+  it("a source longer than 120 s is sourceTooLong (422), before any render (fix wave M-3)", async () => {
+    const renderer = fakeRenderer();
+    const answer = await failure(
+      await server({
+        metadata: fakeMetadata({ durationInSeconds: 120.5 }),
+        renderer,
+      }).fetch(post(request()))
+    );
+    expect(answer).toEqual({
+      code: "sourceTooLong",
+      message: "the source is 121 s long; at most 120 s can be rendered",
+      status: 422,
+    });
+    expect(renderer.calls).toHaveLength(0);
+    expect(await readdir(tmp)).toEqual([]);
+    // Exactly 120 s still renders.
+    expect(
+      (
+        await server({
+          metadata: fakeMetadata({ durationInSeconds: 120 }),
+        }).fetch(post(request()))
+      ).status
+    ).toBe(200);
   });
 
   it("a source that cannot be fetched is retryable, and its URL never leaks", async () => {

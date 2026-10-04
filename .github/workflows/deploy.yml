@@ -64,7 +64,10 @@ jobs:
       # Containers access for that env. Only with it (and RENDER_MODE
       # container) does the script probe Workflows, Docker and Containers,
       # and the build add the Workflow and the Container.
+      # It also writes render_pipeline=true|false to GITHUB_OUTPUT: whether
+      # this deploy builds the render image (the image cache steps below).
       - name: Ensure Cloudflare resources
+        id: resources
         if: steps.secrets.outputs.enabled == 'true'
         env:
           SMOG_PROVISION_PRODUCTION: ${{ vars.SMOG_PROVISION_PRODUCTION }}
@@ -82,10 +85,44 @@ jobs:
         if: steps.secrets.outputs.enabled == 'true' && hashFiles('packages/db/migrations/*.sql') != ''
         working-directory: apps/site
         run: bunx wrangler d1 migrations apply DB --env "$CLOUDFLARE_ENV" --remote
+      # The render image cache (phase 7 fix wave, infra M-1), only when this
+      # deploy builds the SmogRenderer image. wrangler deploy runs its own
+      # `docker build` of the Dockerfile on this fresh runner; without a
+      # cache that rebuilds every layer on every push. So the image is
+      # built first on a buildx builder with the GitHub Actions cache (this
+      # job's own scope, then the render lane's), and the Deploy step's
+      # `docker build` runs on that same builder (BUILDX_BUILDER), where
+      # every layer is already cached. SOURCE_DATE_EPOCH=0 pins the image's
+      # timestamps, so unchanged render inputs give the same image digest
+      # and wrangler finds no container change to roll out.
+      - name: Set up Docker Buildx (render image)
+        id: buildx
+        if: steps.secrets.outputs.enabled == 'true' && steps.resources.outputs.render_pipeline == 'true'
+        uses: docker/setup-buildx-action@v4
+      - name: Build the render image (cached)
+        if: steps.secrets.outputs.enabled == 'true' && steps.resources.outputs.render_pipeline == 'true'
+        uses: docker/build-push-action@v7
+        env:
+          SOURCE_DATE_EPOCH: "0"
+        with:
+          context: .
+          file: packages/render/container/Dockerfile
+          platforms: linux/amd64
+          provenance: false
+          load: true
+          tags: smog-renderer:deploy
+          cache-from: |
+            type=gha,scope=smog-renderer-deploy
+            type=gha,scope=smog-renderer
+          cache-to: type=gha,mode=max,scope=smog-renderer-deploy
       # The guarded site script: vite build for CLOUDFLARE_ENV, the deploy
       # guard, then wrangler deploy --env. Never a bare wrangler deploy.
       - name: Deploy
         if: steps.secrets.outputs.enabled == 'true'
         env:
           SMOG_RENDER_PIPELINE: ${{ vars.SMOG_RENDER_PIPELINE }}
+          # Empty unless the render image steps ran: then wrangler's image
+          # build uses their builder and cache.
+          BUILDX_BUILDER: ${{ steps.buildx.outputs.name }}
+          SOURCE_DATE_EPOCH: ${{ steps.buildx.outputs.name && '0' || '' }}
         run: bun -F @smog/site deploy

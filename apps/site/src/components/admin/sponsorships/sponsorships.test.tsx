@@ -835,6 +835,42 @@ describe("SponsorshipDetail", () => {
     }
   });
 
+  test("a failure with a known code shows what the admin can do (fix wave infra M-3, I-2)", async () => {
+    const failed = renderFailed();
+    const [job] = failed.renderJobs;
+    if (!job) {
+      throw new Error("[test] no job");
+    }
+    failed.renderJobs = [
+      {
+        ...job,
+        error:
+          "sourceTooLong: the source is 150 s long; at most 120 s can be rendered",
+      },
+      {
+        ...job,
+        attempt: 2,
+        error:
+          "workflowNeverStarted: the Workflow did not start within 6 hours",
+        id: "job-2",
+      },
+    ];
+    await showDetail(failed);
+    const jobs = screen.getByRole("region", { name: "Render jobs" });
+    expect(jobs.textContent).toContain(
+      "The gesture's video is longer than 2 minutes"
+    );
+    expect(jobs.textContent).toContain(
+      "The render never started within 6 hours"
+    );
+  });
+
+  test("a failure without a known code shows no hint", async () => {
+    await showDetail(renderFailed());
+    const jobs = screen.getByRole("region", { name: "Render jobs" });
+    expect(jobs.textContent).not.toContain("then retry");
+  });
+
   test.each(["in_review", "rendering", "live", "rejected"] as const)(
     "no retry render on %s",
     async (status) => {

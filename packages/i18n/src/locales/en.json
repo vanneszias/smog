@@ -1742,6 +1742,11 @@
           "running": "Running",
           "succeeded": "Succeeded",
           "failed": "Failed"
+        },
+        "hint": {
+          "sourceTooLong": "The gesture's video is longer than 2 minutes, the most a sponsored video can be. Shorten or replace the gesture's video, then retry.",
+          "workflowNeverStarted": "The render never started within 6 hours. Check the last deploy and the Workflows dashboard, then retry.",
+          "rendererBusy": "No renderer was free for an hour. Retry when fewer videos are being made."
         }
       },
       "retryRender": {

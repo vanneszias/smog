@@ -419,6 +419,24 @@ export function checkRenderConfig(
   }
 }
 
+/**
+ * `SMOG_DRY_RENDER_MODE` (render-config.ts) builds a config whose
+ * `RENDER_MODE` is not the one `wrangler.jsonc` sets, for the core lane's
+ * gate-on dry run only. A guard run without `--dry-run` (the `deploy`
+ * script's, before a real `wrangler deploy`) refuses it (fix wave C-1).
+ */
+export function checkDryRenderOverride(
+  environment: Record<string, string | undefined>,
+  argv: readonly string[]
+): void {
+  const override = environment.SMOG_DRY_RENDER_MODE;
+  if (override && !argv.includes("--dry-run")) {
+    throw new Error(
+      `[deploy-guard] SMOG_DRY_RENDER_MODE=${override} is for dry runs only (deploy:dry:render): unset it to deploy`
+    );
+  }
+}
+
 /** `dist/`, or `--dist <dir>` (the guard's fixture tests). */
 function distDir(): string {
   const index = process.argv.indexOf("--dist");
@@ -467,6 +485,7 @@ if (import.meta.main && process.argv.includes("--bundle")) {
   }
 } else if (import.meta.main) {
   try {
+    checkDryRenderOverride(process.env, process.argv);
     const builtConfig = readBuiltConfig(BUILT_CONFIG_PATH);
     const env = checkDeployTarget(process.env.CLOUDFLARE_ENV, builtConfig);
     checkRenderConfig(builtConfig);

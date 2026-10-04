@@ -128,6 +128,28 @@ export function renderJobLabel(t: Translate, status: RenderJobStatus): string {
   return t(RENDER_JOB_KEYS[status]);
 }
 
+/** Failure codes whose stored error (`code: detail`) gets an admin hint. */
+const RENDER_FAILURE_HINT_KEYS = {
+  rendererBusy: "admin.sponsorships.renderJobs.hint.rendererBusy",
+  sourceTooLong: "admin.sponsorships.renderJobs.hint.sourceTooLong",
+  workflowNeverStarted:
+    "admin.sponsorships.renderJobs.hint.workflowNeverStarted",
+} as const satisfies Record<string, TranslationKey>;
+
+/**
+ * What the admin can do about a failed render job, from its stored error
+ * (`<code>: <detail>`, phase 7 fix wave), or `null` for any other error.
+ */
+export function renderFailureHint(
+  t: Translate,
+  error: string | null
+): string | null {
+  const code = error?.split(":", 1)[0] ?? "";
+  return Object.hasOwn(RENDER_FAILURE_HINT_KEYS, code)
+    ? t(RENDER_FAILURE_HINT_KEYS[code as keyof typeof RENDER_FAILURE_HINT_KEYS])
+    : null;
+}
+
 const TOKEN_PURPOSE_KEYS = {
   reedit: "admin.sponsorships.tokens.purpose.reedit",
   renewal: "admin.sponsorships.tokens.purpose.renewal",

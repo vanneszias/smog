@@ -5,13 +5,19 @@ import {
   DOCKERFILE,
   dockerBuildArgs,
   dockerRunArgs,
+  httpSourceProbe,
   LOCAL_IMAGE,
   layerSizes,
   NO_DOCKER_MESSAGE,
   nodeModulesSizeArgs,
   parseNoBuild,
   renderLanePlan,
+  STAGING_PORT,
+  stagingRunArgs,
 } from "./release-check-render";
+
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 /** `release:check:render` (phase 7 ruling 16), the render lane. */
 describe("renderLanePlan", () => {
@@ -102,6 +108,31 @@ describe("the docker commands", () => {
     expect(args).toContain("RENDER_ALLOW_HTTP=1");
     expect(args).toContain("PORT=8080");
     expect(args.at(-1)).toBe(CI_IMAGE);
+  });
+
+  test("a second run as the Container runs it: staging, no http, all interfaces (fix wave M-2)", () => {
+    const args = stagingRunArgs(CI_IMAGE);
+    expect(args.join(" ")).toContain("--network host");
+    expect(args).toContain("RENDER_ENVIRONMENT=staging");
+    expect(args).toContain(`PORT=${STAGING_PORT}`);
+    expect(args.join(" ")).not.toContain("RENDER_ALLOW_HTTP");
+    expect(args).toContain("smog-renderer-lane-staging");
+    expect(args.at(-1)).toBe(CI_IMAGE);
+    expect(STAGING_PORT).not.toBe(8080);
+  });
+
+  test("the staging probe's request is valid but for its http source, so staging refuses it with 422", () => {
+    const body = httpSourceProbe();
+    // The contract's shape (`renderRequestSchema`): only the source's
+    // scheme is wrong for a deployed env.
+    expect(body).toMatchObject({
+      input: { logoKey: null, v: 1 },
+      logoDataUrl: null,
+      v: 1,
+    });
+    expect(body.renderJobId).toMatch(UUID);
+    expect(new URL(body.sourceUrl).protocol).toBe("http:");
+    expect(new URL(body.uploadUrl).hostname.endsWith(".mux.com")).toBe(true);
   });
 
   test("the node_modules size is read with du, past tini", () => {

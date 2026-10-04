@@ -467,6 +467,7 @@ describe("runStaleSweep (J-03)", () => {
     return await runStaleSweep({
       db,
       mollie,
+      mux: null,
       now: NOW,
       queues,
       siteUrl: SITE_URL,
@@ -747,6 +748,7 @@ describe("runStaleSweep's reconciliation (task 4 review)", () => {
     return await runStaleSweep({
       db,
       mollie: null,
+      mux: null,
       now,
       queues,
       siteUrl: SITE_URL,

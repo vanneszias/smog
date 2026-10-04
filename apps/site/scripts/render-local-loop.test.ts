@@ -4,6 +4,7 @@ import {
   cookieHeader,
   devMailOf,
   renderAssetOf,
+  runCleanups,
 } from "./render-local-loop";
 
 describe("cookieHeader", () => {
@@ -22,10 +23,53 @@ describe("cookieHeader", () => {
 });
 
 describe("devMailOf", () => {
-  it("keeps a stored mailbox (a JSON list) and reads anything else as none", () => {
-    expect(devMailOf('[{"to":"a@b.c"}]\n')).toBe('[{"to":"a@b.c"}]');
-    expect(devMailOf("Value not found\n")).toBeNull();
-    expect(devMailOf("")).toBeNull();
+  it("keeps a stored mailbox (a JSON list)", () => {
+    expect(devMailOf('[{"to":"a@b.c"}]\n')).toEqual({
+      kind: "mailbox",
+      value: '[{"to":"a@b.c"}]',
+    });
+  });
+
+  it("reads wrangler's Value not found, on stdout or stderr, as no mailbox", () => {
+    expect(devMailOf("Value not found\n")).toEqual({ kind: "absent" });
+    expect(devMailOf("", "Value not found\n")).toEqual({ kind: "absent" });
+  });
+
+  it("reads anything else as unreadable, so the restore never deletes it (task 9 review M-5)", () => {
+    expect(devMailOf('▲ [WARNING] proxy\n[{"to":"a@b.c"}]')).toEqual({
+      kind: "unreadable",
+    });
+    expect(devMailOf('[{"to":"a@b.c"')).toEqual({ kind: "unreadable" });
+    expect(devMailOf("")).toEqual({ kind: "unreadable" });
+  });
+});
+
+describe("runCleanups", () => {
+  it("runs each cleanup once, last first, past one that fails", async () => {
+    const ran: string[] = [];
+    const { error } = console;
+    console.error = () => undefined;
+    const list = [
+      () => {
+        ran.push("mailbox");
+        return Promise.resolve();
+      },
+      () => {
+        ran.push("children");
+        return Promise.reject(new Error("already gone"));
+      },
+      () => {
+        ran.push("fixture");
+        return Promise.resolve();
+      },
+    ];
+    try {
+      await runCleanups(list);
+      await runCleanups(list);
+    } finally {
+      console.error = error;
+    }
+    expect(ran).toEqual(["fixture", "children", "mailbox"]);
   });
 });
 

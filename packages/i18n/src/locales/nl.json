@@ -1742,6 +1742,11 @@
           "running": "Bezig",
           "succeeded": "Gelukt",
           "failed": "Mislukt"
+        },
+        "hint": {
+          "sourceTooLong": "De video van het gebaar duurt langer dan 2 minuten, het maximum voor een gesponsorde video. Kort de video van het gebaar in of vervang hem, en probeer dan opnieuw.",
+          "workflowNeverStarted": "Het maken van de video is binnen 6 uur niet gestart. Controleer de laatste deploy en het Workflows-dashboard, en probeer dan opnieuw.",
+          "rendererBusy": "Er was een uur lang geen renderer vrij. Probeer opnieuw wanneer er minder video's tegelijk gemaakt worden."
         }
       },
       "retryRender": {

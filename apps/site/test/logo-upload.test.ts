@@ -363,6 +363,18 @@ describe("POST /api/sponsor/reedit-logo (the kept logo of a re-edit)", () => {
     }
   });
 
+  it("reads at most 1 KiB of body: a longer one is the same 404, even with a good token (fix wave M-3)", async () => {
+    const token = await reeditWithLogo(5);
+    // Without the cap the schema would drop `pad` and answer the logo.
+    const padded = await readLogo({ pad: "x".repeat(1100), token });
+    expect(padded.status).toBe(404);
+    expect(padded.headers.get("cache-control")).toBe("no-store");
+    await padded.body?.cancel();
+    const fits = await readLogo({ pad: "x".repeat(900), token });
+    expect(fits.status).toBe(200);
+    await fits.body?.cancel();
+  });
+
   it("refuses a foreign origin", async () => {
     const token = await reeditWithLogo(4);
     const response = await readLogo(

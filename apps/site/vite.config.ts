@@ -66,7 +66,10 @@ const RENDER_ENVS: readonly RenderEnv[] = ["dev", "staging", "production"];
  * `container` with `SMOG_RENDER_PIPELINE=1`; `container` without the flag
  * fails the build here. `SMOG_DEV_RENDER_MODE=local bun dev` picks dev's
  * local mode and sets the var too (`.dev.vars` is read too late for the
- * binding). Then the dev vars above, which `.dev.vars` still overrides.
+ * binding). `SMOG_DRY_RENDER_MODE=container` builds staging or production
+ * as `container` for the core lane's gate-on dry run (`deploy:dry:render`;
+ * the deploy guard refuses it outside `--dry-run`). Then the dev vars
+ * above, which `.dev.vars` still overrides.
  */
 function customizeWorker(
   worker: WorkerConfig
@@ -79,6 +82,7 @@ function customizeWorker(
   }
   const gate = applyRenderGate({
     devMode: process.env.SMOG_DEV_RENDER_MODE,
+    dryMode: process.env.SMOG_DRY_RENDER_MODE,
     env,
     flag: process.env.SMOG_RENDER_PIPELINE,
     renderMode: worker.vars.RENDER_MODE,

@@ -33,7 +33,7 @@ import type { OutboxEmail } from "@smog/email";
 import type { EventMessage, RenderStarter } from "@smog/jobs";
 import { RENDER_INPUT_VERSION, renderInputSchema } from "@smog/render/contract";
 import { newId } from "@smog/utils";
-import { and, eq, type SQL, sql } from "drizzle-orm";
+import { and, eq, isNull, type SQL, sql } from "drizzle-orm";
 import { RENDER_ERROR_MAX } from "../schema/events";
 import { SponsorshipActionError } from "./lifecycle";
 import { emailAdmins } from "./recipients";
@@ -329,7 +329,11 @@ export async function readRenderJob(
 
 /**
  * Stores the job's current Mux upload (step `render`), only while the job
- * is `running`; `false` when it is not (the watchdog failed it). Its
+ * is `running` and its upload is still `previousUploadId`, the one the
+ * attempt read (a compare-and-set, phase 7 fix wave M-1: an attempt that
+ * went on past its timeout cannot overwrite a later attempt's upload).
+ * `not-running` when the job left `running` (the watchdog failed it),
+ * `superseded` when another attempt stored its upload first. Its
  * `updated_at` is left alone on purpose: the watchdog's ceiling clock runs
  * from `queued → running`, so a retried render does not restart it.
  * Nothing clears `mux_upload_id` afterwards: it stays the committed (or
@@ -337,8 +341,12 @@ export async function readRenderJob(
  */
 export async function setRenderUpload(
   db: Db,
-  input: { renderJobId: string; uploadId: string }
-): Promise<boolean> {
+  input: {
+    previousUploadId: string | null;
+    renderJobId: string;
+    uploadId: string;
+  }
+): Promise<"not-running" | "set" | "superseded"> {
   const rows = await db
     .update(renderJob)
     // Kept as it is (the column's `$onUpdate` would move it to now).
@@ -347,10 +355,20 @@ export async function setRenderUpload(
       updatedAt: sql`${renderJob.updatedAt}`,
     })
     .where(
-      and(eq(renderJob.id, input.renderJobId), eq(renderJob.status, "running"))
+      and(
+        eq(renderJob.id, input.renderJobId),
+        eq(renderJob.status, "running"),
+        input.previousUploadId === null
+          ? isNull(renderJob.muxUploadId)
+          : eq(renderJob.muxUploadId, input.previousUploadId)
+      )
     )
     .returning({ id: renderJob.id });
-  return rows.length > 0;
+  if (rows.length > 0) {
+    return "set";
+  }
+  const job = await readRenderJob(db, input.renderJobId);
+  return job?.status === "running" ? "superseded" : "not-running";
 }
 
 /** The job statuses whose upload still may be, or was, committed. */

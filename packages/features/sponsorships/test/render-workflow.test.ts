@@ -7,7 +7,11 @@
  */
 import { gesture as gestureTable, renderJob, sponsorship } from "@smog/db";
 import type { EmailMessage, EventMessage, JobQueues } from "@smog/jobs";
-import type { RenderRequest, RenderResult } from "@smog/render/contract";
+import type {
+  RendererPort,
+  RenderRequest,
+  RenderResult,
+} from "@smog/render/contract";
 import { createFakeRenderer, FAKE_RENDER_RESULT } from "@smog/render/testing";
 import type { Mux, RenderMuxEvent } from "@smog/video";
 import { createFakeMux, type FakeMux } from "@smog/video/testing";
@@ -546,6 +550,25 @@ describe("runRenderJob: the render (ruling 4, step 6)", () => {
     expect(upload?.status).toBe("cancelled");
   });
 
+  it("a source over 120 s is sourceTooLong: final, one attempt (fix wave infra M-3)", async () => {
+    const addresses = await admins();
+    const job = await queuedJob();
+    const step = createFakeStep();
+    masterReadyAt(step, job.gestureAssetId);
+    const renderer = puttingRenderer(() => ({
+      code: "sourceTooLong",
+      message: "the source is 150 s long; at most 120 s can be rendered",
+      ok: false,
+    }));
+
+    expect(await runRenderJob(step, deps({ renderer }), job)).toEqual({
+      code: "sourceTooLong",
+      outcome: "failed",
+    });
+    expect(renderer.requests).toHaveLength(1);
+    await expectFailed(job, addresses, "sourceTooLong");
+  });
+
   it.each([
     [1, 2],
     [2, 3],
@@ -642,6 +665,185 @@ describe("runRenderJob: the render (ruling 4, step 6)", () => {
       outcome: "completed",
     });
     expect(step.calls.find((call) => call.name === "render")?.attempts).toBe(2);
+  });
+
+  it("a renderer with no capacity is a wait: slot waits, then the render (fix wave C-1)", async () => {
+    const job = await queuedJob();
+    const step = createFakeStep();
+    masterReadyAt(step, job.gestureAssetId);
+    deliverReady(step, job.renderJobId);
+    const renderer = puttingRenderer((_, attempt) =>
+      attempt <= 3
+        ? { code: "busy", message: "no container instance", ok: false }
+        : FAKE_RENDER_RESULT
+    );
+
+    expect(await runRenderJob(step, deps({ renderer }), job)).toEqual({
+      outcome: "completed",
+    });
+    const [uploadId] = [...world.fake.uploads.keys()].slice(-1);
+    expect(step.calls.map((call) => call.name)).toEqual([
+      "start",
+      "source-lookup",
+      "source-wait-1",
+      "source-poll-1",
+      "source-resolve",
+      "render",
+      "render-slot-wait-1",
+      "render-2",
+      "render-slot-wait-2",
+      "render-3",
+      "render-slot-wait-3",
+      "render-4",
+      `ready-${uploadId}`,
+      "commit",
+    ]);
+    // A busy attempt uses none of its step's retries.
+    for (const name of ["render", "render-2", "render-3", "render-4"]) {
+      const call = step.calls.find((entry) => entry.name === name);
+      expect(call?.attempts).toBe(1);
+      expect(call?.config).toEqual(RENDER_STEP_CONFIG.render);
+    }
+    expect(
+      step.calls.find((call) => call.name === "render-slot-wait-1")?.timeoutMs
+    ).toBe(RENDER_WAITS.renderSlotInterval);
+    // Each attempt had its own upload; the busy ones are cancelled.
+    const all = [...world.fake.uploads.values()];
+    expect(all).toHaveLength(4);
+    expect(all.slice(0, -1).map((upload) => upload.status)).toEqual([
+      "cancelled",
+      "cancelled",
+      "cancelled",
+    ]);
+    expect((await jobRow(job.renderJobId))?.status).toBe("succeeded");
+  });
+
+  it("no capacity after every slot wait: rendererBusy, failRender and the emails", async () => {
+    const addresses = await admins();
+    const job = await queuedJob();
+    const step = createFakeStep();
+    masterReadyAt(step, job.gestureAssetId);
+    const renderer = puttingRenderer(() => ({
+      code: "busy",
+      message: "no container instance",
+      ok: false,
+    }));
+
+    expect(await runRenderJob(step, deps({ renderer }), job)).toEqual({
+      code: "rendererBusy",
+      outcome: "failed",
+    });
+    expect(renderer.requests).toHaveLength(RENDER_WAITS.renderSlotWaits + 1);
+    expect(
+      step.calls.filter((call) => call.name.startsWith("render-slot-wait-"))
+    ).toHaveLength(RENDER_WAITS.renderSlotWaits);
+    await expectFailed(job, addresses, "rendererBusy");
+    // Every upload, the last one too, is cancelled.
+    expect(
+      [...world.fake.uploads.values()].every(
+        (upload) => upload.status === "cancelled"
+      )
+    ).toBe(true);
+  });
+
+  it("more jobs than renderers: each waits for a free one, and all commit (fix wave C-1)", async () => {
+    const CAPACITY = 2;
+    const jobs: Awaited<ReturnType<typeof queuedJob>>[] = [];
+    for (let i = 0; i < 5; i += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: fixtures, one checkout each.
+      jobs.push(await queuedJob());
+    }
+    let inFlight = 0;
+    let most = 0;
+    let busy = 0;
+    const renderer: RendererPort = {
+      render: async (request) => {
+        if (inFlight >= CAPACITY) {
+          busy += 1;
+          return { code: "busy", message: "no container instance", ok: false };
+        }
+        inFlight += 1;
+        most = Math.max(most, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        world.fake.completeUpload(uploadIdOf(request.uploadUrl));
+        inFlight -= 1;
+        return FAKE_RENDER_RESULT;
+      },
+    };
+    const steps = jobs.map((job) => {
+      const step = createFakeStep();
+      step.onSleep = async (name) => {
+        if (name === "source-wait-1") {
+          world.fake.readyMaster(job.gestureAssetId);
+        }
+        if (name.startsWith("render-slot-wait-")) {
+          // The slot wait passes while the other renders run.
+          await new Promise((resolve) => setTimeout(resolve, 15));
+        }
+      };
+      deliverReady(step, job.renderJobId);
+      return step;
+    });
+
+    const outcomes = await Promise.all(
+      jobs.map((job, index) =>
+        runRenderJob(steps[index] as FakeStep, deps({ renderer }), job)
+      )
+    );
+
+    expect(outcomes).toEqual(jobs.map(() => ({ outcome: "completed" })));
+    expect(most).toBe(CAPACITY);
+    expect(busy).toBeGreaterThan(0);
+    expect(steps.some((step) => step.names().includes("render-2"))).toBe(true);
+    for (const job of jobs) {
+      // biome-ignore lint/performance/noAwaitInLoops: five rows.
+      expect((await sponsorshipOf(job.sponsorshipId))?.status).toBe(
+        "in_review"
+      );
+    }
+    const renders = [...world.fake.assets.values()].filter((asset) =>
+      asset.passthrough?.startsWith("render-job:")
+    );
+    expect(renders).toHaveLength(jobs.length);
+  });
+
+  it("an upload stored by another attempt meanwhile: this one gives way and the retry renders (fix wave M-1)", async () => {
+    const job = await queuedJob();
+    const step = createFakeStep();
+    masterReadyAt(step, job.gestureAssetId);
+    deliverReady(step, job.renderJobId);
+    let raced = false;
+    const mux: Mux = {
+      ...world.mux,
+      fetch: async (input, init) => {
+        const response = await world.mux.fetch(input, init);
+        const url = new URL(
+          input instanceof Request ? input.url : String(input)
+        );
+        if (
+          !raced &&
+          init?.method === "POST" &&
+          url.pathname.endsWith("/uploads")
+        ) {
+          raced = true;
+          // A late attempt stores its own upload after this one read the job.
+          await db
+            .update(renderJob)
+            .set({ muxUploadId: "late-attempt-upload" })
+            .where(eq(renderJob.id, job.renderJobId));
+        }
+        return response;
+      },
+    };
+
+    expect(await runRenderJob(step, deps({ mux }), job)).toEqual({
+      outcome: "completed",
+    });
+    expect(step.calls.find((call) => call.name === "render")?.attempts).toBe(2);
+    const [first, second] = [...world.fake.uploads.values()];
+    // The attempt that lost the write cancelled its own upload.
+    expect(first?.status).toBe("cancelled");
+    expect((await jobRow(job.renderJobId))?.muxUploadId).toBe(second?.id);
   });
 
   it("without Mux: muxUnavailable", async () => {
@@ -891,6 +1093,47 @@ describe("runRenderJob: the commit and its deletes (rulings 4.8 and 13)", () => 
     );
   });
 
+  it("a commit cut short after it committed: fail deletes the previous asset, and the outcome is noop (fix wave M-2, M-5)", async () => {
+    const addresses = await admins();
+    const job = await queuedJob({ previous: "asset" });
+    const step = createFakeStep();
+    // Every commit attempt commits, then its result is lost; the previous
+    // asset's deletes fail meanwhile (Mux down), so only fail can do it.
+    step.loseResult("commit", RENDER_STEP_CONFIG.commit.retries.limit + 1);
+    masterReadyAt(step, job.gestureAssetId);
+    deliverReady(step, job.renderJobId);
+    let refusals = RENDER_STEP_CONFIG.commit.retries.limit + 1;
+    const mux: Mux = {
+      ...world.mux,
+      fetch: (input, init) => {
+        const url = new URL(
+          input instanceof Request ? input.url : String(input)
+        );
+        if (
+          init?.method === "DELETE" &&
+          url.pathname.endsWith(`/assets/${job.previousAssetId}`) &&
+          refusals > 0
+        ) {
+          refusals -= 1;
+          return Promise.resolve(new Response(null, { status: 503 }));
+        }
+        return world.mux.fetch(input, init);
+      },
+    };
+
+    expect(await runRenderJob(step, deps({ mux }), job)).toEqual({
+      outcome: "noop",
+    });
+    expect(step.names()).toContain("fail");
+    const stored = await jobRow(job.renderJobId);
+    expect(stored?.status).toBe("succeeded");
+    expect((await sponsorshipOf(job.sponsorshipId))?.status).toBe("in_review");
+    expect(world.fake.assets.has(job.previousAssetId as string)).toBe(false);
+    expect(world.fake.assets.has(stored?.muxAssetId as string)).toBe(true);
+    expect(world.fake.assets.has(job.gestureAssetId)).toBe(true);
+    expect(emailsTo(addresses)).toHaveLength(0);
+  });
+
   it("a whole replay of a finished run runs no step again", async () => {
     const job = await queuedJob();
     const step = createFakeStep();
@@ -1037,17 +1280,23 @@ describe("the event type and the ceiling", () => {
         0
       ) +
       RENDER_WAITS.sourcePolls * stepWorstCaseMs(sourcePoll) +
+      // Each slot wait is followed by another `render-<n>` at its worst.
+      RENDER_WAITS.renderSlotWaits *
+        stepWorstCaseMs(RENDER_STEP_CONFIG.render) +
       RENDER_WAITS.readyPolls * stepWorstCaseMs(readyPoll);
     const waits =
       RENDER_WAITS.readyTimeout +
       RENDER_WAITS.sourcePolls * RENDER_WAITS.sourcePollInterval +
+      RENDER_WAITS.renderSlotWaits * RENDER_WAITS.renderSlotInterval +
       RENDER_WAITS.readyPolls * RENDER_WAITS.readyPollInterval;
     expect(steps + waits).toBe(RENDER_WORKFLOW_MAX_MS);
     expect(RENDER_WATCHDOG_CEILING).toBeGreaterThan(steps + waits);
     // Pinned, so a config change shows in review: 5 h 31 min of worst
-    // case, 6 h 01 min with the margin.
-    expect(RENDER_WORKFLOW_MAX_MS).toBe(19_860_000);
-    expect(RENDER_WATCHDOG_CEILING).toBe((6 * 60 + 1) * 60_000);
+    // case without a slot wait, plus 12 × (5 min + 63 min) of slot waits
+    // and their render attempts: 19 h 07 min, 19 h 37 min with the margin.
+    expect(stepWorstCaseMs(RENDER_STEP_CONFIG.render)).toBe(63 * 60_000);
+    expect(RENDER_WORKFLOW_MAX_MS).toBe(19_860_000 + 12 * 68 * 60_000);
+    expect(RENDER_WATCHDOG_CEILING).toBe((19 * 60 + 37) * 60_000);
     expect(RENDER_WATCHDOG_CEILING).toBeGreaterThan(RENDER_WORKFLOW_MAX_MS);
     // 4 × 1 min + 5 s + 10 s + 20 s (exponential).
     expect(stepWorstCaseMs(RENDER_STEP_CONFIG.sourceLookup)).toBe(

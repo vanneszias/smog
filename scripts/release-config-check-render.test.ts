@@ -8,6 +8,7 @@ import {
   checkReleaseScripts,
   checkRenderClassExports,
   checkRequiredConfig,
+  checkSiteDryRuns,
   checkWranglerRenderKeys,
   checkWranglerResources,
 } from "./release-config-check";
@@ -21,6 +22,7 @@ const DEPLOY = read(".github", "workflows", "deploy.yml");
 const WRANGLER = read("apps", "site", "wrangler.jsonc");
 const WORKER = read("apps", "site", "src", "worker.ts");
 const PACKAGE = read("package.json");
+const SITE_PACKAGE = read("apps", "site", "package.json");
 const DEV_VARS_EXAMPLE = read("apps", "site", ".dev.vars.example");
 
 /** `wrangler.jsonc` with `env.<name>.vars.RENDER_MODE` replaced. */
@@ -197,6 +199,37 @@ describe("checkRequiredConfig follows each env's RENDER_MODE (task 1 Minor 5)", 
   });
 });
 
+describe("the site's dry runs (fix wave, infra C-1)", () => {
+  test("deploy:dry and deploy:dry:render carry every part", () => {
+    expect(checkSiteDryRuns(SITE_PACKAGE)).toEqual([]);
+  });
+
+  test.each([
+    ["deploy:dry", "SMOG_RENDER_PIPELINE=1 "],
+    ["deploy:dry", " --containers-rollout=none"],
+    ["deploy:dry:render", "SMOG_DRY_RENDER_MODE=container "],
+    ["deploy:dry:render", " --dry-run --containers-rollout=none"],
+  ])("refuses %s without `%s`", (name, part) => {
+    const parsed = JSON.parse(SITE_PACKAGE) as {
+      scripts: Record<string, string>;
+    };
+    parsed.scripts[name] = String(parsed.scripts[name]).replace(part, " ");
+    expect(checkSiteDryRuns(JSON.stringify(parsed))).toEqual([
+      `apps/site/package.json: ${name} must pass \`${part.trim()}\` (a staging dry run that works once staging is container)`,
+    ]);
+  });
+
+  test("refuses a missing script", () => {
+    const parsed = JSON.parse(SITE_PACKAGE) as {
+      scripts: Record<string, string>;
+    };
+    Reflect.deleteProperty(parsed.scripts, "deploy:dry:render");
+    expect(checkSiteDryRuns(JSON.stringify(parsed))).toEqual([
+      "apps/site/package.json: missing the deploy:dry:render script",
+    ]);
+  });
+});
+
 describe("the four release lanes (ruling 16)", () => {
   test("ci.yml runs core, tests, mobile and render", () => {
     expect(checkCiWorkflow(CI)).toEqual([]);
@@ -222,9 +255,16 @@ describe("the four release lanes (ruling 16)", () => {
     const noDryRun = structuredClone(parsed);
     noDryRun.scripts["release:check:core"] = String(
       parsed.scripts["release:check:core"]
-    ).replace(" && bun -F @smog/site deploy:dry", "");
+    ).replace(" && bun -F @smog/site deploy:dry &&", " &&");
     expect(checkReleaseScripts(JSON.stringify(noDryRun))).toEqual([
       "package.json: release:check:core must run `bun -F @smog/site deploy:dry`",
+    ]);
+    const noGateOn = structuredClone(parsed);
+    noGateOn.scripts["release:check:core"] = String(
+      parsed.scripts["release:check:core"]
+    ).replace(" && bun -F @smog/site deploy:dry:render", "");
+    expect(checkReleaseScripts(JSON.stringify(noGateOn))).toEqual([
+      "package.json: release:check:core must run `bun -F @smog/site deploy:dry:render`",
     ]);
     const noScript = structuredClone(parsed);
     Reflect.deleteProperty(noScript.scripts, "release:check:render");

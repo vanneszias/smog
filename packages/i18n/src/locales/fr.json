@@ -1775,6 +1775,11 @@
           "running": "En cours",
           "succeeded": "Réussi",
           "failed": "Échoué"
+        },
+        "hint": {
+          "sourceTooLong": "La vidéo du geste dure plus de 2 minutes, le maximum pour une vidéo sponsorisée. Raccourcissez ou remplacez la vidéo du geste, puis relancez.",
+          "workflowNeverStarted": "Le rendu n'a pas démarré dans les 6 heures. Vérifiez le dernier déploiement et le tableau de bord Workflows, puis relancez.",
+          "rendererBusy": "Aucun moteur de rendu n'a été libre pendant une heure. Relancez quand moins de vidéos sont en cours."
         }
       },
       "retryRender": {

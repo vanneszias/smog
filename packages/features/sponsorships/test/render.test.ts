@@ -279,7 +279,11 @@ describe("the render seam (ruling 7)", () => {
     const job = await createRenderJob(db, { now: NOW, sponsorshipId: id });
     const renderJobId = job?.renderJobId as string;
     await markRenderRunning(db, { now: NOW, renderJobId });
-    await setRenderUpload(db, { renderJobId, uploadId: "upload-1" });
+    await setRenderUpload(db, {
+      previousUploadId: null,
+      renderJobId,
+      uploadId: "upload-1",
+    });
     await completeRender(db, {
       assetId: "asset-1",
       now: NOW,
@@ -309,7 +313,11 @@ describe("the render seam (ruling 7)", () => {
     const job = await createRenderJob(db, { now: NOW, sponsorshipId: id });
     const renderJobId = job?.renderJobId as string;
     await markRenderRunning(db, { now: NOW, renderJobId });
-    await setRenderUpload(db, { renderJobId, uploadId: "upload-1" });
+    await setRenderUpload(db, {
+      previousUploadId: null,
+      renderJobId,
+      uploadId: "upload-1",
+    });
     await failRender(db, {
       error: "boom",
       now: NOW,
@@ -337,12 +345,20 @@ describe("the render seam (ruling 7)", () => {
     const job = await createRenderJob(db, { now: NOW, sponsorshipId: id });
     const renderJobId = job?.renderJobId as string;
     expect(
-      await setRenderUpload(db, { renderJobId, uploadId: "upload-0" })
-    ).toBe(false);
+      await setRenderUpload(db, {
+        previousUploadId: null,
+        renderJobId,
+        uploadId: "upload-0",
+      })
+    ).toBe("not-running");
     await markRenderRunning(db, { now: NOW, renderJobId });
     expect(
-      await setRenderUpload(db, { renderJobId, uploadId: "upload-1" })
-    ).toBe(true);
+      await setRenderUpload(db, {
+        previousUploadId: null,
+        renderJobId,
+        uploadId: "upload-1",
+      })
+    ).toBe("set");
     const [stored] = await jobsOf(id);
     expect(stored?.muxUploadId).toBe("upload-1");
     expect(stored?.updatedAt.getTime()).toBe(NOW.getTime());
@@ -352,6 +368,43 @@ describe("the render seam (ruling 7)", () => {
       status: "running",
       videoAssetId: null,
     });
+  });
+
+  it("setRenderUpload is a compare-and-set on the upload the attempt read (fix wave M-1)", async () => {
+    const id = await rendering();
+    const job = await createRenderJob(db, { now: NOW, sponsorshipId: id });
+    const renderJobId = job?.renderJobId as string;
+    await markRenderRunning(db, { now: NOW, renderJobId });
+    // Attempt 2 stores U2 over nothing.
+    expect(
+      await setRenderUpload(db, {
+        previousUploadId: null,
+        renderJobId,
+        uploadId: "upload-2",
+      })
+    ).toBe("set");
+    // Attempt 1, which read the job before that, comes back late.
+    expect(
+      await setRenderUpload(db, {
+        previousUploadId: null,
+        renderJobId,
+        uploadId: "upload-1b",
+      })
+    ).toBe("superseded");
+    expect((await readRenderJob(db, renderJobId))?.muxUploadId).toBe(
+      "upload-2"
+    );
+    // The next attempt read U2: it may replace it.
+    expect(
+      await setRenderUpload(db, {
+        previousUploadId: "upload-2",
+        renderJobId,
+        uploadId: "upload-3",
+      })
+    ).toBe("set");
+    expect((await readRenderJob(db, renderJobId))?.muxUploadId).toBe(
+      "upload-3"
+    );
   });
 });
 

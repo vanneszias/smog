@@ -33,7 +33,15 @@ export interface Mux {
   readonly apiUrl: string;
   readonly authorization: string;
   readonly fetch: MuxFetch;
+  /** Per API call; `MUX_REQUEST_TIMEOUT_MS` unless set (tests). */
+  readonly timeoutMs?: number;
 }
+
+/**
+ * How long one Mux API call may take before it is aborted (phase 7 fix
+ * wave M-1): a hung call must not outlive the Workflow step that made it.
+ */
+export const MUX_REQUEST_TIMEOUT_MS = 30_000;
 
 /** A Mux API answer that is not 2xx (404 is returned as `null` by the lookups). */
 export class MuxApiError extends Error {
@@ -87,7 +95,8 @@ interface RequestOptions<T> {
 /**
  * One Mux API call: `{ data }` parsed with `schema`. A non-2xx answer (or
  * a body that does not match) throws `MuxApiError`, logged with `[video]`
- * and without the credentials.
+ * and without the credentials. A call that takes longer than
+ * `MUX_REQUEST_TIMEOUT_MS` is aborted and throws.
  */
 export async function muxRequest<T>(
   mux: Mux,
@@ -117,6 +126,7 @@ export async function muxRequest<T>(
       body: body === undefined ? null : JSON.stringify(body),
       headers,
       method,
+      signal: AbortSignal.timeout(mux.timeoutMs ?? MUX_REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
     console.error(`[video] Failed to reach Mux (${method} ${path}):`, error);

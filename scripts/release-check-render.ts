@@ -17,6 +17,10 @@ import { join } from "node:path";
  *    source and upload sink, the MP4 checks and the ΔE probe; the still and
  *    the MP4 land in `packages/render/.render-out` (a CI artifact).
  * 6. Print the container's log (render time) and remove it.
+ * 7. Start the image again as the Container runs it
+ *    (`RENDER_ENVIRONMENT=staging`, no `RENDER_ALLOW_HTTP`, port 8081):
+ *    `GET /health` answers and an `http:` source is refused with 422
+ *    (phase 7 fix wave, infra M-2).
  *
  * Locally it runs only when a Docker daemon answers. Without one it prints
  * `NO_DOCKER_MESSAGE` and passes, like `SMOG_OFFLINE`: not equivalent to
@@ -124,6 +128,54 @@ export function dockerRunArgs(image: string): string[] {
     "RENDER_ALLOW_HTTP=1",
     image,
   ];
+}
+
+/** The staging-mode run's port: not the dev run's, which may still be closing. */
+export const STAGING_PORT = 8081;
+const STAGING_CONTAINER_NAME = "smog-renderer-lane-staging";
+
+/**
+ * The container as the `SmogRenderer` Container runs it (phase 7 fix wave,
+ * infra M-2): `RENDER_ENVIRONMENT=staging`, so the strict env schema, the
+ * `0.0.0.0` bind and the https-only URL rules apply; no `RENDER_ALLOW_HTTP`.
+ */
+export function stagingRunArgs(image: string): string[] {
+  return [
+    "run",
+    "--detach",
+    "--platform",
+    "linux/amd64",
+    "--network",
+    "host",
+    "--name",
+    STAGING_CONTAINER_NAME,
+    "--env",
+    `PORT=${STAGING_PORT}`,
+    "--env",
+    "RENDER_ENVIRONMENT=staging",
+    image,
+  ];
+}
+
+/**
+ * A render request that is valid but for its `http:` source: a staging
+ * server refuses it at once with `422 invalidInput` (a dev one would try
+ * to read it). It reaches no network.
+ */
+export function httpSourceProbe() {
+  return {
+    input: {
+      displayName: "Probe",
+      logoKey: null,
+      sourcePlaybackId: "probe",
+      v: 1,
+    },
+    logoDataUrl: null,
+    renderJobId: crypto.randomUUID(),
+    sourceUrl: "http://127.0.0.1:9/source.mp4",
+    uploadUrl: "https://storage.mux.com/probe",
+    v: 1,
+  };
 }
 
 /** `du` of the runtime's `node_modules`, in a throwaway container. */
@@ -244,6 +296,58 @@ async function logImage(image: string): Promise<void> {
   );
 }
 
+/**
+ * The image started a second time as the Container runs it (staging): its
+ * `/health` answers, and an `http:` source is refused with 422. A start
+ * failure that only happens outside dev mode shows here, not first in the
+ * staging smoke.
+ */
+async function stagingSmoke(image: string): Promise<number> {
+  await run(["docker", "rm", "--force", STAGING_CONTAINER_NAME], {
+    capture: true,
+    quiet: true,
+  });
+  if (
+    (await run(["docker", ...stagingRunArgs(image)], { capture: true }))
+      .code !== 0
+  ) {
+    console.error("[render] Failed to start the container in staging mode");
+    return 1;
+  }
+  const url = `http://127.0.0.1:${STAGING_PORT}`;
+  try {
+    if (!(await waitForHealth(url))) {
+      console.error(`[render] staging mode: ${url}/health did not answer`);
+      return 1;
+    }
+    const response = await fetch(`${url}/render`, {
+      body: JSON.stringify(httpSourceProbe()),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+      signal: AbortSignal.timeout(HEALTH_REQUEST_TIMEOUT_MS),
+    });
+    const answer = (await response.json().catch(() => null)) as {
+      code?: string;
+    } | null;
+    if (response.status !== 422 || answer?.code !== "invalidInput") {
+      console.error(
+        `[render] staging mode: an http source answered ${response.status} ${answer?.code ?? ""}, not 422 invalidInput`
+      );
+      return 1;
+    }
+    console.log(
+      "[render] staging mode: /health answers and an http source is refused (422)"
+    );
+    return 0;
+  } finally {
+    console.log("[render] staging-mode container log:");
+    await run(["docker", "logs", STAGING_CONTAINER_NAME]);
+    await run(["docker", "rm", "--force", STAGING_CONTAINER_NAME], {
+      capture: true,
+    });
+  }
+}
+
 async function lane(image: string, build: boolean): Promise<number> {
   if (build) {
     console.log(`[render] building ${image}`);
@@ -302,5 +406,8 @@ if (import.meta.main) {
     console.error(plan.message);
     process.exit(1);
   }
-  process.exit(await lane(plan.image, plan.build));
+  const rendered = await lane(plan.image, plan.build);
+  // The staging-mode start runs whatever the render's result, so both show.
+  const staging = await stagingSmoke(plan.image);
+  process.exit(rendered === 0 ? staging : rendered);
 }

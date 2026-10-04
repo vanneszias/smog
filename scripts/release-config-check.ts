@@ -685,17 +685,67 @@ export function checkReleaseScripts(source: string): string[] {
 
 /** The staging build and its deploy guard, offline, on every push. */
 const STAGING_DRY_RUN = "bun -F @smog/site deploy:dry";
+/** The same with staging forced to `container` (the gate-on path). */
+const GATE_ON_DRY_RUN = "bun -F @smog/site deploy:dry:render";
 
 /**
  * `release:check:core` builds the staging config and runs the deploy guard
  * (`deploy:dry`: `vite build`, the guard, `wrangler deploy --dry-run`; no
  * credentials and no network), so a render gate regression fails CI before
- * a develop push deploys it.
+ * a develop push deploys it; and the gate-on dry run (`deploy:dry:render`,
+ * fix wave C-1), so the `container` path is built and guarded on every push
+ * before the owner flips staging.
  */
 function checkStagingDryRun(core: string): string[] {
-  return core.split("&&").some((command) => command.trim() === STAGING_DRY_RUN)
-    ? []
-    : [`package.json: release:check:core must run \`${STAGING_DRY_RUN}\``];
+  const commands = core.split("&&").map((command) => command.trim());
+  return [STAGING_DRY_RUN, GATE_ON_DRY_RUN]
+    .filter((wanted) => !commands.includes(wanted))
+    .map((wanted) => `package.json: release:check:core must run \`${wanted}\``);
+}
+
+/**
+ * The parts each site dry run needs (phase 7 fix wave, infra C-1):
+ * - `deploy:dry` is staging with `SMOG_RENDER_PIPELINE=1` (so a `container`
+ *   staging builds instead of failing on the missing flag) and
+ *   `--containers-rollout=none` (so wrangler's dry run neither needs Docker
+ *   nor builds the image);
+ * - `deploy:dry:render` forces `container` with `SMOG_DRY_RENDER_MODE`,
+ *   runs the guard with `--dry-run` (the only guard run that accepts the
+ *   override) and the same offline wrangler dry run.
+ */
+const SITE_DRY_RUN_PARTS: Record<string, readonly string[]> = {
+  "deploy:dry": [
+    "CLOUDFLARE_ENV=staging",
+    "SMOG_RENDER_PIPELINE=1",
+    "--dry-run",
+    "--containers-rollout=none",
+  ],
+  "deploy:dry:render": [
+    "CLOUDFLARE_ENV=staging",
+    "SMOG_RENDER_PIPELINE=1",
+    "SMOG_DRY_RENDER_MODE=container",
+    "deploy-guard.ts --dry-run",
+    "--dry-run --containers-rollout=none",
+  ],
+};
+
+/** `apps/site/package.json`: both dry runs carry every part they need. */
+export function checkSiteDryRuns(source: string): string[] {
+  const manifest: unknown = JSON.parse(source);
+  const scripts =
+    isRecord(manifest) && isRecord(manifest.scripts) ? manifest.scripts : {};
+  return Object.entries(SITE_DRY_RUN_PARTS).flatMap(([name, parts]) => {
+    const script = scripts[name];
+    if (typeof script !== "string") {
+      return [`apps/site/package.json: missing the ${name} script`];
+    }
+    return parts
+      .filter((part) => !script.includes(part))
+      .map(
+        (part) =>
+          `apps/site/package.json: ${name} must pass \`${part}\` (a staging dry run that works once staging is container)`
+      );
+  });
 }
 
 type RequiredLists = Record<
@@ -1077,6 +1127,7 @@ export function checkReleaseConfig(root: string): string[] {
     ...checkRenderLaneBuild(read(".github/workflows/ci.yml")),
     ...checkDeployWorkflow(read(".github/workflows/deploy.yml"), migrationsDir),
     ...checkReleaseScripts(read("package.json")),
+    ...checkSiteDryRuns(read("apps/site/package.json")),
     ...wranglerErrors,
     ...resourceErrors,
     ...(wranglerErrors.length === 0 ? checkWranglerRenderKeys(wrangler) : []),

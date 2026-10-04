@@ -1,4 +1,4 @@
-import { rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -391,6 +391,15 @@ function renderModeOf(source: string, env: DeployEnv): unknown {
 }
 
 /**
+ * The `GITHUB_OUTPUT` line that tells the deploy job whether this deploy
+ * builds the render image (`steps.resources.outputs.render_pipeline`): only
+ * then does it set up the cached image build (fix wave, infra M-1).
+ */
+export function renderPipelineOutput(enabled: boolean): string {
+  return `render_pipeline=${enabled}\n`;
+}
+
+/**
  * The render gate's refusal, before anything runs: `RENDER_MODE=container`
  * without `SMOG_RENDER_PIPELINE=1` would fail the build in the Deploy step,
  * after the resources and the D1 migrations. The deploy job stops here
@@ -739,16 +748,20 @@ if (import.meta.main) {
     if (refusal) {
       throw new Error(refusal);
     }
+    const pipeline = renderPipelineEnabled(
+      source,
+      env,
+      process.env.SMOG_RENDER_PIPELINE
+    );
+    if (process.env.GITHUB_OUTPUT) {
+      appendFileSync(process.env.GITHUB_OUTPUT, renderPipelineOutput(pipeline));
+    }
     const result = await ensureResources({
       docker: bunDocker,
       env,
       log: { log: console.log, warn: console.warn },
       mode,
-      pipeline: renderPipelineEnabled(
-        source,
-        env,
-        process.env.SMOG_RENDER_PIPELINE
-      ),
+      pipeline,
       plan: planResources(source, env),
       run: bunxWrangler,
     });

@@ -134,6 +134,7 @@ const HANDLERS: Record<CronName, CronHandler> = {
     ...(await runStaleSweep({
       db: createDb(siteEnv().db),
       mollie: createMollie(siteEnv().worker),
+      mux: createMux(siteEnv().worker),
       now,
       queues: cronQueues(),
       siteUrl: siteEnv().vars.SITE_URL,
