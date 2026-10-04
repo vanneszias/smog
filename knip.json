@@ -86,12 +86,7 @@
         "@smog/payments",
         "@smog/render",
         "@smog/rpc",
-        "@smog/sponsorships",
-        "@smog/utils",
-        "@smog/video",
-        "drizzle-orm",
-        "fflate",
-        "zod"
+        "@smog/video"
       ]
     },
     "packages/api": {

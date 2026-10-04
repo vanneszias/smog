@@ -1,0 +1,9 @@
+{"_id": "kt7tab000000000000000000000000", "_creationTime": 1735689600000.0, "name": "adminLogs"}
+{"_id": "kt7tab000000000000000000000001", "_creationTime": 1735689600000.0, "name": "categories"}
+{"_id": "kt7tab000000000000000000000002", "_creationTime": 1735689600000.0, "name": "gesture_list_items"}
+{"_id": "kt7tab000000000000000000000003", "_creationTime": 1735689600000.0, "name": "gesture_lists"}
+{"_id": "kt7tab000000000000000000000004", "_creationTime": 1735689600000.0, "name": "gestures"}
+{"_id": "kt7tab000000000000000000000005", "_creationTime": 1735689600000.0, "name": "sponsorships"}
+{"_id": "kt7tab000000000000000000000006", "_creationTime": 1735689600000.0, "name": "user_consents"}
+{"_id": "kt7tab000000000000000000000007", "_creationTime": 1735689600000.0, "name": "user_favorites"}
+{"_id": "kt7tab000000000000000000000008", "_creationTime": 1735689600000.0, "name": "users"}

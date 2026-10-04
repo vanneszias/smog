@@ -39,6 +39,7 @@
         "scripts/**",
         "packages/render/src/server/**/*.ts",
         "packages/render/test/**/*.ts",
+        "packages/migrate-convex/src/cli/**/*.ts",
         "**/*.test.ts",
         "**/*.test.tsx"
       ],

@@ -1,9 +1,15 @@
 {
-  // `src/core` (phase 8 ruling 6): the library base, no Bun, Node or
-  // Workers types, so a runtime global there fails to compile. The CLI and
-  // the Bun tests: tsconfig.bun.json. The integration suite:
-  // tsconfig.test.json.
-  "extends": "@smog/config/tsconfig/library.json",
+  // `src/core` (phase 8 ruling 6): the Workers base, so it compiles as
+  // workerd runs it (Web Crypto, TextEncoder, and the D1 types `@smog/db`
+  // needs), with the same `types` as the feature packages' Worker side.
+  // No Bun or Node types: `Bun.*`, `process` or `Buffer` there fails to
+  // compile, and `test/core-rules.test.ts` refuses them and any
+  // `cloudflare:*` import. The CLI and the Bun tests: tsconfig.bun.json.
+  // The integration suite: tsconfig.test.json.
+  "extends": "@smog/config/tsconfig/worker.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/vitest-plugin/types"]
+  },
   "include": ["src/core"],
   "exclude": ["src/**/*.test.ts"]
 }
