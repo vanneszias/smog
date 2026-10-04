@@ -192,7 +192,7 @@ These are recorded here and go into `docs/DECISIONS.md` with the task that imple
 3. **EAS.**
    - **Versions.** `appVersionSource: "remote"`: `app.config.ts` is dynamic, and EAS cannot write a local `autoIncrement` into it.
      - `ios.buildNumber` and `android.versionCode` leave `app.config.ts`.
-     - The owner seeds the remote counters once with `eas build:version:set`: iOS 52, Android 81, the current values (the stores have 51/80).
+     - The owner seeds the remote counters once with `eas build:version:set`: iOS 51, Android 80, the last store values, so the first build is 52/81.
    - **Profiles.**
      - `development`: dev client, internal distribution, channel `development`, `environment: "development"`.
      - `staging`: internal distribution, channel `staging`, `environment: "preview"`, the staging origin.

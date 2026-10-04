@@ -40,12 +40,15 @@ describe("the export schemas", () => {
     }
   });
 
-  test("accept the fixture's row of every table with no issue", async () => {
-    const result = validateExport(await fixtureExport());
+  test("accept the fixture's rows of every table with no issue", async () => {
+    const files = await fixtureExport();
+    const result = validateExport(files);
     expect(issues(result)).toEqual([]);
     for (const table of EXPORT_TABLES) {
-      expect(result.tables[table]).toBeGreaterThanOrEqual(1);
-      expect(result.data[table]).toHaveLength(result.tables[table]);
+      const rows = String(files[table]).trim().split("\n").length;
+      expect(rows).toBeGreaterThan(0);
+      expect(result.tables[table]).toBe(rows);
+      expect(result.data[table]).toHaveLength(rows);
     }
     expect(result.unknownTables).toEqual([]);
     expect(
@@ -215,7 +218,7 @@ describe("the export schemas", () => {
 
   test("make a string D1 cannot store a row blocker naming the field (M4)", async () => {
     const files = await fixtureExport();
-    const row = JSON.parse(String(files.gestures).trim());
+    const row = JSON.parse(String(files.gestures).split("\n")[0] ?? "");
     for (const [info, problem] of [
       ["a\u0000b", "a NUL byte"],
       ["a\ud800b", "a lone surrogate"],
