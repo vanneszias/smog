@@ -2,7 +2,16 @@ import { useTranslation } from "@smog/i18n/react";
 import { Button, cn } from "@smog/ui-web";
 import { muxThumbnailUrl } from "@smog/utils";
 import { Pause, Play, SkipForward } from "lucide-react";
-import { lazy, type ReactNode, Suspense, useSyncExternalStore } from "react";
+import {
+  type FocusEvent,
+  lazy,
+  type ReactNode,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 
 export interface SponsorPreviewProps {
   className?: string;
@@ -73,6 +82,28 @@ export function PreviewFrame({
 }: PreviewFrameProps): ReactNode {
   const { t } = useTranslation();
   const playing = controls ? controls.playing : false;
+  const noteRef = useRef<HTMLParagraphElement>(null);
+  // Whether a control had the focus: when the controls go away (every
+  // fallback failed), the focus moves to the note that says why, instead
+  // of dropping to the page (review M-3).
+  const controlsFocused = useRef(false);
+  const onControlsFocus = useCallback(() => {
+    controlsFocused.current = true;
+  }, []);
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const onControlsBlur = useCallback((event: FocusEvent<HTMLButtonElement>) => {
+    const next = event.relatedTarget;
+    if (next instanceof Node && !controlsRef.current?.contains(next)) {
+      controlsFocused.current = false;
+    }
+  }, []);
+  const hidden = controls === false;
+  useEffect(() => {
+    if (hidden && controlsFocused.current) {
+      controlsFocused.current = false;
+      noteRef.current?.focus();
+    }
+  }, [hidden]);
   return (
     <figure
       className={cn("flex w-full max-w-[20rem] flex-col gap-3", className)}
@@ -88,12 +119,14 @@ export function PreviewFrame({
           {children}
         </div>
       </div>
-      {controls === false ? null : (
-        <div className="flex flex-wrap gap-2">
+      {hidden ? null : (
+        <div className="flex flex-wrap gap-2" ref={controlsRef}>
           <Button
             disabled={controls === null}
             icon={playing ? <Pause /> : <Play />}
+            onBlur={onControlsBlur}
             onClick={controls ? controls.onToggle : undefined}
+            onFocus={onControlsFocus}
             variant="secondary"
           >
             {playing ? t("sponsor.preview.pause") : t("sponsor.preview.play")}
@@ -101,14 +134,21 @@ export function PreviewFrame({
           <Button
             disabled={controls === null}
             icon={<SkipForward />}
+            onBlur={onControlsBlur}
             onClick={controls ? controls.onEnding : undefined}
+            onFocus={onControlsFocus}
             variant="ghost"
           >
             {t("sponsor.preview.showEnding")}
           </Button>
         </div>
       )}
-      <p aria-live="polite" className="text-body-sm text-foreground-muted">
+      <p
+        aria-live="polite"
+        className="text-body-sm text-foreground-muted outline-none"
+        ref={noteRef}
+        tabIndex={-1}
+      >
         {note}
       </p>
     </figure>

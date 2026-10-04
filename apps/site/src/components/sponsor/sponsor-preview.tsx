@@ -1,6 +1,7 @@
 import { Player, type PlayerRef } from "@remotion/player";
 import { useTranslation } from "@smog/i18n/react";
 import {
+  isOverlayFontLoaded,
   loadOverlayFont,
   overlayStartFrame,
   SponsoredVideo,
@@ -43,32 +44,45 @@ type Stage = "video" | "image" | "poster";
 
 const PLAYER_STYLE = { height: "100%", width: "100%" } as const;
 
+type FontState = "loading" | "ready" | "failed";
+
 /**
  * The overlay font is loaded before the Player mounts (ruling 6), so the
- * first frame already has its text. A failed load still mounts the Player:
- * the overlay tries again and fails into the Player's `errorFallback`.
+ * first frame already has its text. Once loaded it is loaded for the page,
+ * so a later preview (another gesture) starts `ready`, with no loading
+ * state. A failed load mounts no Player: the overlay would only fail into
+ * the video fallback, whose note would name the wrong cause (review M-1).
  */
-function useOverlayFontReady(): boolean {
-  const [ready, setReady] = useState(false);
+function useOverlayFont(): FontState {
+  const [state, setState] = useState<FontState>(() =>
+    isOverlayFontLoaded() ? "ready" : "loading"
+  );
   useEffect(() => {
+    if (state !== "loading") {
+      return;
+    }
     let active = true;
-    loadOverlayFont()
-      .catch((error: unknown) => {
+    loadOverlayFont().then(
+      () => {
+        if (active) {
+          setState("ready");
+        }
+      },
+      (error: unknown) => {
         console.error(
           "[sponsorPreview] Failed to load the overlay font:",
           error
         );
-      })
-      .finally(() => {
         if (active) {
-          setReady(true);
+          setState("failed");
         }
-      });
+      }
+    );
     return () => {
       active = false;
     };
-  }, []);
-  return ready;
+  }, [state]);
+  return state;
 }
 
 const displayNameSchema = sponsoredVideoPropsSchema.shape.displayName;
@@ -98,7 +112,6 @@ function FailureSignal({ onFail }: { onFail: () => void }): ReactNode {
 function usePlayerHandle(): {
   attach: (handle: PlayerRef | null) => void;
   handle: RefObject<PlayerRef | null>;
-  mounted: boolean;
   playing: boolean;
 } {
   const handle = useRef<PlayerRef | null>(null);
@@ -127,7 +140,7 @@ function usePlayerHandle(): {
       player.removeEventListener("ended", onStop);
     };
   }, [mounted]);
-  return { attach, handle, mounted, playing };
+  return { attach, handle, playing };
 }
 
 /**
@@ -145,7 +158,7 @@ export function SponsorPreview({
   playbackId,
 }: SponsorPreviewProps): ReactNode {
   const { t } = useTranslation();
-  const fontReady = useOverlayFontReady();
+  const font = useOverlayFont();
   const source = useSourceMetadata(playbackId);
   const logoUrl = useObjectUrl(logo);
   const shownName = useLastValidName(displayName);
@@ -153,10 +166,12 @@ export function SponsorPreview({
     image: false,
     video: false,
   });
-  const { attach, handle, mounted, playing } = usePlayerHandle();
+  const { attach, handle, playing } = usePlayerHandle();
 
   let stage: Stage | null = null;
-  if (fontReady && source.status !== "loading") {
+  if (font === "failed") {
+    stage = "poster";
+  } else if (font === "ready" && source.status !== "loading") {
     if (source.status === "ready" && !failed.video) {
       stage = "video";
     } else {
@@ -237,7 +252,9 @@ export function SponsorPreview({
 
   const showsNote = stage === "image" || stage === "poster";
   let note: string | null = null;
-  if (stage === null) {
+  if (font === "failed") {
+    note = t("sponsor.preview.unavailable");
+  } else if (stage === null) {
     note = t("sponsor.preview.loading");
   } else if (showsNote) {
     note = t("sponsor.preview.fallbackNote");
@@ -248,7 +265,10 @@ export function SponsorPreview({
     | null = null;
   if (props === null && stage !== null) {
     controls = false;
-  } else if (mounted) {
+  } else if (props !== null) {
+    // Enabled from the first frame on, and through a remount (the image
+    // fallback replacing the video), so a focused button keeps its focus
+    // (review M-3); without a Player handle they do nothing.
     controls = { onEnding, onToggle, playing };
   }
 

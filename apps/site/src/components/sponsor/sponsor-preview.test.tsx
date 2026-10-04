@@ -10,7 +10,13 @@ import { join } from "node:path";
 import type { Locale } from "@smog/config/constants";
 import { createI18n } from "@smog/i18n";
 import { I18nextProvider } from "@smog/i18n/react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
   emitPlayer,
@@ -37,6 +43,8 @@ const META = {
   width: 360,
 };
 const BLOB_URL = /^blob:/;
+const FALLBACK_NOTE =
+  "The video cannot be played here, so the preview shows a still of the gesture. The final video uses the full clip, with this ending.";
 /** A static import of the Player's stack (the lazy import is `import(…)`). */
 const HEAVY_IMPORT =
   /from "(?:remotion|@remotion\/[^"]+|mediabunny|@smog\/render\/(?:composition|metadata)|\.\/use-source-metadata|\.\/sponsor-preview)"/;
@@ -190,6 +198,59 @@ describe("SponsorPreview (phase 7 ruling 8)", () => {
     );
   });
 
+  test("a font that does not load: the poster and its own note, never the video note (review M-1)", async () => {
+    font.fails = true;
+    sources.set(HIGHEST, META);
+    render(<Preview />);
+    await screen.findByText(
+      "The preview cannot be shown right now. The final video is made with your name and logo as entered."
+    );
+    expect(screen.queryByTestId("remotion-player")).toBeNull();
+    expect(screen.queryByText(FALLBACK_NOTE)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Play" })).toBeNull();
+  });
+
+  test("a loaded font and a known source: no loading state on the next preview (review M-2)", async () => {
+    sources.set(HIGHEST, META);
+    const first = render(<Preview />);
+    await mounted();
+    first.unmount();
+    render(<Preview />);
+    // At once: the Player, no "Loading" announcement, no new font load.
+    expect(screen.getByTestId("remotion-player")).toBeDefined();
+    expect(screen.queryByText("Loading the preview…")).toBeNull();
+    expect(font.loads).toBe(1);
+  });
+
+  test("a video failing while Play has the focus: the button keeps it (review M-3)", async () => {
+    sources.set(HIGHEST, META);
+    const { rerender } = render(<Preview />);
+    await mounted();
+    act(() => button("Play").focus());
+    player.failing.add(HIGHEST);
+    rerender(<Preview displayName="Bakkerij Jansen " />);
+    await screen.findByText(FALLBACK_NOTE);
+    expect(player.props?.inputProps.background).toEqual({
+      kind: "image",
+      src: THUMBNAIL,
+    });
+    expect(document.activeElement).toBe(button("Play"));
+    expect(button("Play").hasAttribute("disabled")).toBe(false);
+  });
+
+  test("when every fallback fails, the focus moves from the controls to the note", async () => {
+    sources.set(HIGHEST, META);
+    const { rerender } = render(<Preview />);
+    await mounted();
+    act(() => button("Show the ending").focus());
+    player.failing.add(HIGHEST);
+    player.failing.add(THUMBNAIL);
+    rerender(<Preview displayName="Bakkerij Jansen " />);
+    const note = await screen.findByText(FALLBACK_NOTE);
+    await waitFor(() => expect(document.activeElement).toBe(note));
+    expect(screen.queryByRole("button", { name: "Play" })).toBeNull();
+  });
+
   test("Play replays from the start, Pause pauses, the label follows the Player", async () => {
     sources.set(HIGHEST, META);
     render(<Preview />);
@@ -300,6 +361,35 @@ describe("SponsorPreviewSlot (phase 7 ruling 8, I-6)", () => {
     expect(player.props).toBeNull();
     expect(font.loads).toBe(0);
     expect(reads).toEqual([]);
+  });
+
+  test("the SSR branch: with import.meta.env.SSR true the build drops the lazy import", async () => {
+    // `bun test` leaves `import.meta.env.SSR` undefined, so the render tests
+    // above take the client branch; Vite defines it per environment. The
+    // same define in a bundle shows the server build has no path to the
+    // Player module (the deploy guard checks the real `dist/server`).
+    const bundle = async (ssr: boolean): Promise<string> => {
+      const result = await Bun.build({
+        define: { "import.meta.env.SSR": JSON.stringify(ssr) },
+        entrypoints: [join(import.meta.dirname, "preview-slot.tsx")],
+        minify: { syntax: true },
+        packages: "external",
+        splitting: true,
+        target: "browser",
+      });
+      expect(result.success).toBe(true);
+      const outputs = await Promise.all(
+        result.outputs.map((output) => output.text())
+      );
+      return outputs.join("\n");
+    };
+    const server = await bundle(true);
+    expect(server).toContain("LazySponsorPreview = null");
+    expect(server).not.toContain("sponsor-preview");
+    expect(server).not.toContain("@remotion/player");
+    expect(server).not.toContain("mediabunny");
+    const client = await bundle(false);
+    expect(client).toContain("@remotion/player");
   });
 
   test("on the client the lazy Player replaces the poster", async () => {

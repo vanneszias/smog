@@ -147,12 +147,21 @@ function ReeditForm({
       </div>
       <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         {gesture.data ? (
-          <SponsorPreviewSlot
-            displayName={displayName.trim()}
-            logo={logoError ? null : logo}
-            name={link.gesture.name}
-            playbackId={gesture.data.playbackId}
-          />
+          <div className="flex min-w-0 flex-col gap-2">
+            <SponsorPreviewSlot
+              displayName={displayName.trim()}
+              logo={logoError ? null : logo}
+              name={link.gesture.name}
+              playbackId={gesture.data.playbackId}
+            />
+            {/* The stored logo has no browser-readable URL (it is served
+                to admins only), so the preview says it stays (review M-5). */}
+            {link.hasLogo && !logo ? (
+              <Text className="max-w-[20rem]" size="body-sm" tone="muted">
+                {t("sponsor.preview.currentLogo")}
+              </Text>
+            ) : null}
+          </div>
         ) : (
           <div />
         )}

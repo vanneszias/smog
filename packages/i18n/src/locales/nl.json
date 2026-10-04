@@ -2065,7 +2065,9 @@
       "pause": "Pauzeren",
       "showEnding": "Toon het einde",
       "loading": "Voorbeeld laden…",
-      "fallbackNote": "De video kan hier niet afspelen, dus het voorbeeld toont een stilstaand beeld van het gebaar. De definitieve video gebruikt de volledige clip, met dit einde."
+      "fallbackNote": "De video kan hier niet worden afgespeeld, dus het voorbeeld toont een stilstaand beeld van het gebaar. De definitieve video gebruikt de volledige clip, met dit einde.",
+      "unavailable": "Het voorbeeld kan nu niet getoond worden. De definitieve video wordt gemaakt met je naam en logo zoals ingevuld.",
+      "currentLogo": "Je huidige logo blijft in de video. Dit voorbeeld toont het niet; kies een nieuw bestand om het te vervangen."
     }
   }
 }

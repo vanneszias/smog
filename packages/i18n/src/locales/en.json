@@ -2065,7 +2065,9 @@
       "pause": "Pause",
       "showEnding": "Show the ending",
       "loading": "Loading the preview…",
-      "fallbackNote": "The video cannot be played here, so the preview shows a still of the gesture. The final video uses the full clip, with this ending."
+      "fallbackNote": "The video cannot be played here, so the preview shows a still of the gesture. The final video uses the full clip, with this ending.",
+      "unavailable": "The preview cannot be shown right now. The final video is made with your name and logo as entered.",
+      "currentLogo": "Your current logo stays in the video. This preview does not show it; choose a new file to replace it."
     }
   }
 }

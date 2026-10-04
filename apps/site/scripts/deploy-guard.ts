@@ -216,9 +216,13 @@ export const CLIENT_LAZY_MARKERS = [
 
 const CLIENT_MANIFEST = join(".vite", "manifest.json");
 
+/** The wizard's Player module: the one lazy root the render stack may load from. */
+const PREVIEW_MODULE = "components/sponsor/sponsor-preview.tsx";
+
 interface ManifestChunk {
   file: string;
   imports: string[];
+  isDynamicEntry: boolean;
   isEntry: boolean;
 }
 
@@ -234,6 +238,7 @@ function manifestChunks(manifest: unknown): Map<string, ManifestChunk> {
         imports: Array.isArray(value.imports)
           ? value.imports.filter((item) => typeof item === "string")
           : [],
+        isDynamicEntry: value.isDynamicEntry === true,
         isEntry: value.isEntry === true,
       });
     }
@@ -241,37 +246,62 @@ function manifestChunks(manifest: unknown): Map<string, ManifestChunk> {
   return chunks;
 }
 
+/** The files of `roots` and every chunk they import statically. */
+function staticClosure(
+  chunks: Map<string, ManifestChunk>,
+  roots: readonly string[]
+): Set<string> {
+  const files = new Set<string>();
+  const pending = [...roots];
+  for (let key = pending.pop(); key !== undefined; key = pending.pop()) {
+    const chunk = chunks.get(key);
+    if (chunk && !files.has(chunk.file)) {
+      files.add(chunk.file);
+      pending.push(...chunk.imports);
+    }
+  }
+  return files;
+}
+
 /**
- * In the browser build, `remotion` and `mediabunny` may appear only in lazy
- * chunks, never in an entry chunk or a chunk an entry imports statically
- * (phase 7 ruling 1): every page would load them. Reads the client build's
- * Vite manifest (`dist/client/.vite/manifest.json`).
+ * In the browser build, `remotion` and `mediabunny` may appear only in the
+ * wizard Player's lazy chunks (phase 7 ruling 1; task 8 review M-6): the
+ * `sponsor-preview.tsx` dynamic entry and the chunks only it imports. Not
+ * in an entry chunk (every page would load them), and not in any other
+ * entry's or lazy route's chunks or a chunk shared with them. Reads the
+ * client build's Vite manifest (`dist/client/.vite/manifest.json`).
  */
 export function checkClientRenderIsLazy(
   manifest: unknown,
   files: readonly BuiltFile[]
 ): void {
   const chunks = manifestChunks(manifest);
-  const pending = [...chunks]
-    .filter(([, chunk]) => chunk.isEntry)
-    .map(([key]) => key);
-  if (pending.length === 0) {
+  const keys = [...chunks.keys()];
+  if (!keys.some((key) => chunks.get(key)?.isEntry)) {
     throw new Error(
       `[deploy-guard] no entry chunk in dist/client/${CLIENT_MANIFEST}: the client build must write its manifest (vite.config.ts, environments.client.build.manifest).`
     );
   }
-  const eager = new Set<string>();
-  for (let key = pending.pop(); key !== undefined; key = pending.pop()) {
-    const chunk = chunks.get(key);
-    if (chunk && !eager.has(chunk.file)) {
-      eager.add(chunk.file);
-      pending.push(...chunk.imports);
-    }
-  }
-  const clientFile = join("dist", "client");
+  const isPreview = (key: string): boolean => key.endsWith(PREVIEW_MODULE);
+  const preview = staticClosure(chunks, keys.filter(isPreview));
+  const others = staticClosure(
+    chunks,
+    keys.filter((key) => {
+      const chunk = chunks.get(key);
+      return (
+        !isPreview(key) &&
+        chunk !== undefined &&
+        (chunk.isEntry || chunk.isDynamicEntry)
+      );
+    })
+  );
+  const allowed = [...preview].filter((file) => !others.has(file));
+  const clientDir = join("dist", "client");
   const found = files
-    .filter((file) =>
-      [...eager].some((chunk) => file.path.endsWith(join(clientFile, chunk)))
+    .filter(
+      (file) =>
+        file.path.includes(clientDir) &&
+        !allowed.some((chunk) => file.path.endsWith(join(clientDir, chunk)))
     )
     .flatMap((file) =>
       CLIENT_LAZY_MARKERS.filter(({ marker }) =>
@@ -280,7 +310,7 @@ export function checkClientRenderIsLazy(
     );
   if (found.length > 0) {
     throw new Error(
-      `[deploy-guard] the browser build loads the render stack in an entry chunk (${found.join("; ")}). The wizard's Player must stay behind its lazy import (components/sponsor/preview-slot.tsx).`
+      `[deploy-guard] the browser build loads the render stack outside the sponsor preview's lazy chunks (${found.join("; ")}). Only components/sponsor/sponsor-preview.tsx may import it, behind preview-slot.tsx's lazy import.`
     );
   }
 }

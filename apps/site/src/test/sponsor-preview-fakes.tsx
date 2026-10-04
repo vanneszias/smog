@@ -100,12 +100,18 @@ export const sources = new Map<string, SourceMetadata | Error>();
 export const reads: string[] = [];
 
 export const font: {
+  fails: boolean;
   hold: boolean;
+  loaded: boolean;
   loads: number;
   release: () => void;
 } = {
+  /** When set, a load rejects. */
+  fails: false,
   /** When set, a load waits for `release()`. */
   hold: false,
+  /** What `isOverlayFontLoaded()` answers (a load that resolved sets it). */
+  loaded: false,
   /** How many times `loadOverlayFont` ran. */
   loads: 0,
   /** Resolves the pending load (by default it resolves at once). */
@@ -121,6 +127,8 @@ export function resetPreviewFakes(): void {
   player.props = null;
   sources.clear();
   reads.length = 0;
+  font.fails = false;
+  font.loaded = false;
   font.loads = 0;
   font.hold = false;
   font.release = () => undefined;
@@ -144,13 +152,24 @@ mock.module("@smog/render/metadata", () => ({
 
 mock.module("@smog/render/composition", () => ({
   ...composition,
+  isOverlayFontLoaded: (): boolean => font.loaded,
   loadOverlayFont: (): Promise<void> => {
     font.loads += 1;
+    if (font.fails) {
+      return Promise.reject(new Error("font failed"));
+    }
+    const done = (): void => {
+      font.loaded = true;
+    };
     if (!font.hold) {
+      done();
       return Promise.resolve();
     }
     return new Promise<void>((resolve) => {
-      font.release = resolve;
+      font.release = () => {
+        done();
+        resolve();
+      };
     });
   },
 }));

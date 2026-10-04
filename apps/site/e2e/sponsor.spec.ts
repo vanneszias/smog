@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   type APIRequestContext,
@@ -73,11 +74,11 @@ const LEGACY_ID = "j57e2elegacygoedemorgen00000";
 const REEDIT_TOKEN = "e2eReeditTokenForTheSponsorSpec_0123456789a";
 const DAY = 86_400_000;
 const MOLLIE_FAKE = `http://localhost:${process.env.E2E_MOLLIE_PORT ?? 4020}`;
-/** A 1×1 transparent PNG. */
-const PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
-  "base64"
-);
+/**
+ * An opaque 160 × 160 PNG logo (a green ring on white), so the preview's
+ * logo box shows what the render would draw.
+ */
+const PNG = readFileSync(join(import.meta.dirname, "fixtures", "logo.png"));
 const SUCCESS_URL = /\/sponsor\/success\?payment=/;
 const CHECKOUT_URL = new RegExp(`^${MOLLIE_FAKE}/checkout/`);
 /**
@@ -403,7 +404,7 @@ test("the review step plays the gesture's MP4 in the Player, with the overlay (S
   await expect(frame.getByText("Bakkerij Jansen")).toBeVisible();
   await expect(frame.locator('img[src^="blob:"]')).toBeVisible();
   await expect(
-    page.getByText("De video kan hier niet afspelen", { exact: false })
+    page.getByText("De video kan hier niet worden afgespeeld", { exact: false })
   ).toHaveCount(0);
   // Play replays the 2 s clip from the start, then it is paused again.
   await page.getByRole("button", { name: "Afspelen" }).click();
@@ -441,7 +442,7 @@ test("an MP4 that does not load: the image fallback, the overlay and the note", 
   await previewReady(page);
   await expect(
     page.getByText(
-      "De video kan hier niet afspelen, dus het voorbeeld toont een stilstaand beeld van het gebaar.",
+      "De video kan hier niet worden afgespeeld, dus het voorbeeld toont een stilstaand beeld van het gebaar.",
       { exact: false }
     )
   ).toBeVisible();

@@ -16,21 +16,31 @@ import {
 
 /**
  * A client manifest as Vite writes it: the entry statically imports a
- * shared chunk and lazily the wizard's preview, which imports Remotion.
+ * shared chunk, and lazily a route and the wizard's preview. The preview
+ * imports Remotion; the route and the preview share a chunk.
  */
 const MANIFEST = {
   "_remotion.js": { file: "assets/remotion.js", name: "remotion" },
+  "_route-shared.js": { file: "assets/route-shared.js" },
   "_shared.js": { file: "assets/shared.js", name: "shared" },
   "_styles.css": { file: "assets/styles.css" },
   "src/client.tsx": {
-    dynamicImports: ["src/components/sponsor/sponsor-preview.tsx"],
+    dynamicImports: [
+      "src/components/sponsor/sponsor-preview.tsx",
+      "src/routes/sponsor.tsx",
+    ],
     file: "assets/main.js",
     imports: ["_shared.js"],
     isEntry: true,
   },
   "src/components/sponsor/sponsor-preview.tsx": {
     file: "assets/sponsor-preview.js",
-    imports: ["_remotion.js", "_shared.js"],
+    imports: ["_remotion.js", "_route-shared.js", "_shared.js"],
+    isDynamicEntry: true,
+  },
+  "src/routes/sponsor.tsx": {
+    file: "assets/route.js",
+    imports: ["_route-shared.js", "_shared.js"],
     isDynamicEntry: true,
   },
 };
@@ -62,9 +72,15 @@ describe("checkClientRenderIsLazy (phase 7 ruling 1)", () => {
     ).not.toThrow();
   });
 
-  it("refuses them in an entry chunk or a chunk it imports statically", () => {
+  it("refuses them anywhere else: an entry, its imports, a lazy route, a chunk the route shares with the preview", () => {
     for (const { marker, name } of CLIENT_LAZY_MARKERS) {
-      for (const file of ["assets/main.js", "assets/shared.js"]) {
+      for (const file of [
+        "assets/main.js",
+        "assets/shared.js",
+        "assets/route.js",
+        "assets/route-shared.js",
+        "assets/unlisted.js",
+      ]) {
         expect(() =>
           checkClientRenderIsLazy(
             MANIFEST,
@@ -177,6 +193,6 @@ describe("deploy-guard --bundle on a built tree (fixture)", () => {
       })
     );
     expect(code).toBe(1);
-    expect(output).toContain("an entry chunk");
+    expect(output).toContain("outside the sponsor preview's lazy chunks");
   });
 });
