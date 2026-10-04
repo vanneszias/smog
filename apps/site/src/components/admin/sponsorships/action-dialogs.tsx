@@ -2,6 +2,7 @@ import {
   sponsorshipRefusalOf,
   useAdminSponsorshipActions,
   useRetryRender,
+  useRetryRenderPending,
 } from "@smog/admin/client";
 import type { AdminPayment, AdminSponsorshipDetail } from "@smog/admin/schema";
 import type { SponsorshipStatus } from "@smog/db/enums";
@@ -477,6 +478,7 @@ export function RetryRender({
 }): ReactNode {
   const { t } = useTranslation();
   const retry = useRetryRender();
+  const anyPending = useRetryRenderPending();
   const run = useRun();
   const [open, setOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -528,6 +530,7 @@ export function RetryRender({
       {failed ? (
         <div>
           <Button
+            disabled={anyPending && !retry.isPending}
             icon={<RotateCcw />}
             loading={retry.isPending}
             onClick={openDialog}

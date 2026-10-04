@@ -13,11 +13,15 @@
  * | `running` | `complete` (the commit was lost) | `failRender` |
  * | `running` | not found | `failRender` |
  * | `running` past the ceiling | still active | `terminate()`, then `failRender` |
+ * | `queued` past the ceiling | still active | `terminate()`, then `failRender` |
  * | any | active, before the ceiling | untouched |
  * | any | `unknown` | logged, untouched |
  *
- * Without a Workflow binding (`RENDER_MODE=fake`) only the first row
- * applies. Idempotent: it acts on `queued`/`running` jobs only, and a
+ * The `queued` ceiling row is an addition to ruling 12 (task 7 review
+ * M-5): an instance that never leaves `queued`/`paused` would otherwise
+ * keep its job `queued` for ever. Both ceilings are measured from the
+ * job's `updated_at`. Without a Workflow binding (`RENDER_MODE=fake`) only
+ * the first row applies. Idempotent: it acts on `queued`/`running` jobs only, and a
  * re-enqueue moves the job's `updated_at` to now, so the next run waits
  * another 10 minutes before sending it again.
  */
@@ -29,10 +33,15 @@ import { failRender } from "./render";
 
 /** A `queued` job this old has lost its `render.requested` (or its start). */
 export const RENDER_QUEUED_GRACE_MS = 10 * 60_000;
-/** Jobs looked at per run, oldest first; the next hour continues. */
-export const RENDER_WATCHDOG_MAX_JOBS = 50;
 /**
- * How long a job may stay `running` (since its last `updated_at`) before
+ * Jobs looked at per run and per status (`queued`, `running`), oldest
+ * first, so neither kind can starve the other (task 7 review M-7); the
+ * next hour continues.
+ */
+export const RENDER_WATCHDOG_BUDGET = 25;
+/**
+ * How long a job may stay `queued` or `running` with an active instance
+ * (since its last `updated_at`) before
  * the watchdog terminates its instance: the Workflow's longest straight
  * path (about 2 h 40 min, ruling 4) plus a 30 minute margin. The
  * Workflow's own `RENDER_WATCHDOG_CEILING` (derived from
@@ -40,8 +49,11 @@ export const RENDER_WATCHDOG_MAX_JOBS = 50;
  */
 export const RENDER_WATCHDOG_CEILING_MS = (2 * 60 + 40 + 30) * 60_000;
 
-/** A Workflow instance's status, as `InstanceStatus["status"]` names it. */
-export type WorkflowInstanceState =
+/**
+ * A Workflow instance's status: the runtime's `WorkflowInstanceStatus`
+ * (`InstanceStatus["status"]`).
+ */
+export type WorkflowInstanceStatus =
   | "complete"
   | "errored"
   | "paused"
@@ -53,9 +65,10 @@ export type WorkflowInstanceState =
   | "waiting"
   | "waitingForPause";
 
-export interface WorkflowInstanceStatus {
+/** What `instance.status()` answers: the runtime's `InstanceStatus`, narrowed. */
+export interface WorkflowInstanceState {
   error?: { message: string; name?: string } | null;
-  status: WorkflowInstanceState;
+  status: WorkflowInstanceStatus;
 }
 
 /**
@@ -64,7 +77,7 @@ export interface WorkflowInstanceStatus {
  * does not know the id, and `terminate`.
  */
 export interface WorkflowStatusPort {
-  status: (instanceId: string) => Promise<WorkflowInstanceStatus | "not-found">;
+  status: (instanceId: string) => Promise<WorkflowInstanceState | "not-found">;
   terminate: (instanceId: string) => Promise<void>;
 }
 
@@ -73,7 +86,7 @@ export interface RenderWatchdogResult {
   failed: number;
   /** `queued` jobs whose `render.requested` was sent again. */
   requeued: number;
-  /** `running` jobs past the ceiling: instance terminated, job failed. */
+  /** Jobs past the ceiling with an active instance: terminated, then failed. */
   timedOut: number;
 }
 
@@ -81,7 +94,7 @@ export interface RenderWatchdogResult {
  * Still working. `rollingBack` (the runtime's rollback handlers, which the
  * render never registers) counts as active too.
  */
-const ACTIVE_INSTANCE: ReadonlySet<WorkflowInstanceState> = new Set([
+const ACTIVE_INSTANCE: ReadonlySet<WorkflowInstanceStatus> = new Set([
   "paused",
   "queued",
   "rollingBack",
@@ -90,7 +103,7 @@ const ACTIVE_INSTANCE: ReadonlySet<WorkflowInstanceState> = new Set([
   "waitingForPause",
 ]);
 
-const ENDED_INSTANCE: ReadonlySet<WorkflowInstanceState> = new Set([
+const ENDED_INSTANCE: ReadonlySet<WorkflowInstanceStatus> = new Set([
   "complete",
   "errored",
   "terminated",
@@ -103,7 +116,7 @@ const URL_PATTERN = /\bhttps?:\/\/\S+/gi;
  * error with every URL removed (signed Mux URLs never reach D1, a log or
  * an email). `failRender` caps it at 300 characters.
  */
-export function instanceErrorSummary(instance: WorkflowInstanceStatus): string {
+export function instanceErrorSummary(instance: WorkflowInstanceState): string {
   const raw = instance.error
     ? [instance.error.name, instance.error.message].filter(Boolean).join(": ")
     : "";
@@ -143,7 +156,7 @@ export function watchdogQuery(
         : eq(renderJob.status, status)
     )
     .orderBy(asc(renderJob.updatedAt))
-    .limit(RENDER_WATCHDOG_MAX_JOBS);
+    .limit(RENDER_WATCHDOG_BUDGET);
 }
 
 interface WatchdogContext {
@@ -210,27 +223,52 @@ async function fail(
   return true;
 }
 
+/**
+ * An active instance past the ceiling: terminated first, so a late commit
+ * cannot land after the failure, then `failRender("timed out")`. When the
+ * terminate succeeds and the failure does not, the next run sees a
+ * `terminated` instance and fails the job through that row instead
+ * ("workflow terminated", counted as `failed`).
+ */
+async function timeOutIfPastCeiling(
+  context: WatchdogContext,
+  job: WatchedJob,
+  instance: WorkflowInstanceState,
+  workflow: WorkflowStatusPort
+): Promise<void> {
+  const age = context.now.getTime() - job.updatedAt.getTime();
+  if (!ACTIVE_INSTANCE.has(instance.status) || age <= context.ceilingMs) {
+    return;
+  }
+  await workflow.terminate(job.workflowInstanceId);
+  if (await fail(context, job, "timed out")) {
+    context.result.timedOut += 1;
+  }
+}
+
 async function reconcileQueued(
   context: WatchdogContext,
   job: WatchedJob,
-  instance: WorkflowInstanceStatus | "not-found" | null
+  instance: WorkflowInstanceState | "not-found" | null,
+  workflow: WorkflowStatusPort | null
 ): Promise<void> {
-  if (instance === null || instance === "not-found") {
+  if (instance === null || instance === "not-found" || workflow === null) {
     await requeue(context, job);
     return;
   }
-  if (
-    ENDED_INSTANCE.has(instance.status) &&
-    (await fail(context, job, "workflow ended without a result"))
-  ) {
-    context.result.failed += 1;
+  if (ENDED_INSTANCE.has(instance.status)) {
+    if (await fail(context, job, "workflow ended without a result")) {
+      context.result.failed += 1;
+    }
+    return;
   }
+  await timeOutIfPastCeiling(context, job, instance, workflow);
 }
 
 async function reconcileRunning(
   context: WatchdogContext,
   job: WatchedJob,
-  instance: WorkflowInstanceStatus | "not-found",
+  instance: WorkflowInstanceState | "not-found",
   workflow: WorkflowStatusPort
 ): Promise<void> {
   if (instance === "not-found") {
@@ -252,14 +290,7 @@ async function reconcileRunning(
     }
     return;
   }
-  const age = context.now.getTime() - job.updatedAt.getTime();
-  if (ACTIVE_INSTANCE.has(instance.status) && age > context.ceilingMs) {
-    // Terminated first, so a late commit cannot land after the failure.
-    await workflow.terminate(job.workflowInstanceId);
-    if (await fail(context, job, "timed out")) {
-      context.result.timedOut += 1;
-    }
-  }
+  await timeOutIfPastCeiling(context, job, instance, workflow);
 }
 
 async function reconcileOne(
@@ -281,16 +312,16 @@ async function reconcileOne(
     return;
   }
   if (job.status === "queued") {
-    await reconcileQueued(context, job, instance);
+    await reconcileQueued(context, job, instance, workflow);
   } else {
     await reconcileRunning(context, job, instance, workflow);
   }
 }
 
 /**
- * Reconciles at most `RENDER_WATCHDOG_MAX_JOBS` render jobs, oldest first
- * (`queued` ones older than 10 minutes, and, with a Workflow binding,
- * every `running` one), as the table at the top of this file says. A job
+ * Reconciles at most `RENDER_WATCHDOG_BUDGET` `queued` jobs older than 10
+ * minutes and, with a Workflow binding, as many `running` ones, each kind
+ * oldest first, as the table at the top of this file says. A job
  * that fails to reconcile is logged and skipped; the next hour retries.
  */
 export async function reconcileRenderJobs({
@@ -314,9 +345,7 @@ export async function reconcileRenderJobs({
     watchdogQuery(db, "queued", queuedBefore),
     workflow ? watchdogQuery(db, "running", null) : Promise.resolve([]),
   ]);
-  const jobs = [...queued, ...running]
-    .sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime())
-    .slice(0, RENDER_WATCHDOG_MAX_JOBS);
+  const jobs = [...queued, ...running];
   const context: WatchdogContext = {
     ceilingMs,
     db,

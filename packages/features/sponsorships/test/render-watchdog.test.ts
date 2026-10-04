@@ -14,10 +14,10 @@ import { createRenderJob, markRenderRunning } from "../src/server/render";
 import {
   instanceErrorSummary,
   RENDER_QUEUED_GRACE_MS,
+  RENDER_WATCHDOG_BUDGET,
   RENDER_WATCHDOG_CEILING_MS,
-  RENDER_WATCHDOG_MAX_JOBS,
   reconcileRenderJobs,
-  type WorkflowInstanceStatus,
+  type WorkflowInstanceState,
   type WorkflowStatusPort,
   watchdogQuery,
 } from "../src/server/render-watchdog";
@@ -70,7 +70,7 @@ function expectAdminEmails(emails: EmailMessage[], renderJobId: string) {
   }
 }
 
-type Answer = WorkflowInstanceStatus | "not-found";
+type Answer = WorkflowInstanceState | "not-found";
 
 /** A status port answering `answers[instanceId]`, recording every call in order. */
 function fakePort(answers: Record<string, Answer>) {
@@ -250,6 +250,7 @@ describe("reconcileRenderJobs (ruling 12)", () => {
     "waiting",
     "paused",
     "waitingForPause",
+    "rollingBack",
   ] as const)(
     "terminates a running job past the ceiling (%s) before failing it",
     async (status) => {
@@ -285,6 +286,7 @@ describe("reconcileRenderJobs (ruling 12)", () => {
     "waiting",
     "paused",
     "waitingForPause",
+    "rollingBack",
   ] as const)(
     "leaves a job whose instance is %s before the ceiling",
     async (status) => {
@@ -307,6 +309,65 @@ describe("reconcileRenderJobs (ruling 12)", () => {
       expect((await jobRow(running.id))?.status).toBe("running");
     }
   );
+
+  it.each(["queued", "paused", "rollingBack"] as const)(
+    "terminates a queued job past the ceiling whose instance is still %s, then fails it",
+    async (status) => {
+      const queued = await job("queued", PAST_CEILING);
+      const { calls, port } = fakePort({ [queued.id]: { status } });
+      const { events, queues } = recordingQueues();
+
+      const first = await run(port, queues);
+      const second = await run(port, queues);
+
+      expect(first).toEqual({ failed: 0, requeued: 0, timedOut: 1 });
+      expect(second).toEqual({ failed: 0, requeued: 0, timedOut: 0 });
+      expect(calls).toEqual([`status:${queued.id}`, `terminate:${queued.id}`]);
+      expect(events).toEqual([]);
+      expect(await jobRow(queued.id)).toMatchObject({
+        error: "timed out",
+        status: "failed",
+      });
+      expect(await statusOf(db, queued.sponsorshipId)).toBe("render_failed");
+    }
+  );
+
+  it("a terminate that throws leaves the job; the next run fails it as terminated", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const running = await job("running", PAST_CEILING);
+    const answers: Record<string, Answer> = {
+      [running.id]: { status: "running" },
+    };
+    const { port } = fakePort(answers);
+    port.terminate = () =>
+      Promise.reject(new Error("instance is already complete"));
+    const { queues } = recordingQueues();
+
+    expect(await run(port, queues)).toEqual({
+      failed: 0,
+      requeued: 0,
+      timedOut: 0,
+    });
+    expect((await jobRow(running.id))?.status).toBe("running");
+    expect(error).toHaveBeenCalledWith(
+      `[sponsorships] Failed to reconcile render job ${running.id}; the next run retries:`,
+      expect.any(Error)
+    );
+
+    answers[running.id] = { status: "terminated" };
+    expect(await run(port, queues)).toEqual({
+      failed: 1,
+      requeued: 0,
+      timedOut: 0,
+    });
+    expect(await jobRow(running.id)).toMatchObject({
+      error: "workflow terminated",
+      status: "failed",
+    });
+    error.mockRestore();
+  });
 
   it("logs and leaves a job whose instance is unknown", async () => {
     const queued = await job("queued", OLD_QUEUED);
@@ -350,15 +411,15 @@ describe("reconcileRenderJobs (ruling 12)", () => {
     error.mockRestore();
   });
 
-  it("looks at most 50 jobs per run, oldest first", async () => {
+  it("looks at most 25 queued jobs per run, oldest first", async () => {
     const jobs: { id: string; sponsorshipId: string }[] = [];
-    for (let i = 0; i < RENDER_WATCHDOG_MAX_JOBS + 2; i += 1) {
+    for (let i = 0; i < RENDER_WATCHDOG_BUDGET + 2; i += 1) {
       // biome-ignore lint/performance/noAwaitInLoops: fixtures, in order.
       jobs.push(await job("queued", new Date(OLD_QUEUED.getTime() - i * 1000)));
     }
     const { events, queues } = recordingQueues();
     expect(await run(null, queues)).toMatchObject({
-      requeued: RENDER_WATCHDOG_MAX_JOBS,
+      requeued: RENDER_WATCHDOG_BUDGET,
     });
     const sent = new Set(
       events.map((event) =>
@@ -369,6 +430,24 @@ describe("reconcileRenderJobs (ruling 12)", () => {
     expect(sent.has(jobs[0]?.id as string)).toBe(false);
     expect(sent.has(jobs[1]?.id as string)).toBe(false);
     expect(sent.has(jobs.at(-1)?.id as string)).toBe(true);
+  });
+
+  it("gives running jobs their own budget: old queued jobs cannot starve them", async () => {
+    for (let i = 0; i < RENDER_WATCHDOG_BUDGET + 1; i += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: fixtures, in order.
+      await job("queued", new Date(PAST_CEILING.getTime() - (i + 1) * 1000));
+    }
+    // The newest job of all, and running: still looked at this run.
+    const running = await job("running", RECENT);
+    const { port } = fakePort({ [running.id]: { status: "errored" } });
+    const { queues } = recordingQueues();
+
+    expect(await run(port, queues)).toEqual({
+      failed: 1,
+      requeued: RENDER_WATCHDOG_BUDGET,
+      timedOut: 0,
+    });
+    expect((await jobRow(running.id))?.status).toBe("failed");
   });
 
   it("summarises an instance error without URLs", () => {

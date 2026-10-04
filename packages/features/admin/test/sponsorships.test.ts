@@ -1659,6 +1659,13 @@ describe("retryRender (A-27)", () => {
       await expect(
         callAs(admin, "sponsorships.retryRender", { id })
       ).resolves.toMatchObject({ attempt: 2 });
+      // Logged by the producer, and the call still succeeds: the hourly
+      // render watchdog re-sends a lost render.requested.
+      expect(
+        logged.mock.calls.some(([message]) =>
+          String(message).startsWith("[jobs] Failed to enqueue")
+        )
+      ).toBe(true);
     } finally {
       queueFaults.events = false;
       logged.mockRestore();

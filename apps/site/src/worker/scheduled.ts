@@ -13,7 +13,7 @@ import {
   runReminderSweep,
   runRetentionPurge,
   runStaleSweep,
-  type WorkflowInstanceStatus,
+  type WorkflowInstanceState,
   type WorkflowStatusPort,
 } from "@smog/sponsorships/server";
 import { createMux } from "@smog/video";
@@ -25,13 +25,20 @@ import { siteEnv } from "@/server/auth";
  */
 export interface WorkflowStatusBinding {
   get: (id: string) => Promise<{
-    status: () => Promise<WorkflowInstanceStatus>;
+    status: () => Promise<WorkflowInstanceState>;
     terminate: () => Promise<void>;
   }>;
 }
 
-/** What `get(id)` throws for an id the engine does not know (`instance.not_found`). */
-const NOT_FOUND = /instance\.not_found|not[ _-]?found/i;
+/**
+ * What `get(id)` throws for an id the engine does not know: the code
+ * `instance.not_found` (Miniflare: `new Error("instance.not_found")`, and
+ * `(instance.not_found) Instance does not exist` from the engine). Only
+ * that code: any other error ("Workflow not found", "script not found"
+ * during a deploy) is thrown, so the watchdog leaves the job for the next
+ * run instead of failing a healthy render (task 7 review I-1).
+ */
+const NOT_FOUND = /\binstance\.not_found\b/;
 
 function isInstanceNotFound(error: unknown): boolean {
   return error instanceof Error && NOT_FOUND.test(error.message);

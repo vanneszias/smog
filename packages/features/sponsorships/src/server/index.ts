@@ -61,8 +61,8 @@ export {
 export {
   instanceErrorSummary,
   RENDER_QUEUED_GRACE_MS,
+  RENDER_WATCHDOG_BUDGET,
   RENDER_WATCHDOG_CEILING_MS,
-  RENDER_WATCHDOG_MAX_JOBS,
   type RenderWatchdogResult,
   reconcileRenderJobs,
   type WorkflowInstanceState,

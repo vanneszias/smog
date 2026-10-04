@@ -323,4 +323,30 @@ describe("workflowStatusPort (the render watchdog's port, ruling 12)", () => {
     await port?.terminate("job-1");
     expect(terminated).toEqual(["job-1"]);
   });
+
+  it("only the instance.not_found code is not-found; any other 'not found' is thrown (review I-1)", async () => {
+    const failing = (message: string): WorkflowStatusBinding => ({
+      get: () => Promise.reject(new Error(message)),
+    });
+    for (const message of [
+      "instance.not_found",
+      "(instance.not_found) Instance does not exist",
+    ]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one case at a time.
+      expect(await workflowStatusPort(failing(message))?.status("x")).toBe(
+        "not-found"
+      );
+    }
+    for (const message of [
+      "Workflow not found",
+      "script not found",
+      "Not Found",
+      "instance.not_foundation",
+    ]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one case at a time.
+      await expect(
+        workflowStatusPort(failing(message))?.status("x")
+      ).rejects.toThrow(message);
+    }
+  });
 });

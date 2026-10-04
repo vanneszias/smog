@@ -10,7 +10,12 @@ import {
   type InvalidStateReason,
   invalidStateReasonOf,
 } from "@smog/sponsorships/schema";
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useIsMutating,
+  useMutation,
+  useQuery,
+} from "@tanstack/react-query";
 import type { AdminSponsorshipListInput } from "../schema";
 import {
   ADMIN_STALE_TIME,
@@ -122,5 +127,18 @@ export function useRetryRender() {
   const invalidate = useInvalidateAfterAdminWrite();
   return useMutation(
     rpc.sponsorships.retryRender.mutationOptions({ onSettled: invalidate })
+  );
+}
+
+/**
+ * Whether any retry render is in flight on this page, whichever button
+ * started it: the detail shows the button twice (the status card and the
+ * render jobs), and both wait while one runs (task 7 review M-2).
+ */
+export function useRetryRenderPending(): boolean {
+  const rpc = useAdminRpc();
+  return (
+    useIsMutating({ mutationKey: rpc.sponsorships.retryRender.mutationKey() }) >
+    0
   );
 }

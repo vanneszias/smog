@@ -6,8 +6,11 @@ import { signInAsAdmin } from "./maintenance";
 import {
   FLOW_IDS,
   openDetail,
+  type RenderFailedFixture,
+  removeRenderFailed,
   resetFlowFixtures,
   seedFlowFixtures,
+  seedRenderFailed,
 } from "./sponsorships";
 
 /*
@@ -40,6 +43,8 @@ const ETEN_EN_DRINKEN = /Drinken en Eten|Eten en Drinken/;
 const SEEDED_RENDER_ERROR = "renderer answered 500";
 const RETRY_RENDER = "Video opnieuw maken";
 const RETRY_DONE = "De video wordt opnieuw gemaakt (poging 2).";
+/** The retry test's own gesture, removed after the spec (review M-6). */
+let renderFailed: RenderFailedFixture | null = null;
 
 test.describe("admin sponsorships", () => {
   test.beforeAll(async ({ browser }) => {
@@ -55,6 +60,11 @@ test.describe("admin sponsorships", () => {
     const page = await browser.newPage();
     try {
       await resetFlowFixtures(page);
+      if (renderFailed) {
+        await signInAsAdmin(page.request);
+        await removeRenderFailed(page, renderFailed);
+        renderFailed = null;
+      }
     } finally {
       await page.close();
     }
@@ -211,14 +221,15 @@ test.describe("admin sponsorships", () => {
   test("a failed render is retried: attempt 2 runs (fake render) and the sponsorship reaches review", async ({
     page,
   }) => {
-    await openDetail(page, FLOW_IDS.kat);
+    renderFailed = await seedRenderFailed(page);
+    await openDetail(page, FLOW_IDS.renderFailed);
     const jobs = page.getByRole("region", { name: "Videotaken" });
     await expect(jobs).toContainText(SEEDED_RENDER_ERROR);
     const retry = jobs.getByRole("button", { name: RETRY_RENDER });
     await retry.focus();
     await page.keyboard.press("Enter");
     const alert = page.getByRole("alertdialog");
-    await expect(alert).toContainText("E2E Kat");
+    await expect(alert).toContainText("E2E Render");
     await alert.getByRole("button", { name: RETRY_RENDER }).click();
     await expect(page.getByText(RETRY_DONE).first()).toBeVisible();
     // `RENDER_MODE=fake`: the queued job completes at once with the
@@ -230,15 +241,15 @@ test.describe("admin sponsorships", () => {
             await adminRpc<{ sponsorship: { status: string } }>(
               page.request,
               "admin/sponsorships/get",
-              { id: FLOW_IDS.kat }
+              { id: FLOW_IDS.renderFailed }
             )
           ).sponsorship.status,
         { timeout: 20_000 }
       )
       .toBe("in_review");
-    await openDetail(page, FLOW_IDS.kat);
+    await openDetail(page, FLOW_IDS.renderFailed);
     await expect(
-      page.getByRole("heading", { level: 1, name: "E2E Kat" })
+      page.getByRole("heading", { level: 1, name: "E2E Render" })
     ).toBeVisible();
     await expect(page.getByText("Ter beoordeling").first()).toBeVisible();
     const trail = page.getByRole("list", { name: "Geschiedenis" });
@@ -257,7 +268,7 @@ test.describe("admin sponsorships", () => {
       ["sponsorship.approve", FLOW_IDS.vogel],
       ["sponsorship.request_changes", FLOW_IDS.koffie],
       ["sponsorship.mark_paid", FLOW_IDS.eten],
-      ["sponsorship.retry_render", FLOW_IDS.kat],
+      ["sponsorship.retry_render", FLOW_IDS.renderFailed],
     ] as const) {
       // biome-ignore lint/performance/noAwaitInLoops: one filter at a time.
       await openAdmin(page, `/admin/audit?action=${action}`);

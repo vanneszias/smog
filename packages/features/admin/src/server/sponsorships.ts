@@ -649,7 +649,7 @@ async function enqueueAfter(
     );
   } catch (error) {
     console.error(
-      "[admin] Failed to enqueue after the commit (a missed payment.settled is re-sent by the stale sweep):",
+      "[admin] Failed to enqueue after the commit (the hourly stale sweep re-sends a lost payment.settled, its render watchdog a lost render.requested):",
       error
     );
     if (loud) {

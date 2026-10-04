@@ -45,13 +45,13 @@ async function uploadLogo(page: Page): Promise<string> {
  * The flow spec's gestures: its tests approve, request changes and mark
  * paid, so it seeds them fresh and resets them afterwards.
  */
-const FLOW_SLUGS = ["vogel", "koffie", "eten", "drinken", "kat"] as const;
+const FLOW_SLUGS = ["vogel", "koffie", "eten", "drinken"] as const;
 
 export const FLOW_IDS = {
   eten: "e2e-adm-eten-0",
-  /** Its first render failed (`sponsorship` op, phase 7 task 7). */
-  kat: "e2e-adm-kat",
   koffie: "e2e-adm-koffie-0",
+  /** Its first render failed (`seedRenderFailed`, phase 7 task 7). */
+  renderFailed: "e2e-adm-render-failed",
   vogel: "e2e-adm-vogel-0",
 } as const;
 
@@ -81,14 +81,77 @@ export async function seedFlowFixtures(page: Page): Promise<void> {
       paymentStatus: "open",
       status: "awaiting_payment",
     },
+  ]);
+}
+
+/** The retry spec's own gesture and category, made by `seedRenderFailed`. */
+export interface RenderFailedFixture {
+  categoryId: string;
+  gestureId: string;
+  gestureName: string;
+  slug: string;
+}
+
+/**
+ * A `render_failed` sponsorship (`FLOW_IDS.renderFailed`, with its failed
+ * first job) on a gesture of its own: an unpublished gesture and category
+ * made for this run, so no other spec ever sees its sponsorship move
+ * (task 7 review M-6). Needs an admin session; `removeRenderFailed` undoes it.
+ */
+export async function seedRenderFailed(
+  page: Page
+): Promise<RenderFailedFixture> {
+  const word = crypto
+    .randomUUID()
+    .slice(0, 8)
+    .replace(/[^a-z]/g, "q");
+  const category = await adminRpc<{ id: string }>(
+    page.request,
+    "admin/categories/create",
+    { name: `Zzcat render ${word}`, published: false }
+  );
+  const gesture = await adminRpc<{ id: string; name: string; slug: string }>(
+    page.request,
+    "admin/gestures/create",
     {
-      displayName: "E2E Kat",
-      gestureSlug: "kat",
-      id: FLOW_IDS.kat,
+      categoryIds: [category.id],
+      name: `Zzrender ${word}`,
+      playbackId: SAMPLE_PLAYBACK_ID,
+      published: false,
+    }
+  );
+  await e2eSeed(page.request, [
+    {
+      displayName: "E2E Render",
+      gestureSlug: gesture.slug,
+      id: FLOW_IDS.renderFailed,
       op: "sponsorship",
       status: "render_failed",
     },
   ]);
+  return {
+    categoryId: category.id,
+    gestureId: gesture.id,
+    gestureName: gesture.name,
+    slug: gesture.slug,
+  };
+}
+
+/** Its sponsorship (with jobs and trail), then the gesture and the category. */
+export async function removeRenderFailed(
+  page: Page,
+  fixture: RenderFailedFixture
+): Promise<void> {
+  await e2eSeed(page.request, [
+    { op: "resetSponsorships", slugs: [fixture.slug] },
+  ]);
+  await adminRpc(page.request, "admin/gestures/delete", {
+    confirmName: fixture.gestureName,
+    id: fixture.gestureId,
+  });
+  await adminRpc(page.request, "admin/categories/delete", {
+    id: fixture.categoryId,
+  });
 }
 
 export async function resetFlowFixtures(page: Page): Promise<void> {
