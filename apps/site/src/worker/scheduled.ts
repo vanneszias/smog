@@ -127,6 +127,7 @@ const HANDLERS: Record<CronName, CronHandler> = {
       db: createDb(siteEnv().db),
       kv: siteEnv().kv,
       media: siteEnv().bindings.MEDIA,
+      mux: createMux(siteEnv().worker),
       now,
     })),
   }),

@@ -44,6 +44,7 @@ import {
   checkRenderedVideo,
   readRenderedVideo,
 } from "@smog/render/testing/video";
+import { renderJobIdOf } from "@smog/video";
 import {
   type FakeMuxServer,
   startFakeMuxServer,
@@ -88,14 +89,17 @@ interface AssetLike {
   status: string;
 }
 
-/** The ready asset the job's render upload became, or `null`. */
+/**
+ * The ready asset the job's render upload became, or `null`: the dev
+ * Worker tags it `render-job:dev:<id>` (phase 8 ruling 4).
+ */
 export function renderAssetOf<T extends AssetLike>(
   assets: Iterable<T>,
   renderJobId: string
 ): T | null {
   for (const asset of assets) {
     if (
-      asset.passthrough === `render-job:${renderJobId}` &&
+      renderJobIdOf(asset.passthrough, "dev") === renderJobId &&
       asset.status === "ready"
     ) {
       return asset;

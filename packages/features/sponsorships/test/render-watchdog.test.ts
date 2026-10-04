@@ -308,6 +308,7 @@ describe("reconcileRenderJobs (ruling 12)", () => {
     const previous = fake.addAsset({ playbackId: "previous" });
     const upload = await createRenderUpload(fake.mux, {
       corsOrigin: SITE_URL,
+      environment: "dev",
       renderJobId: running.id,
       test: true,
     });
@@ -347,6 +348,7 @@ describe("reconcileRenderJobs (ruling 12)", () => {
     const running = await job("running", PAST_CEILING);
     const upload = await createRenderUpload(fake.mux, {
       corsOrigin: SITE_URL,
+      environment: "dev",
       renderJobId: running.id,
       test: true,
     });

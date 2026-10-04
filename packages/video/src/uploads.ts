@@ -1,3 +1,4 @@
+import type { Environment } from "@smog/config/env/worker";
 import { z } from "zod";
 import { type Mux, MuxApiError, muxRequest } from "./client";
 import { UPLOAD_STATUSES, type UploadStatus } from "./schema";
@@ -10,8 +11,10 @@ export const GESTURE_UPLOAD_PREFIX = "gesture-upload:";
 
 /**
  * The passthrough prefix of a rendered sponsored video's upload (phase 7,
- * W-02): `render-job:<render_job.id>`. The webhook routes these to the
- * job's Workflow instead of the gesture upload records.
+ * W-02; phase 8 ruling 4): `render-job:<env>:<render_job.id>`. The webhook
+ * routes this env's to the job's Workflow instead of the gesture upload
+ * records; another env's, and the untagged phase 7 form
+ * `render-job:<id>`, are not this env's to touch.
  */
 export const RENDER_JOB_PREFIX = "render-job:";
 
@@ -26,19 +29,35 @@ export function gestureUploadPassthrough(): string {
   return `${GESTURE_UPLOAD_PREFIX}${crypto.randomUUID()}`;
 }
 
-/** The `render-job:<id>` passthrough of a render job's upload. */
-export function renderJobPassthrough(renderJobId: string): string {
-  return `${RENDER_JOB_PREFIX}${renderJobId}`;
+/** The `render-job:<env>:<id>` passthrough of a render job's upload. */
+export function renderJobPassthrough(
+  environment: Environment,
+  renderJobId: string
+): string {
+  return `${RENDER_JOB_PREFIX}${environment}:${renderJobId}`;
 }
 
-/** The render job id of a `render-job:<id>` passthrough, or `null`. */
-export function renderJobIdOf(
+/** Whether a passthrough is a render job's, of any env or none. */
+export function isRenderJobPassthrough(
   passthrough: string | null | undefined
+): boolean {
+  return passthrough?.startsWith(RENDER_JOB_PREFIX) ?? false;
+}
+
+/**
+ * The render job id of a `render-job:<environment>:<id>` passthrough, or
+ * `null`: for another env's, for the untagged phase 7 `render-job:<id>`
+ * and for anything that is not a render job's.
+ */
+export function renderJobIdOf(
+  passthrough: string | null | undefined,
+  environment: Environment
 ): string | null {
-  if (!passthrough?.startsWith(RENDER_JOB_PREFIX)) {
+  const prefix = `${RENDER_JOB_PREFIX}${environment}:`;
+  if (!passthrough?.startsWith(prefix)) {
     return null;
   }
-  const id = passthrough.slice(RENDER_JOB_PREFIX.length);
+  const id = passthrough.slice(prefix.length);
   return id === "" ? null : id;
 }
 

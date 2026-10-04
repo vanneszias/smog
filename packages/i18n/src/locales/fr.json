@@ -1841,6 +1841,7 @@
       "noLogo": "Ce parrainage n’a pas de logo, vous ne pouvez donc pas en ajouter.",
       "notRenewable": "Ce parrainage ne peut plus être prolongé.",
       "gestureTaken": "Quelqu’un d’autre parraine ce geste entre-temps.",
+      "rejectedTooLongAgo": "Ce parrainage a été refusé il y a 30 jours ou plus. Vous ne pouvez plus demander de modification : la vidéo est supprimée.",
       "noVideo": "La vidéo n’est pas encore prête.",
       "paid": "Ce paiement a été réglé et ne peut pas être annulé.",
       "notRefunded": "Mollie n’indique encore aucun remboursement. Remboursez d’abord dans le tableau de bord Mollie.",

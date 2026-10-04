@@ -207,7 +207,11 @@ export type ReadLogo = (key: string) => Promise<Uint8Array | null>;
 export interface RenderJobDeps {
   clock: () => Date;
   db: Db;
-  /** `dev` creates Mux test uploads (watermarked, deleted after 24 h). */
+  /**
+   * The upload's passthrough carries it (`render-job:<env>:<id>`, phase 8
+   * ruling 4); `dev` creates Mux test uploads (watermarked, deleted after
+   * 24 h).
+   */
   environment: Environment;
   /** `null` without the Mux token: the job fails with `muxUnavailable`. */
   mux: Mux | null;
@@ -733,6 +737,7 @@ async function renderStep(
   }
   const upload = await createRenderUpload(mux, {
     corsOrigin: new URL(deps.siteUrl).origin,
+    environment: deps.environment,
     renderJobId,
     test: deps.environment === "dev",
   });

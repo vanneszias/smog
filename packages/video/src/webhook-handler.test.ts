@@ -56,6 +56,7 @@ async function deliver(
     method: "POST",
   });
   const response = await handleMuxWebhook(request, {
+    environment: "production",
     kv,
     limit: () => Promise.resolve(allow),
     secret: secret ?? undefined,
@@ -107,7 +108,12 @@ describe("handleMuxWebhook", () => {
     const kv = createMemoryKv();
     const response = await handleMuxWebhook(
       new Request(URL_, { body: "{}", method: "POST" }),
-      { kv, limit: () => Promise.resolve(true), secret: SECRET }
+      {
+        environment: "production",
+        kv,
+        limit: () => Promise.resolve(true),
+        secret: SECRET,
+      }
     );
     expect(response.status).toBe(400);
   });
@@ -151,9 +157,13 @@ describe("handleMuxWebhook", () => {
         method: "POST",
       });
     const kv = createMemoryKv();
-    await handleMuxWebhook(request(signed), { kv, limit, secret: SECRET });
+    const options = { environment: "production" as const, kv, limit };
+    await handleMuxWebhook(request(signed), { ...options, secret: SECRET });
     expect(keys).toEqual([]);
-    await handleMuxWebhook(request("t=1,v1=00"), { kv, limit, secret: SECRET });
+    await handleMuxWebhook(request("t=1,v1=00"), {
+      ...options,
+      secret: SECRET,
+    });
     expect(keys).toEqual(["mux-webhook:203.0.113.7"]);
   });
 
@@ -164,6 +174,58 @@ describe("handleMuxWebhook", () => {
     };
     const { response } = await deliver(big);
     expect(response.status).toBe(413);
+  });
+
+  it("reads the body through readCappedBody: a malformed content-length is a 400", async () => {
+    const raw = JSON.stringify(assetReady("up-20", "as-20"));
+    const response = await handleMuxWebhook(
+      new Request(URL_, {
+        body: raw,
+        headers: {
+          "content-length": "12x",
+          "mux-signature": await signMuxWebhook(raw, SECRET),
+        },
+        method: "POST",
+      }),
+      {
+        environment: "production",
+        kv: createMemoryKv(),
+        limit: () => Promise.resolve(true),
+        secret: SECRET,
+      }
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ code: "BAD_REQUEST" });
+  });
+
+  it(`cancels a streamed body past ${MUX_WEBHOOK_MAX_BYTES} bytes (413)`, async () => {
+    let cancelled = false;
+    const chunk = new Uint8Array(256 * 1024);
+    const stream = new ReadableStream<Uint8Array>({
+      cancel: () => {
+        cancelled = true;
+      },
+      pull: (controller) => {
+        controller.enqueue(chunk);
+      },
+    });
+    const response = await handleMuxWebhook(
+      new Request(URL_, {
+        body: stream,
+        // @ts-expect-error: Bun needs it for a streamed request body.
+        duplex: "half",
+        headers: { "mux-signature": "t=1,v1=00" },
+        method: "POST",
+      }),
+      {
+        environment: "production",
+        kv: createMemoryKv(),
+        limit: () => Promise.resolve(true),
+        secret: SECRET,
+      }
+    );
+    expect(response.status).toBe(413);
+    expect(cancelled).toBe(true);
   });
 
   it("ignores other events and other passthroughs with 200", async () => {

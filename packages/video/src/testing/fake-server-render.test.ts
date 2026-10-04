@@ -122,6 +122,7 @@ describe("the fake Mux server for renders", () => {
     emitted.length = 0;
     const upload = await createRenderUpload(mux, {
       corsOrigin: "http://localhost:5173",
+      environment: "dev",
       renderJobId: "job-1",
       test: true,
     });
@@ -134,7 +135,7 @@ describe("the fake Mux server for renders", () => {
     expect(put.status).toBe(200);
     const assetId = (await getUpload(mux, upload.id))?.assetId as string;
     expect(server.fake.assets.get(assetId)?.passthrough).toBe(
-      "render-job:job-1"
+      "render-job:dev:job-1"
     );
     await until(() => emitted.length === 2);
     expect(emitted).toEqual([
@@ -149,6 +150,7 @@ describe("the fake Mux server for renders", () => {
   it("cancels a waiting upload over HTTP, and a second cancel finds it final", async () => {
     const waiting = await createRenderUpload(mux, {
       corsOrigin: "http://localhost:5173",
+      environment: "dev",
       renderJobId: "job-2",
       test: false,
     });

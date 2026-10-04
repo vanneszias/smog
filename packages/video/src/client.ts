@@ -45,13 +45,46 @@ export const MUX_REQUEST_TIMEOUT_MS = 30_000;
 
 /** A Mux API answer that is not 2xx (404 is returned as `null` by the lookups). */
 export class MuxApiError extends Error {
+  /**
+   * Mux's `Retry-After` in seconds (a 429), or `null` without a readable
+   * one: the throttled importer commands wait that long (phase 8 ruling 5).
+   */
+  readonly retryAfterSeconds: number | null;
   readonly status: number;
 
-  constructor(message: string, status: number, options?: ErrorOptions) {
+  constructor(
+    message: string,
+    status: number,
+    options?: ErrorOptions & { retryAfterSeconds?: number | null }
+  ) {
     super(message, options);
     this.name = "MuxApiError";
+    this.retryAfterSeconds = options?.retryAfterSeconds ?? null;
     this.status = status;
   }
+}
+
+const SECONDS = /^\d{1,9}$/;
+/** An IMF-fixdate starts with the day name (`Sun, 04 Oct 2026 …`). */
+const HTTP_DATE = /^[A-Za-z]{3}, /;
+
+/**
+ * A `Retry-After` header in seconds: delta-seconds, or an HTTP date
+ * (rounded up, never below 0); `null` when absent or unreadable.
+ */
+export function retryAfterSeconds(
+  header: string | null,
+  now: number = Date.now()
+): number | null {
+  const value = header?.trim();
+  if (!value) {
+    return null;
+  }
+  if (SECONDS.test(value)) {
+    return Number.parseInt(value, 10);
+  }
+  const at = HTTP_DATE.test(value) ? Date.parse(value) : Number.NaN;
+  return Number.isNaN(at) ? null : Math.max(0, Math.ceil((at - now) / 1000));
 }
 
 const TRAILING_SLASHES = /\/+$/;
@@ -140,7 +173,12 @@ export async function muxRequest<T>(
     await response.body?.cancel();
     const error = new MuxApiError(
       `[video] Mux answered ${response.status} to ${method} ${path}`,
-      response.status
+      response.status,
+      {
+        retryAfterSeconds: retryAfterSeconds(
+          response.headers.get("retry-after")
+        ),
+      }
     );
     console.error(error.message);
     throw error;

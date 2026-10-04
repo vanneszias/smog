@@ -47,6 +47,7 @@ describe("logs never carry a signed URL", () => {
     expect(state.status).toBe("ready");
     const upload = await createRenderUpload(fake.mux, {
       corsOrigin: "https://smog.test",
+      environment: "production",
       renderJobId: "job-logs",
       test: false,
     });
@@ -61,6 +62,7 @@ describe("logs never carry a signed URL", () => {
     fake.failNext(503);
     await createRenderUpload(fake.mux, {
       corsOrigin: "https://smog.test",
+      environment: "production",
       renderJobId: "job-logs",
       test: false,
     }).catch(() => undefined);

@@ -48,6 +48,7 @@ export {
   emailAdmins,
 } from "./recipients";
 export { type ReeditLogo, readReeditLogo } from "./reedit";
+export { isRejectedTooLongAgo } from "./rejected-video";
 export {
   completeRender,
   createRenderJob,

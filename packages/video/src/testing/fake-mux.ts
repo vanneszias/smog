@@ -6,7 +6,8 @@ import { muxSignature } from "../webhooks";
  * `@smog/video` calls (create/get/cancel upload, get/list/delete assets,
  * master access, the playback-id lookup) plus the `PUT` of the file to
  * the upload URL (the browser's for a gesture, the renderer's for a
- * render), so the real client code runs against it. No network. The Bun fake server (`./fake-server`) serves the same
+ * render) and the static renditions (phase 8), so the real client code
+ * runs against it. No network. The Bun fake server (`./fake-server`) serves the same
  * handler over HTTP for e2e.
  */
 
@@ -43,12 +44,27 @@ export interface FakeAsset {
    */
   master: { status: string; url?: string } | null;
   masterAccess: "temporary" | "none";
+  /** The deprecated `mp4_support` (`standard` …); `null` sends none. */
+  mp4Support: string | null;
   passthrough: string | null;
   playbackId: string | null;
   /** The playback id's policy; `null` for no playback id at all. */
   policy: "public" | "signed" | null;
+  /** `static_renditions.files`; `null` sends no `static_renditions`. */
+  staticRenditions: FakeStaticRendition[] | null;
+  /** `static_renditions.status`, as the deprecated `mp4_support` sets it. */
+  staticRenditionsStatus: string | null;
   status: "preparing" | "ready" | "errored";
   uploadId: string | null;
+}
+
+/** One `static_renditions.files[]` entry. */
+export interface FakeStaticRendition {
+  id: string;
+  name: string;
+  resolution: string | null;
+  /** `null` sends none (the deprecated `mp4_support` files). */
+  status: string | null;
 }
 
 export interface FakeMuxOptions {
@@ -72,8 +88,11 @@ export interface FakeMux {
   /** The master could not be prepared (`master.status: "errored"`). */
   errorMaster: (assetId: string) => FakeAsset;
   errorUpload: (uploadId: string, message?: string) => FakeUpload;
-  /** The next API request answers `status` (a Mux outage or rate limit). */
-  failNext: (status: number) => void;
+  /**
+   * The next API request answers `status` (a Mux outage or rate limit),
+   * with `headers` (`retry-after` on a 429).
+   */
+  failNext: (status: number, headers?: Record<string, string>) => void;
   /** Answers like Mux (API requests need the basic auth; uploads do not). */
   fetch: MuxFetch;
   /** A client wired to this fake. */
@@ -85,6 +104,8 @@ export interface FakeMux {
    * fake server answers with the asset's file or its fixture).
    */
   readyMaster: (assetId: string) => FakeAsset;
+  /** The asset's `highest` static rendition is ready. */
+  readyStaticRendition: (assetId: string) => FakeAsset;
   /** Every API request (not the upload PUTs), in order, with its JSON body. */
   readonly requests: FakeRequest[];
   readonly uploads: Map<string, FakeUpload>;
@@ -107,6 +128,8 @@ const PUT_PATH = /^\/upload\/([^/]+)$/;
 const UPLOAD_CANCEL_PATH = /^\/video\/v1\/uploads\/([^/]+)\/cancel$/;
 const MASTER_ACCESS_PATH = /^\/video\/v1\/assets\/([^/]+)\/master-access$/;
 const PLAYBACK_ID_PATH = /^\/video\/v1\/playback-ids\/([^/]+)$/;
+const STATIC_RENDITIONS_PATH =
+  /^\/video\/v1\/assets\/([^/]+)\/static-renditions$/;
 
 /** The decoded id a path pattern captures, or `null`. */
 function idIn(pattern: RegExp, pathname: string): string | null {
@@ -154,13 +177,31 @@ function assetJson(asset: FakeAsset) {
     id: asset.id,
     master: asset.master ?? undefined,
     master_access: asset.masterAccess,
+    mp4_support: asset.mp4Support ?? undefined,
     passthrough: asset.passthrough ?? undefined,
     playback_ids:
       asset.playbackId && asset.policy
         ? [{ id: asset.playbackId, policy: asset.policy }]
         : undefined,
+    static_renditions: asset.staticRenditions
+      ? {
+          files: asset.staticRenditions.map(renditionJson),
+          status: asset.staticRenditionsStatus ?? undefined,
+        }
+      : undefined,
     status: asset.status,
     upload_id: asset.uploadId ?? undefined,
+  };
+}
+
+function renditionJson(rendition: FakeStaticRendition) {
+  return {
+    ext: "mp4",
+    id: rendition.id,
+    name: rendition.name,
+    resolution: rendition.resolution ?? undefined,
+    status: rendition.status ?? undefined,
+    type: "standard",
   };
 }
 
@@ -188,7 +229,8 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
   const uploads = new Map<string, FakeUpload>();
   const assets = new Map<string, FakeAsset>();
   const requests: FakeRequest[] = [];
-  let nextFailure: number | null = null;
+  let nextFailure: { headers: Record<string, string>; status: number } | null =
+    null;
 
   function addAsset(asset: Partial<FakeAsset> = {}): FakeAsset {
     const status = asset.status ?? "ready";
@@ -202,9 +244,12 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
       id: randomId(),
       master: null,
       masterAccess: "none",
+      mp4Support: null,
       passthrough: null,
       playbackId: policy ? (options.playbackId ?? randomId(32)) : null,
       policy,
+      staticRenditions: null,
+      staticRenditionsStatus: null,
       uploadId: null,
       ...asset,
       status,
@@ -278,6 +323,18 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
       status: "ready",
       url: `${masterOrigin}/master/${encodeURIComponent(assetId)}/master.mp4?signature=fake-${randomId(16)}`,
     };
+    return asset;
+  }
+
+  function readyStaticRendition(assetId: string): FakeAsset {
+    const asset = mustAsset(assetId);
+    const highest = asset.staticRenditions?.find(
+      (rendition) => rendition.resolution === "highest"
+    );
+    if (!highest) {
+      throw new Error(`[fake-mux] Asset ${assetId} has no highest rendition`);
+    }
+    highest.status = "ready";
     return asset;
   }
 
@@ -422,6 +479,51 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
   }
 
   /**
+   * `POST /video/v1/assets/:id/static-renditions` (phase 8 ruling 5): 201
+   * with the new file, `preparing` (a test or the fake server readies it).
+   * A second rendition of one resolution is refused with a 400.
+   */
+  function staticRenditionRoute(assetId: string, body: unknown): Response {
+    const asset = assets.get(assetId);
+    if (!asset) {
+      return notFound();
+    }
+    const resolution = (body as { resolution?: unknown } | undefined)
+      ?.resolution;
+    if (typeof resolution !== "string" || resolution === "") {
+      return json(
+        {
+          error: {
+            messages: ["resolution is required"],
+            type: "invalid_parameters",
+          },
+        },
+        400
+      );
+    }
+    const renditions = asset.staticRenditions ?? [];
+    if (renditions.some((rendition) => rendition.resolution === resolution)) {
+      return json(
+        {
+          error: {
+            messages: [`A ${resolution} static rendition already exists`],
+            type: "invalid_parameters",
+          },
+        },
+        400
+      );
+    }
+    const created: FakeStaticRendition = {
+      id: randomId(),
+      name: `${resolution}.mp4`,
+      resolution,
+      status: "preparing",
+    };
+    asset.staticRenditions = [...renditions, created];
+    return json({ data: renditionJson(created) }, 201);
+  }
+
+  /**
    * `PUT /video/v1/uploads/:id/cancel`: only a `waiting` upload cancels;
    * any other is refused with a 400 (Mux: "only succeeds if the upload is
    * still in the waiting state"; the client does not rely on the code).
@@ -470,11 +572,12 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
       ...(body === undefined ? {} : { body }),
     });
     if (nextFailure !== null) {
-      const status = nextFailure;
+      const { headers, status } = nextFailure;
       nextFailure = null;
       return json(
         { error: { messages: ["Fake failure"], type: "fake" } },
-        status
+        status,
+        headers
       );
     }
     if (request.headers.get("authorization") !== AUTHORIZATION) {
@@ -489,6 +592,10 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
   function route(method: string, url: URL, body: unknown): Response {
     if (method === "POST" && url.pathname === "/video/v1/uploads") {
       return createUploadRoute(body);
+    }
+    const renditionAssetId = idIn(STATIC_RENDITIONS_PATH, url.pathname);
+    if (method === "POST" && renditionAssetId !== null) {
+      return staticRenditionRoute(renditionAssetId, body);
     }
     if (method === "DELETE") {
       return deleteAssetRoute(url.pathname);
@@ -562,13 +669,14 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     errorAsset,
     errorMaster,
     errorUpload,
-    failNext: (status) => {
-      nextFailure = status;
+    failNext: (status, headers = {}) => {
+      nextFailure = { headers, status };
     },
     fetch: handle,
     mux,
     readyAsset,
     readyMaster,
+    readyStaticRendition,
     requests,
     uploads,
   };

@@ -13,6 +13,7 @@
  * - `runRetentionPurge` (J-04, daily 03:15 UTC)
  */
 import {
+  failWhen,
   gesture,
   inList,
   type PaymentKind,
@@ -45,6 +46,7 @@ import {
   asc,
   eq,
   gt,
+  isNotNull,
   isNull,
   lt,
   lte,
@@ -53,6 +55,7 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
+import { REJECTED_VIDEO_PURGE_PER_RUN } from "../schema/retention";
 import { SETTLED_AT_SQL } from "./email-window";
 import {
   ENDED_STATUSES,
@@ -61,6 +64,7 @@ import {
   orphanLogoSweep,
   releaseTerminalLogos,
 } from "./orphan-logos";
+import { rejectedEventAtSql, rejectedVideoCutoff } from "./rejected-video";
 import {
   reconcileRenderJobs,
   type WorkflowStatusPort,
@@ -778,7 +782,212 @@ export type RetentionPurgeResult = Record<RetentionTable, number> & {
   logosDeleted: number;
   /** Sponsorships whose `logo_key` was cleared (see `releaseTerminalLogos`). */
   logosReleased: number;
+  /** Rejected videos whose Mux asset was deleted and ids cleared (ruling 13). */
+  rejectedVideosDeleted: number;
+  /** Rejected videos Mux failed to delete: kept, retried the next night. */
+  rejectedVideosFailed: number;
+  /** Rejected videos past the bound still left after this run. */
+  rejectedVideosRemaining: number;
 };
+
+/** A rejected video's ids are cleared only while the row still holds it. */
+const REJECTED_VIDEO_GUARD = "sponsorship-rejected-video";
+
+/**
+ * The rejected sponsorships whose video the purge deletes: `rejected`,
+ * with a video asset, and a `rejected` **event** at or before `cutoff`.
+ * A migrated row without one is never selected (controller ruling). An
+ * index seek on `sponsorship_status_ends_at_idx` (`status = 'rejected'`),
+ * the event a seek per row on `sponsorship_event_sponsorship_created_idx`
+ * (a query-plan test).
+ */
+function rejectedVideoWhere(cutoff: number): SQL {
+  return and(
+    eq(sponsorship.status, "rejected"),
+    isNotNull(sponsorship.videoAssetId),
+    sql`${rejectedEventAtSql(ref("sponsorship", sponsorship.id))} <= ${cutoff}`
+  ) as SQL;
+}
+
+/**
+ * A page of the purge, oldest rejection first, without the rows this run
+ * already failed on (`skip`), at most `limit` (`REJECTED_VIDEO_PURGE_PER_RUN`)
+ * rows. The order sorts the eligible rows only (a temporary B-tree, after
+ * the index seek), which stay few: at most the rejections of a night's
+ * backlog.
+ */
+export function rejectedVideoQuery(
+  db: Db,
+  now: Date,
+  skip: readonly string[] = [],
+  limit: number = REJECTED_VIDEO_PURGE_PER_RUN
+) {
+  return db
+    .select({
+      gestureAssetId: gesture.muxAssetId,
+      id: sponsorship.id,
+      videoAssetId: sponsorship.videoAssetId,
+    })
+    .from(sponsorship)
+    .innerJoin(gesture, eq(gesture.id, sponsorship.gestureId))
+    .where(
+      and(
+        rejectedVideoWhere(rejectedVideoCutoff(now)),
+        not(inList(sponsorship.id, skip))
+      )
+    )
+    .orderBy(
+      asc(rejectedEventAtSql(ref("sponsorship", sponsorship.id))),
+      asc(sponsorship.id)
+    )
+    .limit(limit);
+}
+
+async function countRejectedVideos(db: Db, now: Date): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(sponsorship)
+    .where(rejectedVideoWhere(rejectedVideoCutoff(now)));
+  return row?.n ?? 0;
+}
+
+/**
+ * Clears a purged video's ids in one guarded batch, while the row is still
+ * `rejected` with that asset. `updated_at` is kept: the logo release
+ * counts its 30 days from it, and nothing about the sponsorship changed.
+ */
+async function clearRejectedVideo(
+  db: Db,
+  row: { id: string; videoAssetId: string }
+): Promise<void> {
+  await run(db, [
+    failWhen(
+      db,
+      REJECTED_VIDEO_GUARD,
+      sql`NOT EXISTS (SELECT 1 FROM ${sponsorship} WHERE ${sponsorship.id} = ${row.id} AND ${sponsorship.status} = 'rejected' AND ${sponsorship.videoAssetId} = ${row.videoAssetId})`
+    ),
+    db
+      .update(sponsorship)
+      .set({
+        updatedAt: sql`${sponsorship.updatedAt}`,
+        videoAssetId: null,
+        videoPlaybackId: null,
+      })
+      .where(
+        and(
+          eq(sponsorship.id, row.id),
+          eq(sponsorship.videoAssetId, row.videoAssetId)
+        )
+      ),
+  ]);
+}
+
+type RejectedVideoCounts = Pick<
+  RetentionPurgeResult,
+  "rejectedVideosDeleted" | "rejectedVideosFailed" | "rejectedVideosRemaining"
+>;
+
+/**
+ * The rejected video's retention (phase 8 ruling 13): for each rejected
+ * sponsorship whose `rejected` event is `REJECTED_VIDEO_RETENTION_DAYS`
+ * old or more, oldest first, at most `REJECTED_VIDEO_PURGE_PER_RUN` per run, the Mux
+ * asset is deleted (`deleteAsset`; 404 counts as done), then
+ * `video_asset_id` and `video_playback_id` are cleared in a guarded batch.
+ * An asset a gesture or a running sponsorship still uses is not deleted,
+ * only unlinked. A Mux failure leaves the row as it is, so the next night
+ * retries it; this run looks past it (at most twice
+ * `REJECTED_VIDEO_PURGE_PER_RUN` rows tried per run). Without a Mux client nothing is deleted. Logs
+ * `[retention] rejected videos { deleted, failed, remaining }`.
+ */
+async function purgeRejectedVideos(
+  db: Db,
+  mux: Mux | null,
+  now: Date,
+  dryRun: boolean
+): Promise<RejectedVideoCounts> {
+  const counts: RejectedVideoCounts = {
+    rejectedVideosDeleted: 0,
+    rejectedVideosFailed: 0,
+    rejectedVideosRemaining: 0,
+  };
+  if (dryRun) {
+    const eligible = await countRejectedVideos(db, now);
+    counts.rejectedVideosDeleted = Math.min(
+      eligible,
+      REJECTED_VIDEO_PURGE_PER_RUN
+    );
+    counts.rejectedVideosRemaining = eligible - counts.rejectedVideosDeleted;
+    return counts;
+  }
+  if (!mux) {
+    counts.rejectedVideosRemaining = await countRejectedVideos(db, now);
+    if (counts.rejectedVideosRemaining > 0) {
+      console.warn(
+        "[sponsorships] The Mux credentials are not set: the rejected videos are kept"
+      );
+    }
+    return counts;
+  }
+  // Pages, oldest rejection first; a row that fails is skipped for the
+  // rest of the run (review M1), so persistent failures cannot stall the
+  // others. At most PER_RUN deleted, and 2 × PER_RUN Mux calls, per run.
+  const skip: string[] = [];
+  for (;;) {
+    const room = Math.min(
+      REJECTED_VIDEO_PURGE_PER_RUN - counts.rejectedVideosDeleted,
+      2 * REJECTED_VIDEO_PURGE_PER_RUN -
+        counts.rejectedVideosDeleted -
+        counts.rejectedVideosFailed
+    );
+    if (room <= 0) {
+      break;
+    }
+    // biome-ignore lint/performance/noAwaitInLoops: each page reads what the last one left.
+    const rows = await rejectedVideoQuery(db, now, skip, room);
+    for (const row of rows) {
+      // biome-ignore lint/performance/noAwaitInLoops: one asset at a time, bounded per run.
+      if (await purgeRejectedVideo(db, mux, row)) {
+        counts.rejectedVideosDeleted += 1;
+      } else {
+        counts.rejectedVideosFailed += 1;
+        skip.push(row.id);
+      }
+    }
+    if (rows.length < room) {
+      break;
+    }
+  }
+  counts.rejectedVideosRemaining = await countRejectedVideos(db, now);
+  return counts;
+}
+
+/** One rejected video: `false` (logged) when Mux or the batch failed. */
+async function purgeRejectedVideo(
+  db: Db,
+  mux: Mux,
+  row: {
+    gestureAssetId: string | null;
+    id: string;
+    videoAssetId: string | null;
+  }
+): Promise<boolean> {
+  const assetId = row.videoAssetId as string;
+  try {
+    const used =
+      assetId === row.gestureAssetId || (await assetInUse(db, assetId, row.id));
+    if (!used) {
+      await deleteAsset(mux, assetId);
+    }
+    await clearRejectedVideo(db, { id: row.id, videoAssetId: assetId });
+    return true;
+  } catch (error) {
+    console.error(
+      `[sponsorships] Failed to delete the rejected video ${assetId} of sponsorship ${row.id}; the next run retries:`,
+      error
+    );
+    return false;
+  }
+}
 
 /**
  * The daily purge the privacy text promises (ruling 9, J-04, amended by
@@ -791,7 +1000,11 @@ export type RetentionPurgeResult = Record<RetentionTable, number> & {
  *   `logo_key` cleared (`payment_item.includes_logo` keeps the fact);
  * - R2 `logos/*` objects no sponsorship references, uploaded more than
  *   24 h ago (an upload whose checkout never happened, a replaced logo,
- *   and the ones released above), resuming a KV cursor across runs.
+ *   and the ones released above), resuming a KV cursor across runs;
+ * - the Mux video of a sponsorship rejected `REJECTED_VIDEO_RETENTION_DAYS`
+ *   or more ago by its `rejected` event, at most 20 per run
+ *   (`purgeRejectedVideos`, phase 8 ruling 13; `mux` is `null` without
+ *   the Mux credentials, and then nothing is deleted).
  * With `dryRun`, it counts what a real run would delete (the released
  * logos included) and changes nothing, the cursor included. A failing
  * part is logged and the others still run; then what was done is logged
@@ -804,12 +1017,14 @@ export async function runRetentionPurge({
   dryRun = false,
   kv,
   media,
+  mux,
   now,
 }: {
   db: Db;
   dryRun?: boolean;
   kv: LogoCursorStore | undefined;
   media: LogoBucket | undefined;
+  mux: Mux | null;
   now: Date;
 }): Promise<RetentionPurgeResult> {
   let failure: unknown;
@@ -847,7 +1062,26 @@ export async function runRetentionPurge({
     console.error("[sponsorships] Failed to sweep the logos:", error);
     failure ??= error;
   }
-  const counts = { ...tables, logosDeleted, logosReleased };
+  let videos: RejectedVideoCounts = {
+    rejectedVideosDeleted: 0,
+    rejectedVideosFailed: 0,
+    rejectedVideosRemaining: 0,
+  };
+  try {
+    videos = await purgeRejectedVideos(db, mux, now, dryRun);
+    console.log(
+      `[retention] rejected videos ${JSON.stringify({
+        deleted: videos.rejectedVideosDeleted,
+        failed: videos.rejectedVideosFailed,
+        remaining: videos.rejectedVideosRemaining,
+        ...(dryRun ? { dryRun } : {}),
+      })}`
+    );
+  } catch (error) {
+    console.error("[sponsorships] Failed to purge the rejected videos:", error);
+    failure ??= error;
+  }
+  const counts = { ...tables, logosDeleted, logosReleased, ...videos };
   if (failure !== undefined) {
     console.error(
       `[sponsorships] The retention purge failed part way; done: ${JSON.stringify(counts)}`

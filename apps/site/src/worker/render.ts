@@ -148,7 +148,9 @@ const ENDED: ReadonlySet<string> = new Set([
  *   one that is `complete`/`errored`/`terminated`, is `gone` (200). A
  *   failed `get` (other than not found), `status` or `sendEvent` throws,
  *   and the webhook answers 503 so Mux retries.
- * - `isCurrentUpload`: `isCurrentRenderUpload`, one D1 row.
+ * - `isCurrentUpload`: `isCurrentRenderUpload`, one D1 row (an unknown
+ *   job of this env is not current, so its asset is deleted; phase 8
+ *   ruling 12).
  */
 export function renderWebhookHooks(
   binding: WorkflowEventBinding | undefined,
