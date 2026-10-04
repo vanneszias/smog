@@ -592,7 +592,6 @@
       "name": "@smog/migrate-convex",
       "version": "0.0.0",
       "dependencies": {
-        "@smog/account": "workspace:*",
         "@smog/admin": "workspace:*",
         "@smog/config": "workspace:*",
         "@smog/db": "workspace:*",
