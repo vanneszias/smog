@@ -1,12 +1,19 @@
 import { z } from "zod";
-import { type Mux, muxRequest } from "./client";
+import { type Mux, MuxApiError, muxRequest } from "./client";
 import { UPLOAD_STATUSES, type UploadStatus } from "./schema";
 
 /** How long the signed upload URL stays valid (Mux's default; 60–604800). */
-const UPLOAD_TIMEOUT_SECONDS = 3600;
+export const UPLOAD_TIMEOUT_SECONDS = 3600;
 
-/** The passthrough prefix of an admin gesture upload (phase 7 adds `render:`). */
+/** The passthrough prefix of an admin gesture upload. */
 export const GESTURE_UPLOAD_PREFIX = "gesture-upload:";
+
+/**
+ * The passthrough prefix of a rendered sponsored video's upload (phase 7,
+ * W-02): `render-job:<render_job.id>`. The webhook routes these to the
+ * job's Workflow instead of the gesture upload records.
+ */
+export const RENDER_JOB_PREFIX = "render-job:";
 
 export function isGestureUpload(
   passthrough: string | null | undefined
@@ -17,6 +24,22 @@ export function isGestureUpload(
 /** A fresh `gesture-upload:<uuid>` passthrough. */
 export function gestureUploadPassthrough(): string {
   return `${GESTURE_UPLOAD_PREFIX}${crypto.randomUUID()}`;
+}
+
+/** The `render-job:<id>` passthrough of a render job's upload. */
+export function renderJobPassthrough(renderJobId: string): string {
+  return `${RENDER_JOB_PREFIX}${renderJobId}`;
+}
+
+/** The render job id of a `render-job:<id>` passthrough, or `null`. */
+export function renderJobIdOf(
+  passthrough: string | null | undefined
+): string | null {
+  if (!passthrough?.startsWith(RENDER_JOB_PREFIX)) {
+    return null;
+  }
+  const id = passthrough.slice(RENDER_JOB_PREFIX.length);
+  return id === "" ? null : id;
 }
 
 export const muxUploadDataSchema = z.object({
@@ -43,7 +66,9 @@ export interface MuxUpload {
   url: string | null;
 }
 
-function toMuxUpload(data: z.infer<typeof muxUploadDataSchema>): MuxUpload {
+export function toMuxUpload(
+  data: z.infer<typeof muxUploadDataSchema>
+): MuxUpload {
   return {
     assetId: data.asset_id ?? null,
     error: data.error ? (data.error.message ?? data.error.type ?? null) : null,
@@ -105,4 +130,55 @@ export async function getUpload(
     { nullOn404: true, schema: muxUploadDataSchema }
   );
   return data ? toMuxUpload(data) : null;
+}
+
+/** A 4xx a cancel can get for an upload that is past `waiting` (not auth, not a rate limit). */
+function isRefusal(error: unknown): boolean {
+  return (
+    error instanceof MuxApiError &&
+    error.status >= 400 &&
+    error.status < 500 &&
+    error.status !== 401 &&
+    error.status !== 403 &&
+    error.status !== 429
+  );
+}
+
+/**
+ * `PUT /video/v1/uploads/:id/cancel`. Mux cancels only an upload that is
+ * still `waiting` (then no asset is ever created from it), so:
+ * - `"cancelled"`: Mux cancelled it;
+ * - `"already-final"`: Mux does not know it (404), or refused the cancel and
+ *   the upload is indeed past `waiting` (`asset_created`, errored,
+ *   cancelled, timed out). Its asset, if any, is the caller's to delete.
+ *
+ * Anything else (an outage, a refusal while still `waiting`) throws.
+ */
+export async function cancelUpload(
+  mux: Mux,
+  uploadId: string
+): Promise<"cancelled" | "already-final"> {
+  const path = `/video/v1/uploads/${encodeURIComponent(uploadId)}/cancel`;
+  try {
+    const data = await muxRequest(mux, path, {
+      method: "PUT",
+      nullOn404: true,
+      schema: muxUploadDataSchema,
+    });
+    return data === null || data.status !== "cancelled"
+      ? "already-final"
+      : "cancelled";
+  } catch (error) {
+    if (!isRefusal(error)) {
+      throw error;
+    }
+    const upload = await getUpload(mux, uploadId);
+    if (upload === null || upload.status !== "waiting") {
+      console.log(
+        `[video] Upload ${uploadId} is ${upload?.status ?? "unknown"}: nothing to cancel`
+      );
+      return "already-final";
+    }
+    throw error;
+  }
 }

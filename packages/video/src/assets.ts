@@ -20,6 +20,15 @@ export const muxAssetDataSchema = z.object({
     })
     .nullish(),
   id: z.string(),
+  /**
+   * Master access (phase 7): present while `master_access` is `temporary`
+   * and the URL has not expired. The status is a string, not an enum: a
+   * state Mux adds later must not make the whole asset unreadable.
+   */
+  master: z
+    .object({ status: z.string().nullish(), url: z.string().nullish() })
+    .nullish(),
+  master_access: z.string().nullish(),
   passthrough: z.string().nullish(),
   playback_ids: z.array(playbackIdSchema).nullish(),
   status: z.enum(ASSET_STATUSES),
