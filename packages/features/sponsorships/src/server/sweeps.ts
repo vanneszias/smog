@@ -61,6 +61,10 @@ import {
   orphanLogoSweep,
   releaseTerminalLogos,
 } from "./orphan-logos";
+import {
+  reconcileRenderJobs,
+  type WorkflowStatusPort,
+} from "./render-watchdog";
 import { settlePayment } from "./settle";
 import {
   isStalePayment,
@@ -429,6 +433,12 @@ export interface StaleSweepResult {
    * without Mollie.
    */
   keptOpen: number;
+  /** Render jobs the watchdog failed: their Workflow ended or is gone. */
+  renderFailed: number;
+  /** Queued render jobs whose `render.requested` the watchdog re-sent. */
+  renderRequeued: number;
+  /** Running render jobs past the ceiling: terminated and failed. */
+  renderTimedOut: number;
   /**
    * Paid payments whose `payment.settled` was re-sent because an item sat
    * in `rendering` without a `queued`/`running` render job (the
@@ -580,18 +590,25 @@ async function staleStep(
  * as cancelled, or kept open (no key, a 404, not cancelable). One without
  * a Mollie id never reached Mollie and is cancelled locally. A Mollie
  * error leaves the payment open for the next hour. Then the
- * reconciliation re-sends lost fan-outs.
+ * reconciliation re-sends lost fan-outs, and the render watchdog
+ * (`reconcileRenderJobs`, phase 7 ruling 12) re-sends lost
+ * `render.requested` and fails jobs whose Workflow died (`workflow` is
+ * `null` without a `RENDER_WORKFLOW` binding: only the re-send applies).
  */
 export async function runStaleSweep({
   db,
   mollie,
   now,
   queues,
+  siteUrl,
+  workflow,
 }: {
   db: Db;
   mollie: MollieClient | null;
   now: Date;
   queues: JobQueues;
+  siteUrl: string;
+  workflow: WorkflowStatusPort | null;
 }): Promise<StaleSweepResult> {
   const result: StaleSweepResult = {
     cancelled: 0,
@@ -599,6 +616,9 @@ export async function runStaleSweep({
     deferred: 0,
     failed: 0,
     keptOpen: 0,
+    renderFailed: 0,
+    renderRequeued: 0,
+    renderTimedOut: 0,
     resent: 0,
     settled: 0,
     stuck: 0,
@@ -642,6 +662,16 @@ export async function runStaleSweep({
   const reconciled = await resendSettled(db, queues, now);
   result.resent = reconciled.resent;
   result.stuck = reconciled.stuck;
+  const renders = await reconcileRenderJobs({
+    db,
+    now,
+    queues,
+    siteUrl,
+    workflow,
+  });
+  result.renderFailed = renders.failed;
+  result.renderRequeued = renders.requeued;
+  result.renderTimedOut = renders.timedOut;
   return result;
 }
 

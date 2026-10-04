@@ -464,7 +464,14 @@ describe("runStaleSweep (J-03)", () => {
     queues: JobQueues,
     mollie = fake.mollie as MollieClient | null
   ) {
-    return await runStaleSweep({ db, mollie, now: NOW, queues });
+    return await runStaleSweep({
+      db,
+      mollie,
+      now: NOW,
+      queues,
+      siteUrl: SITE_URL,
+      workflow: null,
+    });
   }
 
   it("settles a payment Mollie reports paid, never cancels it", async () => {
@@ -737,7 +744,14 @@ describe("runStaleSweep's reconciliation (task 4 review)", () => {
   }
 
   async function sweepOnce(queues: JobQueues, now = NOW) {
-    return await runStaleSweep({ db, mollie: null, now, queues });
+    return await runStaleSweep({
+      db,
+      mollie: null,
+      now,
+      queues,
+      siteUrl: SITE_URL,
+      workflow: null,
+    });
   }
 
   it("re-sends payment.settled for a paid item rendering without a job, until the job exists", async () => {

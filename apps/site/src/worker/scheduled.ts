@@ -13,9 +13,62 @@ import {
   runReminderSweep,
   runRetentionPurge,
   runStaleSweep,
+  type WorkflowInstanceStatus,
+  type WorkflowStatusPort,
 } from "@smog/sponsorships/server";
 import { createMux } from "@smog/video";
 import { siteEnv } from "@/server/auth";
+
+/**
+ * The part of a Workflow binding the render watchdog uses (`RENDER_WORKFLOW`,
+ * added by the build only in `local`/`container` mode, phase 7 ruling 2).
+ */
+export interface WorkflowStatusBinding {
+  get: (id: string) => Promise<{
+    status: () => Promise<WorkflowInstanceStatus>;
+    terminate: () => Promise<void>;
+  }>;
+}
+
+/** What `get(id)` throws for an id the engine does not know (`instance.not_found`). */
+const NOT_FOUND = /instance\.not_found|not[ _-]?found/i;
+
+function isInstanceNotFound(error: unknown): boolean {
+  return error instanceof Error && NOT_FOUND.test(error.message);
+}
+
+/**
+ * The render watchdog's `WorkflowStatusPort` over `RENDER_WORKFLOW`
+ * (phase 7 ruling 12): an instance's status, `"not-found"` when `get`
+ * reports an unknown id (any other error is thrown: the job is left for
+ * the next run), and `terminate`. `null` without the binding (`fake`
+ * mode): the watchdog then only re-sends lost `render.requested`.
+ */
+export function workflowStatusPort(
+  binding: WorkflowStatusBinding | undefined
+): WorkflowStatusPort | null {
+  if (!binding) {
+    return null;
+  }
+  return {
+    status: async (id) => {
+      let instance: Awaited<ReturnType<WorkflowStatusBinding["get"]>>;
+      try {
+        instance = await binding.get(id);
+      } catch (failure) {
+        if (isInstanceNotFound(failure)) {
+          return "not-found";
+        }
+        throw failure;
+      }
+      const { error, status } = await instance.status();
+      return { error: error ?? null, status };
+    },
+    terminate: async (id) => {
+      await (await binding.get(id)).terminate();
+    },
+  };
+}
 
 /**
  * One cron's work (phase 6 ruling 9): the sweep from
@@ -76,6 +129,10 @@ const HANDLERS: Record<CronName, CronHandler> = {
       mollie: createMollie(siteEnv().worker),
       now,
       queues: cronQueues(),
+      siteUrl: siteEnv().vars.SITE_URL,
+      workflow: workflowStatusPort(
+        siteEnv().bindings.RENDER_WORKFLOW as WorkflowStatusBinding | undefined
+      ),
     })),
   }),
 };

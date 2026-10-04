@@ -1586,7 +1586,7 @@
         "notes": {
           "awaitingPayment": "Wacht op betaling. Markeer als betaald of annuleer bij de betaling hieronder.",
           "rendering": "De video wordt gemaakt. Daarna komt de sponsoring bij Te beoordelen.",
-          "renderFailed": "De video is mislukt. Opnieuw proberen komt met de nieuwe videomaker; tot dan kan niemand hier iets doen.",
+          "renderFailed": "De video is mislukt. De fout staat bij Videotaken; probeer opnieuw als de oorzaak opgelost of tijdelijk was.",
           "closed": "Deze sponsoring is afgesloten."
         }
       },
@@ -1735,7 +1735,6 @@
       },
       "renderJobs": {
         "title": "Videotaken",
-        "retryLater": "Alleen lezen. Opnieuw proberen komt met de nieuwe videomaker.",
         "empty": "Nog geen videotaken.",
         "attempt": "Poging {{attempt}}",
         "status": {
@@ -1745,7 +1744,13 @@
           "failed": "Mislukt"
         }
       },
-      "retryRender": {},
+      "retryRender": {
+        "action": "Video opnieuw maken",
+        "title": "De video voor {{name}} op {{gesture}} opnieuw maken?",
+        "description": "Er start een nieuwe video met de huidige naam en het huidige logo. De sponsoring gaat terug naar Video wordt gemaakt en komt bij Ter beoordeling zodra de video klaar is. Er gaat geen e-mail uit.",
+        "done": "De video wordt opnieuw gemaakt (poging {{attempt}}).",
+        "announce": "Video opnieuw gestart: poging {{attempt}} voor {{name}}."
+      },
       "tokens": {
         "title": "Links",
         "empty": "Nog geen links.",

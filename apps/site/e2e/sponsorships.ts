@@ -45,10 +45,12 @@ async function uploadLogo(page: Page): Promise<string> {
  * The flow spec's gestures: its tests approve, request changes and mark
  * paid, so it seeds them fresh and resets them afterwards.
  */
-const FLOW_SLUGS = ["vogel", "koffie", "eten", "drinken"] as const;
+const FLOW_SLUGS = ["vogel", "koffie", "eten", "drinken", "kat"] as const;
 
 export const FLOW_IDS = {
   eten: "e2e-adm-eten-0",
+  /** Its first render failed (`sponsorship` op, phase 7 task 7). */
+  kat: "e2e-adm-kat",
   koffie: "e2e-adm-koffie-0",
   vogel: "e2e-adm-vogel-0",
 } as const;
@@ -78,6 +80,13 @@ export async function seedFlowFixtures(page: Page): Promise<void> {
       op: "sponsorshipCheckout",
       paymentStatus: "open",
       status: "awaiting_payment",
+    },
+    {
+      displayName: "E2E Kat",
+      gestureSlug: "kat",
+      id: FLOW_IDS.kat,
+      op: "sponsorship",
+      status: "render_failed",
     },
   ]);
 }

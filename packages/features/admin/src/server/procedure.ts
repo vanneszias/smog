@@ -106,6 +106,14 @@ export interface AdminSponsorshipServices {
     input: ActorInput & { siteUrl: string }
   ) => Promise<SponsorshipLinkPlan>;
   /**
+   * The retry of a failed render (A-27): `render_failed → rendering` and
+   * the next job; `after` holds its `render.requested`.
+   */
+  retryRender: (
+    db: Db,
+    input: ActorInput
+  ) => Promise<SponsorshipPlan & { attempt: number; renderJobId: string }>;
+  /**
    * `settlePayment` (ruling 6): what the webhook does with Mollie's
    * payment. Its own batches; the caller enqueues `events` and `notify`.
    * `null` when the payment is not ours.

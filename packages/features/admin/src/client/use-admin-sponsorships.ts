@@ -75,6 +75,7 @@ export const SPONSORSHIP_ACTIONS = [
   "cancel",
   "forceExpire",
   "recordRefund",
+  "retryRender",
 ] as const;
 
 /**
@@ -107,5 +108,19 @@ export function useAdminSponsorshipActions() {
     requestChanges: useMutation(
       rpc.sponsorships.requestChanges.mutationOptions(oneTime)
     ),
+    retryRender: useRetryRender(),
   } satisfies Record<(typeof SPONSORSHIP_ACTIONS)[number], unknown>;
+}
+
+/**
+ * Retry a failed render (A-27, `admin.sponsorships.retryRender`): answers
+ * the new job's `{ renderJobId, attempt }`, then refetches the admin
+ * queries (the detail shows the sponsorship `rendering` with the new job).
+ */
+export function useRetryRender() {
+  const rpc = useAdminRpc();
+  const invalidate = useInvalidateAfterAdminWrite();
+  return useMutation(
+    rpc.sponsorships.retryRender.mutationOptions({ onSettled: invalidate })
+  );
 }

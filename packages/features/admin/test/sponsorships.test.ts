@@ -31,6 +31,7 @@ import {
   deletedAssets,
   enqueued,
   mollieFaults,
+  muxFaults,
   queueFaults,
   testMollie,
 } from "./sponsorship-fakes";
@@ -38,6 +39,7 @@ import {
   eventTypes,
   paymentRow,
   seedCheckout,
+  seedRenderFailed,
   seedRenewal,
   seedToken,
   sponsorshipRow,
@@ -986,6 +988,49 @@ describe("forceExpire", () => {
     expect(deletedAssets).toContain("sponsored-asset");
   });
 
+  it.each([
+    [404, false],
+    [500, true],
+  ])(
+    "deletes through @smog/video deleteAsset: Mux %i is done or logged, and the expiry stands",
+    async (status, logs) => {
+      const gesture = await makeGesture(testDb(), { name: "Weg ermee" });
+      const seeded = await seedCheckout({
+        gestures: [gesture],
+        paymentStatus: "paid",
+        status: "live",
+        videoAssetId: `asset-${status}`,
+      });
+      const id = seeded.sponsorshipIds[0] as string;
+      muxFaults.deleteStatus = status;
+      const logged = quietErrors();
+      try {
+        await expect(
+          callAs(admin, "sponsorships.forceExpire", {
+            confirmName: "Weg ermee",
+            id,
+          })
+        ).resolves.toEqual({ id, status: "expired" });
+        // `deleteAsset`'s own message: the admin no longer sends the DELETE itself.
+        const videoLine = `[video] Mux answered ${status} to DELETE /video/v1/assets/asset-${status}`;
+        expect(logged.mock.calls.some(([line]) => line === videoLine)).toBe(
+          logs
+        );
+        expect(
+          logged.mock.calls.some(
+            ([line]) =>
+              line ===
+              `[admin] Failed to delete the sponsored asset asset-${status}:`
+          )
+        ).toBe(logs);
+      } finally {
+        muxFaults.deleteStatus = null;
+        logged.mockRestore();
+      }
+      expect((await sponsorshipRow(id)).status).toBe("expired");
+    }
+  );
+
   it("leaves the gesture's own asset alone and revokes the open renewal link", async () => {
     const gesture = await makeGesture(testDb(), { muxAssetId: "own-asset" });
     const seeded = await seedCheckout({
@@ -1489,5 +1534,135 @@ describe("the status-filtered list keeps the created index (M1)", () => {
       );
       expect(plan.some((step) => step.includes("TEMP B-TREE"))).toBe(false);
     }
+  });
+});
+
+describe("retryRender (A-27)", () => {
+  async function renderJobsOf(sponsorshipId: string) {
+    return await testDb()
+      .select()
+      .from(renderJob)
+      .where(sql`${renderJob.sponsorshipId} = ${sponsorshipId}`);
+  }
+
+  it("moves render_failed back to rendering with job 2, its events, the audit entry and one message", async () => {
+    const seeded = await seedRenderFailed();
+    const id = seeded.sponsorshipIds[0] as string;
+    const mark = await auditMark();
+
+    const result = await callAs<{ attempt: number; renderJobId: string }>(
+      admin,
+      "sponsorships.retryRender",
+      { id }
+    );
+
+    expect(result.attempt).toBe(2);
+    expect((await sponsorshipRow(id)).status).toBe("rendering");
+    const jobs = await renderJobsOf(id);
+    expect(
+      jobs.map((job) => [
+        job.attempt,
+        job.status,
+        job.id === result.renderJobId,
+      ])
+    ).toEqual(
+      expect.arrayContaining([
+        [1, "failed", false],
+        [2, "queued", true],
+      ])
+    );
+    expect(jobs).toHaveLength(2);
+    expect(await eventTypes(id)).toEqual(["render_retried", "render_started"]);
+    await expectAudit("sponsorships.retryRender", {
+      actorId: admin.user.id,
+      data: { attempt: 2, renderJobId: result.renderJobId },
+      mark,
+      targetId: id,
+      targetType: "sponsorship",
+    });
+    expect(enqueued.events).toEqual([
+      { renderJobId: result.renderJobId, type: "render.requested" },
+    ]);
+  });
+
+  it("two concurrent retries: one job, the other INVALID_STATE stale", async () => {
+    const id = (await seedRenderFailed()).sponsorshipIds[0] as string;
+    const mark = await auditMark();
+    const results = await Promise.allSettled([
+      callAs(admin, "sponsorships.retryRender", { id }),
+      callAs(admin, "sponsorships.retryRender", { id }),
+    ]);
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(rejected).toHaveLength(1);
+    expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({
+      code: "INVALID_STATE",
+      data: { reason: "stale" },
+    });
+    expect(await renderJobsOf(id)).toHaveLength(2);
+    expect(await auditRowsSince(mark)).toHaveLength(1);
+    expect(enqueued.events).toHaveLength(1);
+  });
+
+  it("refuses a sponsorship in review with INVALID_STATE stale, writing nothing", async () => {
+    const id = (
+      await seedCheckout({ paymentStatus: "paid", status: "in_review" })
+    ).sponsorshipIds[0] as string;
+    const mark = await auditMark();
+    expect(
+      await failure(callAs(admin, "sponsorships.retryRender", { id }))
+    ).toMatchObject({ code: "INVALID_STATE", data: { reason: "stale" } });
+    expect((await sponsorshipRow(id)).status).toBe("in_review");
+    expect(await renderJobsOf(id)).toHaveLength(0);
+    expect(await auditRowsSince(mark)).toHaveLength(0);
+    expect(enqueued.events).toEqual([]);
+  });
+
+  it("an unknown sponsorship is NOT_FOUND", async () => {
+    expect(
+      await failure(callAs(admin, "sponsorships.retryRender", { id: newId() }))
+    ).toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("a demoted admin is FORBIDDEN and changes nothing", async () => {
+    const demoted = await signedUp("admin");
+    const id = (await seedRenderFailed()).sponsorshipIds[0] as string;
+    await env.DB.prepare("UPDATE user SET role = 'user' WHERE id = ?")
+      .bind(demoted.user.id)
+      .run();
+    expect(
+      await failure(callAs(demoted, "sponsorships.retryRender", { id }))
+    ).toMatchObject({ code: "FORBIDDEN" });
+    expect((await sponsorshipRow(id)).status).toBe("render_failed");
+    expect(await renderJobsOf(id)).toHaveLength(1);
+  });
+
+  it("a failing audit insert fails the whole batch: still render_failed, no job", async () => {
+    const id = (await seedRenderFailed()).sponsorshipIds[0] as string;
+    const logged = quietErrors();
+    try {
+      await expect(
+        callOver(failingAudit(), "sponsorships.retryRender", { id })
+      ).rejects.toThrow();
+    } finally {
+      logged.mockRestore();
+    }
+    expect((await sponsorshipRow(id)).status).toBe("render_failed");
+    expect(await renderJobsOf(id)).toHaveLength(1);
+    expect(enqueued.events).toEqual([]);
+  });
+
+  it("a lost render.requested is logged; the retry stands", async () => {
+    const id = (await seedRenderFailed()).sponsorshipIds[0] as string;
+    queueFaults.events = true;
+    const logged = quietErrors();
+    try {
+      await expect(
+        callAs(admin, "sponsorships.retryRender", { id })
+      ).resolves.toMatchObject({ attempt: 2 });
+    } finally {
+      queueFaults.events = false;
+      logged.mockRestore();
+    }
+    expect((await sponsorshipRow(id)).status).toBe("rendering");
   });
 });

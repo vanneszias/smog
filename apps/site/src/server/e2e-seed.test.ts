@@ -97,6 +97,38 @@ describe("the e2e seed endpoint's operations", () => {
     expect(seen.some((entry) => STATUS_UPDATE.test(entry.sql))).toBe(false);
   });
 
+  test("seeds a render_failed sponsorship with its failed first job and its trail, all bound", () => {
+    const { db, seen } = recordingDb();
+    const statements = seedStatements(db, {
+      displayName: "Bakkerij Jansen",
+      gestureSlug: "dankjewel",
+      id: "e2e-render-failed",
+      op: "sponsorship",
+      status: "render_failed",
+    });
+    expect(statements).toHaveLength(4);
+    expect(seen[2]?.sql).toContain("INSERT INTO render_job ");
+    expect(seen[2]?.sql).toContain("'failed'");
+    expect(seen[2]?.values).toEqual([
+      "e2e-render-failed-job-1",
+      "e2e-render-failed",
+      "e2e-render-failed-job-1",
+      '{"v":1}',
+      "renderer answered 500",
+    ]);
+    expect(seen[3]?.sql).toContain("'render_started'");
+    expect(seen[3]?.sql).toContain("'render_failed'");
+    expect(seen[3]?.values).toEqual([
+      "e2e-render-failed-job-1-started",
+      "e2e-render-failed",
+      '{"attempt":1,"renderJobId":"e2e-render-failed-job-1"}',
+      "e2e-render-failed-job-1-failed",
+      "e2e-render-failed",
+      '{"error":"renderer answered 500","renderJobId":"e2e-render-failed-job-1"}',
+    ]);
+    expect(seen.some((entry) => STATUS_UPDATE.test(entry.sql))).toBe(false);
+  });
+
   test("reads the sponsorship statuses of named gestures, never writing (review I-7)", () => {
     const { db, seen } = recordingDb();
     const statements = seedStatements(db, {

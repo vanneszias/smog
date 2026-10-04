@@ -11,6 +11,7 @@ import {
   type PaymentStatus,
   payment,
   paymentItem,
+  renderJob,
   type SponsorshipStatus,
   sponsor,
   sponsorship,
@@ -214,4 +215,32 @@ export async function eventTypes(sponsorshipId: string): Promise<string[]> {
     .bind(sponsorshipId)
     .all<{ type: string }>();
   return results.map((row) => row.type);
+}
+
+/**
+ * A sponsorship whose first render failed: `render_failed`, paid, with a
+ * `failed` render job (attempt 1).
+ */
+export async function seedRenderFailed(
+  options: SeedOptions = {}
+): Promise<Seeded & { renderJobId: string }> {
+  const seeded = await seedCheckout({
+    paymentStatus: "paid",
+    status: "render_failed",
+    ...options,
+  });
+  const renderJobId = newId();
+  await testDb()
+    .insert(renderJob)
+    .values({
+      attempt: 1,
+      error: "render failed",
+      finishedAt: new Date(),
+      id: renderJobId,
+      input: { v: 1 },
+      sponsorshipId: seeded.sponsorshipIds[0] as string,
+      status: "failed",
+      workflowInstanceId: renderJobId,
+    });
+  return { ...seeded, renderJobId };
 }

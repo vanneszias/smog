@@ -93,6 +93,13 @@ function useEventDetail(): (event: SponsorshipEvent) => string | null {
         return stringField(data, "note");
       case "render_failed":
         return stringField(data, "error");
+      case "render_started": {
+        // Which attempt, so a retried render (A-27) reads as such.
+        const attempt = field(data, "attempt");
+        return typeof attempt === "number"
+          ? t("admin.sponsorships.renderJobs.attempt", { attempt })
+          : null;
+      }
       case "cancelled":
         return pick(stringField(data, "reason"), CANCEL_REASON_KEYS, t);
       case "refund_needed":

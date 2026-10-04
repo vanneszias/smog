@@ -1617,7 +1617,7 @@
         "notes": {
           "awaitingPayment": "En attente de paiement. Marquez-le payé ou annulez-le sur le paiement ci-dessous.",
           "rendering": "La vidéo est en préparation. Ensuite, le parrainage passe à l’examen.",
-          "renderFailed": "La vidéo a échoué. Le nouvel essai arrive avec le moteur de rendu\u00a0; d’ici là, rien à faire ici.",
+          "renderFailed": "La vidéo a échoué. L’erreur figure sous Tâches de rendu\u00a0; relancez le rendu une fois la cause corrigée ou si elle était passagère.",
           "closed": "Ce parrainage est clôturé."
         }
       },
@@ -1768,7 +1768,6 @@
       },
       "renderJobs": {
         "title": "Tâches de rendu",
-        "retryLater": "Lecture seule. Le nouvel essai arrive avec le moteur de rendu.",
         "empty": "Pas encore de tâche de rendu.",
         "attempt": "Essai {{attempt}}",
         "status": {
@@ -1778,7 +1777,13 @@
           "failed": "Échoué"
         }
       },
-      "retryRender": {},
+      "retryRender": {
+        "action": "Relancer le rendu",
+        "title": "Refaire la vidéo de {{name}} sur {{gesture}}\u00a0?",
+        "description": "Un nouveau rendu démarre avec le nom et le logo actuels. Le parrainage repasse à Vidéo en préparation, puis à l’examen quand la vidéo est prête. Aucun e-mail n’est envoyé.",
+        "done": "La vidéo est refaite (essai {{attempt}}).",
+        "announce": "Rendu relancé\u00a0: essai {{attempt}} démarré pour {{name}}."
+      },
       "tokens": {
         "title": "Liens",
         "empty": "Pas encore de liens.",

@@ -20,7 +20,11 @@ import { type ReactNode, useCallback, useEffect, useId, useRef } from "react";
 import { AdminPage } from "../admin-page";
 import { useAuditTime } from "../audit-data";
 import { errorCode } from "../catalog/errors";
-import { SponsorshipActions, sponsorshipAmountCents } from "./action-dialogs";
+import {
+  RetryRender,
+  SponsorshipActions,
+  sponsorshipAmountCents,
+} from "./action-dialogs";
 import { EventTrail } from "./event-trail";
 import { InvoiceBox } from "./invoice-box";
 import { renderJobLabel, tokenPurposeLabel, useDay, useMoney } from "./labels";
@@ -276,15 +280,16 @@ const RENDER_JOB_TONES = {
   succeeded: "success",
 } as const satisfies Record<RenderJobStatus, "danger" | "neutral" | "success">;
 
-/** The render jobs, read only (retrying arrives with phase 7, A-27). */
+/**
+ * The render jobs, each with its error summary (URL-free), and
+ * the retry of a failed render (A-27).
+ */
 function RenderJobs({ detail }: { detail: AdminSponsorshipDetail }): ReactNode {
   const { t } = useTranslation();
   const time = useAuditTime();
   return (
     <Section title={t("admin.sponsorships.renderJobs.title")}>
-      <Text size="caption" tone="muted">
-        {t("admin.sponsorships.renderJobs.retryLater")}
-      </Text>
+      <RetryRender detail={detail} />
       {detail.renderJobs.length === 0 ? (
         <Text size="body-sm" tone="muted">
           {t("admin.sponsorships.renderJobs.empty")}

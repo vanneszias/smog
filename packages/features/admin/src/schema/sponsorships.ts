@@ -317,6 +317,12 @@ export const paymentActionResultSchema = z.object({
   sponsorshipIds: z.array(z.string()),
 });
 
+/** The job a retried render created (A-27): its id and attempt (≥ 2). */
+export const retryRenderResultSchema = z.object({
+  attempt: z.number().int().min(2),
+  renderJobId: z.string(),
+});
+
 export const recordRefundResultSchema = z.object({
   amountCents: z.number().int(),
   paymentId: z.string(),
