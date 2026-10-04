@@ -26,7 +26,7 @@ bun run retention --env <dev|staging|production> --dry-run  # Count what the dai
 bun scripts/ensure-cloudflare-resources.ts --env <staging|production> --check|--create|--dry-run  # Queues, DLQs, R2 bucket + CORS (the deploy job runs it)
 ```
 
-`release:check` runs four scripts sequentially locally; CI (`.github/workflows/ci.yml`) runs the same scripts on separate runners with `fail-fast: false`: `release:check:core` (`check:ci` → `boundaries` → `scripts/release-config-check.ts` → `check-types` → `build` → staging `deploy:dry` (offline: the staging build, the deploy guard, `wrangler deploy --dry-run`) → `knip` → `audit`), `release:check:tests` (all tests), `release:check:mobile` (online expo-doctor, both iOS/Android exports, bundle sizes and gallery checks), and `release:check:render` (the render image and a real render, phase 7 task 4; locally it runs only with a Docker daemon and otherwise says it is CI only, not equivalent). Deploy waits for every lane. Pushes to `develop`/`master` run the gate through Deploy only; other branch pushes and pull requests run CI directly.
+`release:check` runs four scripts sequentially locally; CI (`.github/workflows/ci.yml`) runs the same scripts on separate runners with `fail-fast: false`: `release:check:core` (`check:ci` → `boundaries` → `scripts/release-config-check.ts` → `check-types` → `build` → staging `deploy:dry` (offline: the staging build, the deploy guard, `wrangler deploy --dry-run`) → `knip` → `audit`), `release:check:tests` (all tests), `release:check:mobile` (online expo-doctor, both iOS/Android exports, bundle sizes and gallery checks), and `release:check:render` (`scripts/release-check-render.ts`: the `SmogRenderer` image, started with `--network host`, `GET /health`, then `test:render` on the host against it, with the last frame and the MP4 kept as a CI artifact; CI builds the image first with `docker/build-push-action` and the GHA cache and passes `SMOG_RENDER_NO_BUILD=1`; locally it builds the image itself and runs only with a Docker daemon, otherwise it says it is CI only, not equivalent). Deploy waits for every lane. Pushes to `develop`/`master` run the gate through Deploy only; other branch pushes and pull requests run CI directly.
 
 `SMOG_OFFLINE=1` only affects expo-doctor, and the result is **not equivalent to CI**. Offline, three doctor checks are degraded (the script prints this list every time): the config schema check is tolerated when the schema fetch crashes; the SDK dependency-version check only compares against the bundled native-module list, so the api.expo.dev pins (react, react-native, typescript, jest-expo, …) go unchecked; and the React Native Directory check is off. Fetch failures are warnings (`EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS=1`). Every other doctor failure still fails. Never set it in CI; CI is the authority.
 
@@ -65,6 +65,16 @@ bun -F @smog/mobile doctor   # expo-doctor (needs network, see SMOG_OFFLINE abov
 ```
 
 Local runs need the `EXPO_PUBLIC_*` env: copy `apps/mobile/.env.example` to `apps/mobile/.env` (the app points at the local site on port 5173; use your LAN address on a device).
+
+### Render server (`@smog/render`, Bun + Remotion)
+```bash
+bun -F @smog/render serve        # RENDER_MODE=local server on 127.0.0.1:3002 (builds .render-bundle/ once)
+bun -F @smog/render test:render  # A real render with Chrome; RENDER_BROWSER_EXECUTABLE=/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell locally, RENDER_SERVER_URL to target a running server
+bun -F @smog/render fixture      # Re-render test/fixtures/source-2s.mp4 (needs a browser; commit the file)
+docker build --platform linux/amd64 -f packages/render/container/Dockerfile .  # The image (context: the repository root)
+```
+
+The server (`packages/render/src/server/*`) is the only `@smog/render` code that may use `Bun.*`, and `bun run test` never starts Chrome or Docker: the real render runs only in `test:render` and the render lane.
 
 ### Packages
 ```bash

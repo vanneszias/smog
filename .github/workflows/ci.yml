@@ -37,8 +37,33 @@ jobs:
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
+      # The render lane (phase 7 ruling 16) builds the SmogRenderer image here,
+      # with the GitHub Actions cache; its script then runs it (--no-build).
+      - if: matrix.check == 'render'
+        uses: docker/setup-buildx-action@v4
+      - if: matrix.check == 'render'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: packages/render/container/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: smog-renderer:ci
+          cache-from: type=gha,scope=smog-renderer
+          cache-to: type=gha,mode=max,scope=smog-renderer
       # Runs expo-doctor online: never set SMOG_OFFLINE here.
       - run: bun run release:check:${{ matrix.check }}
+        env:
+          SMOG_RENDER_NO_BUILD: ${{ matrix.check == 'render' && '1' || '' }}
+      # The render's last frame and MP4, for the parity review.
+      - if: always() && matrix.check == 'render'
+        uses: actions/upload-artifact@v7
+        with:
+          name: render-lane-output
+          path: packages/render/.render-out/
+          # A dot directory: upload-artifact skips hidden files by default.
+          include-hidden-files: true
+          if-no-files-found: warn
 
   e2e:
     name: Playwright e2e

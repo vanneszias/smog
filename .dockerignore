@@ -1,0 +1,26 @@
+# The build context of packages/render/container/Dockerfile (the
+# SmogRenderer image, phase 7 ruling 17) is the repository root. Its first
+# stage runs `turbo prune @smog/render --docker`, which needs the workspace
+# manifests, the lockfile and the pruned packages' sources only.
+.git
+.github
+.claude
+**/node_modules
+**/.turbo
+**/.wrangler
+**/dist
+**/build
+**/coverage
+**/.render-bundle
+**/.render-out
+**/.expo
+**/.tanstack
+**/test-results
+**/playwright-report
+**/*.log
+**/.dev.vars
+**/.dev.vars.*
+**/.env
+**/.env.*
+apps/mobile
+docs

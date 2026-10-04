@@ -99,6 +99,79 @@ function envMentions(value: unknown, key: string): boolean {
   return isRecord(value) && key in value;
 }
 
+/** The image tag `scripts/release-check-render.ts` runs in CI. */
+const RENDER_CI_IMAGE = "smog-renderer:ci";
+
+/**
+ * The render lane's build in `ci.yml` (phase 7 task 4 review, minor 8):
+ * the `render` leg builds the image with `docker/build-push-action`
+ * (`load: true`, linux/amd64, the Dockerfile, the tag the lane runs), and
+ * the shared `release:check` step tells the lane not to build again.
+ */
+export function checkRenderLaneBuild(source: string): string[] {
+  const file = "ci.yml";
+  const workflow = parseWorkflow(source, file);
+  if (typeof workflow === "string") {
+    return [workflow];
+  }
+  const errors: string[] = [];
+  const steps = workflow.jobs?.["release-check"]?.steps ?? [];
+  const build = steps.find((step) =>
+    step.uses?.startsWith("docker/build-push-action@")
+  );
+  if (build) {
+    const expected: Record<string, unknown> = {
+      file: "packages/render/container/Dockerfile",
+      load: true,
+      platforms: "linux/amd64",
+      tags: RENDER_CI_IMAGE,
+    };
+    for (const [key, value] of Object.entries(expected)) {
+      if (build.with?.[key] !== value) {
+        errors.push(
+          `${file}: the render image build needs with.${key}: ${String(value)}`
+        );
+      }
+    }
+    if (!build.if?.includes("matrix.check == 'render'")) {
+      errors.push(
+        `${file}: the render image build must run in the render leg only`
+      );
+    }
+  } else {
+    errors.push(
+      `${file}: the render leg must build the image with docker/build-push-action`
+    );
+  }
+  // `.render-out` is a dot directory, which upload-artifact skips unless
+  // told otherwise (the first CI run uploaded nothing).
+  const artifact = steps.find(
+    (step) =>
+      (step.uses?.startsWith("actions/upload-artifact@") ?? false) &&
+      String(step.with?.path ?? "").includes("packages/render/.render-out")
+  );
+  if (artifact?.with?.["include-hidden-files"] !== true) {
+    errors.push(
+      `${file}: the render lane's artifact upload needs include-hidden-files: true for packages/render/.render-out`
+    );
+  }
+  const lane = steps.find((step) =>
+    step.run?.includes("bun run release:check:")
+  );
+  const noBuild = lane?.env?.SMOG_RENDER_NO_BUILD;
+  if (
+    !(
+      typeof noBuild === "string" &&
+      noBuild.includes("matrix.check == 'render'")
+    )
+  ) {
+    errors.push(
+      `${file}: the release:check step must pass SMOG_RENDER_NO_BUILD for the render leg`
+    );
+  }
+  return errors;
+}
+
 export function checkCiWorkflow(source: string): string[] {
   const file = "ci.yml";
   const workflow = parseWorkflow(source, file);
@@ -1001,6 +1074,7 @@ export function checkReleaseConfig(root: string): string[] {
     wranglerErrors.length === 0 ? checkWranglerResources(wrangler) : [];
   return [
     ...checkCiWorkflow(read(".github/workflows/ci.yml")),
+    ...checkRenderLaneBuild(read(".github/workflows/ci.yml")),
     ...checkDeployWorkflow(read(".github/workflows/deploy.yml"), migrationsDir),
     ...checkReleaseScripts(read("package.json")),
     ...wranglerErrors,
