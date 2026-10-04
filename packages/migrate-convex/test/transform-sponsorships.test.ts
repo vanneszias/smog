@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { hashSponsorshipToken } from "@smog/sponsorships/schema";
+import { sha256Hex } from "@smog/utils";
 import { legacyIdRef } from "../src/core/emit";
 import { type ExportFiles, validateExport } from "../src/core/export-schema";
 import { legacyKey, legacyUuid } from "../src/core/ids";
@@ -21,6 +22,8 @@ import {
 } from "../src/core/transform/sponsorships";
 import { FIXTURE_INPUTS, FIXTURE_SECRETS, fixtureExport } from "./helpers";
 import {
+  FIXTURE_LOGO_DATA_URL,
+  SPONSORSHIP_ADMIN_LOGS,
   SPONSORSHIP_BLOCKERS,
   SPONSORSHIP_GESTURES,
 } from "./sponsorship-fixtures";
@@ -42,11 +45,15 @@ const overrides: OverlayOverrides = parseOverlayOverrides(
   readFileSync(FIXTURE_INPUTS.overrides, "utf8")
 );
 
-/** The fixture export, with the gestures the sponsorships need (and the blocker rows when asked). */
+/** The fixture export, with the gestures and the admin log the sponsorships need (and the blocker rows when asked). */
 async function files(withBlockers = false): Promise<ExportFiles> {
   const base = await fixtureExport();
   return {
     ...base,
+    adminLogs: [
+      base.adminLogs,
+      readFileSync(SPONSORSHIP_ADMIN_LOGS, "utf8"),
+    ].join(""),
     gestures: [base.gestures, readFileSync(SPONSORSHIP_GESTURES, "utf8")].join(
       ""
     ),
@@ -121,7 +128,7 @@ describe("mapSponsorshipStatus (ruling 10's table)", () => {
     ["rejected", "rejected", "paid"],
     ["cancelled", "cancelled", "canceled"],
   ] as const)("%s → %s, payment %s", (old, status, paymentStatus) => {
-    const mapped = mapSponsorshipStatus({ ...row, status: old }, NOW);
+    const mapped = mapSponsorshipStatus({ ...row, status: old }, NOW, true);
     expect(mapped.status).toBe(status);
     expect(mapped.payment).toBe(paymentStatus);
   });
@@ -130,12 +137,26 @@ describe("mapSponsorshipStatus (ruling 10's table)", () => {
     expect(
       mapSponsorshipStatus(
         { ...row, renewalReminderSentAt: NOW.getTime(), status: "active" },
-        NOW
+        NOW,
+        true
       ).status
     ).toBe("expiring");
   });
 
-  test("pending_payment is cancelled only when updatedAt is more than 24 hours before --now", () => {
+  test("pending_payment with a Mollie id stays awaiting_payment / open at any age (I4)", () => {
+    const old = mapSponsorshipStatus(
+      { ...row, status: "pending_payment", updatedAt: 0 },
+      NOW,
+      true
+    );
+    expect(old).toMatchObject({
+      payment: "open",
+      stale: false,
+      status: "awaiting_payment",
+    });
+  });
+
+  test("pending_payment without a Mollie id is cancelled only when updatedAt is more than 24 hours before --now (I1)", () => {
     const at = (offset: number) =>
       mapSponsorshipStatus(
         {
@@ -143,11 +164,15 @@ describe("mapSponsorshipStatus (ruling 10's table)", () => {
           status: "pending_payment",
           updatedAt: NOW.getTime() - offset,
         },
-        NOW
+        NOW,
+        false
       );
-    expect(at(24 * HOUR).status).toBe("awaiting_payment");
+    expect(at(24 * HOUR)).toMatchObject({
+      payment: "open",
+      status: "awaiting_payment",
+    });
     expect(at(24 * HOUR + 1)).toMatchObject({
-      payment: "canceled",
+      payment: null,
       stale: true,
       status: "cancelled",
     });
@@ -155,7 +180,7 @@ describe("mapSponsorshipStatus (ruling 10's table)", () => {
 
   test("pending_approval takes the sponsored video, else the preview, else render_failed", () => {
     const approval = { ...row, status: "pending_approval" as const };
-    expect(mapSponsorshipStatus(approval, NOW).videoPlaybackId).toBe(
+    expect(mapSponsorshipStatus(approval, NOW, true).videoPlaybackId).toBe(
       "sponsored"
     );
     expect(
@@ -165,13 +190,15 @@ describe("mapSponsorshipStatus (ruling 10's table)", () => {
           previewVideoPlaybackId: "preview",
           sponsoredVideoPlaybackId: undefined,
         },
-        NOW
+        NOW,
+        true
       )
     ).toMatchObject({ status: "in_review", videoPlaybackId: "preview" });
     expect(
       mapSponsorshipStatus(
         { ...approval, sponsoredVideoPlaybackId: undefined },
-        NOW
+        NOW,
+        true
       )
     ).toMatchObject({ status: "render_failed", videoPlaybackId: null });
   });
@@ -193,7 +220,7 @@ describe("transformSponsorships on the fixture", () => {
     expect(statuses).toEqual({
       [id("01")]: "live",
       [id("02")]: "awaiting_payment",
-      [id("03")]: "cancelled",
+      [id("03")]: "awaiting_payment",
       [id("04")]: "in_review",
       [id("05")]: "in_review",
       [id("06")]: "render_failed",
@@ -203,13 +230,16 @@ describe("transformSponsorships on the fixture", () => {
       [id("10")]: "rejected",
       [id("11")]: "cancelled",
       [id("12")]: "cancelled",
+      [id("13")]: "awaiting_payment",
+      [id("14")]: "cancelled",
+      [id("15")]: "in_review",
     });
     expect(result.sections[0]?.counts).toMatchObject({
-      sponsorships: 12,
+      sponsorships: 15,
       stalePendingPayments: 1,
-      "status.awaiting_payment": 1,
+      "status.awaiting_payment": 3,
       "status.cancelled": 3,
-      "status.in_review": 2,
+      "status.in_review": 3,
     });
     expect(
       issuesOf(result).filter((entry) => entry.severity === "blocker")
@@ -218,8 +248,8 @@ describe("transformSponsorships on the fixture", () => {
 
   test("groups rows into checkouts by Mollie id: one sponsor, one payment, an item per row", async () => {
     const result = await transformSponsorships(await context());
-    // 12 rows, sp04 and sp05 share tr_fixture0004.
-    expect(result.rows.sponsors).toHaveLength(11);
+    // 15 rows, sp04 and sp05 share tr_fixture0004.
+    expect(result.rows.sponsors).toHaveLength(14);
     const sponsor04 = sponsorshipOf(result, "04").sponsorId;
     expect(sponsorshipOf(result, "05").sponsorId).toBe(sponsor04);
     const paymentId = await legacyUuid(
@@ -237,9 +267,10 @@ describe("transformSponsorships on the fixture", () => {
     expect(
       result.rows.paymentItems.filter((row) => row.paymentId === paymentId)
     ).toHaveLength(2);
-    // sp12 (pending, no Mollie id) gets its own sponsor and no payment.
-    expect(result.rows.payments).toHaveLength(10);
-    expect(result.rows.paymentItems).toHaveLength(11);
+    // sp12 (pending) and sp14 (stale, no Mollie id) get no payment; sp13
+    // and sp15 get one without a Mollie id.
+    expect(result.rows.payments).toHaveLength(12);
+    expect(result.rows.paymentItems).toHaveLength(13);
     const sponsor12 = sponsorshipOf(result, "12").sponsorId;
     expect(sponsor12).toBe(await legacyUuid("sponsor", id("12")));
     expect(
@@ -267,9 +298,11 @@ describe("transformSponsorships on the fixture", () => {
       paidAt: null,
       status: "open",
     });
+    // I4: an old pending_payment with a Mollie id stays open, whatever its
+    // age, for the first stale sweep to check with Mollie.
     expect(await paymentOf("tr_fixture0003")).toMatchObject({
       paidAt: null,
-      status: "canceled",
+      status: "open",
     });
     expect(await paymentOf("tr_fixture0011")).toMatchObject({
       status: "canceled",
@@ -283,7 +316,7 @@ describe("transformSponsorships on the fixture", () => {
     expect(live.endsAt).toEqual(new Date(1_767_536_000_000));
     const expiring = sponsorshipOf(result, "08");
     expect(expiring.reminderSentAt).toEqual(new Date("2026-09-21T10:00:00Z"));
-    for (const n of ["02", "04", "06", "07", "10"]) {
+    for (const n of ["02", "03", "04", "06", "07", "10", "13", "15"]) {
       const row = sponsorshipOf(result, n);
       expect(row.startsAt).toBeNull();
       expect(row.endsAt).toBeNull();
@@ -327,9 +360,111 @@ describe("transformSponsorships on the fixture", () => {
     });
     expect(item("01")).toMatchObject({ includesLogo: false });
     expect(issue(result, "unexpectedAmount")?.ids).toEqual([id("09")]);
-    expect(issue(result, "logoNotStored")?.ids).toEqual([id("06")]);
+    expect(issue(result, "logoNotStored")?.ids).toEqual([id("06"), id("15")]);
     expect(issue(result, "reviewWithoutVideo")?.ids).toEqual([id("06")]);
     expect(result.sections[0]?.counts.overlayImagesDropped).toBe(2);
+  });
+
+  test("I1: a recent pending_payment without a Mollie id is awaiting an open payment with no Mollie id; an old one is cancelled", async () => {
+    const result = await transformSponsorships(await context());
+    const thirteen = sponsorshipOf(result, "13");
+    const paymentId = await legacyUuid("payment", id("13"));
+    expect(
+      result.rows.payments.find((row) => row.id === paymentId)
+    ).toMatchObject({
+      amountCents: 5000,
+      mollieId: null,
+      paidAt: null,
+      status: "open",
+    });
+    expect(
+      result.rows.paymentItems.find((row) => row.sponsorshipId === thirteen.id)
+    ).toMatchObject({ amountCents: 5000, paymentId });
+    const fourteen = sponsorshipOf(result, "14");
+    expect(fourteen.status).toBe("cancelled");
+    expect(
+      result.rows.paymentItems.some((row) => row.sponsorshipId === fourteen.id)
+    ).toBe(false);
+    expect(result.rows.payments.map((row) => row.id)).not.toContain(
+      await legacyUuid("payment", id("14"))
+    );
+  });
+
+  test("M1, M3: a row marked paid by hand keeps a paid payment, its logo item and a marked_paid_manually event", async () => {
+    const result = await transformSponsorships(await context());
+    const fifteen = sponsorshipOf(result, "15");
+    const paymentId = await legacyUuid("payment", id("15"));
+    expect(
+      result.rows.payments.find((row) => row.id === paymentId)
+    ).toMatchObject({
+      amountCents: 6000,
+      mollieId: null,
+      paidAt: new Date("2026-09-25T10:00:00Z"),
+      status: "paid",
+    });
+    expect(
+      result.rows.paymentItems.find((row) => row.sponsorshipId === fifteen.id)
+    ).toEqual({
+      amountCents: 6000,
+      includesLogo: true,
+      paymentId,
+      sponsorshipId: fifteen.id,
+    });
+    expect(
+      result.rows.events.find((row) => row.type === "marked_paid_manually")
+    ).toEqual({
+      actorId: legacyIdRef("user", ADA),
+      createdAt: new Date("2026-09-26T10:00:00Z"),
+      data: { paymentId },
+      id: await legacyUuid(
+        "sponsorship_event",
+        legacyKey(id("15"), "marked_paid_manually")
+      ),
+      sponsorshipId: fifteen.id,
+      type: "marked_paid_manually",
+    });
+    expect(result.sections[0]?.counts.markedPaidManually).toBe(1);
+    expect(issue(result, "paymentWithoutMollieId")?.ids).toEqual([
+      id("15"),
+      id("13"),
+    ]);
+  });
+
+  test("I2: the logo data URL is never copied, only a marker", async () => {
+    for (const target of ["production", "staging"] as const) {
+      // biome-ignore lint/performance/noAwaitInLoops: two targets.
+      const result = await transformSponsorships(await context({ target }));
+      expect(result.statements.join("\n")).not.toContain("data:image");
+      expect(JSON.stringify(result.rows)).not.toContain(FIXTURE_LOGO_DATA_URL);
+      const six = sponsorshipOf(result, "06");
+      const event = result.rows.events.find(
+        (row) => row.sponsorshipId === six.id && row.type === "legacy"
+      );
+      expect(
+        (event?.data as { legacy: { overlayImage: unknown } } | undefined)
+          ?.legacy.overlayImage
+      ).toEqual({
+        bytes: 68,
+        kind: "dataUrl",
+        sha256: await sha256Hex(FIXTURE_LOGO_DATA_URL),
+      });
+    }
+  });
+
+  test("I2: a large logo does not grow the statement", async () => {
+    const base = await context();
+    const big = `data:image/png;base64,${"A".repeat(400_000)}`;
+    const result = await transformSponsorships({
+      ...base,
+      data: {
+        ...base.data,
+        sponsorships: base.data.sponsorships.map((row) =>
+          row._id === id("06") ? { ...row, overlayImageStorageId: big } : row
+        ),
+      },
+    });
+    const longest = Math.max(...result.statements.map((line) => line.length));
+    expect(longest).toBeLessThan(4000);
   });
 
   test("without a Mux map every video warns and has no asset id", async () => {
@@ -456,7 +591,7 @@ describe("transformSponsorships on the fixture", () => {
           durationYears: 1,
           hasLogo: null,
           originalVideoPlaybackId: "fixtureOriginalPlayback0001",
-          overlayImageStorageId: null,
+          overlayImage: null,
           overlayText: "Jef Fixturebureau",
           previewVideoPlaybackId: "fixturePreviewPlayback0010",
           rejectionReason: "Fixture reden: logo onleesbaar",
@@ -482,7 +617,8 @@ describe("transformSponsorships on the fixture", () => {
     expect(
       result.rows.events.find((row) => row.sponsorshipId === two.id)?.actorId
     ).toBeNull();
-    expect(result.rows.events).toHaveLength(12);
+    // 15 legacy events and sp15's marked_paid_manually.
+    expect(result.rows.events).toHaveLength(16);
   });
 
   test("an unexpired re-edit token is hashed with its expiry; expired ones are counted", async () => {
@@ -540,12 +676,12 @@ describe("transformSponsorships on the fixture", () => {
 
   test("the reset keys list every row it writes", async () => {
     const result = await transformSponsorships(await context());
-    expect(result.resetKeys.rows?.sponsorship).toHaveLength(12);
-    expect(result.resetKeys.rows?.sponsor).toHaveLength(11);
+    expect(result.resetKeys.rows?.sponsorship).toHaveLength(15);
+    expect(result.resetKeys.rows?.sponsor).toHaveLength(14);
     expect(result.resetKeys.rows?.invoice_request).toHaveLength(3);
-    expect(result.resetKeys.rows?.payment).toHaveLength(10);
-    expect(result.resetKeys.rows?.payment_item).toHaveLength(11);
-    expect(result.resetKeys.rows?.sponsorship_event).toHaveLength(12);
+    expect(result.resetKeys.rows?.payment).toHaveLength(12);
+    expect(result.resetKeys.rows?.payment_item).toHaveLength(13);
+    expect(result.resetKeys.rows?.sponsorship_event).toHaveLength(16);
     expect(result.resetKeys.rows?.sponsorship_token).toEqual([
       await legacyUuid("sponsorship_token", legacyKey(id("07"), "reedit")),
     ]);
@@ -582,6 +718,33 @@ describe("the blockers", () => {
     expect(result.statements.join("\n")).not.toContain("tr_fixtureblock02");
   });
 
+  test("I3: a Mollie payment whose rows are partly paid and partly open is a blocker naming the Mollie id and the rows", async () => {
+    const result = await transformSponsorships(
+      await context({ blockers: true })
+    );
+    expect(issue(result, "checkoutMixedPayment")).toMatchObject({
+      details: [
+        {
+          legacyId: "ks7spn000000000000000000000bk03",
+          mollieId: "tr_fixtureblock03",
+          payment: "paid",
+          status: "in_review",
+        },
+        {
+          legacyId: "ks7spn000000000000000000000bk04",
+          mollieId: "tr_fixtureblock03",
+          payment: "open",
+          status: "awaiting_payment",
+        },
+      ],
+      ids: [
+        "ks7spn000000000000000000000bk03",
+        "ks7spn000000000000000000000bk04",
+      ],
+      severity: "blocker",
+    });
+  });
+
   test("a plan over the blockers reports them and counts them", async () => {
     const output = await plan({
       export: await files(true),
@@ -590,8 +753,8 @@ describe("the blockers", () => {
       target: "production",
       transforms: [transformSponsorships],
     });
-    expect(output.report.blockers).toBe(2);
-    expect(output.manifest?.report.blockers).toBe(2);
+    expect(output.report.blockers).toBe(3);
+    expect(output.manifest?.report.blockers).toBe(3);
   });
 
   test("an overlay offender blocks the plan without overrides", async () => {

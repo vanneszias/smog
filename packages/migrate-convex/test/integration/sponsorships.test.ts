@@ -8,11 +8,13 @@ import { legacyUuid } from "../../src/core/ids";
 import { parseMuxMap, parseOverlayOverrides } from "../../src/core/inputs";
 import type { Target } from "../../src/core/target";
 import { transformSponsorships } from "../../src/core/transform/sponsorships";
+import adminLogsText from "../fixtures/export/adminLogs/documents.jsonl?raw";
 import gesturesText from "../fixtures/export/gestures/documents.jsonl?raw";
 import sponsorshipsText from "../fixtures/export/sponsorships/documents.jsonl?raw";
 import usersText from "../fixtures/export/users/documents.jsonl?raw";
 import muxMapText from "../fixtures/mux-map.json?raw";
 import overridesText from "../fixtures/overlay-overrides.json?raw";
+import sponsorshipAdminLogsText from "../fixtures/sponsorship-admin-logs.jsonl?raw";
 import sponsorshipGesturesText from "../fixtures/sponsorship-gestures.jsonl?raw";
 
 /*
@@ -59,6 +61,7 @@ async function counts(): Promise<Record<string, number>> {
 
 async function transform(target: Target) {
   const validated = validateExport({
+    adminLogs: `${adminLogsText}${sponsorshipAdminLogsText}`,
     gestures: `${gesturesText}${sponsorshipGesturesText}`,
     sponsorships: sponsorshipsText,
     users: usersText,
@@ -149,11 +152,11 @@ describe("the sponsorship transform's SQL on D1", () => {
     const first = await counts();
     expect(first).toEqual({
       invoice_request: 3,
-      payment: 10,
-      payment_item: 11,
-      sponsor: 11,
-      sponsorship: 12,
-      sponsorship_event: 12,
+      payment: 12,
+      payment_item: 13,
+      sponsor: 14,
+      sponsorship: 15,
+      sponsorship_event: 16,
       sponsorship_token: 1,
     });
     await run(result.statements);
@@ -192,6 +195,19 @@ describe("the sponsorship transform's SQL on D1", () => {
       "SELECT count(*) AS n FROM invoice_request WHERE vat_number = ''"
     ).first<{ n: number }>();
     expect(vat?.n).toBe(1);
+    // I1, M1: payments without a Mollie id, open and paid.
+    const noMollie = await env.DB.prepare(
+      "SELECT status, amount_cents FROM payment WHERE mollie_id IS NULL ORDER BY status"
+    ).all();
+    expect(noMollie.results).toEqual([
+      { amount_cents: 5000, status: "open" },
+      { amount_cents: 6000, status: "paid" },
+    ]);
+    // I2: no logo in the database.
+    const logo = await env.DB.prepare(
+      "SELECT count(*) AS n FROM sponsorship_event WHERE data LIKE '%data:image%'"
+    ).first<{ n: number }>();
+    expect(logo?.n).toBe(0);
 
     await run(resetStatements(result.resetKeys));
     expect(Object.values(await counts())).toEqual(TABLES.map(() => 0));
@@ -202,11 +218,11 @@ describe("the sponsorship transform's SQL on D1", () => {
     await run(result.statements);
     expect(await counts()).toEqual({
       invoice_request: 3,
-      payment: 10,
-      payment_item: 11,
-      sponsor: 11,
-      sponsorship: 12,
-      sponsorship_event: 12,
+      payment: 12,
+      payment_item: 13,
+      sponsor: 14,
+      sponsorship: 15,
+      sponsorship_event: 16,
       sponsorship_token: 0,
     });
     const emails = await env.DB.prepare(

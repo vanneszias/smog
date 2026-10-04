@@ -5,14 +5,27 @@
  *   besides `Mama` (the `gestures` table is task 7's fixture, so these
  *   rows live here until task 10 merges them into the export);
  * - `sponsorships-blockers.jsonl`: rows that block a plan (a second
- *   blocking sponsorship on a gesture, a missing gesture), kept out of the
- *   export so the fixture plan has no blocker with its overrides.
+ *   blocking sponsorship on a gesture, a missing gesture, a Mollie payment
+ *   whose rows are partly paid and partly open), kept out of the export so
+ *   the fixture plan has no blocker with its overrides;
+ * - `sponsorship-admin-logs.jsonl`: the old admin's `mark_paid_manually`
+ *   log of sp15 (the `adminLogs` table is task 7's fixture, so task 10
+ *   merges it too).
  */
 
 export const SPONSORSHIP_GESTURES = new URL(
   "./fixtures/sponsorship-gestures.jsonl",
   import.meta.url
 ).pathname;
+
+export const SPONSORSHIP_ADMIN_LOGS = new URL(
+  "./fixtures/sponsorship-admin-logs.jsonl",
+  import.meta.url
+).pathname;
+
+/** The logo the old legacy flow kept in `overlayImageStorageId` (a 1x1 PNG). */
+export const FIXTURE_LOGO_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4DwQACfsD/eNV8pwAAAAASUVORK5CYII=";
 
 export const SPONSORSHIP_BLOCKERS = new URL(
   "./fixtures/sponsorships-blockers.jsonl",
@@ -34,6 +47,10 @@ export const SPONSORSHIP_SECRETS = [
   "lien.fixture@example.test",
   "mira.fixture@example.test",
   "noor.fixture@example.test",
+  "olaf.fixture@example.test",
+  "pieter.fixture@example.test",
+  "quinten.fixture@example.test",
+  "rik.fixture@example.test",
   // Contact and sponsor names, companies.
   "Cas Fixture",
   "Dirk Fixture",
@@ -47,6 +64,10 @@ export const SPONSORSHIP_SECRETS = [
   "Lien Fixture",
   "Mira Fixture",
   "Noor Fixture",
+  "Olaf Fixture",
+  "Pieter Fixture",
+  "Quinten Fixture",
+  "Rik Fixture",
   "Fixture Garage",
   "Slagerij Fixturelaan",
   // Overlays (the 36-character one and its override included).
@@ -62,6 +83,13 @@ export const SPONSORSHIP_SECRETS = [
   "Lien Fixturebloemen",
   "Mira Fixturestudio",
   "Noor Fixturecafe",
+  "Olaf Fixturefabriek",
+  "Pieter Fixturebakker",
+  "Quinten Fixturedrukker",
+  "Rik Fixturegarage",
+  // The logo (and its base64 payload alone).
+  FIXTURE_LOGO_DATA_URL,
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ",
   // The rejection reason, a VAT number, the re-edit tokens.
   "Fixture reden: logo onleesbaar",
   "BE0123456789",

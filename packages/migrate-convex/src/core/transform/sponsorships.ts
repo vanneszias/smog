@@ -10,12 +10,16 @@
  *   for an invoice (B3: `invoiceName ?? contactCompany ?? contactFullName`,
  *   `invoiceEmail ?? sponsorEmail`, the VAT number trimmed; a missing one
  *   is `""` with a warning, one that fails mod-97 is kept with a warning),
- *   and, when it has a Mollie id, one `initial` `payment` with a
- *   `payment_item` per row.
+ *   and one `initial` `payment` with a `payment_item` per row: always
+ *   with a Mollie id, and without one only when a row is paid (marked
+ *   paid by hand, with its `marked_paid_manually` event) or open (a fresh
+ *   checkout that never reached Mollie). Rows of one payment that are
+ *   partly open are a blocker (task 8 review I3).
  * - **Statuses** (`mapSponsorshipStatus`): the old state machine
  *   (`ref-master/packages/convex/convex/sponsorships.ts`) onto spec §5.5.
- *   The importer writes final states as data; the app's `transition()`
- *   never runs here.
+ *   A `pending_payment` with a Mollie id is never cancelled here (I4):
+ *   the first stale sweep asks Mollie. The importer writes final states
+ *   as data; the app's `transition()` never runs here.
  * - **`display_name`** is the trimmed `overlayText`, the text in the video,
  *   or its `overlay-overrides.json` entry. A text the wizard would refuse
  *   (over 35 characters, empty, a line break) is a blocker listing the
@@ -23,7 +27,8 @@
  * - **Videos.** `video_playback_id` is the sponsored video (for
  *   `in_review`, the preview when there is none; with neither the row is
  *   `render_failed`). `video_asset_id` comes from the Mux map. Logos are
- *   not migrated (`logo_key` NULL; `includes_logo` keeps the fact).
+ *   not migrated (`logo_key` NULL; `includes_logo` keeps the fact), and
+ *   an old logo data URL becomes a marker in the legacy data (I2).
  * - **Blockers:** a row whose gesture is not in the export, and two
  *   blocking sponsorships on one gesture after mapping
  *   (`sponsorship_gesture_blocking_uq`). A row with a missing gesture is
@@ -57,9 +62,13 @@ import {
   normalizeBelgianVat,
   sponsorshipTokenSchema,
 } from "@smog/sponsorships/schema";
-import { DAY_MS } from "@smog/utils";
+import { DAY_MS, sha256Hex } from "@smog/utils";
 import { insertRow, legacyIdRef, type RawSql, type ResetKeys } from "../emit";
-import type { ConvexSponsorshipStatus, SponsorshipRow } from "../export-schema";
+import type {
+  AdminLogRow,
+  ConvexSponsorshipStatus,
+  SponsorshipRow,
+} from "../export-schema";
 import { legacyKey, legacyUuid } from "../ids";
 import type { MuxMap } from "../inputs";
 import type { TransformContext, TransformResult } from "../plan";
@@ -92,7 +101,7 @@ const DATED: ReadonlySet<SponsorshipStatus> = new Set([
 export interface MappedStatus {
   /** Its part of the checkout's payment; null when it has none (`pending`). */
   readonly payment: PaymentStatus | null;
-  /** A `pending_payment` cancelled by the 24-hour rule. */
+  /** A `pending_payment` without a Mollie id cancelled by the 24-hour rule. */
   readonly stale: boolean;
   readonly status: SponsorshipStatus;
   readonly videoPlaybackId: string | null;
@@ -108,11 +117,21 @@ type StatusRow = Pick<
 >;
 
 /**
- * Ruling 10's status table. `pending` is the legacy flow before Mollie;
- * a `pending_payment` whose `updatedAt` is more than 24 hours before
- * `now` is what the old hourly sweep would have cancelled.
+ * Ruling 10's status table, as amended (task 8 review I1, I4). `pending`
+ * is the legacy flow before Mollie. A `pending_payment` row is never
+ * cancelled locally while it has a Mollie id: it becomes
+ * `awaiting_payment` with an `open` payment, whatever its age, and the
+ * first stale sweep asks Mollie (settle, revive or cancel; D-STALE).
+ * Without a Mollie id no money can arrive: a row whose `updatedAt` is
+ * more than 24 hours before `now` is cancelled, a newer one is
+ * `awaiting_payment` with an `open` payment that has no Mollie id, which
+ * the sweep or an admin handles.
  */
-export function mapSponsorshipStatus(row: StatusRow, now: Date): MappedStatus {
+export function mapSponsorshipStatus(
+  row: StatusRow,
+  now: Date,
+  hasMollieId: boolean
+): MappedStatus {
   const sponsored = row.sponsoredVideoPlaybackId ?? null;
   const old: ConvexSponsorshipStatus = row.status;
   switch (old) {
@@ -124,10 +143,11 @@ export function mapSponsorshipStatus(row: StatusRow, now: Date): MappedStatus {
         videoPlaybackId: sponsored,
       };
     case "pending_payment": {
-      const stale = row.updatedAt < now.getTime() - STALE_PAYMENT_MS;
+      const stale =
+        !hasMollieId && row.updatedAt < now.getTime() - STALE_PAYMENT_MS;
       return stale
         ? {
-            payment: "canceled",
+            payment: null,
             stale,
             status: "cancelled",
             videoPlaybackId: sponsored,
@@ -314,6 +334,11 @@ function checkoutsOf(rows: readonly SponsorshipRow[]): Checkout[] {
 interface Context {
   readonly counts: Record<string, number>;
   readonly issues: Issues;
+  /**
+   * The old admin's `mark_paid_manually` logs (M3), by sponsorship: the
+   * first one per row.
+   */
+  readonly manualMarks: ReadonlyMap<string, AdminLogRow>;
   readonly muxMap: MuxMap | null;
   readonly now: Date;
   readonly overrides: ReadonlyMap<string, string> | null;
@@ -472,13 +497,16 @@ function displayNameOf(
   if (parsed.success) {
     return context.p.name("sponsor", n, parsed.data);
   }
-  const length = characters(text);
+  // One rule (M5): the wizard's own schema decides, and its first issue
+  // names the reason; `length` is the length that schema measures.
+  const [first] = parsed.error.issues;
   let reason = "controlCharacters";
-  if (length === 0) {
+  if (first?.code === "too_small") {
     reason = "empty";
-  } else if (text.length > DISPLAY_NAME_MAX) {
+  } else if (first?.code === "too_big") {
     reason = "tooLong";
   }
+  const { length } = text;
   context.issues.add(
     "blocker",
     "overlayOffender",
@@ -497,14 +525,61 @@ function displayNameOf(
   return context.p.name("sponsor", n, cut(text, DISPLAY_NAME_MAX) || "-");
 }
 
+const DATA_URL = /^data:[^,]*,/i;
+const BASE64_DATA_URL = /^data:[^,]*;base64,/i;
+const BASE64_PADDING = /[=]+$/;
+const encoder = new TextEncoder();
+
+/**
+ * What the legacy data keeps of `overlayImageStorageId` (task 8 review
+ * I2). In the old legacy flow it held the logo itself as a data URL, so
+ * the value is never copied: a data URL becomes `{ kind: "dataUrl",
+ * bytes, sha256 }` (its decoded size and the SHA-256 of the whole URL),
+ * anything else `{ kind: "storageId", sha256 }`.
+ */
+export interface OverlayImageMarker {
+  readonly bytes?: number;
+  readonly kind: "dataUrl" | "storageId";
+  readonly sha256: string;
+}
+
+function decodedLength(payload: string): number {
+  try {
+    return encoder.encode(decodeURIComponent(payload)).length;
+  } catch {
+    return encoder.encode(payload).length;
+  }
+}
+
+async function overlayImageMarker(
+  value: string | undefined
+): Promise<OverlayImageMarker | null> {
+  if (value === undefined) {
+    return null;
+  }
+  const sha256 = await sha256Hex(value);
+  if (!DATA_URL.test(value)) {
+    return { kind: "storageId", sha256 };
+  }
+  const payload = value.slice(value.indexOf(",") + 1);
+  const bytes = BASE64_DATA_URL.test(value)
+    ? Math.floor((payload.replace(BASE64_PADDING, "").length * 3) / 4)
+    : decodedLength(payload);
+  return { bytes, kind: "dataUrl", sha256 };
+}
+
 /** The legacy event's `data.legacy` (M4), with the free text pseudonymised. */
-function legacyData(p: Pseudonymiser, row: SponsorshipRow) {
+function legacyData(
+  p: Pseudonymiser,
+  row: SponsorshipRow,
+  overlayImage: OverlayImageMarker | null
+) {
   return {
     legacy: {
       durationYears: row.durationYears,
       hasLogo: row.hasLogo ?? null,
       originalVideoPlaybackId: row.originalVideoPlaybackId,
-      overlayImageStorageId: row.overlayImageStorageId ?? null,
+      overlayImage,
       overlayText: p.freeText(row.overlayText),
       previewVideoPlaybackId: row.previewVideoPlaybackId ?? null,
       rejectionReason: p.freeText(row.rejectionReason ?? null),
@@ -520,6 +595,9 @@ function legacyData(p: Pseudonymiser, row: SponsorshipRow) {
 
 interface RowIds {
   readonly event: string;
+  /** The `marked_paid_manually` event's id. */
+  readonly manualEvent: string;
+  readonly overlayImage: OverlayImageMarker | null;
   readonly sponsorship: string;
   readonly token: string;
   /** The SHA-256 of the raw re-edit token, when the row has one. */
@@ -559,6 +637,11 @@ async function idsOf(checkouts: readonly Checkout[]): Promise<Ids> {
               "sponsorship_event",
               legacyKey(row._id, "legacy")
             ),
+            manualEvent: await legacyUuid(
+              "sponsorship_event",
+              legacyKey(row._id, "marked_paid_manually")
+            ),
+            overlayImage: await overlayImageMarker(row.overlayImageStorageId),
             sponsorship: await legacyUuid("sponsorship", row._id),
             token: await legacyUuid(
               "sponsorship_token",
@@ -674,7 +757,49 @@ function checkBlocking(
   }
 }
 
-/** The checkout's payment (one `initial` payment per Mollie id), or null. */
+/**
+ * I3: a payment whose rows map to different states would strand a row
+ * (a `paid` payment holding an `awaiting_payment` item, which nothing
+ * settles, or an `open` one holding a `cancelled` item, whose share a
+ * later `paid` would take silently). Any mix with `open` is a blocker
+ * naming the Mollie id and the rows; `paid` beside `canceled` only warns.
+ */
+function checkMixedPayment(
+  context: Context,
+  checkout: Checkout,
+  mapped: ReadonlyMap<string, MappedStatus>,
+  parts: ReadonlySet<PaymentStatus>
+): void {
+  if (parts.size < 2) {
+    return;
+  }
+  const blocker = parts.has("open");
+  for (const row of checkout.rows) {
+    const status = mapped.get(row._id);
+    context.issues.add(
+      blocker ? "blocker" : "warning",
+      blocker ? "checkoutMixedPayment" : "checkoutPartlyCancelled",
+      blocker
+        ? "The rows of one Mollie payment are partly open and partly paid or cancelled; settle them in the old admin before the export (the payment would strand a row)."
+        : "The rows of one paid Mollie payment include a cancelled one; the payment stays paid.",
+      row._id,
+      {
+        legacyId: row._id,
+        mollieId: checkout.mollieId,
+        payment: status?.payment ?? null,
+        status: status?.status ?? null,
+      }
+    );
+  }
+}
+
+/**
+ * The checkout's `initial` payment, or null. With a Mollie id: one
+ * payment for every row that has a payment part. Without one (I1, M1): a
+ * payment only when a row is `paid` (the old admin's mark-paid) or `open`
+ * (a fresh `pending_payment`), with `mollie_id` NULL, so the item keeps
+ * its amount and paid logo and the sweep or an admin can reach it.
+ */
 function paymentOf(
   context: Context,
   checkout: Checkout,
@@ -691,17 +816,13 @@ function paymentOf(
     }
   }
   const status = checkoutPaymentStatus(parts);
-  if (checkout.mollieId === null || status === null) {
+  if (
+    status === null ||
+    (checkout.mollieId === null && status !== "paid" && status !== "open")
+  ) {
     return null;
   }
-  if (new Set(parts).size > 1) {
-    context.issues.add(
-      "warning",
-      "checkoutMixedPayment",
-      "The rows of one checkout map to different payment states; the payment is paid if any row was, else open.",
-      paid[0]?._id ?? checkout.key
-    );
-  }
+  checkMixedPayment(context, checkout, mapped, new Set(parts));
   for (const row of paid) {
     if (!Number.isSafeInteger(row.paymentAmount) || row.paymentAmount < 0) {
       context.issues.add(
@@ -791,11 +912,11 @@ function noteRow(
       row._id
     );
   }
-  if (!hasPayment && status.payment === "paid") {
+  if (hasPayment && row.molliePaymentId === undefined) {
     issues.add(
-      "warning",
-      "paidWithoutMollieId",
-      "A sponsorship past payment has no Mollie payment id; it gets no payment row.",
+      "info",
+      "paymentWithoutMollieId",
+      "A sponsorship's payment has no Mollie id (marked paid by hand, or a checkout that never reached Mollie); its payment row has mollie_id NULL.",
       row._id
     );
   }
@@ -948,11 +1069,25 @@ function writeSponsorship(
         ? legacyIdRef("user", row.reviewedBy)
         : null,
     createdAt: ms(row.updatedAt),
-    data: legacyData(context.p, row),
+    data: legacyData(context.p, row, ids.overlayImage),
     id: ids.event,
     sponsorshipId: ids.sponsorship,
     type: "legacy",
   });
+  const mark = context.manualMarks.get(row._id);
+  if (mark && paymentId !== null && status.payment === "paid") {
+    count(context, "markedPaidManually");
+    out.events.push({
+      actorId: context.users.has(mark.userId)
+        ? legacyIdRef("user", mark.userId)
+        : null,
+      createdAt: ms(mark.createdAt),
+      data: { paymentId },
+      id: ids.manualEvent,
+      sponsorshipId: ids.sponsorship,
+      type: "marked_paid_manually",
+    });
+  }
   const token = tokenOf(context, row, ids, out.seenTokens);
   if (token) {
     out.tokens.push(token);
@@ -1032,6 +1167,23 @@ function writeCheckout(
   }
 }
 
+/** The first `mark_paid_manually` log of each sponsorship (logs come sorted). */
+function manualMarksOf(
+  logs: readonly AdminLogRow[]
+): ReadonlyMap<string, AdminLogRow> {
+  const marks = new Map<string, AdminLogRow>();
+  for (const log of logs) {
+    if (
+      log.action === "mark_paid_manually" &&
+      log.targetType === "sponsorship" &&
+      !marks.has(log.targetId)
+    ) {
+      marks.set(log.targetId, log);
+    }
+  }
+  return marks;
+}
+
 /** Ruling 10, applied to the export (see the module comment). */
 export async function transformSponsorships(
   input: TransformContext
@@ -1039,6 +1191,7 @@ export async function transformSponsorships(
   const context: Context = {
     counts: {},
     issues: new Issues(),
+    manualMarks: manualMarksOf(input.data.adminLogs),
     muxMap: input.inputs.muxMap,
     now: input.now,
     overrides: input.inputs.overrides,
@@ -1053,7 +1206,14 @@ export async function transformSponsorships(
     new Set(input.data.gestures.map((row) => row._id))
   );
   const mapped = new Map(
-    rows.map((row) => [row._id, mapSponsorshipStatus(row, context.now)])
+    rows.map((row) => [
+      row._id,
+      mapSponsorshipStatus(
+        row,
+        context.now,
+        trimmed(row.molliePaymentId) !== null
+      ),
+    ])
   );
   checkBlocking(context, rows, mapped);
 
