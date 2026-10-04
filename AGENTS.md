@@ -32,6 +32,8 @@ bun scripts/ensure-cloudflare-resources.ts --env <staging|production> --check|--
 
 Deploys run from `.github/workflows/deploy.yml` on pushes to `develop` (staging) and `master` (production). It first runs `ci.yml` (reusable, `workflow_call`) as the `release-check` job; `deploy` needs it. Then `scripts/ensure-cloudflare-resources.ts` (staging `--create`; production `--check` unless the repository variable `SMOG_PROVISION_PRODUCTION` is `1`; it never changes or deletes what exists), then D1 migrations (`packages/db/migrations/*.sql`), then `CLOUDFLARE_ENV=<env> bun -F @smog/site deploy`. Without the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets the job skips with a warning. The resources step needs, on the account and token: the Workers Paid plan (Queues), R2 enabled on the account, and the token permissions Workers R2 Storage: Edit and Workers Scripts: Edit (or Queues: Edit); a refusal prints a `[provision]` line naming the missing one. A bucket CORS that does not allow the PUT from `SITE_URL` fails the step with the `wrangler r2 bucket cors set` command to run by hand (it is never overwritten), and production provisioning refuses while `SITE_URL` is the placeholder.
 
+The render pipeline is gated (`apps/site/render-config.ts`, phase 7 ruling 2): `wrangler.jsonc` has no `workflows`, `containers`, Durable Object binding or migration; the build adds the `RENDER_WORKFLOW` Workflow for `RENDER_MODE=local` (dev only) and the Workflow plus the `SmogRenderer` container block for `container`, which also needs `SMOG_RENDER_PIPELINE=1` (a GitHub **environment** variable per env, passed by `deploy.yml` to the resources and deploy steps; a `container` build without it fails on purpose). Dev and staging are `fake`; production is `container`, so a production build needs the flag. With the flag, the resources step first probes `wrangler workflows list`, `docker info` and `wrangler containers list` and prints a `[provision] Workflows: …` / `[provision] Containers: …` line naming what is missing; the token then needs Workflows (expected: Workers Scripts: Edit) and Containers (expected: Containers: Edit, plus pushing to the Cloudflare Registry), on Workers Paid. These names are unconfirmed until the owner's first flip (docs/PROGRESS.md owner actions, in order: the token, the flag, then the env's `RENDER_MODE`).
+
 Every command in a package's `test` script runs through `bun <root>/scripts/test-deadline.ts -- <command>`: after 25 minutes (`SMOG_TEST_DEADLINE_MINUTES`) it prints `Test command hung` with the process tree and Node reports, kills the command's process group and exits 124; a command that exits 75 (a stuck Vitest pool, see `StallReporter`) runs once more. Wrap any new test command the same way. `bun run test` streams turbo output (`--log-order=stream`), and the Workers-pool Vitest configs spread `WORKERS_POOL_TEST_OPTIONS` from `@smog/config/testing/vitest` (timeouts, `verbose` in CI, `[vitest-stall]` reports).
 
 Use `bun run <script>` for scripts whose name clashes with a Bun built-in (`build`, `test`).
@@ -45,6 +47,8 @@ bun -F @smog/site deploy:dry # Build for staging, run the deploy guard, wrangler
 bun -F @smog/site test       # Vitest (Workers pool)
 bun -F @smog/site check-types
 bun -F @smog/site cf-typegen # Generate worker-configuration.d.ts (gitignored; check-types does it too)
+SMOG_DEV_RENDER_MODE=local bun -F @smog/site dev  # Real renders: adds RENDER_WORKFLOW; run `bun -F @smog/render serve` and give it a Mux (or the fake)
+bun -F @smog/site render:local-loop  # Opt-in (needs Chrome): Mux fake + render server + dev server, one paid sponsorship rendered to in_review
 ```
 
 Local auth (dev only): copy `apps/site/.dev.vars.example` to `.dev.vars` (it has a dev `BETTER_AUTH_SECRET`), then `bun -F @smog/db migrate:dev && bun -F @smog/db seed:dev`. The seeded admin is `admin@smog.test` with the **dev-only** password `smog-dev-admin`. Emails are not sent in dev: read them at `http://localhost:5173/dev/mail` (or `/dev/mail.json`). Migrations are append-only from now on: never edit an existing migration; add a new one (`bun -F @smog/db db:generate`). To start the local D1 from scratch, `rm -rf apps/site/.wrangler/state/v3/d1` first.
@@ -68,7 +72,7 @@ Local runs need the `EXPO_PUBLIC_*` env: copy `apps/mobile/.env.example` to `app
 
 ### Render server (`@smog/render`, Bun + Remotion)
 ```bash
-bun -F @smog/render serve        # RENDER_MODE=local server on 127.0.0.1:3002 (builds .render-bundle/ once)
+bun -F @smog/render serve        # RENDER_MODE=local server on 127.0.0.1:3002 (rebuilds .render-bundle/ on each start, so it renders the current composition)
 bun -F @smog/render test:render  # A real render with Chrome; RENDER_BROWSER_EXECUTABLE=/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell locally, RENDER_SERVER_URL to target a running server
 bun -F @smog/render fixture      # Re-render test/fixtures/source-2s.mp4 (needs a browser; commit the file)
 docker build --platform linux/amd64 -f packages/render/container/Dockerfile .  # The image (context: the repository root)

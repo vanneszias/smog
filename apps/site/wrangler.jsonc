@@ -52,7 +52,13 @@
   // environment variable the owner sets once the env's token can deploy
   // Workflows and Containers; without it a `container` build fails). The
   // deploy guard checks the built config. Dev's local mode:
-  // `SMOG_DEV_RENDER_MODE=local bun dev`.
+  // `SMOG_DEV_RENDER_MODE=local bun dev` (and `bun -F @smog/site
+  // render:local-loop` runs one real render end to end). Production's mode
+  // is already `container`, so a production build fails until the
+  // `production` environment has SMOG_RENDER_PIPELINE=1. The owner's flip
+  // for staging, in order: the token permissions, the flag, then
+  // `RENDER_MODE: "container"` below, with the env's own Mux secrets
+  // (docs/PROGRESS.md, owner actions).
   // D1 migrations live in packages/db/migrations (drizzle-kit + hand-written
   // FTS5); `bun -F @smog/db migrate:dev` applies them to the local dev D1.
   "env": {
