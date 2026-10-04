@@ -1,0 +1,9 @@
+{
+  // `src/core` (phase 8 ruling 6): the library base, no Bun, Node or
+  // Workers types, so a runtime global there fails to compile. The CLI and
+  // the Bun tests: tsconfig.bun.json. The integration suite:
+  // tsconfig.test.json.
+  "extends": "@smog/config/tsconfig/library.json",
+  "include": ["src/core"],
+  "exclude": ["src/**/*.test.ts"]
+}

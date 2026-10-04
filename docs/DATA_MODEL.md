@@ -60,6 +60,7 @@ erDiagram
     integer ban_expires
     text locale
     text legacy_id UK
+    integer welcomed_at
   }
   session {
     text id PK
@@ -348,10 +349,13 @@ Statuses (`SPONSORSHIP_STATUSES`): `awaiting_payment → rendering → in_review
 | `ban_expires` | `banExpires` | integer (ms) → Date | yes |  |
 | `locale` | `locale` | text | yes | enum: `nl`, `en`, `fr` |
 | `legacy_id` | `legacyId` | text | yes | unique |
+| `welcomed_at` | `welcomedAt` | integer (ms) → Date | yes | server-only (migration 0012): when the welcome email was claimed |
 
 Indexes: `user_created_at_idx` (created_at).
 
 CHECK: `user_role_check`, `user_locale_check`.
+
+`welcomed_at` (migration 0012, phase 8 ruling 16): the welcome email is claimed once in D1. `welcome()` runs `UPDATE user SET welcomed_at = ? WHERE id = ? AND welcomed_at IS NULL RETURNING id` and enqueues only when a row comes back, so two concurrent verifications send one welcome; the claim keeps `updated_at`. It is not a Better Auth additional field (no client reads or sets it). The migration is `ADD COLUMN` plus the backfill `UPDATE user SET welcomed_at = updated_at WHERE email_verified = 1`: no table rebuild, so `user_keep_one_admin` survives, and it never writes `role`. Unverified accounts stay NULL. The Convex import sets it to the plan's `--now`, so a migrated user is never welcomed.
 
 Trigger: `user_keep_one_admin` (migration 0007, hand-written): `BEFORE UPDATE OF role` aborts with `last_admin` when an admin is demoted and no other admin without a ban in force remains (ruling 7, atomic). Deleting the last admin is refused by `account.delete` in code; admins cannot delete admins.
 #### `session`
@@ -702,7 +706,7 @@ CHECK: `sponsorship_token_purpose_check`.
 
 ## Migrations, seed and tests
 
-**Migrations are append-only.** `0000`–`0011` are merged (the next free number is `0012`); never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
+**Migrations are append-only.** `0000`–`0012` are merged (the next free number is `0013`); never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
 
 - **Retention** (phase 6 ruling 9, `packages/db/src/retention.ts`): the daily `15 3 * * *` cron deletes `audit_log` rows older than 3 × 365 days, expired `session` and `verification` rows, and `sponsorship_token` rows used or expired more than 29 days ago (so a daily run removes them within 30 days), in chunks of 500 (`rowid IN (SELECT rowid … LIMIT 500)`, at most 20 per purge per run). Each chunk read seeks an index except the used-token one (`used_at` has no index; the table is small). The same run (`runRetentionPurge`, `@smog/sponsorships/server`) clears `sponsorship.logo_key` on sponsorships that ended (`rejected`, `cancelled`, `expired`) more than 30 days ago and can no longer use the logo (`payment_item.includes_logo` keeps the fact), and deletes R2 `logos/*` objects that no sponsorship references and that were uploaded more than 24 h ago (a KV cursor resumes the listing across runs). `bun run retention --env <env> --dry-run` counts what it would delete.
 - `bun -F @smog/db db:generate` runs `drizzle-kit generate` (generate only; wrangler applies migrations). Hand-written SQL (such as the FTS table) goes in a file made with `drizzle-kit generate --custom --name <name>`, so the drizzle journal stays in step.

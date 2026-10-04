@@ -637,7 +637,8 @@
         "reasonChargeback": "Rétrofacturé\u00a0: la banque a annulé le paiement. Vérifiez le parrainage et contactez le parrain si nécessaire.",
         "steps": "Remboursez le montant dans le tableau de bord Mollie. Si le remboursement n'apparaît pas ensuite dans l'administration, enregistrez-le sur le paiement.",
         "button": "Ouvrir dans Mollie"
-      }
+      },
+      "weMoved": {}
     }
   },
   "devTools": {

@@ -1,0 +1,9 @@
+{
+  // The CLI (`src/cli`, Bun only) and the Bun tests (`bun test`).
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["bun"]
+  },
+  "include": ["src/cli", "src/**/*.test.ts", "test/*.test.ts"]
+}

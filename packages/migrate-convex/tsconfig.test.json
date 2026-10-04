@@ -1,0 +1,10 @@
+{
+  // The integration suite (Vitest, workerd) and its config.
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["@cloudflare/vitest-plugin/types"]
+  },
+  "files": ["worker-configuration.d.ts"],
+  "include": ["test/integration", "test/env.d.ts", "vitest.config.ts"]
+}

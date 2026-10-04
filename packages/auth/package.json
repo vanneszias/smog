@@ -17,14 +17,14 @@
     "test": "bun ../../scripts/test-deadline.ts -- vitest run && bun ../../scripts/test-deadline.ts -- bun test guard src"
   },
   "dependencies": {
-    "@better-auth/core": "1.7.6",
-    "@better-auth/expo": "1.7.6",
-    "@better-auth/passkey": "1.7.6",
+    "@better-auth/core": "1.7.7",
+    "@better-auth/expo": "1.7.7",
+    "@better-auth/passkey": "1.7.7",
     "@smog/config": "workspace:*",
     "@smog/db": "workspace:*",
     "@smog/email": "workspace:*",
     "@smog/utils": "workspace:*",
-    "better-auth": "1.7.6",
+    "better-auth": "1.7.7",
     "drizzle-orm": "catalog:",
     "zod": "catalog:"
   },

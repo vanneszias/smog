@@ -1,0 +1,42 @@
+{
+  "name": "@smog/migrate-convex",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/core/index.ts"
+  },
+  "scripts": {
+    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.bun.json && tsc -p tsconfig.test.json",
+    "cli": "bun src/cli/main.ts",
+    "test": "bun ../../scripts/test-deadline.ts -- vitest run && bun ../../scripts/test-deadline.ts -- bun test --path-ignore-patterns='test/integration/**'"
+  },
+  "dependencies": {
+    "@smog/account": "workspace:*",
+    "@smog/admin": "workspace:*",
+    "@smog/config": "workspace:*",
+    "@smog/db": "workspace:*",
+    "@smog/email": "workspace:*",
+    "@smog/favorites": "workspace:*",
+    "@smog/gestures": "workspace:*",
+    "@smog/jobs": "workspace:*",
+    "@smog/lists": "workspace:*",
+    "@smog/sponsorships": "workspace:*",
+    "@smog/utils": "workspace:*",
+    "@smog/video": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "fflate": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "catalog:",
+    "@smog/auth": "workspace:*",
+    "@smog/payments": "workspace:*",
+    "@smog/render": "workspace:*",
+    "@smog/rpc": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}
