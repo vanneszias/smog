@@ -356,9 +356,7 @@ describe("emitPlan and the manifest", () => {
         ...manifest.files,
         ...manifest.reset,
         manifest.preflight,
-      ].find(
-        (item) => item.name === file.name
-      );
+      ].find((item) => item.name === file.name);
       expect(entry?.sha256).toBe(sha(file.content));
       expect(entry?.bytes).toBe(Buffer.byteLength(file.content));
     }

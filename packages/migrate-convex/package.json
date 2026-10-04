@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "catalog:",
+    "@orpc/server": "catalog:",
     "@smog/auth": "workspace:*",
     "@smog/payments": "workspace:*",
     "@smog/render": "workspace:*",

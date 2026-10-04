@@ -113,7 +113,11 @@ function kvGetArgs(env: WranglerEnv, key: string): string[] {
 }
 
 /** `wrangler kv key put …` on `KV` for `env`. */
-export function kvPutArgs(env: WranglerEnv, key: string, value: string): string[] {
+export function kvPutArgs(
+  env: WranglerEnv,
+  key: string,
+  value: string
+): string[] {
   return [
     "kv",
     "key",

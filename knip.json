@@ -73,21 +73,7 @@
     "packages/migrate-convex": {
       "entry": ["src/cli/main.ts", "test/**/*.test.ts"],
       "project": ["src/**/*.ts", "test/**/*.ts"],
-      "ignoreDependencies": [
-        "cloudflare",
-        "@smog/account",
-        "@smog/admin",
-        "@smog/auth",
-        "@smog/email",
-        "@smog/favorites",
-        "@smog/gestures",
-        "@smog/jobs",
-        "@smog/lists",
-        "@smog/payments",
-        "@smog/render",
-        "@smog/rpc",
-        "@smog/video"
-      ]
+      "ignoreDependencies": ["cloudflare", "@smog/account"]
     },
     "packages/api": {
       "entry": ["test/**/*.test.ts"],

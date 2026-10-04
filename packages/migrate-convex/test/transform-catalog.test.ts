@@ -11,8 +11,8 @@ import {
   type ContextOptions,
   cat,
   conflictProblems,
-  fixtureContext as wholeFixtureContext,
   ges,
+  fixtureContext as wholeFixtureContext,
 } from "./transform-helpers";
 
 /** Task 8's gestures (`…sg02`–`…sg12`), merged into the export by task 10. */

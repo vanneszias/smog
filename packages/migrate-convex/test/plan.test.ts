@@ -337,10 +337,11 @@ describe("plan on the minimal fixture", () => {
     const report = JSON.parse(readFileSync(join(out, "report.json"), "utf8"));
     // The malformed row, and (with no user left) no admin.
     expect(
-      report.sections.flatMap((part: { issues: { code: string; severity: string }[] }) =>
-        part.issues
-          .filter((issue) => issue.severity === "blocker")
-          .map((issue) => issue.code)
+      report.sections.flatMap(
+        (part: { issues: { code: string; severity: string }[] }) =>
+          part.issues
+            .filter((issue) => issue.severity === "blocker")
+            .map((issue) => issue.code)
       )
     ).toEqual(["malformedRow", "noAdmin"]);
     expect(

@@ -194,7 +194,7 @@ function text(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
-const MIGRATION_NUMBER = /^(\d{4})_/;
+const MIGRATION_NUMBER = /^\d{4}_/;
 const NO_SUCH_TABLE = /no such table/i;
 
 async function lastMigration(query: D1Query): Promise<number | null> {
@@ -212,9 +212,9 @@ async function lastMigration(query: D1Query): Promise<number | null> {
   }
   let last: number | null = null;
   for (const row of rows) {
-    const [, digits] = MIGRATION_NUMBER.exec(text(row.name) ?? "") ?? [];
-    if (digits !== undefined) {
-      const n = Number(digits);
+    const name = text(row.name) ?? "";
+    if (MIGRATION_NUMBER.test(name)) {
+      const n = Number(name.slice(0, 4));
       last = last === null ? n : Math.max(last, n);
     }
   }

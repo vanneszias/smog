@@ -51,10 +51,10 @@ import { TARGETS, type Target } from "../core/target";
 import { d1ExecuteArgs, kvPutArgs, type Wrangler } from "./wrangler";
 
 const PREFIX = "[migrate-convex]";
-export const APPLY_REPORT_FILE = "apply-report.json";
-export const NATIVE_CATALOG_FILE = "reset-native-catalog.sql";
+const APPLY_REPORT_FILE = "apply-report.json";
+const NATIVE_CATALOG_FILE = "reset-native-catalog.sql";
 /** The KV key of the catalogue's version (`@smog/gestures/server`). */
-export const CATALOG_VERSION_KEY = "catalog:version";
+const CATALOG_VERSION_KEY = "catalog:version";
 /** The KV key of the maintenance setting (`@smog/config/maintenance`). */
 const MAINTENANCE_KEY = "maintenance";
 
@@ -109,7 +109,7 @@ const manifestSchema = z.strictObject({
 export class ApplyRefusal extends Error {}
 
 /** The env a manifest's target may be applied to (B2). */
-export function targetFits(env: ApplyEnv, target: Target): boolean {
+function targetFits(env: ApplyEnv, target: Target): boolean {
   return env === "dev" || env === target;
 }
 
@@ -202,7 +202,7 @@ function readFacts(text: string): PreflightFacts {
 }
 
 /** The statements of `reset-native-catalog.sql`, or none. */
-export function nativeCatalogStatements(native: NativeCatalog): string[] {
+function nativeCatalogStatements(native: NativeCatalog): string[] {
   const list = (ids: readonly string[]) =>
     `(SELECT value FROM json_each(${sqlLiteral(JSON.stringify(ids))}))`;
   const statements: string[] = [];
