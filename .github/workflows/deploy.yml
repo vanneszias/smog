@@ -59,10 +59,16 @@ jobs:
       # script never changes or deletes what exists. Staging creates what is
       # missing; production only checks, and fails with the exact commands,
       # unless the repository variable SMOG_PROVISION_PRODUCTION is 1.
+      # SMOG_RENDER_PIPELINE is the render gate (phase 7): a GitHub
+      # environment variable, absent until the owner confirms Workflows and
+      # Containers access for that env. Only with it (and RENDER_MODE
+      # container) does the script probe Workflows, Docker and Containers,
+      # and the build add the Workflow and the Container.
       - name: Ensure Cloudflare resources
         if: steps.secrets.outputs.enabled == 'true'
         env:
           SMOG_PROVISION_PRODUCTION: ${{ vars.SMOG_PROVISION_PRODUCTION }}
+          SMOG_RENDER_PIPELINE: ${{ vars.SMOG_RENDER_PIPELINE }}
         run: |
           if [ "$CLOUDFLARE_ENV" = "production" ] && [ "$SMOG_PROVISION_PRODUCTION" != "1" ]; then
             bun scripts/ensure-cloudflare-resources.ts --env "$CLOUDFLARE_ENV" --check
@@ -80,4 +86,6 @@ jobs:
       # guard, then wrangler deploy --env. Never a bare wrangler deploy.
       - name: Deploy
         if: steps.secrets.outputs.enabled == 'true'
+        env:
+          SMOG_RENDER_PIPELINE: ${{ vars.SMOG_RENDER_PIPELINE }}
         run: bun -F @smog/site deploy

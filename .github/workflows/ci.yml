@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: [core, tests, mobile]
+        check: [core, tests, mobile, render]
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
