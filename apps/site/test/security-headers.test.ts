@@ -4,6 +4,7 @@ import { SYSTEM_THEME_SCRIPT } from "../src/lib/preferences";
 import {
   buildCsp,
   r2ConnectSources,
+  reportingEndpoints,
   respondSecurely,
   THEME_SCRIPT_HASH,
   withSecurityHeaders,
@@ -47,8 +48,26 @@ describe("the CSP", () => {
         "base-uri 'self'",
         "form-action 'self'",
         "frame-ancestors 'none'",
+        "report-uri /api/csp-report",
+        "report-to csp",
       ].join("; ")
     );
+  });
+
+  it("reports to the same-origin endpoint (phase 8 ruling 11)", () => {
+    expect(buildCsp("n")).toContain(
+      "; report-uri /api/csp-report; report-to csp"
+    );
+    expect(reportingEndpoints("https://smog.example")).toBe(
+      'csp="https://smog.example/api/csp-report"'
+    );
+    // Only the origin of the request's URL.
+    expect(reportingEndpoints("http://localhost:5173/x?y")).toBe(
+      'csp="http://localhost:5173/api/csp-report"'
+    );
+    for (const invalid of [undefined, "", "not a url", "javascript:alert(1)"]) {
+      expect(reportingEndpoints(invalid)).toBeNull();
+    }
   });
 
   it("hashes the exact theme pre-paint script the page inlines", async () => {
@@ -88,6 +107,9 @@ describe("security headers on the site", () => {
       "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
     );
     expect(headers.get("cross-origin-opener-policy")).toBe("same-origin");
+    expect(headers.get("reporting-endpoints")).toBe(
+      `csp="${ORIGIN}/api/csp-report"`
+    );
     // A nonced page is never stored for someone else.
     expect(headers.get("cache-control")).toBe("private, no-cache");
     // dev: enforced, and no HSTS (localhost is plain http).
@@ -118,6 +140,18 @@ describe("security headers on the site", () => {
     expect(hashes).toContain(THEME_SCRIPT_HASH);
   });
 
+  it("points Reporting-Endpoints at the request's own origin, never SITE_URL", async () => {
+    // SITE_URL is http://localhost:5173 in the tests; another host (a
+    // custom domain, a preview URL) must still report to itself.
+    const response = await exports.default.fetch(
+      "https://other-host.example/?token=secret"
+    );
+    expect(response.headers.get("reporting-endpoints")).toBe(
+      'csp="https://other-host.example/api/csp-report"'
+    );
+    await response.body?.cancel();
+  });
+
   it("uses a fresh nonce per response", async () => {
     const [a, b] = await Promise.all([fetchSite("/"), fetchSite("/")]);
     const nonceOf = (response: Response | undefined): string | undefined =>
@@ -137,6 +171,7 @@ describe("security headers on the site", () => {
       "strict-origin-when-cross-origin"
     );
     expect(response.headers.get("content-security-policy")).toBeNull();
+    expect(response.headers.get("reporting-endpoints")).toBeNull();
     await response.body?.cancel();
   });
 
@@ -235,6 +270,59 @@ describe("withSecurityHeaders", () => {
       ...init,
       headers: { "content-type": "text/html; charset=utf-8", ...init?.headers },
     });
+
+  it.each(["dev", "staging", "production"] as const)(
+    "reports in %s: the directives and Reporting-Endpoints on documents",
+    (environment) => {
+      const requestUrl = "https://smog.example";
+      const page = withSecurityHeaders(html(), {
+        environment,
+        nonce: "n",
+        requestUrl,
+      });
+      const csp =
+        page.headers.get("content-security-policy") ??
+        page.headers.get("content-security-policy-report-only") ??
+        "";
+      expect(csp).toContain("report-uri /api/csp-report; report-to csp");
+      expect(page.headers.get("reporting-endpoints")).toBe(
+        'csp="https://smog.example/api/csp-report"'
+      );
+      const redirect = withSecurityHeaders(
+        Response.redirect("https://smog.example/", 302),
+        { environment, nonce: "n", requestUrl }
+      );
+      expect(redirect.headers.get("reporting-endpoints")).toBe(
+        'csp="https://smog.example/api/csp-report"'
+      );
+      const json = withSecurityHeaders(Response.json({}), {
+        environment,
+        nonce: "n",
+        requestUrl,
+      });
+      expect(json.headers.get("reporting-endpoints")).toBeNull();
+    }
+  );
+
+  it("sends no Reporting-Endpoints without a valid request URL, and keeps a route's own", () => {
+    expect(
+      withSecurityHeaders(html(), {
+        environment: "production",
+        nonce: "n",
+      }).headers.get("reporting-endpoints")
+    ).toBeNull();
+    const own = withSecurityHeaders(
+      html({ headers: { "reporting-endpoints": 'x="https://a.example/r"' } }),
+      {
+        environment: "production",
+        nonce: "n",
+        requestUrl: "https://smog.example",
+      }
+    );
+    expect(own.headers.get("reporting-endpoints")).toBe(
+      'x="https://a.example/r"'
+    );
+  });
 
   it("adds HSTS outside dev and Report-Only in staging", () => {
     const staging = withSecurityHeaders(html(), {

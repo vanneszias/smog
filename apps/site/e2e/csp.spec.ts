@@ -38,6 +38,8 @@ const MUX_MP4 = /^https:\/\/stream\.mux\.com\/[^/]+\/highest\.mp4(?:#.*)?$/;
  */
 
 const CSP_MESSAGE = /Content Security Policy|Content-Security-Policy/i;
+/** An image `img-src` refuses (the CSP blocks it before any request). */
+const CSP_BLOCKED_IMAGE = "https://blocked.example/pixel.png";
 const NONCE_SOURCE = /'nonce-[A-Za-z0-9+/=]+'/;
 const TURNSTILE_FRAME =
   "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/e2e/turnstile";
@@ -194,6 +196,73 @@ test.describe("CSP (enforced in dev)", () => {
     await expect
       .poll(async () => (await violations(page, csp)).length)
       .toBeGreaterThan(0);
+  });
+
+  /*
+   * Phase 8 ruling 11. Browsers deliver reports from their network
+   * service, in batches, so the delivery is not intercepted here: the
+   * endpoint is unit-tested (`src/server/csp-report.test.ts`,
+   * `test/csp-report.test.ts`). This proves the page side: the directives,
+   * the endpoint header, and a real violation event.
+   */
+  test("reports violations same-origin: report-uri, report-to and Reporting-Endpoints", async ({
+    baseURL,
+    page,
+    request,
+  }) => {
+    const response = await page.goto("/");
+    const headers = response?.headers() ?? {};
+    expect(headers["content-security-policy"]).toContain(
+      "; report-uri /api/csp-report; report-to csp"
+    );
+    expect(headers["reporting-endpoints"]).toBe(
+      `csp="${baseURL}/api/csp-report"`
+    );
+    // The request's own origin, whatever SITE_URL says (review I-1).
+    const otherHost = (baseURL ?? "").replace("localhost", "127.0.0.1");
+    const viaIp = await request.get(`${otherHost}/`);
+    expect(viaIp.headers()["reporting-endpoints"]).toBe(
+      `csp="${otherHost}/api/csp-report"`
+    );
+    await viaIp.dispose();
+    await waitForApp(page);
+    const event = await page.evaluate(
+      (blocked) =>
+        new Promise<Record<string, string>>((resolve) => {
+          document.addEventListener(
+            "securitypolicyviolation",
+            (violation) =>
+              resolve({
+                blocked: violation.blockedURI,
+                directive: violation.effectiveDirective,
+                disposition: violation.disposition,
+              }),
+            { once: true }
+          );
+          const image = document.createElement("img");
+          image.src = blocked;
+          document.body.append(image);
+        }),
+      CSP_BLOCKED_IMAGE
+    );
+    expect(event).toEqual({
+      blocked: CSP_BLOCKED_IMAGE,
+      directive: "img-src",
+      disposition: "enforce",
+    });
+    // The endpoint answers such a report with an empty 204.
+    const report = await request.post("/api/csp-report", {
+      data: JSON.stringify({
+        "csp-report": {
+          "blocked-uri": CSP_BLOCKED_IMAGE,
+          "document-uri": `${baseURL}/`,
+          "effective-directive": "img-src",
+        },
+      }),
+      headers: { "content-type": "application/csp-report" },
+    });
+    expect(report.status()).toBe(204);
+    expect(await report.text()).toBe("");
   });
 
   test("a gesture page loads the Mux player and requests its media", async ({

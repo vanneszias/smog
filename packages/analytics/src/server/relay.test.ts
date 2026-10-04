@@ -195,6 +195,16 @@ describe("handleAnalyticsRelay", () => {
     expect(response.status).toBe(400);
   });
 
+  test("400 for a content-length of 16 or more digits (readCappedBody: malformed)", async () => {
+    const { fetch, options } = setup();
+    const response = await handleAnalyticsRelay(
+      post(TRACK, { "content-length": "1".repeat(16) }),
+      options
+    );
+    expect(response.status).toBe(400);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   test("413 for a chunked body past 4 KB: the read stops at the cap", async () => {
     const { fetch, options } = setup();
     let chunks = 0;
