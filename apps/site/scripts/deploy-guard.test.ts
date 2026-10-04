@@ -164,6 +164,7 @@ describe("checkClientHasNoSecrets", () => {
       "R2_SECRET_ACCESS_KEY",
       "aws4fetch",
       "AWS4-HMAC-SHA256",
+      "REMOTION_LICENSE_KEY",
     ]);
   });
 });

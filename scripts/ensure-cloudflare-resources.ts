@@ -27,6 +27,15 @@ import { join } from "node:path";
  * Workers Paid plan (Queues), R2 enabled on the account, and a token with
  * Workers R2 Storage: Edit and Workers Scripts: Edit (or Queues: Edit).
  * A refusal names the one that is missing (`[provision]` hints).
+ *
+ * The render pipeline (phase 7 ruling 2): only when the env's `RENDER_MODE`
+ * is `container` and `SMOG_RENDER_PIPELINE=1` (the GitHub environment
+ * variable `deploy.yml` passes), it first checks, read only, that the token
+ * reaches Workflows (`wrangler workflows list`), that Docker runs
+ * (`docker info`) and that Containers are reachable (`wrangler containers
+ * list`), and stops with a `[provision] Workflows: …` or `[provision]
+ * Containers: …` line otherwise. It creates neither: the deploy does. With
+ * the gate off it runs nothing new.
  */
 
 const DEPLOY_ENVS = ["staging", "production"] as const;
@@ -39,8 +48,11 @@ export interface WranglerResult {
   stdout: string;
 }
 
+/** Runs a command with `args` (tests pass a fake). */
+export type CommandRunner = (args: string[]) => Promise<WranglerResult>;
+
 /** Runs `wrangler <args>` (tests pass a fake). */
-export type WranglerRunner = (args: string[]) => Promise<WranglerResult>;
+export type WranglerRunner = CommandRunner;
 
 export interface ResourcePlan {
   buckets: { corsOrigin: string; name: string }[];
@@ -338,14 +350,84 @@ export interface EnsureResult {
 }
 
 export interface EnsureOptions {
+  /** Runs `docker <args>` (only the render probes use it). */
+  docker?: CommandRunner;
   env: DeployEnv;
   log: Logger;
   mode: EnsureMode;
+  /**
+   * The render pipeline is on for this deploy (`renderPipelineEnabled`):
+   * probe Workflows, Docker and Containers before anything else.
+   */
+  pipeline?: boolean;
   plan: ResourcePlan;
   run: WranglerRunner;
 }
 
-function dryRun({ log, plan }: EnsureOptions): EnsureResult {
+/**
+ * Whether this deploy turns the render pipeline on (phase 7 ruling 2): the
+ * env's `RENDER_MODE` is `container` and `SMOG_RENDER_PIPELINE` is `1` (the
+ * GitHub environment variable, `deploy.yml`). Only then does the build add
+ * the Workflow and the Container (`apps/site/render-config.ts`).
+ */
+export function renderPipelineEnabled(
+  source: string,
+  env: DeployEnv,
+  flag: string | undefined
+): boolean {
+  const config: unknown = Bun.JSONC.parse(source);
+  const envs = isRecord(config) && isRecord(config.env) ? config.env : {};
+  const target = isRecord(envs[env]) ? envs[env] : {};
+  const vars = isRecord(target.vars) ? target.vars : {};
+  return vars.RENDER_MODE === "container" && flag === "1";
+}
+
+const WORKFLOWS_LIST = ["workflows", "list"];
+const CONTAINERS_LIST = ["containers", "list"];
+const DOCKER_INFO = ["info"];
+
+/**
+ * The render probes, read only: `wrangler workflows list` (the token
+ * reaches Workflows), `docker info` (`wrangler deploy` builds the image) and
+ * `wrangler containers list` (Containers are reachable). Nothing is created:
+ * the deploy itself registers the Workflow and the container application.
+ * Registry push is proven only by the first real deploy (owner action).
+ */
+async function probeRenderPipeline(
+  env: DeployEnv,
+  run: WranglerRunner,
+  docker: CommandRunner,
+  log: Logger
+): Promise<void> {
+  const workflows = await run(WORKFLOWS_LIST);
+  if (workflows.code !== 0) {
+    throw new Error(
+      `[provision] Workflows: the token cannot list Workflows (wrangler workflows list exited ${workflows.code}): ${output(workflows)}\n[provision] Workflows: the ${env} CLOUDFLARE_API_TOKEN needs Workflows access (Account › Workers Scripts: Edit) before SMOG_RENDER_PIPELINE=1 (PROGRESS owner actions).`
+    );
+  }
+  const info = await docker(DOCKER_INFO);
+  if (info.code !== 0) {
+    throw new Error(
+      `[provision] Containers: Docker is not running in the deploy job (docker info exited ${info.code}): ${output(info)}\n[provision] Containers: wrangler deploy builds and pushes the render image, which needs a Docker daemon.`
+    );
+  }
+  const containers = await run(CONTAINERS_LIST);
+  if (containers.code !== 0) {
+    throw new Error(
+      `[provision] Containers: the token cannot list Containers (wrangler containers list exited ${containers.code}): ${output(containers)}\n[provision] Containers: the account needs Containers (Workers Paid) and the ${env} CLOUDFLARE_API_TOKEN needs Containers access (Account › Containers: Edit) before SMOG_RENDER_PIPELINE=1 (PROGRESS owner actions).`
+    );
+  }
+  log.log(
+    `[provision] ${env}: Workflows and Containers are reachable, and Docker runs.`
+  );
+}
+
+function dryRun({ log, pipeline, plan }: EnsureOptions): EnsureResult {
+  if (pipeline) {
+    log.log(shown(WORKFLOWS_LIST));
+    log.log(`docker ${DOCKER_INFO.join(" ")}`);
+    log.log(shown(CONTAINERS_LIST));
+  }
   for (const name of plan.queues) {
     log.log(shown(["queues", "info", name]));
     log.log(`  if missing: ${shown(["queues", "create", name])}`);
@@ -551,6 +633,9 @@ export async function ensureResources(
       `[provision] production SITE_URL is still the placeholder ${PRODUCTION_SITE_URL_PLACEHOLDER}: set the launch origin in wrangler.jsonc before creating the production bucket (its CORS is set from it)`
     );
   }
+  if (options.pipeline) {
+    await probeRenderPipeline(env, run, options.docker ?? bunDocker, log);
+  }
   const lookup = await lookUp(run, plan);
   return mode === "check"
     ? report(env, lookup, log)
@@ -591,29 +676,46 @@ export function parseEnsureArgs(
 
 const SITE_DIR = join(import.meta.dir, "..", "apps", "site");
 
-const bunxWrangler: WranglerRunner = async (args) => {
-  const proc = Bun.spawn(["bunx", "wrangler", ...args], {
-    cwd: SITE_DIR,
-    env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
-    stderr: "pipe",
-    stdout: "pipe",
-  });
+async function spawn(command: string[]): Promise<WranglerResult> {
+  let proc: ReturnType<typeof Bun.spawn>;
+  try {
+    proc = Bun.spawn(command, {
+      cwd: SITE_DIR,
+      env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+  } catch (error) {
+    // Not installed: the shell's "command not found".
+    return { code: 127, stderr: String(error), stdout: "" };
+  }
   const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
+    new Response(proc.stdout as ReadableStream).text(),
+    new Response(proc.stderr as ReadableStream).text(),
     proc.exited,
   ]);
   return { code, stderr, stdout };
-};
+}
+
+const bunxWrangler: WranglerRunner = (args) =>
+  spawn(["bunx", "wrangler", ...args]);
+
+const bunDocker: CommandRunner = (args) => spawn(["docker", ...args]);
 
 if (import.meta.main) {
   try {
     const { env, mode } = parseEnsureArgs(process.argv.slice(2), process.env);
     const source = await Bun.file(join(SITE_DIR, "wrangler.jsonc")).text();
     const result = await ensureResources({
+      docker: bunDocker,
       env,
       log: { log: console.log, warn: console.warn },
       mode,
+      pipeline: renderPipelineEnabled(
+        source,
+        env,
+        process.env.SMOG_RENDER_PIPELINE
+      ),
       plan: planResources(source, env),
       run: bunxWrangler,
     });

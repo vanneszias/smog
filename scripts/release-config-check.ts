@@ -1,8 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join, posix } from "node:path";
 import {
+  ENVIRONMENTS,
   type Environment,
-  REQUIRED_WORKER_CONFIG,
+  RENDER_MODES,
+  type RenderMode,
+  requiredWorkerConfig,
   workerSecretsSchema,
   workerVarsSchema,
 } from "@smog/config/env/worker";
@@ -45,6 +48,10 @@ interface Workflow {
 }
 
 const DEPLOY_COMMAND = "bun -F @smog/site deploy";
+/** The CI lanes, each a `release:check:<lane>` script (phase 7 ruling 16). */
+const RELEASE_LANES = ["core", "tests", "mobile", "render"];
+/** The render gate's flag, a GitHub environment variable (phase 7 ruling 2). */
+const RENDER_FLAG = "SMOG_RENDER_PIPELINE";
 const ENSURE_COMMAND = "scripts/ensure-cloudflare-resources.ts";
 const MIGRATIONS_COMMAND = "wrangler d1 migrations apply DB";
 const TOP_LEVEL_BINDINGS = ["d1_databases", "kv_namespaces", "r2_buckets"];
@@ -101,9 +108,9 @@ export function checkCiWorkflow(source: string): string[] {
   const errors: string[] = [];
   const gate = workflow.jobs?.["release-check"];
   const lanes = gate?.strategy?.matrix?.check ?? [];
-  if (!sameList(lanes, ["core", "tests", "mobile"])) {
+  if (!sameList(lanes, RELEASE_LANES)) {
     errors.push(
-      `${file}: release:check matrix must include core, tests and mobile`
+      `${file}: release:check matrix must include core, tests, mobile and render`
     );
   }
   if (gate?.strategy?.["fail-fast"] !== false) {
@@ -254,6 +261,7 @@ function checkDeploySteps(
     errors.push(`${file}: the D1 migrations must run before the deploy`);
   }
   errors.push(...checkEnsureStep(steps, migrations, file));
+  errors.push(...checkRenderFlag(steps, file));
   if (
     steps.some(
       (step) => step.run !== undefined && RAW_WRANGLER_DEPLOY.test(step.run)
@@ -321,6 +329,25 @@ function checkEnsureStep(
     );
   }
   return errors;
+}
+
+/**
+ * The render gate's flag reaches the two steps that read it (phase 7
+ * ruling 2): the resources step (its Workflows and Containers probes) and
+ * the deploy (the build's `config` hook). It is the GitHub environment
+ * variable, so `staging` and `production` each have their own.
+ */
+function checkRenderFlag(steps: Step[], file: string): string[] {
+  const expected = `\${{ vars.${RENDER_FLAG} }}`;
+  return [ENSURE_COMMAND, DEPLOY_COMMAND].flatMap((command) => {
+    const step = steps[findStepIndex(steps, command)];
+    if (!step || step.env?.[RENDER_FLAG] === expected) {
+      return [];
+    }
+    return [
+      `${file}: the "${step.name ?? command}" step must pass ${RENDER_FLAG}: ${expected} (the render gate)`,
+    ];
+  });
 }
 
 export function checkDeployWorkflow(
@@ -486,10 +513,12 @@ export function checkWranglerResources(source: string): string[] {
     if (vars.MEDIA_BUCKET !== bucket) {
       errors.push(`${where}: vars.MEDIA_BUCKET must be ${bucket}`);
     }
-    if (typeof vars.RENDER_MODE !== "string") {
+    if (!(RENDER_MODES as readonly unknown[]).includes(vars.RENDER_MODE)) {
       errors.push(
-        `${where}: vars.RENDER_MODE must be set (fake until phase 7)`
+        `${where}: vars.RENDER_MODE must be one of ${RENDER_MODES.join(", ")}`
       );
+    } else if (vars.RENDER_MODE === "local" && name !== "dev") {
+      errors.push(`${where}: vars.RENDER_MODE=local is dev only`);
     }
     const triggers = isRecord(env.triggers) ? env.triggers : {};
     const listed = asArray(triggers.crons).map(String);
@@ -502,6 +531,109 @@ export function checkWranglerResources(source: string): string[] {
   return errors;
 }
 
+/** Keys only the render gate may add (phase 7 ruling 2). */
+const RENDER_GATE_KEYS = [
+  "workflows",
+  "containers",
+  "durable_objects",
+  "migrations",
+] as const;
+
+/**
+ * `wrangler.jsonc` declares no Workflow, container, Durable Object or DO
+ * migration, at the top or in an env: `apps/site/render-config.ts` adds
+ * them at build time only when the env's render mode needs them, so
+ * staging's deployed config stays as it is until the owner turns the
+ * pipeline on.
+ */
+export function checkWranglerRenderKeys(source: string): string[] {
+  const file = "apps/site/wrangler.jsonc";
+  const config: unknown = Bun.JSONC.parse(source);
+  if (!isRecord(config)) {
+    return [];
+  }
+  const envs = isRecord(config.env) ? config.env : {};
+  const scopes: [string, Record<string, unknown>][] = [
+    ["", config],
+    ...Object.entries(envs)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, env]): [string, Record<string, unknown>] => [
+        `env.${name}.`,
+        isRecord(env) ? env : {},
+      ]),
+  ];
+  return scopes.flatMap(([prefix, scope]) =>
+    RENDER_GATE_KEYS.filter((key) => key in scope).map(
+      (key) =>
+        `${file}: ${prefix}${key} is not allowed: the render gate adds it at build time (apps/site/render-config.ts)`
+    )
+  );
+}
+
+const RENDER_CLASSES = ["RenderSponsorshipVideo", "SmogRenderer"] as const;
+
+/** `export { …Name… }` or `export class Name`. */
+function exportsName(source: string, name: string): boolean {
+  const listed = new RegExp(`\\bexport\\s*\\{[^}]*\\b${name}\\b[^}]*\\}`);
+  const declared = new RegExp(`\\bexport\\s+class\\s+${name}\\b`);
+  return listed.test(source) || declared.test(source);
+}
+
+/**
+ * `src/worker.ts` exports the Workflow and the Container classes, always:
+ * the gate binds them only for some builds, and a Durable Object class
+ * that was deployed once must stay exported.
+ */
+export function checkRenderClassExports(source: string): string[] {
+  return RENDER_CLASSES.filter((name) => !exportsName(source, name)).map(
+    (name) =>
+      `apps/site/src/worker.ts: must export ${name} (a class deployed once must stay exported; the render gate binds it)`
+  );
+}
+
+/**
+ * The release lanes (phase 7 ruling 16): a `release:check:<lane>` script
+ * per CI lane, and the local `release:check` runs each.
+ */
+export function checkReleaseScripts(source: string): string[] {
+  const manifest: unknown = JSON.parse(source);
+  const scripts =
+    isRecord(manifest) && isRecord(manifest.scripts) ? manifest.scripts : {};
+  const all = String(scripts["release:check"] ?? "");
+  return RELEASE_LANES.flatMap((lane) => {
+    const name = `release:check:${lane}`;
+    if (typeof scripts[name] !== "string") {
+      return [`package.json: missing the ${name} script`];
+    }
+    const runs = all
+      .split("&&")
+      .some((command) => command.trim() === `bun run ${name}`);
+    return runs ? [] : [`package.json: release:check must run ${name}`];
+  });
+}
+
+type RequiredLists = Record<
+  Environment,
+  { secrets: readonly string[]; vars: readonly string[] }
+>;
+
+/** Each env's `vars.RENDER_MODE` in `wrangler.jsonc` (`fake` when unset). */
+function renderModes(wrangler: string): Record<Environment, RenderMode> {
+  const config: unknown = Bun.JSONC.parse(wrangler);
+  const envs = isRecord(config) && isRecord(config.env) ? config.env : {};
+  const modeOf = (name: Environment): RenderMode => {
+    const env = envs[name];
+    const mode =
+      isRecord(env) && isRecord(env.vars) ? env.vars.RENDER_MODE : undefined;
+    return RENDER_MODES.find((candidate) => candidate === mode) ?? "fake";
+  };
+  return {
+    dev: modeOf("dev"),
+    production: modeOf("production"),
+    staging: modeOf("staging"),
+  };
+}
+
 /** `KEY=` or `# KEY=` at the start of a `.dev.vars.example` line. */
 function documentsKey(devVarsExample: string, key: string): boolean {
   return devVarsExample
@@ -510,25 +642,49 @@ function documentsKey(devVarsExample: string, key: string): boolean {
 }
 
 /**
- * `REQUIRED_WORKER_CONFIG` (ruling 12): each key is in the env schema, each
- * secret is documented in `.dev.vars.example`, and each var is named in
- * that env's `wrangler.jsonc` vars (empty means "set before launch").
+ * The required worker config (phase 6 ruling 12, phase 7 ruling 11). By
+ * default it is `requiredWorkerConfig(env, RENDER_MODE)` at each env's mode
+ * in `wrangler.jsonc`, so flipping an env to `container` requires the Mux
+ * trio; a given `required` list must still cover what each env's mode
+ * needs. Each key is in the env schema, each secret is documented in
+ * `.dev.vars.example`, and each var is named in that env's
+ * `wrangler.jsonc` vars (empty means "set before launch").
  */
 export function checkRequiredConfig({
   devVarsExample,
-  required = REQUIRED_WORKER_CONFIG,
+  required,
   wrangler,
 }: {
   devVarsExample: string;
-  required?: Record<
-    Environment,
-    { secrets: readonly string[]; vars: readonly string[] }
-  >;
+  required?: RequiredLists;
   wrangler: string;
 }): string[] {
   const config: unknown = Bun.JSONC.parse(wrangler);
   const envs = isRecord(config) && isRecord(config.env) ? config.env : {};
-  return Object.entries(required).flatMap(([name, keys]) => {
+  const modes = renderModes(wrangler);
+  const byMode: RequiredLists = {
+    dev: requiredWorkerConfig("dev", modes.dev),
+    production: requiredWorkerConfig("production", modes.production),
+    staging: requiredWorkerConfig("staging", modes.staging),
+  };
+  const lists = required ?? byMode;
+  const uncovered = ENVIRONMENTS.flatMap((name) =>
+    byMode[name].secrets
+      .filter((key) => !lists[name].secrets.includes(key))
+      .map(
+        (key) =>
+          `REQUIRED_WORKER_CONFIG.${name}: RENDER_MODE=${modes[name]} needs ${key}`
+      )
+  );
+  return [...uncovered, ...checkRequiredLists(lists, envs, devVarsExample)];
+}
+
+function checkRequiredLists(
+  lists: RequiredLists,
+  envs: Record<string, unknown>,
+  devVarsExample: string
+): string[] {
+  return Object.entries(lists).flatMap(([name, keys]) => {
     const env = envs[name];
     const vars = isRecord(env) && isRecord(env.vars) ? env.vars : {};
     return [
@@ -833,8 +989,11 @@ export function checkReleaseConfig(root: string): string[] {
   return [
     ...checkCiWorkflow(read(".github/workflows/ci.yml")),
     ...checkDeployWorkflow(read(".github/workflows/deploy.yml"), migrationsDir),
+    ...checkReleaseScripts(read("package.json")),
     ...wranglerErrors,
     ...resourceErrors,
+    ...(wranglerErrors.length === 0 ? checkWranglerRenderKeys(wrangler) : []),
+    ...checkRenderClassExports(read("apps/site/src/worker.ts")),
     ...checkRequiredConfig({
       devVarsExample: read("apps/site/.dev.vars.example"),
       wrangler,

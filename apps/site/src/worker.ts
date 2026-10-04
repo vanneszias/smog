@@ -18,6 +18,16 @@ import { dispatchQueue } from "@/worker/queues";
 import { dispatchScheduled } from "@/worker/scheduled";
 
 /**
+ * The render Workflow and Container classes (phase 7). Always exported: the
+ * build binds them only when the env's render mode needs them
+ * (render-config.ts), and a Durable Object class deployed once must stay
+ * exported.
+ */
+// biome-ignore lint/performance/noBarrelFile: workerd finds Workflow and Durable Object classes only among the entry module's named exports.
+export { RenderSponsorshipVideo } from "@/worker/render-workflow";
+export { SmogRenderer } from "@/worker/renderer";
+
+/**
  * The request pipeline, in order: the maintenance gate (503 unless exempt
  * or bypassed; an admin sign-in route goes to the sign-in-only auth), the
  * admin bypass endpoint, the old site's URLs (301, `legacy-redirects.ts`),

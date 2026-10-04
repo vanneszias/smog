@@ -108,6 +108,12 @@ Run from this sandbox over plain HTTPS, with no Cloudflare credentials (nothing 
 
   `scripts/ensure-cloudflare-resources.ts` stops with a `[provision]` line naming whichever is missing; nothing is created half way that a re-run would not finish.
 - **Before production provisioning:** choose the production bucket's location (`--location weur`) or jurisdiction (`--jurisdiction eu`, which changes the S3 endpoint and needs `jurisdiction` on the binding); it cannot change after creation (DECISIONS, phase 6 task 1). Staging uses the default.
+- **The render pipeline (phase 7 render gate, `apps/site/render-config.ts`):** Workflows and Containers reach an env only when the owner turns them on, in this order, per env:
+  1. Confirm the env's `CLOUDFLARE_API_TOKEN` can deploy Workflows and Containers and push images to the Cloudflare Registry, and that Containers are enabled on the account (Workers Paid).
+  2. Set the GitHub **environment** variable `SMOG_RENDER_PIPELINE=1` on that environment (`staging` or `production`), not a repository variable.
+  3. Set that env's `RENDER_MODE` to `container` in `wrangler.jsonc` (staging; production already is), with the Mux trio set as secrets.
+
+  The other order fails the build on purpose, before anything is uploaded: `[render] RENDER_MODE=container needs SMOG_RENDER_PIPELINE=1`. Production's `RENDER_MODE` is already `container`, so a `master` deploy fails until step 2 is done for production (phase 8). With the flag on, the deploy job first checks `wrangler workflows list`, `docker info` and `wrangler containers list` and stops with a `[provision] Workflows: …` / `[provision] Containers: …` line naming what is missing; registry push is proven only by that first deploy. Turning the flag off later leaves the container application idle (the class stays exported; nothing is deleted).
 - **When a `SITE_URL` changes:** the bucket's CORS is never overwritten by the deploy; the deploy step fails and prints the `wrangler r2 bucket cors set` command to run by hand.
 
 ## Pending before develop → master
@@ -129,7 +135,7 @@ Run from this sandbox over plain HTTPS, with no Cloudflare credentials (nothing 
 - The legal texts (`/privacy`, `/terms`) need the owner's sign-off before any develop → master merge (see "Pending before develop → master").
 - Bun is pinned at 1.3.11 (`packageManager`); upgrade when possible (see DECISIONS).
 - `SMOG_OFFLINE=1 bun run release:check` (local, no network) degrades three expo-doctor checks; CI runs them online and is the authority.
-- The deploy workflow deploys staging on every push to `develop`, once the three CI lanes pass (the `staging` GitHub environment has its secrets and ids). Production has never deployed: `master` needs the `production` environment's `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`, real KV ids, `SITE_URL` and the Turnstile keys, and the list under "Pending before develop → master". D1 migrations run before each deploy (`packages/db/migrations`, append-only).
+- The deploy workflow deploys staging on every push to `develop`, once the four CI lanes pass (core, tests, mobile, render; the `staging` GitHub environment has its secrets and ids). Production has never deployed: `master` needs the `production` environment's `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`, real KV ids, `SITE_URL` and the Turnstile keys, and the list under "Pending before develop → master". D1 migrations run before each deploy (`packages/db/migrations`, append-only).
 - `bun run audit` ignores three moderate advisories (DECISIONS).
 - CI watch (phase 6): Deploy run 37161447962 (6e9fbe2, 2026-10-03) hung in the `@smog/site` vitest until the 45-minute job timeout; the next run (b04f062) was green and 2-CPU local runs never hung. If it recurs, note the last test file the log names and whether it is the Workers pool (vitest) or the bun tests that stall, then bound that run with a per-file or per-step timeout.
 - Phase 6 rule (review M8, kept for later phases): a queue producer merges only together with, or after, its real consumer. Both phase 6 consumers are in (`worker/email-queue.ts`, `worker/events-queue.ts`).

@@ -93,11 +93,7 @@
         "scripts/**/*.ts",
         "e2e/**/*.ts"
       ],
-      "ignoreDependencies": [
-        "cloudflare",
-        "@cloudflare/containers",
-        "@remotion/player"
-      ]
+      "ignoreDependencies": ["cloudflare", "@remotion/player"]
     },
     "apps/mobile": {
       "entry": [

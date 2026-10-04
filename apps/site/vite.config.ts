@@ -1,10 +1,11 @@
 import { fileURLToPath } from "node:url";
-import { cloudflare } from "@cloudflare/vite-plugin";
+import { cloudflare, type WorkerConfig } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { THEME_SCRIPT_HASH_DEFINE } from "./build-defines";
+import { applyRenderGate, type RenderEnv } from "./render-config";
 
 const SRC = fileURLToPath(new URL("./src", import.meta.url));
 
@@ -57,6 +58,45 @@ const devVars: Record<string, string> = {
   ...devMollieVars,
 };
 
+const RENDER_ENVS: readonly RenderEnv[] = ["dev", "staging", "production"];
+
+/**
+ * The render gate (render-config.ts, phase 7 ruling 2): the Workflow and
+ * the Container reach the build only for `RENDER_MODE` `local` (dev) or
+ * `container` with `SMOG_RENDER_PIPELINE=1`; `container` without the flag
+ * fails the build here. `SMOG_DEV_RENDER_MODE=local bun dev` picks dev's
+ * local mode and sets the var too (`.dev.vars` is read too late for the
+ * binding). Then the dev vars above, which `.dev.vars` still overrides.
+ */
+function customizeWorker(
+  worker: WorkerConfig
+): Partial<WorkerConfig> | undefined {
+  const env = RENDER_ENVS.find((name) => name === process.env.CLOUDFLARE_ENV);
+  if (!env) {
+    throw new Error(
+      `[render] CLOUDFLARE_ENV must be one of ${RENDER_ENVS.join(", ")} (got ${JSON.stringify(process.env.CLOUDFLARE_ENV)})`
+    );
+  }
+  const gate = applyRenderGate({
+    devMode: process.env.SMOG_DEV_RENDER_MODE,
+    env,
+    flag: process.env.SMOG_RENDER_PIPELINE,
+    renderMode: worker.vars.RENDER_MODE,
+  });
+  if ("error" in gate) {
+    throw new Error(gate.error);
+  }
+  const vars = { ...gate.vars, ...devVars };
+  const hasVars = Object.keys(vars).length > 0;
+  if (Object.keys(gate.add).length === 0 && !hasVars) {
+    return;
+  }
+  return {
+    ...gate.add,
+    ...(hasVars ? { vars: { ...worker.vars, ...vars } } : {}),
+  };
+}
+
 export default defineConfig({
   // `/dev/*` pages are compiled out of production builds (spec §9: dev and
   // staging only); see src/routes/dev/ui.tsx and scripts/deploy-guard.ts.
@@ -72,14 +112,8 @@ export default defineConfig({
   },
   plugins: [
     cloudflare({
+      config: customizeWorker,
       viteEnvironment: { name: "ssr" },
-      ...(Object.keys(devVars).length > 0
-        ? {
-            config: (worker) => ({
-              vars: { ...worker.vars, ...devVars },
-            }),
-          }
-        : {}),
     }),
     tanstackStart(),
     react(),

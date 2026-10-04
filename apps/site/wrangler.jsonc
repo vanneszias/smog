@@ -39,8 +39,20 @@
   // deploy; `release-config-check` holds the names to this pattern. Vite
   // dev and the tests emulate all of them locally. New secrets
   // (MOLLIE_API_KEY, R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY) are optional
-  // and degrade cleanly; see `.dev.vars.example`. RENDER_MODE is `fake`
-  // (completes renders with the gesture's own video) until phase 7.
+  // and degrade cleanly; see `.dev.vars.example`.
+  // Phase 7, the render gate: RENDER_MODE `fake` completes renders with the
+  // gesture's own video (dev and staging); `container` renders in the
+  // SmogRenderer Container through the RenderSponsorshipVideo Workflow
+  // (production); `local` (dev only) uses the render server on this machine.
+  // This file declares no `workflows`, `containers`, Durable Object binding
+  // or DO migration, here or in an env (release-config-check refuses them):
+  // `render-config.ts` adds them at build time (the Vite plugin's `config`
+  // hook), the Workflow for `local`/`container` and the container block for
+  // `container`, which also needs SMOG_RENDER_PIPELINE=1 (a GitHub
+  // environment variable the owner sets once the env's token can deploy
+  // Workflows and Containers; without it a `container` build fails). The
+  // deploy guard checks the built config. Dev's local mode:
+  // `SMOG_DEV_RENDER_MODE=local bun dev`.
   // D1 migrations live in packages/db/migrations (drizzle-kit + hand-written
   // FTS5); `bun -F @smog/db migrate:dev` applies them to the local dev D1.
   "env": {

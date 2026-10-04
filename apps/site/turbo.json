@@ -3,11 +3,11 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "env": ["CLOUDFLARE_ENV"],
+      "env": ["CLOUDFLARE_ENV", "SMOG_RENDER_PIPELINE"],
       "outputs": ["dist/**", ".wrangler/deploy/**"]
     },
     "dev": {
-      "passThroughEnv": ["CLOUDFLARE_ENV"]
+      "passThroughEnv": ["CLOUDFLARE_ENV", "SMOG_DEV_RENDER_MODE"]
     },
     "check-types": {
       "outputs": ["worker-configuration.d.ts"]
