@@ -1,2 +1,4 @@
 id,email,first_name,last_name
 user_01FIXTUREADA0000000000000,Ada.Fixture@Example.test,Adalinde,Fixturova
+user_01FIXTURENOE1000000000000,recovered.fixture@example.test,Rik,Herstel
+user_01FIXTUREDIF0000000000000,new.fixture@example.test,Dirk,Verschil

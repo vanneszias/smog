@@ -1,1 +1,11 @@
 {"_id":"jd7usr000000000000000000000ada1","_creationTime":1735689600000.0,"createdAt":1735689600000,"email":"ada.fixture@example.test","lastActiveAt":1738368000000,"role":"admin","workosId":"user_01FIXTUREADA0000000000000"}
+{"_id":"jd7usr000000000000000000000gst1","_creationTime":1735689610000.0,"createdAt":1735689610000,"lastActiveAt":1735776010000,"guestId":"guest-fixture-0000000000000000000000000001"}
+{"_id":"jd7usr000000000000000000000upg1","_creationTime":1735689620000.0,"createdAt":1735689620000,"lastActiveAt":1735776020000,"guestId":"guest-fixture-0000000000000000000000000002","workosId":"user_01FIXTUREUPG0000000000000","email":"upgraded.fixture@example.test"}
+{"_id":"jd7usr000000000000000000000noe1","_creationTime":1735689630000.0,"createdAt":1735689630000,"lastActiveAt":1735776030000,"workosId":"user_01FIXTURENOE1000000000000"}
+{"_id":"jd7usr000000000000000000000noe2","_creationTime":1735689640000.0,"createdAt":1735689640000,"lastActiveAt":1735776040000,"workosId":"user_01FIXTURENOE2000000000000"}
+{"_id":"jd7usr000000000000000000000dif1","_creationTime":1735689650000.0,"createdAt":1735689650000,"lastActiveAt":1735776050000,"workosId":"user_01FIXTUREDIF0000000000000","email":"old.fixture@example.test"}
+{"_id":"jd7usr000000000000000000000rel1","_creationTime":1735689660000.0,"createdAt":1735689660000,"lastActiveAt":1735776060000,"workosId":"user_01FIXTUREREL0000000000000","email":"q7x9fixture@privaterelay.appleid.com"}
+{"_id":"jd7usr000000000000000000000dup1","_creationTime":1735689670000.0,"createdAt":1735689670000,"lastActiveAt":1735776070000,"workosId":"user_01FIXTUREDUP1000000000000","email":"dup.fixture@example.test","role":"user"}
+{"_id":"jd7usr000000000000000000000dup2","_creationTime":1735689680000.0,"createdAt":1735689680000,"lastActiveAt":1735776080000,"workosId":"user_01FIXTUREDUP2000000000000","email":" Dup.Fixture@Example.TEST ","role":"admin"}
+{"_id":"jd7usr000000000000000000000adm2","_creationTime":1735689690000.0,"createdAt":1735689690000,"lastActiveAt":1735776090000,"workosId":"user_01FIXTUREADM2000000000000","email":"second.admin@example.test","role":"admin"}
+{"_id":"jd7usr000000000000000000000pre1","_creationTime":1735689695000.0,"createdAt":1735689695000,"lastActiveAt":1735776095000,"workosId":"user_01FIXTUREPRE1000000000000","email":"preexisting.admin@example.test","role":"user"}

@@ -122,17 +122,16 @@ describe("plan on the minimal fixture", () => {
     ).toBe(true);
     const report = JSON.parse(String(files["report.json"]));
     expect(report.blockers).toBe(0);
-    expect(report.export.tables).toEqual({
-      adminLogs: 1,
-      categories: 1,
-      gesture_list_items: 1,
-      gesture_lists: 1,
-      gestures: 1,
-      sponsorships: 1,
-      user_consents: 1,
-      user_favorites: 1,
-      users: 1,
-    });
+    const fixture = await fixtureExport();
+    expect(report.export.tables).toEqual(
+      Object.fromEntries(
+        Object.keys(report.export.tables).map((table) => [
+          table,
+          String(fixture[table]).trim().split("\n").length,
+        ])
+      )
+    );
+    expect(Object.keys(report.export.tables)).toHaveLength(9);
   });
 
   test("is byte-identical across runs, and from the ZIP and the directory", async () => {
@@ -374,7 +373,7 @@ describe("plan's transform wiring (task 10 fills TRANSFORMS)", () => {
   test("puts each transform's statements in its group, its keys in the reset and its gestures in the FTS file", async () => {
     const catalog: Transform = async ({ data, target }) => {
       const rows = await Promise.all(
-        data.categories.map(async (row) => ({
+        data.categories.slice(0, 1).map(async (row) => ({
           id: await legacyUuid("category", row._id),
           legacyId: row._id,
           name: row.name,
