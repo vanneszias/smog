@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import {
   type APIRequestContext,
@@ -206,6 +208,74 @@ export async function stubMuxStream(page: Page): Promise<void> {
     })
   );
   await page.route("https://*.litix.io/**", (route) => route.abort());
+}
+
+/**
+ * The sponsor preview's source (phase 7 ruling 15): Mux's static MP4
+ * renditions (`highest.mp4`, `high.mp4`) answered with a committed 2 s
+ * 360 × 640 clip (`fixtures/preview-2s.mp4`), with byte ranges and CORS
+ * as Mux answers them. The clip is VP9 in MP4: Playwright's Chromium is
+ * an open-source build without H.264, which Mux's renditions use and every
+ * shipping browser plays. Or the MP4s are refused (`abort`), which shows
+ * the preview's image fallback.
+ * Registered after `stubMuxStream`, so it wins for the MP4s.
+ */
+const PREVIEW_MP4 = readFileSync(
+  join(import.meta.dirname, "fixtures", "preview-2s.mp4")
+);
+const MUX_RENDITION =
+  /^https:\/\/stream\.mux\.com\/[^/]+\/(?:highest|high)\.mp4/;
+const BYTE_RANGE = /^bytes=(\d*)-(\d*)$/;
+const CORS = {
+  "access-control-allow-headers": "range",
+  "access-control-allow-origin": "*",
+  "access-control-expose-headers":
+    "accept-ranges, content-length, content-range",
+};
+
+/** A `Range: bytes=a-b` header as inclusive offsets, or `null` without one. */
+function byteRange(
+  header: string | null,
+  size: number
+): { end: number; start: number } | null {
+  if (!(header && BYTE_RANGE.test(header))) {
+    return null;
+  }
+  const [from = "", to = ""] = header.slice("bytes=".length).split("-");
+  return {
+    end: to === "" ? size - 1 : Math.min(Number(to), size - 1),
+    start: from === "" ? 0 : Number(from),
+  };
+}
+
+export async function stubMuxRenditions(
+  page: Page,
+  { abort = false }: { abort?: boolean } = {}
+): Promise<void> {
+  await page.route(MUX_RENDITION, async (route) => {
+    const request = route.request();
+    if (abort) {
+      await route.abort();
+      return;
+    }
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ headers: CORS, status: 204 });
+      return;
+    }
+    const size = PREVIEW_MP4.length;
+    const range = byteRange(await request.headerValue("range"), size);
+    const { end, start } = range ?? { end: size - 1, start: 0 };
+    await route.fulfill({
+      body: range ? PREVIEW_MP4.subarray(start, end + 1) : PREVIEW_MP4,
+      headers: {
+        ...CORS,
+        "accept-ranges": "bytes",
+        "content-type": "video/mp4",
+        ...(range ? { "content-range": `bytes ${start}-${end}/${size}` } : {}),
+      },
+      status: range ? 206 : 200,
+    });
+  });
 }
 
 export async function stubMux(page: Page): Promise<void> {

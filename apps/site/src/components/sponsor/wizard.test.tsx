@@ -10,6 +10,8 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderSite, rpcError } from "@/test/render";
+// The preview's Player and Mux reads, faked (before the wizard loads it).
+import "@/test/sponsor-preview-fakes";
 import { SponsorWizard } from "./wizard";
 
 const NAME_IN_THE_VIDEO = /^Name in the video/;
@@ -278,7 +280,22 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     await chooseBroerAndZus();
     await fillDetails();
     expect(screen.getByTestId("review-total").textContent).toBe("€100.00");
-    expect(screen.getAllByRole("img", { name: PREVIEW_FOR })).toHaveLength(2);
+    // One Player at a time (phase 7 ruling 8): the first gesture, and a
+    // poster toggle per gesture to switch.
+    expect(screen.getAllByRole("img", { name: PREVIEW_FOR })).toHaveLength(1);
+    expect(
+      screen.getByRole("img", { name: "Preview for Broer" })
+    ).toBeDefined();
+    const picker = screen.getByRole("toolbar", {
+      name: "Choose the gesture to preview",
+    });
+    fireEvent.click(within(picker).getByRole("button", { name: "Zus" }));
+    expect(screen.getByRole("img", { name: "Preview for Zus" })).toBeDefined();
+    expect(
+      within(picker)
+        .getByRole("button", { name: "Zus" })
+        .getAttribute("aria-pressed")
+    ).toBe("true");
     fireEvent.click(
       screen.getByRole("button", { name: "Continue to payment" })
     );

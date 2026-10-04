@@ -2,6 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderSite, rpcError } from "@/test/render";
+// The preview's Player and Mux reads, faked (before the page loads it).
+import "@/test/sponsor-preview-fakes";
 import { ReeditView } from "./reedit-view";
 import { RenewalView } from "./renewal-view";
 
@@ -124,6 +126,50 @@ describe("the re-edit page (S-19)", () => {
     expect(
       screen.getByText("Leave empty to keep your current logo.")
     ).toBeDefined();
+  });
+
+  test("the preview says the kept logo is not shown in it (review M-5)", async () => {
+    const KEPT =
+      "Your current logo stays in the video. This preview does not show it; choose a new file to replace it.";
+    await renderSite(() => <Edit />, {
+      api: {
+        "gestures/bySlug": {
+          canonicalSlug: "broer",
+          categories: [],
+          description: "",
+          id: "00000000-0000-4000-8000-000000000001",
+          keywords: [],
+          name: "Broer",
+          playbackId: "pb-broer",
+          publishedAt: 0,
+          slug: "broer",
+          sponsor: null,
+          updatedAt: 0,
+        },
+        "sponsorships/reedit/get": {
+          displayName: "Bakkerij Jansen",
+          expiresAt: Date.now() + DAY,
+          gesture: { name: "Broer", slug: "broer" },
+          hasLogo: true,
+        },
+      },
+    });
+    expect(await screen.findByText(KEPT)).toBeDefined();
+    expect(
+      screen.getByRole("img", { name: "Preview for Broer" })
+    ).toBeDefined();
+    const input = document.querySelector("input#logo-upload");
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error("no logo input");
+    }
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File([new Uint8Array([1])], "logo.png", { type: "image/png" }),
+        ],
+      },
+    });
+    await waitFor(() => expect(screen.queryByText(KEPT)).toBeNull());
   });
 });
 

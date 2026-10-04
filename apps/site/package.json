@@ -53,6 +53,7 @@
     "@tanstack/react-start": "1.168.59",
     "cookie-es": "3.1.1",
     "lucide-react": "catalog:",
+    "mediabunny": "catalog:",
     "qrcode.react": "4.2.0",
     "react": "catalog:",
     "react-dom": "catalog:",

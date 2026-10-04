@@ -203,6 +203,118 @@ export function checkServerHasNoRenderer(files: readonly BuiltFile[]): void {
   }
 }
 
+/**
+ * Strings that survive the client build, one package each: Remotion's
+ * `window` property, and an error message of mediabunny's `Input` (its
+ * load-time check is tree-shaken from the browser build). The wizard's
+ * Player (`components/sponsor/sponsor-preview.tsx`) loads them lazily.
+ */
+export const CLIENT_LAZY_MARKERS = [
+  { marker: "remotion_delayRenderHandles", name: "remotion" },
+  { marker: "Input has been disposed", name: "mediabunny" },
+] as const;
+
+const CLIENT_MANIFEST = join(".vite", "manifest.json");
+
+/** The wizard's Player module: the one lazy root the render stack may load from. */
+const PREVIEW_MODULE = "components/sponsor/sponsor-preview.tsx";
+
+interface ManifestChunk {
+  file: string;
+  imports: string[];
+  isDynamicEntry: boolean;
+  isEntry: boolean;
+}
+
+function manifestChunks(manifest: unknown): Map<string, ManifestChunk> {
+  const chunks = new Map<string, ManifestChunk>();
+  if (!isRecord(manifest)) {
+    return chunks;
+  }
+  for (const [key, value] of Object.entries(manifest)) {
+    if (isRecord(value) && typeof value.file === "string") {
+      chunks.set(key, {
+        file: value.file,
+        imports: Array.isArray(value.imports)
+          ? value.imports.filter((item) => typeof item === "string")
+          : [],
+        isDynamicEntry: value.isDynamicEntry === true,
+        isEntry: value.isEntry === true,
+      });
+    }
+  }
+  return chunks;
+}
+
+/** The files of `roots` and every chunk they import statically. */
+function staticClosure(
+  chunks: Map<string, ManifestChunk>,
+  roots: readonly string[]
+): Set<string> {
+  const files = new Set<string>();
+  const pending = [...roots];
+  for (let key = pending.pop(); key !== undefined; key = pending.pop()) {
+    const chunk = chunks.get(key);
+    if (chunk && !files.has(chunk.file)) {
+      files.add(chunk.file);
+      pending.push(...chunk.imports);
+    }
+  }
+  return files;
+}
+
+/**
+ * In the browser build, `remotion` and `mediabunny` may appear only in the
+ * wizard Player's lazy chunks (phase 7 ruling 1; task 8 review M-6): the
+ * `sponsor-preview.tsx` dynamic entry and the chunks only it imports. Not
+ * in an entry chunk (every page would load them), and not in any other
+ * entry's or lazy route's chunks or a chunk shared with them. Reads the
+ * client build's Vite manifest (`dist/client/.vite/manifest.json`).
+ */
+export function checkClientRenderIsLazy(
+  manifest: unknown,
+  files: readonly BuiltFile[]
+): void {
+  const chunks = manifestChunks(manifest);
+  const keys = [...chunks.keys()];
+  if (!keys.some((key) => chunks.get(key)?.isEntry)) {
+    throw new Error(
+      `[deploy-guard] no entry chunk in dist/client/${CLIENT_MANIFEST}: the client build must write its manifest (vite.config.ts, environments.client.build.manifest).`
+    );
+  }
+  const isPreview = (key: string): boolean => key.endsWith(PREVIEW_MODULE);
+  const preview = staticClosure(chunks, keys.filter(isPreview));
+  const others = staticClosure(
+    chunks,
+    keys.filter((key) => {
+      const chunk = chunks.get(key);
+      return (
+        !isPreview(key) &&
+        chunk !== undefined &&
+        (chunk.isEntry || chunk.isDynamicEntry)
+      );
+    })
+  );
+  const allowed = [...preview].filter((file) => !others.has(file));
+  const clientDir = join("dist", "client");
+  const found = files
+    .filter(
+      (file) =>
+        file.path.includes(clientDir) &&
+        !allowed.some((chunk) => file.path.endsWith(join(clientDir, chunk)))
+    )
+    .flatMap((file) =>
+      CLIENT_LAZY_MARKERS.filter(({ marker }) =>
+        file.content.includes(marker)
+      ).map(({ name }) => `${name}: ${file.path}`)
+    );
+  if (found.length > 0) {
+    throw new Error(
+      `[deploy-guard] the browser build loads the render stack outside the sponsor preview's lazy chunks (${found.join("; ")}). Only components/sponsor/sponsor-preview.tsx may import it, behind preview-slot.tsx's lazy import.`
+    );
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -307,7 +419,12 @@ export function checkRenderConfig(
   }
 }
 
-const DIST_DIR = fileURLToPath(new URL("../dist", import.meta.url));
+/** `dist/`, or `--dist <dir>` (the guard's fixture tests). */
+function distDir(): string {
+  const index = process.argv.indexOf("--dist");
+  const dir = index === -1 ? undefined : process.argv[index + 1];
+  return dir ?? fileURLToPath(new URL("../dist", import.meta.url));
+}
 
 function readBuiltFiles(dir: string): BuiltFile[] {
   return readdirSync(dir, { recursive: true, withFileTypes: true })
@@ -316,6 +433,12 @@ function readBuiltFiles(dir: string): BuiltFile[] {
       const path = join(entry.parentPath, entry.name);
       return { content: readFileSync(path, "utf8"), path };
     });
+}
+
+/** The client build's Vite manifest (`null` when it is missing). */
+function readClientManifest(dist: string): unknown {
+  const path = join(dist, "client", CLIENT_MANIFEST);
+  return existsSync(path) ? readBuiltConfig(path) : null;
 }
 
 function readBuiltConfig(path: string): unknown {
@@ -331,9 +454,11 @@ if (import.meta.main && process.argv.includes("--bundle")) {
   // After every `vite build` (the site's `build` script, so CI runs it):
   // the checks that hold for any environment.
   try {
-    const files = readBuiltFiles(DIST_DIR);
+    const dist = distDir();
+    const files = readBuiltFiles(dist);
     checkServerHasNoVideoPlayer(files);
     checkServerHasNoRenderer(files);
+    checkClientRenderIsLazy(readClientManifest(dist), files);
     checkClientHasNoSecrets(files);
     console.log("deploy-guard: bundle ok");
   } catch (error) {
@@ -345,11 +470,13 @@ if (import.meta.main && process.argv.includes("--bundle")) {
     const builtConfig = readBuiltConfig(BUILT_CONFIG_PATH);
     const env = checkDeployTarget(process.env.CLOUDFLARE_ENV, builtConfig);
     checkRenderConfig(builtConfig);
-    const files = readBuiltFiles(DIST_DIR);
+    const dist = distDir();
+    const files = readBuiltFiles(dist);
     checkDevTools(env, files);
     checkNoE2eSeed(env, files);
     checkServerHasNoVideoPlayer(files);
     checkServerHasNoRenderer(files);
+    checkClientRenderIsLazy(readClientManifest(dist), files);
     checkClientHasNoSecrets(files);
     console.log(`deploy-guard: ok (${env})`);
   } catch (error) {

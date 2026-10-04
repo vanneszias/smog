@@ -1935,7 +1935,6 @@
     "review": {
       "title": "Bekijk je sponsoring",
       "description": "Zo verschijnt je naam op de geselecteerde gebaren. De echte video wordt na de betaling gemaakt en gecontroleerd voor hij online gaat.",
-      "previewLabel": "Voorbeeld voor {{name}}",
       "summary": "Sponsoringdetails",
       "gestures": "Gebaren",
       "duration": "Duur",
@@ -2059,6 +2058,16 @@
       "pay": "Verlengen en betalen",
       "failed": "De betaling kon niet starten. Probeer het opnieuw."
     },
-    "preview": {}
+    "preview": {
+      "label": "Voorbeeld voor {{name}}",
+      "picker": "Kies het gebaar voor het voorbeeld",
+      "play": "Afspelen",
+      "pause": "Pauzeren",
+      "showEnding": "Toon het einde",
+      "loading": "Voorbeeld laden…",
+      "fallbackNote": "De video kan hier niet worden afgespeeld, dus het voorbeeld toont een stilstaand beeld van het gebaar. De definitieve video gebruikt de volledige clip, met dit einde.",
+      "unavailable": "Het voorbeeld kan nu niet getoond worden. De definitieve video wordt gemaakt met je naam en logo zoals ingevuld.",
+      "currentLogo": "Je huidige logo blijft in de video. Dit voorbeeld toont het niet; kies een nieuw bestand om het te vervangen."
+    }
   }
 }

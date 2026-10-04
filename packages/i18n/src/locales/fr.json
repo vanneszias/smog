@@ -1974,7 +1974,6 @@
     "review": {
       "title": "Vérifiez votre parrainage",
       "description": "Voici comment votre nom apparaît sur les gestes choisis. La vraie vidéo est réalisée après le paiement et vérifiée avant sa mise en ligne.",
-      "previewLabel": "Aperçu pour {{name}}",
       "summary": "Détails du parrainage",
       "gestures": "Gestes",
       "duration": "Durée",
@@ -2099,6 +2098,16 @@
       "pay": "Prolonger et payer",
       "failed": "Le paiement n'a pas pu démarrer. Veuillez réessayer."
     },
-    "preview": {}
+    "preview": {
+      "label": "Aperçu pour {{name}}",
+      "picker": "Choisissez le geste à prévisualiser",
+      "play": "Lire",
+      "pause": "Pause",
+      "showEnding": "Voir la fin",
+      "loading": "Chargement de l’aperçu…",
+      "fallbackNote": "La vidéo ne peut pas être lue ici, l’aperçu montre donc une image fixe du geste. La vidéo finale utilise le clip complet, avec cette fin.",
+      "unavailable": "L’aperçu ne peut pas être affiché pour le moment. La vidéo finale est réalisée avec votre nom et votre logo tels que saisis.",
+      "currentLogo": "Votre logo actuel reste dans la vidéo. Cet aperçu ne l’affiche pas\u00a0; choisissez un nouveau fichier pour le remplacer."
+    }
   }
 }

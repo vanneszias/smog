@@ -1935,7 +1935,6 @@
     "review": {
       "title": "Review your sponsorship",
       "description": "This is how your name appears on the selected gestures. The real video is made after payment and checked before it goes online.",
-      "previewLabel": "Preview for {{name}}",
       "summary": "Sponsorship details",
       "gestures": "Gestures",
       "duration": "Duration",
@@ -2059,6 +2058,16 @@
       "pay": "Renew and pay",
       "failed": "The payment could not start. Please try again."
     },
-    "preview": {}
+    "preview": {
+      "label": "Preview for {{name}}",
+      "picker": "Choose the gesture to preview",
+      "play": "Play",
+      "pause": "Pause",
+      "showEnding": "Show the ending",
+      "loading": "Loading the preview…",
+      "fallbackNote": "The video cannot be played here, so the preview shows a still of the gesture. The final video uses the full clip, with this ending.",
+      "unavailable": "The preview cannot be shown right now. The final video is made with your name and logo as entered.",
+      "currentLogo": "Your current logo stays in the video. This preview does not show it; choose a new file to replace it."
+    }
   }
 }

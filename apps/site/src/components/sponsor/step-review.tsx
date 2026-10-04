@@ -3,10 +3,11 @@ import { type WizardState, wizardPrice } from "@smog/sponsorships/client";
 import { Button, Card, Heading, Text } from "@smog/ui-web";
 import { formatMoney } from "@smog/utils";
 import { ArrowLeft, Lock } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Turnstile } from "@/components/auth/turnstile";
-import { SponsorOverlayPreview } from "./overlay-preview";
 import { usePageLocale } from "./page-locale";
+import { type PreviewGesture, PreviewPicker } from "./preview-picker";
+import { SponsorPreviewSlot } from "./preview-slot";
 
 export interface StepReviewProps {
   /** The failed attempt's message, if any. */
@@ -35,8 +36,47 @@ function Row({ label, value }: { label: string; value: ReactNode }): ReactNode {
 }
 
 /**
- * Step 3, "Preview & pay" (S-11): one overlay preview per gesture (ruling
- * 7), the summary (the gestures, 1 year, the name, the logo, the contact,
+ * One Player at a time (phase 7 ruling 8; up to 10 MP4s at once is too
+ * heavy): the chosen gesture's preview, the first by default, above a row
+ * of poster toggles when there is more than one.
+ */
+function ReviewPreview({
+  displayName,
+  gestures,
+  logo,
+}: {
+  displayName: string;
+  gestures: readonly PreviewGesture[];
+  logo: Blob | null;
+}): ReactNode {
+  const [chosenId, setChosenId] = useState(gestures[0]?.id ?? "");
+  const shown =
+    gestures.find((gesture) => gesture.id === chosenId) ?? gestures[0];
+  if (!shown) {
+    return null;
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      <SponsorPreviewSlot
+        displayName={displayName}
+        logo={logo}
+        name={shown.name}
+        playbackId={shown.playbackId}
+      />
+      {gestures.length > 1 ? (
+        <PreviewPicker
+          gestures={gestures}
+          onSelect={setChosenId}
+          selectedId={shown.id}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Step 3, "Preview & pay" (S-11): the sponsored video's preview (ruling
+ * 8), the summary (the gestures, 1 year, the name, the logo, the contact,
  * the total), Turnstile, and "Continue to payment" with the note that
  * Mollie takes over.
  */
@@ -71,18 +111,11 @@ export function StepReview({
           {t("sponsor.review.description")}
         </Text>
       </div>
-      <ul className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {state.selected.map((gesture) => (
-          <li key={gesture.id}>
-            <SponsorOverlayPreview
-              displayName={details.displayName.trim()}
-              logo={logo}
-              name={gesture.name}
-              playbackId={gesture.playbackId}
-            />
-          </li>
-        ))}
-      </ul>
+      <ReviewPreview
+        displayName={details.displayName.trim()}
+        gestures={state.selected}
+        logo={logo}
+      />
       <Card className="max-w-reading gap-4" variant="sunken">
         <Heading level={2} size="title-3">
           {t("sponsor.review.summary")}

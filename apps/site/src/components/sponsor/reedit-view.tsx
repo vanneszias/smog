@@ -32,7 +32,7 @@ import { Turnstile } from "@/components/auth/turnstile";
 import { detailsErrorMessage, mutationErrorMessage } from "./errors";
 import { LinkState } from "./link-state";
 import { LogoDropzone, LogoGuidelines } from "./logo-dropzone";
-import { SponsorOverlayPreview } from "./overlay-preview";
+import { SponsorPreviewSlot } from "./preview-slot";
 
 export interface ReeditViewProps {
   token: string | null;
@@ -147,13 +147,21 @@ function ReeditForm({
       </div>
       <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         {gesture.data ? (
-          <SponsorOverlayPreview
-            className="max-w-[20rem]"
-            displayName={displayName.trim()}
-            logo={logoError ? null : logo}
-            name={link.gesture.name}
-            playbackId={gesture.data.playbackId}
-          />
+          <div className="flex min-w-0 flex-col gap-2">
+            <SponsorPreviewSlot
+              displayName={displayName.trim()}
+              logo={logoError ? null : logo}
+              name={link.gesture.name}
+              playbackId={gesture.data.playbackId}
+            />
+            {/* The stored logo has no browser-readable URL (it is served
+                to admins only), so the preview says it stays (review M-5). */}
+            {link.hasLogo && !logo ? (
+              <Text className="max-w-[20rem]" size="body-sm" tone="muted">
+                {t("sponsor.preview.currentLogo")}
+              </Text>
+            ) : null}
+          </div>
         ) : (
           <div />
         )}
