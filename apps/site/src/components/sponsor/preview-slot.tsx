@@ -235,8 +235,9 @@ export interface PreviewSlotProps extends SponsorPreviewProps {
 /**
  * The slot over a given lazy preview: the poster until it has loaded, the
  * poster with the "unavailable" note and no controls when it fails (to
- * load, or to render). One boundary per gesture, so another gesture tries
- * again.
+ * load, or to render). One boundary per gesture, so another gesture
+ * renders afresh after a Player error; a chunk that failed stays failed
+ * for the page (React keeps the lazy import's rejection).
  */
 export function PreviewSlot({
   preview: Preview,
