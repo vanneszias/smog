@@ -23,8 +23,8 @@ describe("parseDeadlineArgs", () => {
     ).toEqual({ command: ["vitest", "run"], minutes: 12 });
   });
 
-  test("defaults to 20 minutes, or SMOG_TEST_DEADLINE_MINUTES", () => {
-    expect(parseDeadlineArgs(["--", "bun", "test"]).minutes).toBe(20);
+  test("defaults to 25 minutes, or SMOG_TEST_DEADLINE_MINUTES", () => {
+    expect(parseDeadlineArgs(["--", "bun", "test"]).minutes).toBe(25);
     expect(
       parseDeadlineArgs(["--", "bun", "test"], {
         SMOG_TEST_DEADLINE_MINUTES: "3",

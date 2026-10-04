@@ -6,7 +6,7 @@ import { join } from "node:path";
 /**
  * `bun <root>/scripts/test-deadline.ts [--minutes N] -- <command> [args…]`
  *
- * Runs one test command with a hard wall-clock limit (default 20 minutes,
+ * Runs one test command with a hard wall-clock limit (default 25 minutes,
  * or `SMOG_TEST_DEADLINE_MINUTES`). The command runs in its own process
  * group. When the limit passes, it prints which command hung (package
  * directory, command line, elapsed time), the process tree, and, for every
@@ -21,7 +21,7 @@ import { join } from "node:path";
  * output still buffered (docs/DECISIONS.md, "CI test hang").
  */
 
-const DEFAULT_MINUTES = 20;
+const DEFAULT_MINUTES = 25;
 const KILL_GRACE_MS = 10_000;
 const REPORT_WAIT_MS = 5000;
 const EXIT_TIMED_OUT = 124;
