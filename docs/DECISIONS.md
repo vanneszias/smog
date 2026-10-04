@@ -1088,6 +1088,13 @@ Each entry: date · decision · alternatives · why. Newest entries go at the bo
   - **A larger clip.** For a worst case, a 30 s 1080 × 1920 source (900 frames) was rendered with the whole server pinned to one CPU (`taskset -c 0`, so Chrome and the compositor shared it). It took 302 s, about 0.34 s per frame.
   - **The threshold.** At that rate a 1080 × 1920 clip reaches 10 minutes (half the `render` step's 20-minute timeout) at about 55 s. Gesture clips are a few seconds to tens of seconds, so `standard-2` (1 vCPU) stays.
   - **Caveats.** The Containers vCPU is not this machine's core, and the CI lane logs its own times. Phase 9's latency check on staging (the p95 per clip length) is the real measure; switch to `standard-3` if it shows renders near 10 minutes.
+- **2026-10-04 · The first CI run of the render lane (run 37182551197, commit `a7652cf`, before the review fixes): green.**
+  - **The image** was 969 MiB. The `fonts-noto-core` layer is 45.5 MB, the Chrome library layer 255 MB. Every apt name installed. `/health` reported `remotion-headless-shell` and Remotion 4.0.532 (Remotion's own download, in the image).
+  - **Render times on the runner:** 60 frames in 5.6 s, and the Arabic render in 5.5 s, both `200`.
+  - **The green probe found 225 px in CI** against 307 locally: the image's Chrome and fontconfig rasterise the shrunk line differently. That confirmed the review's margin concern; the short-name gate (at least 300 px, 759 locally) replaces the 200 px bar.
+  - **The artifact upload found nothing.** `packages/render/.render-out` is a dot directory, and `actions/upload-artifact` skips hidden files unless `include-hidden-files: true`, which the step now sets; `checkRenderLaneBuild` requires it.
+  - **Noise.** The lane's pre-clean `docker rm --force` now drops its stderr: "No such container" is the normal case.
+  - `--omit=peer` should shrink the image by about 230 MB; the next run's `[render] node_modules` and image size lines will show it.
 
 ## `@smog/video` for renders (phase 7 task 5)
 

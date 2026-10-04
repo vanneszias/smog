@@ -33,6 +33,16 @@ describe("checkRenderLaneBuild", () => {
     );
   });
 
+  test("the artifact upload must include the hidden .render-out", () => {
+    expect(
+      checkRenderLaneBuild(
+        CI.replace("include-hidden-files: true", "include-hidden-files: false")
+      )
+    ).toContain(
+      "ci.yml: the render lane's artifact upload needs include-hidden-files: true for packages/render/.render-out"
+    );
+  });
+
   test("the release:check step must pass SMOG_RENDER_NO_BUILD", () => {
     expect(
       checkRenderLaneBuild(CI.replace("SMOG_RENDER_NO_BUILD:", "OTHER_FLAG:"))

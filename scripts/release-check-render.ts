@@ -160,12 +160,18 @@ async function run(
   {
     capture = false,
     env,
-  }: { capture?: boolean; env?: Record<string, string> } = {}
+    quiet = false,
+  }: {
+    capture?: boolean;
+    env?: Record<string, string>;
+    /** Drop stderr too (an expected "No such container"). */
+    quiet?: boolean;
+  } = {}
 ): Promise<{ code: number; stdout: string }> {
   const proc = Bun.spawn(command, {
     cwd: ROOT,
     env: { ...process.env, ...env },
-    stderr: "inherit",
+    stderr: quiet ? "ignore" : "inherit",
     stdout: capture ? "pipe" : "inherit",
   });
   const stdout = capture ? await new Response(proc.stdout).text() : "";
@@ -247,7 +253,11 @@ async function lane(image: string, build: boolean): Promise<number> {
     }
   }
   await logImage(image);
-  await run(["docker", "rm", "--force", CONTAINER_NAME], { capture: true });
+  // A leftover from an earlier run, usually none.
+  await run(["docker", "rm", "--force", CONTAINER_NAME], {
+    capture: true,
+    quiet: true,
+  });
   if (
     (await run(["docker", ...dockerRunArgs(image)], { capture: true })).code !==
     0

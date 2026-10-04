@@ -143,6 +143,18 @@ export function checkRenderLaneBuild(source: string): string[] {
       `${file}: the render leg must build the image with docker/build-push-action`
     );
   }
+  // `.render-out` is a dot directory, which upload-artifact skips unless
+  // told otherwise (the first CI run uploaded nothing).
+  const artifact = steps.find(
+    (step) =>
+      (step.uses?.startsWith("actions/upload-artifact@") ?? false) &&
+      String(step.with?.path ?? "").includes("packages/render/.render-out")
+  );
+  if (artifact?.with?.["include-hidden-files"] !== true) {
+    errors.push(
+      `${file}: the render lane's artifact upload needs include-hidden-files: true for packages/render/.render-out`
+    );
+  }
   const lane = steps.find((step) =>
     step.run?.includes("bun run release:check:")
   );

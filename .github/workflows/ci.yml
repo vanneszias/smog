@@ -61,6 +61,8 @@ jobs:
         with:
           name: render-lane-output
           path: packages/render/.render-out/
+          # A dot directory: upload-artifact skips hidden files by default.
+          include-hidden-files: true
           if-no-files-found: warn
 
   e2e:
