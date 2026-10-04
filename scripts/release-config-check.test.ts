@@ -6,8 +6,10 @@ import {
   appLinkIdentity,
   checkAppLinks,
   checkCiWorkflow,
+  checkDeployConfigStep,
   checkDeployWorkflow,
   checkReleaseConfig,
+  checkReleaseScripts,
   checkRequiredConfig,
   checkWranglerConfig,
   checkWranglerResources,
@@ -33,6 +35,17 @@ const DEV_VARS_EXAMPLE = readFileSync(
   "utf8"
 );
 const ENSURE_SCRIPT = "scripts/ensure-cloudflare-resources.ts";
+const PACKAGE = readFileSync(join(ROOT, "package.json"), "utf8");
+/** Spelled apart so a GitHub expression is not read as a template slot. */
+const DOLLAR = "$";
+const CONFIG_CHECK_STEP = DEPLOY.slice(
+  DEPLOY.indexOf("      # The deploy config check"),
+  DEPLOY.indexOf("      # The queues,")
+);
+const WARN_ONLY_LINE =
+  "bun scripts/check-deploy-config.ts --env staging --warn-only || echo";
+const ENFORCING_LINE =
+  'bun scripts/check-deploy-config.ts --env "$CLOUDFLARE_ENV"\n';
 
 describe("checkReleaseConfig", () => {
   test("passes on the real repository", () => {
@@ -198,6 +211,164 @@ describe("checkDeployWorkflow", () => {
       DEPLOY.replaceAll("secrets.CLOUDFLARE_ACCOUNT_ID", "vars.ACCOUNT")
     );
     expect(errors.join("\n")).toContain("CLOUDFLARE_ACCOUNT_ID");
+  });
+});
+
+describe("checkDeployConfigStep (phase 8 ruling 1)", () => {
+  const errorsOf = (source: string): string =>
+    checkDeployConfigStep(source).join("\n");
+
+  test("the real deploy.yml passes", () => {
+    expect(CONFIG_CHECK_STEP).toContain("name: Check deploy config");
+    expect(checkDeployConfigStep(DEPLOY)).toEqual([]);
+    expect(checkDeployWorkflow(DEPLOY)).toEqual([]);
+  });
+
+  test("fails without the step", () => {
+    expect(errorsOf(DEPLOY.replace(CONFIG_CHECK_STEP, ""))).toContain(
+      "scripts/check-deploy-config.ts"
+    );
+  });
+
+  test("fails when it runs after the resources step or the migrations", () => {
+    const afterEnsure = DEPLOY.replace(CONFIG_CHECK_STEP, "").replace(
+      "      # Migrations live",
+      `${CONFIG_CHECK_STEP}      # Migrations live`
+    );
+    expect(errorsOf(afterEnsure)).toContain(
+      "before `scripts/ensure-cloudflare-resources.ts`"
+    );
+    const afterMigrations = DEPLOY.replace(CONFIG_CHECK_STEP, "").replace(
+      "      # The render image cache",
+      `${CONFIG_CHECK_STEP}      # The render image cache`
+    );
+    expect(errorsOf(afterMigrations)).toContain("before the D1 migrations");
+  });
+
+  test("production never gets --warn-only", () => {
+    const toAll = DEPLOY.replace(
+      "--env staging --warn-only",
+      '--env "$CLOUDFLARE_ENV" --warn-only'
+    );
+    expect(errorsOf(toAll)).toContain("--env staging");
+    const unconditional = DEPLOY.replace(
+      ENFORCING_LINE,
+      'bun scripts/check-deploy-config.ts --env "$CLOUDFLARE_ENV" --warn-only\n'
+    );
+    expect(errorsOf(unconditional)).toContain("--warn-only");
+  });
+
+  test("staging honours SMOG_REQUIRE_SECRETS", () => {
+    expect(
+      errorsOf(DEPLOY.replace(' && [ "$SMOG_REQUIRE_SECRETS" != "1" ]', ""))
+    ).toContain("SMOG_REQUIRE_SECRETS");
+    expect(
+      errorsOf(
+        DEPLOY.replace(
+          `SMOG_REQUIRE_SECRETS: ${DOLLAR}{{ vars.SMOG_REQUIRE_SECRETS }}`,
+          'SMOG_REQUIRE_SECRETS: ""'
+        )
+      )
+    ).toContain("vars.SMOG_REQUIRE_SECRETS");
+  });
+
+  test("the staging test and the opt-in are joined by && (m-3)", () => {
+    expect(
+      errorsOf(
+        DEPLOY.replace(
+          '[ "$CLOUDFLARE_ENV" = "staging" ] && [ "$SMOG_REQUIRE_SECRETS" != "1" ]',
+          '[ "$CLOUDFLARE_ENV" = "staging" ] || [ "$SMOG_REQUIRE_SECRETS" != "1" ]'
+        )
+      )
+    ).toContain("&&");
+  });
+
+  test("the step is bounded, and only warn-only staging may continue on error (I-1)", () => {
+    expect(
+      errorsOf(DEPLOY.replace("        timeout-minutes: 5\n", ""))
+    ).toContain("timeout-minutes");
+    expect(
+      errorsOf(DEPLOY.replace("timeout-minutes: 5\n", "timeout-minutes: 30\n"))
+    ).toContain("timeout-minutes");
+    expect(
+      errorsOf(
+        DEPLOY.replace(
+          "env.CLOUDFLARE_ENV == 'staging' && vars.SMOG_REQUIRE_SECRETS != '1'",
+          "true"
+        )
+      )
+    ).toContain("continue-on-error");
+  });
+
+  test("staging's warn-only run keeps even a crash green", () => {
+    expect(
+      errorsOf(
+        DEPLOY.replace(
+          WARN_ONLY_LINE,
+          "bun scripts/check-deploy-config.ts --env staging --warn-only; echo"
+        )
+      )
+    ).toContain("||");
+  });
+
+  test("an enforcing run must exist for production", () => {
+    expect(errorsOf(DEPLOY.replace(ENFORCING_LINE, "true\n"))).toContain(
+      "enforcing"
+    );
+  });
+
+  test("the step is skipped with the others when the secrets are absent", () => {
+    const step = CONFIG_CHECK_STEP.replace(
+      "        if: steps.secrets.outputs.enabled == 'true'\n",
+      ""
+    );
+    expect(errorsOf(DEPLOY.replace(CONFIG_CHECK_STEP, step))).toContain(
+      "steps.secrets.outputs.enabled"
+    );
+  });
+});
+
+describe("checkReleaseScripts: the offline deploy config check", () => {
+  const core = (change: (script: string) => string): string => {
+    const parsed = JSON.parse(PACKAGE) as { scripts: Record<string, string> };
+    parsed.scripts["release:check:core"] = change(
+      String(parsed.scripts["release:check:core"])
+    );
+    return JSON.stringify(parsed);
+  };
+  const CHECK = "bun scripts/check-deploy-config.ts --env staging --offline";
+
+  test("release:check:core runs it after the staging dry run", () => {
+    expect(checkReleaseScripts(PACKAGE)).toEqual([]);
+    expect(PACKAGE).toContain(`bun -F @smog/site deploy:dry && ${CHECK}`);
+  });
+
+  test("fails without it", () => {
+    expect(
+      checkReleaseScripts(core((script) => script.replace(` && ${CHECK}`, "")))
+    ).toEqual([`package.json: release:check:core must run \`${CHECK}\``]);
+  });
+
+  test("fails when it runs before the staging dry run", () => {
+    const moved = core((script) =>
+      script
+        .replace(` && ${CHECK}`, "")
+        .replace("bun run check:ci", `${CHECK} && bun run check:ci`)
+    );
+    expect(checkReleaseScripts(moved)).toEqual([
+      `package.json: release:check:core must run \`${CHECK}\` after \`bun -F @smog/site deploy:dry\``,
+    ]);
+  });
+
+  test("never with --warn-only or for production", () => {
+    for (const wrong of [
+      `${CHECK} --warn-only`,
+      CHECK.replace("staging", "production"),
+    ]) {
+      expect(
+        checkReleaseScripts(core((script) => script.replace(CHECK, wrong)))
+      ).not.toEqual([]);
+    }
   });
 });
 

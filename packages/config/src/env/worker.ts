@@ -93,7 +93,8 @@ export const workerSecretsSchema = z.object({
   /**
    * The Mux access token (`@smog/video`). Optional: without both, admin
    * video uploads and the asset picker are off (`INVALID_STATE`) and only a
-   * pasted playback id works. Phase 8 makes them required in production.
+   * pasted playback id works. Required in production and with
+   * `RENDER_MODE=container` (`requiredWorkerConfig`).
    */
   MUX_TOKEN_ID: optionalValue,
   MUX_TOKEN_SECRET: optionalValue,
@@ -256,9 +257,10 @@ const CONTAINER_REQUIRED_SECRETS: readonly SecretKey[] = [
  * What a deploy of `env` needs set when it runs `renderMode` (phase 7
  * ruling 11): the env's own list, plus the Mux trio for `container`.
  * `scripts/release-config-check.ts` asserts each key is in the schema and
- * in `.dev.vars.example` or `wrangler.jsonc`; phase 8 makes the deploy
- * check the real values (`wrangler secret list`). Everything else is
- * optional and degrades cleanly when unset.
+ * in `.dev.vars.example` or `wrangler.jsonc`, and the deploy config check
+ * (`scripts/check-deploy-config.ts`, phase 8 ruling 1) holds each env's
+ * `wrangler secret list` and vars to it. Everything else is optional and
+ * degrades cleanly when unset.
  */
 export function requiredWorkerConfig(
   env: Environment,
@@ -282,6 +284,45 @@ export const REQUIRED_WORKER_CONFIG: Record<Environment, RequiredConfig> = {
   production: requiredWorkerConfig("production", "container"),
   staging: requiredWorkerConfig("staging", "fake"),
 };
+
+/** Secrets that only work together: a feature with part of them is broken. */
+export interface SecretGroup {
+  name: string;
+  secrets: readonly SecretKey[];
+}
+
+/**
+ * The sign-in providers (phase 8 ruling 1). Each is optional, but an env
+ * that sets any of a provider's secrets needs all of them; the deploy
+ * check (`scripts/check-deploy-config.ts`) refuses a partial one. Whether
+ * production must offer them is the owner's decision.
+ */
+export const PROVIDER_SECRET_GROUPS = [
+  {
+    name: "Google sign-in",
+    secrets: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+  },
+  {
+    name: "Sign in with Apple",
+    secrets: [
+      "APPLE_CLIENT_ID",
+      "APPLE_CLIENT_SECRET",
+      "APPLE_APP_BUNDLE_IDENTIFIER",
+    ],
+  },
+] as const satisfies readonly SecretGroup[];
+
+/**
+ * Optional secrets the deploy check lists as "not configured" when an env
+ * has none of them: the providers and the OpenPanel relay. Never an error.
+ */
+export const RECOMMENDED_WORKER_CONFIG: readonly SecretGroup[] = [
+  ...PROVIDER_SECRET_GROUPS,
+  {
+    name: "OpenPanel relay",
+    secrets: ["OPENPANEL_CLIENT_ID", "OPENPANEL_CLIENT_SECRET"],
+  },
+];
 
 /** Validates the vars and secrets once per isolate; names every invalid key. */
 export function parseWorkerEnv(env: object): WorkerEnv {

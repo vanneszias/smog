@@ -54,6 +54,31 @@ jobs:
           node-version: 22
       - if: steps.secrets.outputs.enabled == 'true'
         run: bun install --frozen-lockfile
+      # The deploy config check (phase 8 ruling 1), first, so nothing is
+      # created, migrated or built while a secret or var is missing: the
+      # env's secrets (`wrangler secret list`) against requiredWorkerConfig
+      # and the provider pairs, and its vars, SITE_URL and KV/D1 ids in
+      # wrangler.jsonc. Production always enforces. Staging only warns
+      # until the owner sets the staging environment variable
+      # SMOG_REQUIRE_SECRETS=1: --warn-only turns every problem (wrangler
+      # errors, output that is not JSON, a missing Worker) into a
+      # ::warning::, and the `||` keeps even a crash of the script green.
+      # A hang is bounded twice: the script kills `wrangler secret list`
+      # after 120 s, and the step stops after 5 minutes, which a warn-only
+      # staging run ignores (continue-on-error). The script also refuses
+      # an --env that differs from CLOUDFLARE_ENV.
+      - name: Check deploy config
+        if: steps.secrets.outputs.enabled == 'true'
+        timeout-minutes: 5
+        continue-on-error: ${{ env.CLOUDFLARE_ENV == 'staging' && vars.SMOG_REQUIRE_SECRETS != '1' }}
+        env:
+          SMOG_REQUIRE_SECRETS: ${{ vars.SMOG_REQUIRE_SECRETS }}
+        run: |
+          if [ "$CLOUDFLARE_ENV" = "staging" ] && [ "$SMOG_REQUIRE_SECRETS" != "1" ]; then
+            bun scripts/check-deploy-config.ts --env staging --warn-only || echo "::warning::[deploy-config] the check itself failed (exit $?); staging deploys anyway until SMOG_REQUIRE_SECRETS=1"
+          else
+            bun scripts/check-deploy-config.ts --env "$CLOUDFLARE_ENV"
+          fi
       # The queues, their DLQs and the R2 bucket (with its CORS) that
       # wrangler.jsonc binds must exist before the deploy (phase 6). The
       # script never changes or deletes what exists. Staging creates what is
