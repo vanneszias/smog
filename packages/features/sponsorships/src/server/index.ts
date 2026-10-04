@@ -56,7 +56,19 @@ export {
   markRenderRunning,
   type RenderJobPlan,
   renderStarterFor,
+  retryRenderStatements,
 } from "./render";
+export {
+  instanceErrorSummary,
+  RENDER_QUEUED_GRACE_MS,
+  RENDER_WATCHDOG_BUDGET,
+  RENDER_WATCHDOG_CEILING_MS,
+  type RenderWatchdogResult,
+  reconcileRenderJobs,
+  type WorkflowInstanceState,
+  type WorkflowInstanceStatus,
+  type WorkflowStatusPort,
+} from "./render-watchdog";
 export { createSponsorshipsRouter } from "./router";
 export {
   isRenewable,

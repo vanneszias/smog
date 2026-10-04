@@ -4,6 +4,7 @@ import { renderInputSchema } from "@smog/render/contract";
 import { newId } from "@smog/utils";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { SponsorshipActionError } from "../src/server/lifecycle";
 import {
   completeRender,
   createRenderJob,
@@ -12,7 +13,9 @@ import {
   fakeRenderStarter,
   markRenderRunning,
   renderStarterFor,
+  retryRenderStatements,
 } from "../src/server/render";
+import { isStaleTransition } from "../src/server/transition";
 import {
   eventsOf,
   makeAdmin,
@@ -256,5 +259,104 @@ describe("the render seam (ruling 7)", () => {
     expect((await jobsOf(id))[0]?.status).toBe("queued");
     await renderStarterFor("fake", { db }).start({ input, renderJobId });
     expect((await jobsOf(id))[0]?.status).toBe("succeeded");
+  });
+});
+
+describe("retryRenderStatements (A-27)", () => {
+  /** A sponsorship whose first render failed (`render_failed`, job 1 failed). */
+  async function renderFailed() {
+    const id = await rendering();
+    const job = await createRenderJob(db, { now: NOW, sponsorshipId: id });
+    await failRender(db, {
+      error: "boom",
+      now: NOW,
+      renderJobId: job?.renderJobId as string,
+      siteUrl: SITE_URL,
+    });
+    expect(await statusOf(db, id)).toBe("render_failed");
+    return id;
+  }
+
+  it("moves render_failed → rendering and creates job 2 with its events, in one batch", async () => {
+    const admin = await makeAdmin(db);
+    const id = await renderFailed();
+    const plan = await retryRenderStatements(db, {
+      actorId: admin.id,
+      now: NOW,
+      sponsorshipId: id,
+    });
+    expect(plan.attempt).toBe(2);
+    expect(plan.after).toEqual([
+      { renderJobId: plan.renderJobId, type: "render.requested" },
+    ]);
+    const [first, ...rest] = plan.statements;
+    await db.batch([first as never, ...(rest as never[])]);
+    expect(await statusOf(db, id)).toBe("rendering");
+    const jobs = await jobsOf(id);
+    expect(jobs.map((job) => [job.attempt, job.status]).sort()).toEqual([
+      [1, "failed"],
+      [2, "queued"],
+    ]);
+    const events = await eventsOf(db, id);
+    expect(events.map((event) => event.type)).toEqual([
+      "render_started",
+      "render_failed",
+      "render_retried",
+      "render_started",
+    ]);
+    const retried = events.find((event) => event.type === "render_retried");
+    expect(retried?.actorId).toBe(admin.id);
+    expect(events.at(-1)?.data).toEqual({
+      attempt: 2,
+      renderJobId: plan.renderJobId,
+    });
+  });
+
+  it("two concurrent retries: one job, the other batch fails its transition guard", async () => {
+    const admin = await makeAdmin(db);
+    const id = await renderFailed();
+    const input = { actorId: admin.id, now: NOW, sponsorshipId: id };
+    const [a, b] = await Promise.all([
+      retryRenderStatements(db, input),
+      retryRenderStatements(db, input),
+    ]);
+    const results = await Promise.allSettled(
+      [a, b].map(async (plan) => {
+        const [first, ...rest] = plan.statements;
+        await db.batch([first as never, ...(rest as never[])]);
+      })
+    );
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(rejected).toHaveLength(1);
+    expect(
+      isStaleTransition((rejected[0] as PromiseRejectedResult).reason)
+    ).toBe(true);
+    expect((await jobsOf(id)).filter((job) => job.attempt === 2)).toHaveLength(
+      1
+    );
+  });
+
+  it("refuses any other status with stale, and an unknown id with notFound", async () => {
+    const admin = await makeAdmin(db);
+    const seeded = await seedCheckout(db, {
+      count: 1,
+      paymentStatus: "paid",
+      status: "in_review",
+    });
+    const refusal = async (sponsorshipId: string) => {
+      try {
+        await retryRenderStatements(db, {
+          actorId: admin.id,
+          now: NOW,
+          sponsorshipId,
+        });
+      } catch (error) {
+        return error instanceof SponsorshipActionError ? error.reason : error;
+      }
+      return null;
+    };
+    expect(await refusal(seeded.sponsorshipIds[0] as string)).toBe("stale");
+    expect(await refusal(await rendering())).toBe("stale");
+    expect(await refusal(newId())).toBe("notFound");
   });
 });

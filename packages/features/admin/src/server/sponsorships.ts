@@ -34,7 +34,7 @@ import {
   encodeCursor,
   InvalidCursorError,
 } from "@smog/utils";
-import { createMux } from "@smog/video";
+import { createMux, deleteAsset } from "@smog/video";
 import {
   and,
   asc,
@@ -649,7 +649,7 @@ async function enqueueAfter(
     );
   } catch (error) {
     console.error(
-      "[admin] Failed to enqueue after the commit (a missed payment.settled is re-sent by the stale sweep):",
+      "[admin] Failed to enqueue after the commit (the hourly stale sweep re-sends a lost payment.settled, its render watchdog a lost render.requested):",
       error
     );
     if (loud) {
@@ -789,7 +789,10 @@ async function cancelAtMollie(
   }
 }
 
-/** Deletes the sponsored Mux asset (as the expiry sweep); logged, never thrown. */
+/**
+ * Deletes the sponsored Mux asset through `@smog/video` `deleteAsset`, as
+ * the expiry sweep does (404 is done); logged, never thrown.
+ */
 async function deleteSponsoredAsset(
   context: RpcContext,
   deps: AdminDeps,
@@ -803,14 +806,7 @@ async function deleteSponsoredAsset(
     return;
   }
   try {
-    const response = await mux.fetch(
-      `${mux.apiUrl}/video/v1/assets/${encodeURIComponent(assetId)}`,
-      { headers: { authorization: mux.authorization }, method: "DELETE" }
-    );
-    await response.body?.cancel();
-    if (!(response.ok || response.status === 404)) {
-      throw new Error(`Mux answered ${response.status}`);
-    }
+    await deleteAsset(mux, assetId);
   } catch (error) {
     console.error(
       `[admin] Failed to delete the sponsored asset ${assetId}:`,
@@ -1209,6 +1205,39 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
                 })
               );
               return { expiresAt: plan.expiresAt, url: plan.url };
+            }
+          )
+      ),
+      retryRender: procedures.retryRender.handler(
+        ({ context, errors, input }) =>
+          refusing(
+            deps,
+            errors,
+            `retry the render of ${input.id}`,
+            async () => {
+              const plan = await services.retryRender(context.db, {
+                actorId: context.user.id,
+                now: new Date(),
+                sponsorshipId: input.id,
+              });
+              // The job, its events and this entry in one batch; then
+              // `render.requested`, logged on failure (the hourly render
+              // watchdog re-sends a lost one).
+              await run(
+                context,
+                plan,
+                auditStatement(context.db, {
+                  action: "sponsorship.retry_render",
+                  actorId: context.user.id,
+                  data: {
+                    attempt: plan.attempt,
+                    renderJobId: plan.renderJobId,
+                  },
+                  targetId: input.id,
+                  targetType: "sponsorship",
+                })
+              );
+              return { attempt: plan.attempt, renderJobId: plan.renderJobId };
             }
           )
       ),

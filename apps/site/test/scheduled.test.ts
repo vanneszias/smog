@@ -9,13 +9,24 @@ import {
   waitOnExecutionContext,
 } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { auditLog, payment, paymentItem, sponsor, sponsorship } from "@smog/db";
+import {
+  auditLog,
+  payment,
+  paymentItem,
+  renderJob,
+  sponsor,
+  sponsorship,
+} from "@smog/db";
 import { createDb } from "@smog/db/client";
 import { makeGesture } from "@smog/db/testing";
 import { CRON, type CronName } from "@smog/jobs";
 import { DAY_MS, newId } from "@smog/utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/worker";
+import {
+  type WorkflowStatusBinding,
+  workflowStatusPort,
+} from "../src/worker/scheduled";
 import { waitForMail } from "./helpers";
 
 function required<T>(binding: T | undefined, name: string): T {
@@ -228,6 +239,34 @@ describe("the scheduled dispatch (ruling 9)", () => {
     expect(counts(first).audit_log).toBeGreaterThanOrEqual(1);
   });
 
+  it(`stale (${CRON.stale}) re-sends render.requested for a job queued over 10 minutes, once (fake mode: no Workflow binding)`, async () => {
+    const { id } = await seed({ status: "rendering" });
+    const jobId = newId();
+    await db.insert(renderJob).values({
+      createdAt: new Date(NOW.getTime() - 11 * 60_000),
+      id: jobId,
+      input: { v: 1 },
+      sponsorshipId: id,
+      status: "queued",
+      updatedAt: new Date(NOW.getTime() - 11 * 60_000),
+      workflowInstanceId: jobId,
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const first = await runCron("stale");
+    const second = await runCron("stale");
+
+    expect(counts(first)).toMatchObject({
+      renderFailed: 0,
+      renderRequeued: 1,
+      renderTimedOut: 0,
+    });
+    expect(counts(second)).toMatchObject({ renderRequeued: 0 });
+    expect(warn).toHaveBeenCalledWith(
+      `[sponsorships] Re-sent render.requested for the queued render job ${jobId}`
+    );
+  });
+
   it("logs a cron it does not know and does not throw", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const controller = createScheduledController({ cron: "0 3 1 * *" });
@@ -235,5 +274,79 @@ describe("the scheduled dispatch (ruling 9)", () => {
     await worker.scheduled(controller, env, createExecutionContext());
 
     expect(warn).toHaveBeenCalledWith("[cron] Unknown schedule 0 3 1 * *");
+  });
+});
+
+describe("workflowStatusPort (the render watchdog's port, ruling 12)", () => {
+  it("is null without a RENDER_WORKFLOW binding", () => {
+    expect(workflowStatusPort(undefined)).toBeNull();
+  });
+
+  it("answers an instance's status, not-found for an unknown id, and terminates", async () => {
+    const terminated: string[] = [];
+    const binding: WorkflowStatusBinding = {
+      get: (id) => {
+        if (id === "gone") {
+          return Promise.reject(new Error("instance.not_found"));
+        }
+        if (id === "broken") {
+          return Promise.reject(new Error("engine unavailable"));
+        }
+        return Promise.resolve({
+          status: () =>
+            Promise.resolve(
+              id === "failed"
+                ? {
+                    error: { message: "boom", name: "Error" },
+                    status: "errored" as const,
+                  }
+                : { status: "running" as const }
+            ),
+          terminate: () => {
+            terminated.push(id);
+            return Promise.resolve();
+          },
+        });
+      },
+    };
+    const port = workflowStatusPort(binding);
+    expect(await port?.status("job-1")).toEqual({
+      error: null,
+      status: "running",
+    });
+    expect(await port?.status("failed")).toEqual({
+      error: { message: "boom", name: "Error" },
+      status: "errored",
+    });
+    expect(await port?.status("gone")).toBe("not-found");
+    await expect(port?.status("broken")).rejects.toThrow("engine unavailable");
+    await port?.terminate("job-1");
+    expect(terminated).toEqual(["job-1"]);
+  });
+
+  it("only the instance.not_found code is not-found; any other 'not found' is thrown (review I-1)", async () => {
+    const failing = (message: string): WorkflowStatusBinding => ({
+      get: () => Promise.reject(new Error(message)),
+    });
+    for (const message of [
+      "instance.not_found",
+      "(instance.not_found) Instance does not exist",
+    ]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one case at a time.
+      expect(await workflowStatusPort(failing(message))?.status("x")).toBe(
+        "not-found"
+      );
+    }
+    for (const message of [
+      "Workflow not found",
+      "script not found",
+      "Not Found",
+      "instance.not_foundation",
+    ]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one case at a time.
+      await expect(
+        workflowStatusPort(failing(message))?.status("x")
+      ).rejects.toThrow(message);
+    }
   });
 });

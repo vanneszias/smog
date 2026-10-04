@@ -9,6 +9,9 @@
  *   instance id, `attempt` counted up) and its `render_started` event, for
  *   a sponsorship in `rendering` without a `queued`/`running` job; the
  *   caller enqueues `render.requested` after the batch.
+ * - `retryRenderStatements` (A-27, phase 7): the admin's retry of a
+ *   `render_failed` sponsorship, `render_failed → rendering`
+ *   (`render_retried`) and the next job in one batch.
  * - `markRenderRunning`, `completeRender`, `failRender`: idempotent (a
  *   final job is a no-op).
  */
@@ -35,6 +38,7 @@ import { RENDER_INPUT_VERSION, renderInputSchema } from "@smog/render/contract";
 import { newId } from "@smog/utils";
 import { and, eq, type SQL, sql } from "drizzle-orm";
 import { RENDER_ERROR_MAX } from "../schema/events";
+import { SponsorshipActionError } from "./lifecycle";
 import { emailAdmins } from "./recipients";
 import {
   eventStatement,
@@ -60,6 +64,8 @@ function activeJobExists(sponsorshipId: SQL | string): SQL {
 export interface RenderJobPlan {
   /** `render.requested` for the new job, to enqueue after the batch. */
   after: EventMessage[];
+  /** The new job's attempt (1 for the first job of a sponsorship). */
+  attempt: number;
   renderJobId: string;
   statements: Statement[];
 }
@@ -75,16 +81,22 @@ export interface RenderJobPlan {
  * the read expects `changes_requested` and the job's input takes the new
  * display name and logo. The in-batch guards still check `rendering` at
  * that point of the batch.
+ *
+ * `retried` (the admin's retry, A-27): the read expects `render_failed`,
+ * and the batch itself starts with `render_failed → rendering`
+ * (`render_retried`, by `actorId`), then the guards and the job. A
+ * concurrent retry or a status that moved on fails the transition's guard.
  */
 export async function createRenderJobStatements(
   db: Db,
   input: {
     now: Date;
     resubmitted?: { displayName: string; logoKey: string | null };
+    retried?: { actorId: string };
     sponsorshipId: string;
   }
 ): Promise<RenderJobPlan | null> {
-  const { now, resubmitted, sponsorshipId } = input;
+  const { now, resubmitted, retried, sponsorshipId } = input;
   const [row] = await db
     .select({
       active: sql<number>`${activeJobExists(ref("sponsorship", sponsorship.id))}`,
@@ -100,7 +112,7 @@ export async function createRenderJobStatements(
     .innerJoin(gesture, eq(gesture.id, sponsorship.gestureId))
     .where(eq(sponsorship.id, sponsorshipId))
     .limit(1);
-  const expected = resubmitted ? "changes_requested" : "rendering";
+  const expected = expectedStatus(input);
   if (row?.status !== expected || row.active) {
     return null;
   }
@@ -114,8 +126,19 @@ export async function createRenderJobStatements(
   });
   return {
     after: [{ renderJobId, type: "render.requested" }],
+    attempt,
     renderJobId,
     statements: [
+      ...(retried
+        ? transitionStatements(db, {
+            actorId: retried.actorId,
+            data: {},
+            event: "render_retried",
+            from: "render_failed",
+            now,
+            sponsorshipId,
+          })
+        : []),
       failWhen(
         db,
         STALE_GUARD,
@@ -141,6 +164,54 @@ export async function createRenderJobStatements(
       }),
     ],
   };
+}
+
+function expectedStatus(input: {
+  resubmitted?: unknown;
+  retried?: unknown;
+}): "changes_requested" | "render_failed" | "rendering" {
+  if (input.resubmitted) {
+    return "changes_requested";
+  }
+  return input.retried ? "render_failed" : "rendering";
+}
+
+/**
+ * The admin's retry of a failed render (A-27): `render_failed → rendering`
+ * (`render_retried`), the next job (`attempt + 1`, a new id and Workflow
+ * instance) and its `render_started`, as one batch the admin appends its
+ * audit entry to. `after` holds `render.requested`, to enqueue once the
+ * batch committed. Refuses with `notFound`, or `stale` for any status but
+ * `render_failed` (or one with a job still active); a concurrent retry
+ * fails the batch's transition guard (`isStaleTransition`).
+ */
+export async function retryRenderStatements(
+  db: Db,
+  input: { actorId: string; now: Date; sponsorshipId: string }
+): Promise<RenderJobPlan> {
+  const plan = await createRenderJobStatements(db, {
+    now: input.now,
+    retried: { actorId: input.actorId },
+    sponsorshipId: input.sponsorshipId,
+  });
+  if (plan) {
+    return plan;
+  }
+  const [row] = await db
+    .select({ status: sponsorship.status })
+    .from(sponsorship)
+    .where(eq(sponsorship.id, input.sponsorshipId))
+    .limit(1);
+  if (!row) {
+    throw new SponsorshipActionError(
+      "notFound",
+      `No sponsorship ${input.sponsorshipId}`
+    );
+  }
+  throw new SponsorshipActionError(
+    "stale",
+    `Cannot retry the render of sponsorship ${input.sponsorshipId} in ${row.status}`
+  );
 }
 
 /** Whether a batch lost a race these services treat as "already done". */

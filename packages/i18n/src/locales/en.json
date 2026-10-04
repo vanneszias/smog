@@ -1586,7 +1586,7 @@
         "notes": {
           "awaitingPayment": "Awaiting payment. Mark it paid or cancel it on the payment below.",
           "rendering": "The video is being made. Then the sponsorship moves to Review.",
-          "renderFailed": "The video failed. Retrying arrives with the render pipeline; until then there is nothing to do here.",
+          "renderFailed": "The video failed. The error is under Render jobs; retry the render when the cause is fixed or was temporary.",
           "closed": "This sponsorship is closed."
         }
       },
@@ -1735,7 +1735,6 @@
       },
       "renderJobs": {
         "title": "Render jobs",
-        "retryLater": "Read only. Retrying arrives with the render pipeline.",
         "empty": "No render jobs yet.",
         "attempt": "Attempt {{attempt}}",
         "status": {
@@ -1745,7 +1744,13 @@
           "failed": "Failed"
         }
       },
-      "retryRender": {},
+      "retryRender": {
+        "action": "Retry render",
+        "title": "Make the video for {{name}} on {{gesture}} again?",
+        "description": "A new render starts with the current name and logo. The sponsorship goes back to Making the video and moves to Review when the video is ready. No email is sent.",
+        "done": "The video is being made again (attempt {{attempt}}).",
+        "announce": "Render retried: attempt {{attempt}} started for {{name}}."
+      },
       "tokens": {
         "title": "Links",
         "empty": "No links yet.",

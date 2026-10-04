@@ -69,7 +69,9 @@ export const e2eSeedSchema = z.discriminatedUnion("op", [
   /**
    * One sponsorship inserted in a given state (the CTA's states, the
    * re-edit link), with its own sponsor and, optionally, a token whose
-   * SHA-256 the spec computed (the raw token stays in the spec). Inserted,
+   * SHA-256 the spec computed (the raw token stays in the spec). A
+   * `render_failed` one also gets its failed first render job (attempt 1)
+   * and that job's trail, for the admin's retry (phase 7 task 7). Inserted,
    * never updated: the state machine is not bypassed for real rows.
    */
   z.object({
@@ -158,7 +160,13 @@ function resetStatements(
   ];
 }
 
-/** `sponsorship`: its sponsor, the row, and the token when asked. */
+/** The stored error of a seeded failed render. */
+const E2E_RENDER_ERROR = "renderer answered 500";
+
+/**
+ * `sponsorship`: its sponsor, the row, the failed first render job of a
+ * `render_failed` one, and the token when asked.
+ */
 function sponsorshipStatements(
   db: D1Database,
   seed: Extract<E2eSeed, { op: "sponsorship" }>
@@ -182,6 +190,37 @@ function sponsorshipStatements(
         seed.gestureSlug
       ),
   ];
+  if (seed.status === "render_failed") {
+    // Its first render failed (Minor 4): a `failed` job (attempt 1, id
+    // `<id>-job-1`) and the trail's `render_started` and `render_failed`,
+    // so the admin can retry it (A-27).
+    const jobId = `${seed.id}-job-1`;
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO render_job (id, sponsorship_id, status, workflow_instance_id, input, error, attempt, created_at, updated_at, finished_at) VALUES (?, ?, 'failed', ?, ?, ?, 1, ${NOW_MS}, ${NOW_MS}, ${NOW_MS})`
+        )
+        .bind(
+          jobId,
+          seed.id,
+          jobId,
+          JSON.stringify({ v: 1 }),
+          E2E_RENDER_ERROR
+        ),
+      db
+        .prepare(
+          `INSERT INTO sponsorship_event (id, sponsorship_id, type, actor_id, data, created_at) VALUES (?, ?, 'render_started', NULL, ?, ${NOW_MS}), (?, ?, 'render_failed', NULL, ?, ${NOW_MS})`
+        )
+        .bind(
+          `${jobId}-started`,
+          seed.id,
+          JSON.stringify({ attempt: 1, renderJobId: jobId }),
+          `${jobId}-failed`,
+          seed.id,
+          JSON.stringify({ error: E2E_RENDER_ERROR, renderJobId: jobId })
+        )
+    );
+  }
   if (seed.token) {
     statements.push(
       db

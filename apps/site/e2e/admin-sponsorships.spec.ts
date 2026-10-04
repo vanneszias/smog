@@ -6,8 +6,11 @@ import { signInAsAdmin } from "./maintenance";
 import {
   FLOW_IDS,
   openDetail,
+  type RenderFailedFixture,
+  removeRenderFailed,
   resetFlowFixtures,
   seedFlowFixtures,
+  seedRenderFailed,
 } from "./sponsorships";
 
 /*
@@ -15,8 +18,9 @@ import {
  * checkouts seeded through `/dev/e2e-seed` (`sponsorshipCheckout`): the
  * keyboard path; the Review queue → approve → the public page credits the
  * sponsor; request changes → the link, shown once, opens `/sponsor/edit`;
- * mark paid on a two-gesture payment; the CSV (18 columns, BOM); the audit
- * log of all of it. Serial: the audit test reads what the others did, so a
+ * mark paid on a two-gesture payment; the CSV (18 columns, BOM); retry a
+ * failed render (phase 7 task 7, `RENDER_MODE=fake`); the audit log of all
+ * of it. Serial: the audit test reads what the others did, so a
  * failure skips it instead of reporting a confusing miss. The gestures are
  * this spec's own; the screens' axe matrix and screenshots are
  * `admin-sponsorships-a11y.spec.ts`.
@@ -35,6 +39,12 @@ const MARK_PAID_DONE = "Als betaald gemarkeerd. De video’s worden gemaakt.";
 const ONE_HUNDRED = /100,00/;
 const CSV_FILE = /^sponsorships-\d{4}-\d{2}-\d{2}\.csv$/;
 const ETEN_EN_DRINKEN = /Drinken en Eten|Eten en Drinken/;
+/** The error the `render_failed` fixture's job carries (`e2e-seed.ts`). */
+const SEEDED_RENDER_ERROR = "renderer answered 500";
+const RETRY_RENDER = "Video opnieuw maken";
+const RETRY_DONE = "De video wordt opnieuw gemaakt (poging 2).";
+/** The retry test's own gesture, removed after the spec (review M-6). */
+let renderFailed: RenderFailedFixture | null = null;
 
 test.describe("admin sponsorships", () => {
   test.beforeAll(async ({ browser }) => {
@@ -50,6 +60,11 @@ test.describe("admin sponsorships", () => {
     const page = await browser.newPage();
     try {
       await resetFlowFixtures(page);
+      if (renderFailed) {
+        await signInAsAdmin(page.request);
+        await removeRenderFailed(page, renderFailed);
+        renderFailed = null;
+      }
     } finally {
       await page.close();
     }
@@ -203,11 +218,57 @@ test.describe("admin sponsorships", () => {
     await expect(page.getByText("rijen geëxporteerd.").first()).toBeVisible();
   });
 
+  test("a failed render is retried: attempt 2 runs (fake render) and the sponsorship reaches review", async ({
+    page,
+  }) => {
+    renderFailed = await seedRenderFailed(page);
+    await openDetail(page, FLOW_IDS.renderFailed);
+    const jobs = page.getByRole("region", { name: "Videotaken" });
+    await expect(jobs).toContainText(SEEDED_RENDER_ERROR);
+    const retry = jobs.getByRole("button", { name: RETRY_RENDER });
+    await retry.focus();
+    await page.keyboard.press("Enter");
+    const alert = page.getByRole("alertdialog");
+    await expect(alert).toContainText("E2E Render");
+    await alert.getByRole("button", { name: RETRY_RENDER }).click();
+    await expect(page.getByText(RETRY_DONE).first()).toBeVisible();
+    // `RENDER_MODE=fake`: the queued job completes at once with the
+    // gesture's own video, so the sponsorship moves on to review.
+    await expect
+      .poll(
+        async () =>
+          (
+            await adminRpc<{ sponsorship: { status: string } }>(
+              page.request,
+              "admin/sponsorships/get",
+              { id: FLOW_IDS.renderFailed }
+            )
+          ).sponsorship.status,
+        { timeout: 20_000 }
+      )
+      .toBe("in_review");
+    await openDetail(page, FLOW_IDS.renderFailed);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "E2E Render" })
+    ).toBeVisible();
+    await expect(page.getByText("Ter beoordeling").first()).toBeVisible();
+    const trail = page.getByRole("list", { name: "Geschiedenis" });
+    await expect(trail).toContainText("Video opnieuw gestart");
+    await expect(trail).toContainText("Poging 2");
+    await expect(
+      page.getByRole("region", { name: "Videotaken" })
+    ).toContainText("Poging 2");
+    await expect(page.getByRole("button", { name: RETRY_RENDER })).toHaveCount(
+      0
+    );
+  });
+
   test("the audit log lists the sponsorship actions", async ({ page }) => {
     for (const [action, target] of [
       ["sponsorship.approve", FLOW_IDS.vogel],
       ["sponsorship.request_changes", FLOW_IDS.koffie],
       ["sponsorship.mark_paid", FLOW_IDS.eten],
+      ["sponsorship.retry_render", FLOW_IDS.renderFailed],
     ] as const) {
       // biome-ignore lint/performance/noAwaitInLoops: one filter at a time.
       await openAdmin(page, `/admin/audit?action=${action}`);

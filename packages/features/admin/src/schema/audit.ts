@@ -138,7 +138,8 @@ const sponsorshipStatusFilter = z.array(z.enum(SPONSORSHIP_STATUSES));
  * A re-edit or renewal link's token is never in an entry (ruling 11): only
  * its expiry. No sponsor contact data either (data minimisation; the
  * target id links to the sponsorship while it exists).
- * `sponsorship.retry_render` stays unmapped until phase 7 (A-27).
+ * Phase 7 task 7: `sponsorship.retry_render` (A-27), the new job's id and
+ * attempt.
  */
 const SPONSORSHIP_AUDIT_SCHEMAS = {
   "export.sponsorships_csv": z.object({
@@ -186,6 +187,10 @@ const SPONSORSHIP_AUDIT_SCHEMAS = {
     reason: z.string().min(1).max(REJECTION_REASON_MAX),
   }),
   "sponsorship.request_changes": z.object({ expiresAt: isoDate }),
+  "sponsorship.retry_render": z.object({
+    attempt: z.number().int().min(2),
+    renderJobId: z.string().min(1),
+  }),
 } satisfies AuditSchemaBlock;
 
 /**

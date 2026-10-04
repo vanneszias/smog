@@ -777,6 +777,182 @@ describe("SponsorshipDetail", () => {
     ).toEqual({ confirmName: "hond", id: "sp-1" });
   });
 
+  /** A sponsorship whose first render failed, with the job's error. */
+  function renderFailed(): AdminSponsorshipDetail {
+    return detail(
+      {
+        events: [
+          {
+            actor: null,
+            createdAt: CREATED + 120_000,
+            data: { attempt: 1, renderJobId: "job-1" },
+            id: "ev-started",
+            type: "render_started",
+          },
+          {
+            actor: null,
+            createdAt: CREATED + 180_000,
+            data: { error: "renderer answered 500", renderJobId: "job-1" },
+            id: "ev-failed",
+            type: "render_failed",
+          },
+        ],
+        renderJobs: [
+          {
+            attempt: 1,
+            createdAt: CREATED + 120_000,
+            error: "renderer answered 500",
+            finishedAt: CREATED + 180_000,
+            id: "job-1",
+            playbackId: null,
+            status: "failed",
+          },
+        ],
+        video: { fakeRender: false, playbackId: null },
+      },
+      { status: "render_failed" }
+    );
+  }
+
+  test("retry render shows only on render_failed: in the status card and the render jobs, with the job's error", async () => {
+    await showDetail(renderFailed());
+    expect(
+      screen.getAllByRole("button", { name: "Retry render" })
+    ).toHaveLength(2);
+    const jobs = screen.getByRole("region", { name: "Render jobs" });
+    expect(
+      within(jobs).getByRole("button", { name: "Retry render" })
+    ).toBeTruthy();
+    expect(jobs.textContent).toContain("renderer answered 500");
+    expect(jobs.textContent).not.toContain("Read only");
+    // The trail names the attempt of each render_started, and the error.
+    const trail = screen.getByRole("list", { name: "History" });
+    expect(trail.textContent).toContain("Video started");
+    expect(trail.textContent).toContain("Attempt 1");
+    expect(trail.textContent).toContain("renderer answered 500");
+    for (const name of ["Approve", "Reject", "End now"]) {
+      expect(screen.queryByRole("button", { name })).toBeNull();
+    }
+  });
+
+  test.each(["in_review", "rendering", "live", "rejected"] as const)(
+    "no retry render on %s",
+    async (status) => {
+      await showDetail(detail({}, { status }));
+      expect(screen.queryByRole("button", { name: "Retry render" })).toBeNull();
+    }
+  );
+
+  test("retry render: confirm → the mutation → the toast and the announcement; focus returns", async () => {
+    const site = await showDetail(renderFailed(), {
+      "admin/sponsorships/retryRender": {
+        attempt: 2,
+        renderJobId: "job-2",
+      },
+    });
+    const jobs = screen.getByRole("region", { name: "Render jobs" });
+    const trigger = within(jobs).getByRole("button", {
+      name: "Retry render",
+    }) as HTMLButtonElement;
+    trigger.focus();
+    fireEvent.click(trigger);
+    const alert = await screen.findByRole("alertdialog");
+    expect(alert.textContent).toContain("Bakkerij Zon");
+    expect(alert.textContent).toContain("Hond");
+    expect(alert.textContent).toContain("No email is sent");
+    fireEvent.click(
+      within(alert).getByRole("button", { name: "Retry render" })
+    );
+    await screen.findByText("The video is being made again (attempt 2).");
+    expect(
+      site.calls.find((call) => call.path === "admin/sponsorships/retryRender")
+        ?.input
+    ).toEqual({ id: "sp-1" });
+    const announced = screen
+      .getAllByRole("status")
+      .filter((element) => element.getAttribute("aria-live") === "polite")
+      .map((element) => element.textContent);
+    expect(announced).toContain(
+      "Render retried: attempt 2 started for Bakkerij Zon."
+    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  test("while one retry runs, the other Retry render button waits too (review M-2)", async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    await showDetail(renderFailed(), {
+      "admin/sponsorships/retryRender": () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const jobs = screen.getByRole("region", { name: "Render jobs" });
+    fireEvent.click(within(jobs).getByRole("button", { name: "Retry render" }));
+    const alert = await screen.findByRole("alertdialog");
+    fireEvent.click(
+      within(alert).getByRole("button", { name: "Retry render" })
+    );
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole("button", { name: "Retry render" })
+          .every((element) => (element as HTMLButtonElement).disabled)
+      ).toBe(true)
+    );
+    answer({ attempt: 2, renderJobId: "job-2" });
+    await screen.findByText("The video is being made again (attempt 2).");
+  });
+
+  test("once the refetched detail has moved on, focus goes to the announcement (review M-5)", async () => {
+    let retried = false;
+    await showDetail(renderFailed(), {
+      "admin/sponsorships/get": () =>
+        retried ? detail({}, { status: "rendering" }) : renderFailed(),
+      "admin/sponsorships/retryRender": () => {
+        retried = true;
+        return { attempt: 2, renderJobId: "job-2" };
+      },
+    });
+    const jobs = screen.getByRole("region", { name: "Render jobs" });
+    const trigger = within(jobs).getByRole("button", {
+      name: "Retry render",
+    }) as HTMLButtonElement;
+    trigger.focus();
+    fireEvent.click(trigger);
+    const alert = await screen.findByRole("alertdialog");
+    fireEvent.click(
+      within(alert).getByRole("button", { name: "Retry render" })
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Retry render" })).toBeNull()
+    );
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toBe(
+        "Render retried: attempt 2 started for Bakkerij Zon."
+      )
+    );
+    expect(document.activeElement?.getAttribute("aria-live")).toBe("polite");
+  });
+
+  test("a refused retry render (another admin was first) shows the reason", async () => {
+    await showDetail(renderFailed(), {
+      "admin/sponsorships/retryRender": rpcError("INVALID_STATE", 409, {
+        reason: "stale",
+      }),
+    });
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Retry render" })[0] as HTMLElement
+    );
+    const alert = await screen.findByRole("alertdialog");
+    fireEvent.click(
+      within(alert).getByRole("button", { name: "Retry render" })
+    );
+    await screen.findByText(
+      "This sponsorship changed in the meantime. Refresh the page and try again."
+    );
+  });
+
   test("expiring: a new renewal link; changes requested: a new edit link", async () => {
     await showDetail(
       detail({}, { endsAt: CREATED + 20 * DAY, status: "expiring" })

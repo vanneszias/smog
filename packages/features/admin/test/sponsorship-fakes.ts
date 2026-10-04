@@ -75,11 +75,19 @@ export const deletedAssets: string[] = [];
 
 const ASSET_PATH = /\/video\/v1\/assets\/([^/?]+)$/;
 
+/** Set to make the next asset `DELETE` answer this status (not recorded). */
+export const muxFaults = { deleteStatus: null as number | null };
+
 /** The Mux fake, plus `DELETE /video/v1/assets/<id>` (204, recorded). */
 export const muxWithDeletes: MuxFetch = (input, init) => {
   const request = new Request(input, init);
   const match = ASSET_PATH.exec(new URL(request.url).pathname);
   if (request.method === "DELETE" && match) {
+    const status = muxFaults.deleteStatus;
+    if (status !== null) {
+      muxFaults.deleteStatus = null;
+      return Promise.resolve(new Response(null, { status }));
+    }
     deletedAssets.push(decodeURIComponent(match[1] as string));
     return Promise.resolve(new Response(null, { status: 204 }));
   }
