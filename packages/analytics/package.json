@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@smog/config": "workspace:*",
+    "@smog/utils": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -19,7 +19,7 @@ import { maintenanceResponse } from "./maintenance-page";
  * maintenance` write it. While it is enabled,
  * the Worker answers every request with a 503, except:
  * - `/api/webhooks/*`, the legacy `/webhooks/mollie`, `/api/health`,
- *   `/.well-known/*` and `/api/analytics`;
+ *   `/.well-known/*`, `/api/analytics` and `/api/csp-report`;
  * - the `/sign-in` page and `AUTH_SIGN_IN_ROUTES`, so an existing admin
  *   can sign in (served by a sign-in-only Better Auth: no sign-up, no
  *   reset, no email to an unknown address);
@@ -110,6 +110,10 @@ const EXEMPT_PATHS = new Set([
   "/api/analytics",
   // The legacy Mollie webhook (spec §15): a payment must settle in a window.
   "/webhooks/mollie",
+  // The CSP report endpoint (phase 8 ruling 11): the 503 page and the
+  // sign-in page carry the CSP too, so their reports must land. It only
+  // logs, rate-limited and capped.
+  "/api/csp-report",
 ]);
 const EXEMPT_PREFIXES = ["/api/webhooks/", "/.well-known/"];
 

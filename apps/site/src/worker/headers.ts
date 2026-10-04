@@ -10,7 +10,8 @@ import { r2Origin } from "@smog/sponsorships/server";
  * - Every response: `X-Content-Type-Options`, `Referrer-Policy` and, outside
  *   dev, `Strict-Transport-Security`.
  * - HTML and redirects also get the CSP, `X-Frame-Options`,
- *   `Permissions-Policy` and `Cross-Origin-Opener-Policy`.
+ *   `Permissions-Policy`, `Cross-Origin-Opener-Policy` and, with a valid
+ *   `SITE_URL`, `Reporting-Endpoints` (the CSP's `report-to csp` group).
  * - A header the route already set wins: this never overwrites one. A route
  *   that sends its own `Content-Security-Policy` (or `-Report-Only`), like
  *   `/turnstile-bridge`, gets neither CSP header from here, so its policy is
@@ -21,6 +22,12 @@ import { r2Origin } from "@smog/sponsorships/server";
 export const THEME_SCRIPT_HASH: string = __SMOG_THEME_SCRIPT_HASH__;
 
 const HSTS = "max-age=31536000; includeSubDomains";
+
+/** The CSP report endpoint (`routes/api/csp-report.ts`, phase 8 ruling 11). */
+const CSP_REPORT_PATH = "/api/csp-report";
+/** The `report-to` group `Reporting-Endpoints` names. */
+const CSP_REPORT_GROUP = "csp";
+const REPORTING_ENDPOINTS = "reporting-endpoints";
 const CSP = "content-security-policy";
 const CSP_REPORT_ONLY = "content-security-policy-report-only";
 
@@ -49,6 +56,9 @@ const DOCUMENT_HEADERS: Readonly<Record<string, string>> = {
  * The OpenPanel relay is same-origin (`/api/analytics`). The site loads no
  * web fonts, so `font-src` is the brief's minus fonts.gstatic.com.
  * `connectSrc` adds sources to `connect-src` (dev: the Mux fake).
+ * Violations are reported same-origin: `report-uri` for browsers without
+ * the Reporting API, `report-to` for the rest (whose endpoint comes from
+ * the `Reporting-Endpoints` header, `reportingEndpoints`).
  */
 export function buildCsp(
   nonce: string,
@@ -71,12 +81,38 @@ export function buildCsp(
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
+    `report-uri ${CSP_REPORT_PATH}`,
+    `report-to ${CSP_REPORT_GROUP}`,
   ].join("; ");
+}
+
+/**
+ * The `Reporting-Endpoints` value for the CSP's `report-to` group:
+ * `csp="<SITE_URL origin>/api/csp-report"`, or null when `SITE_URL` is not
+ * an http(s) URL (the CSP's `report-uri` still reports then).
+ */
+export function reportingEndpoints(siteUrl: unknown): string | null {
+  if (typeof siteUrl !== "string") {
+    return null;
+  }
+  try {
+    const { origin, protocol } = new URL(siteUrl);
+    return protocol === "https:" || protocol === "http:"
+      ? `${CSP_REPORT_GROUP}="${origin}${CSP_REPORT_PATH}"`
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface CspOptions {
   /** Extra `connect-src` sources (`devConnectSources`). */
   connectSrc?: readonly string[];
+}
+
+export interface RespondOptions extends CspOptions {
+  /** `SITE_URL`, for `Reporting-Endpoints`. */
+  siteUrl?: unknown;
 }
 
 /**
@@ -124,6 +160,8 @@ export interface SecurityHeaderOptions {
   connectSrc?: readonly string[];
   environment: Environment;
   nonce: string;
+  /** `SITE_URL`, for `Reporting-Endpoints` (`reportingEndpoints`). */
+  siteUrl?: unknown;
 }
 
 function isDocument(response: Response): boolean {
@@ -168,6 +206,10 @@ export function withSecurityHeaders(
     return secured;
   }
   setMissing(headers, DOCUMENT_HEADERS);
+  const endpoints = reportingEndpoints(options.siteUrl);
+  if (endpoints) {
+    setMissing(headers, { [REPORTING_ENDPOINTS]: endpoints });
+  }
   if (headers.get("content-type")?.startsWith("text/html")) {
     // The page carries this response's nonce: never let a shared cache
     // (a later Cache Rule, a proxy) serve it to someone else.
@@ -192,7 +234,7 @@ export function withSecurityHeaders(
 export async function respondSecurely(
   environment: Environment,
   handle: (nonce: string) => Promise<Response> | Response,
-  { connectSrc = [] }: CspOptions = {}
+  { connectSrc = [], siteUrl }: RespondOptions = {}
 ): Promise<Response> {
   const nonce = createNonce();
   let response: Response;
@@ -208,5 +250,10 @@ export async function respondSecurely(
       status: 500,
     });
   }
-  return withSecurityHeaders(response, { connectSrc, environment, nonce });
+  return withSecurityHeaders(response, {
+    connectSrc,
+    environment,
+    nonce,
+    siteUrl,
+  });
 }

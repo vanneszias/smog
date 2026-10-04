@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./tsconfig/*.json": "./tsconfig/*.json",
+    "./admin-grant": "./src/admin-grant.ts",
     "./boundaries": "./src/boundaries.ts",
     "./constants": "./src/constants.ts",
     "./env/worker": "./src/env/worker.ts",
