@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   codeIn,
+  cookieHeader,
   findUser,
   linkIn,
   PASSWORD,
@@ -286,6 +287,32 @@ describe("the welcome claim", () => {
     ).toBeGreaterThanOrEqual(before);
   });
 
+  it("leaves updated_at alone: the claim is not a profile change", async () => {
+    const ctx = setup();
+    const context = await ctx.auth.$context;
+    const email = uniqueEmail();
+
+    // A social sign-up arrives verified through an insert, so the claim is
+    // the only update this account gets.
+    const created = await context.internalAdapter.createUser(
+      {
+        email,
+        emailVerified: true,
+        name: "Grace",
+        updatedAt: new Date(1000),
+      },
+      { method: "google" }
+    );
+
+    expect(welcomes(ctx)).toHaveLength(1);
+    const row = await ctx.db.query.user.findFirst({
+      columns: { updatedAt: true, welcomedAt: true },
+      where: eq(user.id, created.id),
+    });
+    expect(row?.welcomedAt).not.toBeNull();
+    expect(row?.updatedAt.getTime()).toBe(1000);
+  });
+
   it("sends exactly one welcome for two concurrent verifications", async () => {
     const ctx = setup();
     const member = await makeUser(ctx.db, {
@@ -363,5 +390,17 @@ describe("the welcome claim", () => {
 
     expect(body.user).not.toHaveProperty("welcomedAt");
     expect(body.user).not.toHaveProperty("welcomed_at");
+
+    // The session a client polls (and its cookie cache) carries none either.
+    const session = await ctx.call("/get-session", {
+      cookie: cookieHeader(signIn),
+    });
+    expect(session.status).toBe(200);
+    const current = (await session.json()) as {
+      user: Record<string, unknown>;
+    } | null;
+    expect(current?.user.email).toBe(email);
+    expect(current?.user).not.toHaveProperty("welcomedAt");
+    expect(current?.user).not.toHaveProperty("welcomed_at");
   });
 });

@@ -54,15 +54,69 @@ function importViolation(file: string, specifier: string): string | null {
   return `${specifier} is not on the core allow-list`;
 }
 
-const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g;
-const LINE_COMMENT = /^\s*\/\/.*$/gm;
+const NODE_GLOBALS: readonly [RegExp, string][] = [
+  [/\bprocess\s*\./, "process"],
+  [/\bBuffer\b/, "Buffer"],
+  [/\b__dirname\b/, "__dirname"],
+  [/\b__filename\b/, "__filename"],
+];
+const TEMPLATE_IMPORT = /\b(?:import|require)\s*\(\s*`/;
+
+/**
+ * `text` without comments (`code`, strings kept, for the import scan) and
+ * also without the contents of string literals (`bare`, for the global
+ * scan, so a message that says "process." is not a use). A comment marker
+ * inside a string (`"src/**\/*.ts"`) is not a comment. Template literals
+ * are treated as strings whole.
+ */
+function stripSource(text: string): { bare: string; code: string } {
+  let code = "";
+  let bare = "";
+  let index = 0;
+  while (index < text.length) {
+    const char = text[index] ?? "";
+    const next = text[index + 1];
+    if (char === "/" && next === "/") {
+      const end = text.indexOf("\n", index);
+      index = end === -1 ? text.length : end;
+      continue;
+    }
+    if (char === "/" && next === "*") {
+      const end = text.indexOf("*/", index + 2);
+      index = end === -1 ? text.length : end + 2;
+      continue;
+    }
+    if (char === '"' || char === "'" || char === "`") {
+      let end = index + 1;
+      while (end < text.length && text[end] !== char) {
+        end += text[end] === "\\" ? 2 : 1;
+      }
+      code += text.slice(index, end + 1);
+      bare += `${char}${char}`;
+      index = end + 1;
+      continue;
+    }
+    code += char;
+    bare += char;
+    index += 1;
+  }
+  return { bare, code };
+}
 
 /** Every rule `text` (a file under `src/core`) breaks; comments may name anything. */
 function coreViolations(file: string, text: string): string[] {
-  const source = text.replace(BLOCK_COMMENT, "").replace(LINE_COMMENT, "");
+  const { bare, code: source } = stripSource(text);
   const problems: string[] = [];
-  if (BUN_GLOBAL.test(source)) {
+  if (BUN_GLOBAL.test(bare)) {
     problems.push("uses Bun.*");
+  }
+  for (const [pattern, name] of NODE_GLOBALS) {
+    if (pattern.test(bare)) {
+      problems.push(`uses the Node global ${name}`);
+    }
+  }
+  if (TEMPLATE_IMPORT.test(source)) {
+    problems.push("imports a template literal (unverifiable)");
   }
   for (const match of source.matchAll(SPECIFIER)) {
     const specifier = match[1] ?? "";
@@ -114,6 +168,40 @@ describe("the core rules", () => {
       "export const ok = 1;",
     ].join("\n");
     expect(coreViolations(file, source)).toEqual([]);
+  });
+
+  test("let strings name globals, and never hide code behind a comment marker in a string", () => {
+    const harmless = [
+      'const message = "the process. Buffer and __dirname are words here";',
+      "const note = `Bun.file is not called`;",
+    ].join("\n");
+    expect(coreViolations(file, harmless)).toEqual([]);
+
+    // `/*` in the glob would have opened a "comment" up to the next `*/`.
+    const hidden = [
+      'const glob = "src/**/*.ts";',
+      'import { createAuth } from "@smog/auth/server";',
+      "/* a real comment */",
+    ].join("\n");
+    expect(coreViolations(file, hidden)).toEqual([
+      "@smog/auth/server is not on the core allow-list",
+    ]);
+  });
+
+  test("refuse the Node globals and template-literal imports", () => {
+    const source = [
+      "const debug = process.env.DEBUG;",
+      'const bytes = Buffer.from("x");',
+      "const here = __dirname + __filename;",
+      "const lazy = await import(`@smog/admin/server`);",
+    ].join("\n");
+    expect(coreViolations(file, source)).toEqual([
+      "uses the Node global process",
+      "uses the Node global Buffer",
+      "uses the Node global __dirname",
+      "uses the Node global __filename",
+      "imports a template literal (unverifiable)",
+    ]);
   });
 
   test("refuse Bun, runtime modules and every package off the list", () => {

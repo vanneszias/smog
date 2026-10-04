@@ -21,6 +21,7 @@
     "@smog/auth": "workspace:*",
     "@smog/config": "workspace:*",
     "@smog/db": "workspace:*",
+    "@tanstack/query-core": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
