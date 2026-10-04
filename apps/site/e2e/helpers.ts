@@ -213,7 +213,8 @@ export async function stubMuxStream(page: Page): Promise<void> {
 /**
  * The sponsor preview's source (phase 7 ruling 15): Mux's static MP4
  * renditions (`highest.mp4`, `high.mp4`) answered with a committed 2 s
- * 360 × 640 clip (`fixtures/preview-2s.mp4`), with byte ranges and CORS
+ * 360 × 480 clip (`fixtures/preview-2s.mp4`: 3:4, the gesture library's
+ * 810 × 1080 scaled down; fix wave M-5), with byte ranges and CORS
  * as Mux answers them. The clip is VP9 in MP4: Playwright's Chromium is
  * an open-source build without H.264, which Mux's renditions use and every
  * shipping browser plays. Or the MP4s are refused (`abort`), which shows

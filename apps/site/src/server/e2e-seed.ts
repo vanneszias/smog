@@ -25,6 +25,12 @@ const email = z.email().max(254);
 const slug = z.string().regex(/^[a-z0-9][a-z0-9-]{0,119}$/);
 /** A fixture id: always `e2e-…`, so a seed never touches real rows. */
 const fixtureId = z.string().regex(/^e2e-[A-Za-z0-9_-]{1,40}$/);
+/** A token row: the SHA-256 the spec computed (the raw token stays there). */
+const seedToken = z.object({
+  expiresAt: z.number().int(),
+  hash: z.string().regex(/^[0-9a-f]{64}$/),
+  purpose: z.enum(SPONSORSHIP_TOKEN_PURPOSES),
+});
 
 export const e2eSeedSchema = z.discriminatedUnion("op", [
   /** Sets a user's role (the shell spec's demotion; `admin:grant` in SQL). */
@@ -82,43 +88,44 @@ export const e2eSeedSchema = z.discriminatedUnion("op", [
     id: fixtureId,
     op: z.literal("sponsorship"),
     status: z.enum(SPONSORSHIP_STATUSES),
-    token: z
-      .object({
-        expiresAt: z.number().int(),
-        hash: z.string().regex(/^[0-9a-f]{64}$/),
-        purpose: z.enum(SPONSORSHIP_TOKEN_PURPOSES),
-      })
-      .optional(),
+    token: seedToken.optional(),
   }),
   /**
    * One checkout as the money path writes it, in a given state: a sponsor
    * (and an invoice request), one `initial` payment priced by the ruling 3
    * rule, and per gesture a sponsorship (ids `<id>-<n>`), its item and its
    * `created` event. The admin spec's fixtures (phase 6 task 7). Inserted,
-   * never updated.
+   * never updated. With a `token`, one gesture only: the token is the
+   * sponsorship's (`<id>-0`), so a paid logo can be kept through a re-edit
+   * link (the kept-logo e2e, fix wave I-2).
    */
-  z.object({
-    displayName: z.string().min(1).max(35),
-    /** Epoch ms (live or expiring); `starts_at` is then now. */
-    endsAt: z.number().int().optional(),
-    gestureSlugs: z.array(slug).min(1).max(10),
-    id: fixtureId,
-    invoice: z.boolean().optional(),
-    logo: z.boolean().optional(),
-    /** A stored logo (`logos/<uuid>`, uploaded by the spec). */
-    logoKey: z
-      .string()
-      .regex(/^logos\/[0-9a-f-]{36}$/)
-      .optional(),
-    op: z.literal("sponsorshipCheckout"),
-    paymentStatus: z.enum(PAYMENT_STATUSES),
-    status: z.enum(SPONSORSHIP_STATUSES),
-    /** The sponsored video (a Mux playback id). */
-    videoPlaybackId: z
-      .string()
-      .regex(/^[A-Za-z0-9]{1,64}$/)
-      .optional(),
-  }),
+  z
+    .object({
+      displayName: z.string().min(1).max(35),
+      /** Epoch ms (live or expiring); `starts_at` is then now. */
+      endsAt: z.number().int().optional(),
+      gestureSlugs: z.array(slug).min(1).max(10),
+      id: fixtureId,
+      invoice: z.boolean().optional(),
+      logo: z.boolean().optional(),
+      /** A stored logo (`logos/<uuid>`, uploaded by the spec). */
+      logoKey: z
+        .string()
+        .regex(/^logos\/[0-9a-f-]{36}$/)
+        .optional(),
+      op: z.literal("sponsorshipCheckout"),
+      paymentStatus: z.enum(PAYMENT_STATUSES),
+      status: z.enum(SPONSORSHIP_STATUSES),
+      token: seedToken.optional(),
+      /** The sponsored video (a Mux playback id). */
+      videoPlaybackId: z
+        .string()
+        .regex(/^[A-Za-z0-9]{1,64}$/)
+        .optional(),
+    })
+    .refine((seed) => !seed.token || seed.gestureSlugs.length === 1, {
+      message: "a checkout with a token has one gesture",
+    }),
 ]);
 
 export type E2eSeed = z.infer<typeof e2eSeedSchema>;
@@ -222,21 +229,28 @@ function sponsorshipStatements(
     );
   }
   if (seed.token) {
-    statements.push(
-      db
-        .prepare(
-          `INSERT INTO sponsorship_token (id, sponsorship_id, purpose, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ${NOW_MS})`
-        )
-        .bind(
-          seed.id,
-          seed.id,
-          seed.token.purpose,
-          seed.token.hash,
-          seed.token.expiresAt
-        )
-    );
+    statements.push(tokenStatement(db, seed.id, seed.token));
   }
   return statements;
+}
+
+/** The token row of a seeded sponsorship (its id is the sponsorship's). */
+function tokenStatement(
+  db: D1Database,
+  sponsorshipId: string,
+  token: z.infer<typeof seedToken>
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO sponsorship_token (id, sponsorship_id, purpose, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ${NOW_MS})`
+    )
+    .bind(
+      sponsorshipId,
+      sponsorshipId,
+      token.purpose,
+      token.hash,
+      token.expiresAt
+    );
 }
 
 /** One gesture's price (cents): 50 euro, plus 10 with a logo (ruling 3). */
@@ -305,6 +319,9 @@ function checkoutStatements(
         .bind(`${id}-created`, id, JSON.stringify({ paymentId: seed.id }))
     );
   });
+  if (seed.token) {
+    statements.push(tokenStatement(db, `${seed.id}-0`, seed.token));
+  }
   return statements;
 }
 

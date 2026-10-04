@@ -540,7 +540,14 @@ describe("POST /render, the slot (one job at a time)", () => {
     expect(
       await failure(await app.fetch(post(request({ renderJobId: OTHER_JOB }))))
     ).toMatchObject({ code: "busy", status: 503 });
-    await Bun.sleep(5);
+    // Still draining once every queued callback has run (review M-8): a
+    // race, not a wall-clock wait.
+    expect(
+      await Promise.race([
+        draining.then(() => "drained"),
+        new Promise((resolve) => setTimeout(() => resolve("draining"), 0)),
+      ])
+    ).toBe("draining");
     expect(drained).toBe(false);
     gate.resolve();
     expect((await first).status).toBe(200);
