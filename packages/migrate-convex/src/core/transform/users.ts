@@ -125,6 +125,7 @@ export interface ResolvedUsers {
   readonly counts: {
     readonly guests: number;
     readonly mergedDuplicates: number;
+    readonly mergedWorkosDuplicates: number;
     readonly noEmail: number;
     readonly privateRelay: number;
     readonly workosEmailDiffers: number;
@@ -134,16 +135,21 @@ export interface ResolvedUsers {
   };
   /** The duplicate groups: the kept `_id` and the merged ones. */
   readonly duplicateGroups: readonly (readonly string[])[];
+  /** Rows sharing one `workosId` (review M-3): the kept `_id` and the merged ones. */
+  readonly duplicateWorkosGroups: readonly (readonly string[])[];
   readonly noEmailIds: readonly string[];
   readonly privateRelayIds: readonly string[];
   /** The migrated users, in plan order (`_creationTime`, `_id` of the kept row). */
   readonly users: readonly MigratedUser[];
 }
 
+/** One WorkOS identity: its Convex rows (oldest first; usually one) and its address. */
 interface Candidate {
   readonly email: string;
   readonly name: string;
+  /** The oldest row. */
   readonly row: UserRow;
+  readonly rows: readonly UserRow[];
 }
 
 function workosName(workos: WorkosUser | undefined): string {
@@ -161,7 +167,7 @@ type UserCounts = { -readonly [K in keyof ResolvedUsers["counts"]]: number };
  * null when it has none; counts the WorkOS differences.
  */
 function contactOf(
-  row: UserRow,
+  rows: readonly UserRow[],
   workosId: string,
   workosUsers: ReadonlyMap<string, WorkosUser> | null,
   counts: UserCounts
@@ -170,7 +176,11 @@ function contactOf(
   if (workosUsers && !workos) {
     counts.workosMissing += 1;
   }
-  const convexEmail = normalizeEmail(row.email);
+  // The oldest row's address that is set (Convex stored it at creation).
+  const convexEmail =
+    rows
+      .map((row) => normalizeEmail(row.email))
+      .find((address) => address !== null) ?? null;
   const workosEmail = normalizeEmail(workos?.email);
   if (workosEmail && convexEmail && workosEmail !== convexEmail) {
     counts.workosEmailDiffers += 1;
@@ -216,8 +226,8 @@ function mergeByEmail(
   for (const group of byEmail.values()) {
     group.sort((a, b) => oldestFirst(a.row, b.row));
     const legacyId = group[0]?.row._id ?? "";
-    for (const member of group) {
-      byConvexId.set(member.row._id, { kind: "migrated", legacyId });
+    for (const row of group.flatMap((member) => member.rows)) {
+      byConvexId.set(row._id, { kind: "migrated", legacyId });
     }
     if (group.length > 1) {
       counts.mergedDuplicates += group.length - 1;
@@ -240,19 +250,45 @@ async function migratedUser(
     throw new Error("[migrate-convex] An email group cannot be empty");
   }
   const legacyId = oldest.row._id;
+  const rows = group.flatMap((member) => member.rows);
   return {
     createdAt: oldest.row.createdAt,
     email: oldest.email,
     id: await legacyUuid("user", legacyId),
-    lastActiveAt: Math.max(...group.map((member) => member.row.lastActiveAt)),
+    lastActiveAt: Math.max(...rows.map((row) => row.lastActiveAt)),
     legacyId,
-    mergedFrom: group.slice(1).map((member) => member.row._id),
+    mergedFrom: rows.map((row) => row._id).filter((id) => id !== legacyId),
     n,
     name: group.find((member) => member.name.length > 0)?.name ?? "",
-    role: group.some((member) => member.row.role === "admin")
-      ? "admin"
-      : "user",
+    role: rows.some((row) => row.role === "admin") ? "admin" : "user",
   };
+}
+
+/**
+ * The real users' rows by `workosId`, oldest first (review M-3: the old
+ * `migrateGuestToUser` could give a second row an id another row had);
+ * guests go to `byConvexId` at once.
+ */
+function groupByWorkosId(
+  users: readonly UserRow[],
+  byConvexId: Map<string, UserResolution>,
+  counts: UserCounts
+): Map<string, UserRow[]> {
+  const byWorkos = new Map<string, UserRow[]>();
+  for (const row of users) {
+    if (!row.workosId) {
+      counts.guests += 1;
+      byConvexId.set(row._id, { kind: "guest" });
+      continue;
+    }
+    const rows = byWorkos.get(row.workosId) ?? [];
+    rows.push(row);
+    byWorkos.set(row.workosId, rows);
+  }
+  for (const rows of byWorkos.values()) {
+    rows.sort(oldestFirst);
+  }
+  return byWorkos;
 }
 
 /**
@@ -269,6 +305,7 @@ export async function resolveUsers(
   const counts: UserCounts = {
     guests: 0,
     mergedDuplicates: 0,
+    mergedWorkosDuplicates: 0,
     noEmail: 0,
     privateRelay: 0,
     workosEmailDiffers: 0,
@@ -277,24 +314,29 @@ export async function resolveUsers(
     workosNames: 0,
   };
   const noEmailIds: string[] = [];
+  const byWorkos = groupByWorkosId(context.data.users, byConvexId, counts);
+  const duplicateWorkosGroups: string[][] = [];
   const byEmail = new Map<string, Candidate[]>();
-  for (const row of context.data.users) {
-    if (!row.workosId) {
-      counts.guests += 1;
-      byConvexId.set(row._id, { kind: "guest" });
-      continue;
+  for (const [workosId, rows] of byWorkos) {
+    if (rows.length > 1) {
+      counts.mergedWorkosDuplicates += rows.length - 1;
+      duplicateWorkosGroups.push(rows.map((row) => row._id));
     }
-    const contact = contactOf(row, row.workosId, workosUsers, counts);
-    if (!contact) {
-      counts.noEmail += 1;
-      noEmailIds.push(row._id);
-      byConvexId.set(row._id, { kind: "noEmail" });
+    const contact = contactOf(rows, workosId, workosUsers, counts);
+    const [oldest] = rows;
+    if (!(contact && oldest)) {
+      counts.noEmail += rows.length;
+      for (const row of rows) {
+        noEmailIds.push(row._id);
+        byConvexId.set(row._id, { kind: "noEmail" });
+      }
       continue;
     }
     const group = byEmail.get(contact.email) ?? [];
-    group.push({ ...contact, row });
+    group.push({ ...contact, row: oldest, rows });
     byEmail.set(contact.email, group);
   }
+  duplicateWorkosGroups.sort((a, b) => ((a[0] ?? "") < (b[0] ?? "") ? -1 : 1));
   const { duplicateGroups, groups } = mergeByEmail(byEmail, byConvexId, counts);
   const users = await Promise.all(
     groups.map((group, index) => migratedUser(group, index + 1))
@@ -307,6 +349,7 @@ export async function resolveUsers(
     byConvexId,
     counts,
     duplicateGroups,
+    duplicateWorkosGroups,
     noEmailIds,
     privateRelayIds,
     users,
@@ -354,21 +397,26 @@ function ownedCounts(
   listItems: number;
   lists: number;
 } {
-  const lists = context.data.gesture_lists.filter((row) =>
+  const owned = context.data.gesture_lists.filter((row) =>
     dropped.has(row.ownerId)
   );
-  const listIds = new Set(lists.map((row) => row._id));
+  const lists = new Set(
+    owned.filter((row) => !row.isDefaultFavorites).map((row) => row._id)
+  );
+  const defaults = new Set(
+    owned.filter((row) => row.isDefaultFavorites).map((row) => row._id)
+  );
+  const items = context.data.gesture_list_items;
   return {
     consents: context.data.user_consents.filter((row) =>
       dropped.has(row.userId)
     ).length,
-    favorites: context.data.user_favorites.filter((row) =>
-      dropped.has(row.userId)
-    ).length,
-    listItems: context.data.gesture_list_items.filter((row) =>
-      listIds.has(row.listId)
-    ).length,
-    lists: lists.length,
+    // The default list's items are favorites in the new model.
+    favorites:
+      context.data.user_favorites.filter((row) => dropped.has(row.userId))
+        .length + items.filter((row) => defaults.has(row.listId)).length,
+    listItems: items.filter((row) => lists.has(row.listId)).length,
+    lists: lists.size,
   };
 }
 
@@ -402,7 +450,7 @@ function usersIssues(
       code: "noEmail",
       count: resolved.noEmailIds.length,
       ids: ids(resolved.noEmailIds),
-      message: `${resolved.noEmailIds.length} user(s) have no email (in Convex or the WorkOS export) and are dropped, losing ${lost.favorites} favorite(s), ${lost.lists} list(s) with ${lost.listItems} item(s) and ${lost.consents} consent row(s). A WorkOS user export (--workos-users) may recover them.`,
+      message: `${resolved.noEmailIds.length} user(s) have no email (in Convex or the WorkOS export) and are dropped, losing ${lost.favorites} favorite(s) (their default list's items included), ${lost.lists} other list(s) with ${lost.listItems} item(s) and ${lost.consents} consent row(s). Their admin log entries and the list items they added elsewhere keep a NULL actor (the account section's auditLogsUnmappedActor, the learning section's listItemAddedByCleared). A WorkOS user export (--workos-users) may recover them.`,
       severity: "warning",
     });
   }
@@ -416,6 +464,19 @@ function usersIssues(
       })),
       ids: ids(resolved.duplicateGroups.flat()),
       message: `${resolved.duplicateGroups.length} email(s) belong to several accounts: each is merged into its oldest account (favorites united, lists moved, admin if any was).`,
+      severity: "warning",
+    });
+  }
+  if (resolved.duplicateWorkosGroups.length > 0) {
+    issues.push({
+      code: "duplicateWorkosId",
+      count: resolved.counts.mergedWorkosDuplicates,
+      details: resolved.duplicateWorkosGroups.map((group) => ({
+        kept: group[0] ?? null,
+        merged: group.slice(1).join(", "),
+      })),
+      ids: ids(resolved.duplicateWorkosGroups.flat()),
+      message: `${resolved.duplicateWorkosGroups.length} WorkOS identity(ies) have several Convex rows (an upgraded guest beside an existing row): each is merged into its oldest row, with the first address any of them has.`,
       severity: "warning",
     });
   }
@@ -496,6 +557,7 @@ export async function usersTransform(
           guestListsSkipped: guestOwned.lists,
           guestsSkipped: resolved.counts.guests,
           mergedDuplicates: resolved.counts.mergedDuplicates,
+          mergedWorkosDuplicates: resolved.counts.mergedWorkosDuplicates,
           migrated: resolved.users.length,
           noEmailDropped: resolved.counts.noEmail,
           privateRelay: resolved.counts.privateRelay,

@@ -77,7 +77,7 @@ describe("the users transform", () => {
     );
     expect(noEmail).toMatchObject({ ids: [user("noe2")], severity: "warning" });
     expect(noEmail?.message).toContain(
-      "losing 1 favorite(s), 0 list(s) with 0 item(s) and 0 consent row(s)"
+      "losing 1 favorite(s) (their default list's items included), 0 other list(s) with 0 item(s) and 0 consent row(s)"
     );
 
     const without = await usersTransform(
@@ -89,6 +89,49 @@ describe("the users transform", () => {
     expect(rowOf(without.rows.user, user("noe1"))).toBeUndefined();
     expect(without.sections[0]?.counts.noEmailDropped).toBe(2);
     expect(rowOf(without.rows.user, user("ada1"))?.name).toBe("");
+  });
+
+  test("merges rows that share a WorkOS id into the oldest, with the first address any has (M-3)", async () => {
+    for (const noWorkos of [false, true]) {
+      // biome-ignore lint/performance/noAwaitInLoops: two cases, one after another.
+      const context = await fixtureContext({ noWorkos });
+      const result = await usersTransform(context);
+      expect(rowOf(result.rows.user, user("upg2"))).toBeUndefined();
+      expect(rowOf(result.rows.user, user("upg1"))?.email).toBe(
+        "upgraded.fixture@example.test"
+      );
+      const resolved = await resolveUsers(context);
+      expect(resolved.byConvexId.get(user("upg2"))).toEqual({
+        kind: "migrated",
+        legacyId: user("upg1"),
+      });
+      expect(result.sections[0]?.counts.mergedWorkosDuplicates).toBe(1);
+      expect(
+        result.sections[0]?.issues.find(
+          (issue) => issue.code === "duplicateWorkosId"
+        )
+      ).toMatchObject({
+        details: [{ kept: user("upg1"), merged: user("upg2") }],
+        severity: "warning",
+      });
+    }
+  });
+
+  test("counts a dropped user's default list items as favorites, not as a list (M-4)", async () => {
+    const context = await fixtureContext();
+    const lists = context.data.gesture_lists.map((row) =>
+      row.isDefaultFavorites ? { ...row, ownerId: user("noe2") } : row
+    );
+    const result = await usersTransform({
+      ...context,
+      data: { ...context.data, gesture_lists: lists },
+    });
+    const noEmail = result.sections[0]?.issues.find(
+      (issue) => issue.code === "noEmail"
+    );
+    expect(noEmail?.message).toContain(
+      "losing 3 favorite(s) (their default list's items included), 0 other list(s)"
+    );
   });
 
   test("trims and lower-cases emails, and counts private-relay addresses", async () => {

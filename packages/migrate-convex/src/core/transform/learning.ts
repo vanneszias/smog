@@ -219,6 +219,9 @@ interface UserIndex {
 interface ListSelection {
   defaultItems: { item: GestureListItemRow; ownerId: string }[];
   defaultLists: number;
+  /** Shared default lists with share tokens (review I-1): their links stop working. */
+  defaultShared: string[];
+  defaultShareTokens: number;
   drops: Drops;
   kept: { owner: MigratedUser; row: GestureListRow }[];
   skippedItems: number;
@@ -233,6 +236,8 @@ function selectLists(
   const selection: ListSelection = {
     defaultItems: [],
     defaultLists: 0,
+    defaultShared: [],
+    defaultShareTokens: 0,
     drops: newDrops(),
     kept: [],
     skippedItems: 0,
@@ -244,6 +249,14 @@ function selectLists(
       selection.defaultItems.push(
         ...items.map((item) => ({ item, ownerId: row.ownerId }))
       );
+      const tokens =
+        row.visibility === "shared"
+          ? [row.viewShareToken, row.editShareToken].filter(Boolean).length
+          : 0;
+      if (tokens > 0) {
+        selection.defaultShareTokens += tokens;
+        selection.defaultShared.push(row._id);
+      }
       continue;
     }
     const owner = ownerOf(
@@ -375,6 +388,8 @@ function sharesOf(row: GestureListRow): {
 
 interface Rows {
   addedByCleared: number;
+  /** Lists whose edit token is dropped (shared editing off). */
+  editTokenLists: string[];
   editTokensDropped: number;
   items: ListItemValues[];
   lists: ListRowValues[];
@@ -411,6 +426,7 @@ async function listRowsOf(
 ): Promise<Rows> {
   const rows: Rows = {
     addedByCleared: 0,
+    editTokenLists: [],
     editTokensDropped: 0,
     items: [],
     lists: [],
@@ -435,6 +451,7 @@ async function listRowsOf(
     }
     const shares = sharesOf(row);
     rows.editTokensDropped += shares.editDropped;
+    rows.editTokenLists.push(...(shares.editDropped > 0 ? [row._id] : []));
     rows.privateTokensDropped += shares.privateDropped;
     for (const { role, token } of shares.tokens) {
       const key = legacyKey(row._id, role);
@@ -466,6 +483,9 @@ function countBy<T>(
 }
 
 interface LearningFacts {
+  defaultShared: readonly string[];
+  defaultShareTokens: number;
+  editTokenLists: readonly string[];
   emptyNames: readonly string[];
   listsPerOwner: ReadonlyMap<string, number>;
   missingGestures: readonly string[];
@@ -526,11 +546,29 @@ function learningIssues(facts: LearningFacts): ReportIssue[] {
       severity: "warning",
     });
   }
+  if (facts.defaultShared.length > 0) {
+    issues.push({
+      code: "defaultListSharesDropped",
+      count: facts.defaultShareTokens,
+      ids: limited(facts.defaultShared),
+      message: `${facts.defaultShared.length} default favorites list(s) were shared: their ${facts.defaultShareTokens} share link(s) now answer not found, since favorites are not a shareable list any more (the favorites themselves are migrated).`,
+      severity: "warning",
+    });
+  }
+  if (facts.editTokenLists.length > 0) {
+    issues.push({
+      code: "editTokenDropped",
+      count: facts.editTokenLists.length,
+      ids: limited(facts.editTokenLists),
+      message: `${facts.editTokenLists.length} shared list(s) kept an edit token with shared editing off (the old app then opened it read-only): those edit links now answer not found; their view links keep working.`,
+      severity: "warning",
+    });
+  }
   if (facts.planned > 0) {
     issues.push({
       code: "listBookmarks",
       message:
-        "Old /lists/<convex list id> links to an owner's own list now answer not found (owners find their lists under their account); view and edit share links keep working.",
+        "Old /lists/<convex list id> links to an owner's own list now answer not found (owners find their lists under their account). Migrated share links keep their token: the view links of shared lists and the edit links of lists with shared editing on; a default favorites list's links and edit links with editing off answer not found (defaultListSharesDropped, editTokenDropped).",
       severity: "info",
     });
   }
@@ -604,6 +642,9 @@ export async function learningTransform(
     .filter((entry) => entry.parts.length > 1)
     .map((entry) => entry.row._id);
   const issues = learningIssues({
+    defaultShared: selection.defaultShared,
+    defaultShareTokens: selection.defaultShareTokens,
+    editTokenLists: rows.editTokenLists,
     emptyNames,
     listsPerOwner,
     missingGestures: [
@@ -643,6 +684,7 @@ export async function learningTransform(
       section(
         "learning",
         {
+          defaultListShareTokensDropped: selection.defaultShareTokens,
           defaultListsMerged: selection.defaultLists,
           favorites: favoriteRows.length,
           favoritesDroppedGuest: favorites.drops.guest,

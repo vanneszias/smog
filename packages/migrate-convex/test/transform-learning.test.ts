@@ -100,6 +100,12 @@ describe("the learning transform", () => {
         gestureId: await legacyUuid("gesture", ges("ete1")),
         userId: ref("pre1"),
       },
+      // fav9: a second row of upg1's WorkOS id (M-3).
+      {
+        createdAt: new Date(1_735_690_080_000),
+        gestureId: papa,
+        userId: ref("upg1"),
+      },
       // The default list's other item.
       {
         createdAt: new Date(1_735_689_960_000),
@@ -193,9 +199,18 @@ describe("the learning transform", () => {
     const counts = result.sections[0]?.counts ?? {};
     expect(counts.listShareEditTokensDropped).toBe(1);
     expect(counts.listSharePrivateTokensDropped).toBe(1);
-    expect(result.sections[0]?.issues.map((issue) => issue.code)).toContain(
-      "listBookmarks"
-    );
+    // The shared default favorites list (I-1): its links stop working.
+    expect(counts.defaultListShareTokensDropped).toBe(2);
+    const issues = result.sections[0]?.issues ?? [];
+    expect(
+      issues.find((issue) => issue.code === "defaultListSharesDropped")
+    ).toMatchObject({ count: 2, ids: [lst("def1")], severity: "warning" });
+    expect(
+      issues.find((issue) => issue.code === "editTokenDropped")
+    ).toMatchObject({ count: 1, ids: [lst("lst3")], severity: "warning" });
+    const bookmarks = issues.find((issue) => issue.code === "listBookmarks");
+    expect(bookmarks?.message).not.toContain("keep working.");
+    expect(bookmarks?.message).toContain("answer not found");
   });
 
   test("splits a list of 501 items with an 80-character name, after an existing Name (2)", async () => {
@@ -356,6 +371,10 @@ describe("the learning transform", () => {
       [
         await legacyUuid("user", user("pre1")),
         await legacyUuid("gesture", ges("ete1")),
+      ],
+      [
+        await legacyUuid("user", user("upg1")),
+        await legacyUuid("gesture", ges("pap1")),
       ],
       [
         await legacyUuid("user", user("ada1")),

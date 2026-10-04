@@ -84,4 +84,7 @@ export const FIXTURE_SECRETS = [
   "fixture-edit-token-0003",
   "fixture-edit-token-0004",
   "Fixture reden: logo onleesbaar",
+  "guest-fixture-0000000000000000000000000003",
+  "fixture-view-token-def1",
+  "fixture-edit-token-def1",
 ] as const;

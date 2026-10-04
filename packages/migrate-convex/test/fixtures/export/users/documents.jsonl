@@ -9,3 +9,4 @@
 {"_id":"jd7usr000000000000000000000dup2","_creationTime":1735689680000.0,"createdAt":1735689680000,"lastActiveAt":1735776080000,"workosId":"user_01FIXTUREDUP2000000000000","email":" Dup.Fixture@Example.TEST ","role":"admin"}
 {"_id":"jd7usr000000000000000000000adm2","_creationTime":1735689690000.0,"createdAt":1735689690000,"lastActiveAt":1735776090000,"workosId":"user_01FIXTUREADM2000000000000","email":"second.admin@example.test","role":"admin"}
 {"_id":"jd7usr000000000000000000000pre1","_creationTime":1735689695000.0,"createdAt":1735689695000,"lastActiveAt":1735776095000,"workosId":"user_01FIXTUREPRE1000000000000","email":"preexisting.admin@example.test","role":"user"}
+{"_id":"jd7usr000000000000000000000upg2","_creationTime":1735689698000.0,"createdAt":1735689698000,"lastActiveAt":1735779698000,"guestId":"guest-fixture-0000000000000000000000000003","workosId":"user_01FIXTUREUPG0000000000000"}
