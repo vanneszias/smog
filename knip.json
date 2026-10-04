@@ -7,9 +7,11 @@
       "project": ["scripts/**/*.ts"]
     },
     "packages/*": {
+      "entry": ["src/**/*.test.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx}"]
     },
     "packages/styles": {
+      "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts", "generated/*.{css,cjs}"]
     },
     "packages/render": {
@@ -27,6 +29,7 @@
       ]
     },
     "packages/ui-web": {
+      "entry": ["src/**/*.test.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx,css}"],
       "ignoreDependencies": ["tailwindcss"]
     },
@@ -46,7 +49,11 @@
       "ignoreDependencies": ["cloudflare", "@types/react"]
     },
     "packages/auth": {
-      "entry": ["test/**/*.test.{ts,tsx}", "guard/*.ts"],
+      "entry": [
+        "test/**/*.test.{ts,tsx}",
+        "src/**/*.test.{ts,tsx}",
+        "guard/*.ts"
+      ],
       "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}", "guard/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },
