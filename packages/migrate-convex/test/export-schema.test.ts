@@ -44,11 +44,15 @@ describe("the export schemas", () => {
     const result = validateExport(await fixtureExport());
     expect(issues(result)).toEqual([]);
     for (const table of EXPORT_TABLES) {
-      expect(result.tables[table]).toBe(1);
-      expect(result.data[table]).toHaveLength(1);
+      expect(result.tables[table]).toBeGreaterThanOrEqual(1);
+      expect(result.data[table]).toHaveLength(result.tables[table]);
     }
     expect(result.unknownTables).toEqual([]);
-    expect(result.data.sponsorships[0]?.status).toBe("active");
+    expect(
+      result.data.sponsorships.find(
+        (row) => row._id === "ks7spn000000000000000000000spn1"
+      )?.status
+    ).toBe("active");
     expect(result.data.gestures[0]?.categoryIds).toEqual([
       "kc7cat000000000000000000000fam1",
     ]);
@@ -149,7 +153,7 @@ describe("the export schemas", () => {
 
   test("refuse an unknown sponsorship status", async () => {
     const files = await fixtureExport();
-    const row = JSON.parse(String(files.sponsorships).trim());
+    const row = JSON.parse(String(files.sponsorships).split("\n")[0] ?? "{}");
     const result = validateExport(
       withTable(files, "sponsorships", jsonl([{ ...row, status: "paused" }]))
     );
