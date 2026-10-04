@@ -572,20 +572,17 @@ export function checkWranglerRenderKeys(source: string): string[] {
 
 const RENDER_CLASSES = ["RenderSponsorshipVideo", "SmogRenderer"] as const;
 
-/** `export { …Name… }` or `export class Name`. */
-function exportsName(source: string, name: string): boolean {
-  const listed = new RegExp(`\\bexport\\s*\\{[^}]*\\b${name}\\b[^}]*\\}`);
-  const declared = new RegExp(`\\bexport\\s+class\\s+${name}\\b`);
-  return listed.test(source) || declared.test(source);
-}
-
 /**
  * `src/worker.ts` exports the Workflow and the Container classes, always:
  * the gate binds them only for some builds, and a Durable Object class
  * that was deployed once must stay exported.
  */
 export function checkRenderClassExports(source: string): string[] {
-  return RENDER_CLASSES.filter((name) => !exportsName(source, name)).map(
+  // The module's real exports (Bun's parser): comments and strings never count.
+  const exported = new Set(
+    new Bun.Transpiler({ loader: "ts" }).scan(source).exports
+  );
+  return RENDER_CLASSES.filter((name) => !exported.has(name)).map(
     (name) =>
       `apps/site/src/worker.ts: must export ${name} (a class deployed once must stay exported; the render gate binds it)`
   );
@@ -593,7 +590,8 @@ export function checkRenderClassExports(source: string): string[] {
 
 /**
  * The release lanes (phase 7 ruling 16): a `release:check:<lane>` script
- * per CI lane, and the local `release:check` runs each.
+ * per CI lane, and the local `release:check` runs each; the core lane runs
+ * the staging dry run.
  */
 export function checkReleaseScripts(source: string): string[] {
   const manifest: unknown = JSON.parse(source);
@@ -609,7 +607,22 @@ export function checkReleaseScripts(source: string): string[] {
       .split("&&")
       .some((command) => command.trim() === `bun run ${name}`);
     return runs ? [] : [`package.json: release:check must run ${name}`];
-  });
+  }).concat(checkStagingDryRun(String(scripts["release:check:core"] ?? "")));
+}
+
+/** The staging build and its deploy guard, offline, on every push. */
+const STAGING_DRY_RUN = "bun -F @smog/site deploy:dry";
+
+/**
+ * `release:check:core` builds the staging config and runs the deploy guard
+ * (`deploy:dry`: `vite build`, the guard, `wrangler deploy --dry-run`; no
+ * credentials and no network), so a render gate regression fails CI before
+ * a develop push deploys it.
+ */
+function checkStagingDryRun(core: string): string[] {
+  return core.split("&&").some((command) => command.trim() === STAGING_DRY_RUN)
+    ? []
+    : [`package.json: release:check:core must run \`${STAGING_DRY_RUN}\``];
 }
 
 type RequiredLists = Record<

@@ -293,6 +293,10 @@ function shown(args: string[]): string {
   return `(cd apps/site && bunx wrangler ${args.join(" ")})`;
 }
 
+function shownDocker(args: string[]): string {
+  return `(cd apps/site && docker ${args.join(" ")})`;
+}
+
 const CORS_FILE = "<cors.json>";
 
 /** `--no-update-config`: wrangler must not offer to edit wrangler.jsonc. */
@@ -375,11 +379,32 @@ export function renderPipelineEnabled(
   env: DeployEnv,
   flag: string | undefined
 ): boolean {
+  return renderModeOf(source, env) === "container" && flag === "1";
+}
+
+function renderModeOf(source: string, env: DeployEnv): unknown {
   const config: unknown = Bun.JSONC.parse(source);
   const envs = isRecord(config) && isRecord(config.env) ? config.env : {};
   const target = isRecord(envs[env]) ? envs[env] : {};
   const vars = isRecord(target.vars) ? target.vars : {};
-  return vars.RENDER_MODE === "container" && flag === "1";
+  return vars.RENDER_MODE;
+}
+
+/**
+ * The render gate's refusal, before anything runs: `RENDER_MODE=container`
+ * without `SMOG_RENDER_PIPELINE=1` would fail the build in the Deploy step,
+ * after the resources and the D1 migrations. The deploy job stops here
+ * instead, at its first Cloudflare step. `null` when the gate holds.
+ */
+export function renderGateRefusal(
+  source: string,
+  env: DeployEnv,
+  flag: string | undefined
+): string | null {
+  if (renderModeOf(source, env) !== "container" || flag === "1") {
+    return null;
+  }
+  return `[provision] env.${env} has RENDER_MODE=container, which needs SMOG_RENDER_PIPELINE=1 (Workflows and Containers access confirmed; see PROGRESS owner actions). Nothing was run.`;
 }
 
 const WORKFLOWS_LIST = ["workflows", "list"];
@@ -425,7 +450,7 @@ async function probeRenderPipeline(
 function dryRun({ log, pipeline, plan }: EnsureOptions): EnsureResult {
   if (pipeline) {
     log.log(shown(WORKFLOWS_LIST));
-    log.log(`docker ${DOCKER_INFO.join(" ")}`);
+    log.log(shownDocker(DOCKER_INFO));
     log.log(shown(CONTAINERS_LIST));
   }
   for (const name of plan.queues) {
@@ -706,6 +731,14 @@ if (import.meta.main) {
   try {
     const { env, mode } = parseEnsureArgs(process.argv.slice(2), process.env);
     const source = await Bun.file(join(SITE_DIR, "wrangler.jsonc")).text();
+    const refusal = renderGateRefusal(
+      source,
+      env,
+      process.env.SMOG_RENDER_PIPELINE
+    );
+    if (refusal) {
+      throw new Error(refusal);
+    }
     const result = await ensureResources({
       docker: bunDocker,
       env,

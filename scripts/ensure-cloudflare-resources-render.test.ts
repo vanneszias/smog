@@ -6,6 +6,7 @@ import {
   type EnsureMode,
   ensureResources,
   planResources,
+  renderGateRefusal,
   renderPipelineEnabled,
   type WranglerResult,
 } from "./ensure-cloudflare-resources";
@@ -139,6 +140,42 @@ describe("renderPipelineEnabled", () => {
   });
 });
 
+describe("renderGateRefusal (the gate stops the deploy job first)", () => {
+  test("container without the flag is refused before anything runs", () => {
+    for (const flag of [undefined, "", "0"]) {
+      expect(renderGateRefusal(WRANGLER, "production", flag)).toBe(
+        "[provision] env.production has RENDER_MODE=container, which needs SMOG_RENDER_PIPELINE=1 (Workflows and Containers access confirmed; see PROGRESS owner actions). Nothing was run."
+      );
+    }
+  });
+
+  test("passes container with the flag, and fake with or without it", () => {
+    expect(renderGateRefusal(WRANGLER, "production", "1")).toBeNull();
+    for (const flag of [undefined, "", "1"]) {
+      expect(renderGateRefusal(WRANGLER, "staging", flag)).toBeNull();
+    }
+  });
+
+  test("the CLI exits before any wrangler call", () => {
+    const proc = Bun.spawnSync(
+      [
+        "bun",
+        join(import.meta.dir, "ensure-cloudflare-resources.ts"),
+        "--env",
+        "production",
+        "--dry-run",
+      ],
+      { env: { ...process.env, SMOG_RENDER_PIPELINE: "" } }
+    );
+    expect(proc.exitCode).toBe(1);
+    const stdout = proc.stdout.toString();
+    expect(stdout).not.toContain("wrangler");
+    expect(proc.stderr.toString()).toContain(
+      "[provision] env.production has RENDER_MODE=container"
+    );
+  });
+});
+
 describe("the render probes", () => {
   test("gate off: nothing new runs", async () => {
     const runs = await Promise.all([
@@ -223,7 +260,7 @@ describe("the render probes", () => {
     expect(calls).toEqual([]);
     const output = lines.join("\n");
     expect(output).toContain("(cd apps/site && bunx wrangler workflows list)");
-    expect(output).toContain("docker info");
+    expect(output).toContain("(cd apps/site && docker info)");
     expect(output).toContain("(cd apps/site && bunx wrangler containers list)");
   });
 });

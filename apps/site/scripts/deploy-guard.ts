@@ -217,7 +217,8 @@ function records(value: unknown): Record<string, unknown>[] {
  *
  * - `RENDER_MODE=fake` builds no Workflow, container, `RENDERER` binding or
  *   migration (staging until the owner turns the pipeline on);
- * - `RENDER_MODE=container` builds all of them;
+ * - `RENDER_MODE=container` builds all of them, the migration that
+ *   creates `SmogRenderer` included;
  * - `local` is dev only;
  * - every `containers[].image` and `image_build_context` is an absolute
  *   path that exists (`wrangler deploy` would resolve a relative one
@@ -247,6 +248,11 @@ export function checkRenderConfig(
   const rendererBinding = durableObjects.some(
     (entry) => entry.name === "RENDERER" && entry.class_name === "SmogRenderer"
   );
+  const rendererMigration = migrations.some(
+    (entry) =>
+      Array.isArray(entry.new_sqlite_classes) &&
+      entry.new_sqlite_classes.includes("SmogRenderer")
+  );
   const errors: string[] = [];
   if (mode === "fake") {
     const present: [boolean, string][] = [
@@ -265,6 +271,10 @@ export function checkRenderConfig(
       [renderWorkflow, "the RENDER_WORKFLOW Workflow (RenderSponsorshipVideo)"],
       [renderer, "the SmogRenderer container"],
       [rendererBinding, "the RENDERER binding (SmogRenderer)"],
+      [
+        rendererMigration,
+        "the migration that creates SmogRenderer (new_sqlite_classes)",
+      ],
     ];
     for (const [found, what] of needed) {
       if (!found) {

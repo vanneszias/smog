@@ -146,6 +146,10 @@ describe("checkRenderConfig (phase 7 ruling 2)", () => {
       ["workflows", "the RENDER_WORKFLOW Workflow (RenderSponsorshipVideo)"],
       ["containers", "the SmogRenderer container"],
       ["durable_objects", "the RENDERER binding (SmogRenderer)"],
+      [
+        "migrations",
+        "the migration that creates SmogRenderer (new_sqlite_classes)",
+      ],
     ] as const;
     for (const [key, what] of missing) {
       const config = built(

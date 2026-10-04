@@ -134,6 +134,21 @@ describe("checkRenderClassExports", () => {
       ]);
     }
   });
+
+  test("an export inside a comment or a string does not count", () => {
+    const commented = [
+      "// export { RenderSponsorshipVideo } from './a';",
+      "/* export class SmogRenderer {} */",
+      'const s = "export { SmogRenderer }";',
+      "export default {};",
+    ].join("\n");
+    expect(checkRenderClassExports(commented)).toHaveLength(2);
+    expect(
+      checkRenderClassExports(
+        "export class RenderSponsorshipVideo {}\nexport { SmogRenderer } from './r';"
+      )
+    ).toEqual([]);
+  });
 });
 
 describe("checkRequiredConfig follows each env's RENDER_MODE (task 1 Minor 5)", () => {
@@ -203,6 +218,13 @@ describe("the four release lanes (ruling 16)", () => {
     ).replace(" && bun run release:check:render", "");
     expect(checkReleaseScripts(JSON.stringify(withoutRender))).toEqual([
       "package.json: release:check must run release:check:render",
+    ]);
+    const noDryRun = structuredClone(parsed);
+    noDryRun.scripts["release:check:core"] = String(
+      parsed.scripts["release:check:core"]
+    ).replace(" && bun -F @smog/site deploy:dry", "");
+    expect(checkReleaseScripts(JSON.stringify(noDryRun))).toEqual([
+      "package.json: release:check:core must run `bun -F @smog/site deploy:dry`",
     ]);
     const noScript = structuredClone(parsed);
     Reflect.deleteProperty(noScript.scripts, "release:check:render");
