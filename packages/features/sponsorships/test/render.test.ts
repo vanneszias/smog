@@ -11,6 +11,7 @@ import {
   createRenderJobStatements,
   failRender,
   fakeRenderStarter,
+  isCurrentRenderUpload,
   markRenderRunning,
   readRenderJob,
   retryRenderStatements,
@@ -271,6 +272,64 @@ describe("the render seam (ruling 7)", () => {
     expect(
       await markRenderRunning(db, { now: NOW, renderJobId: newId() })
     ).toBe("missing");
+  });
+
+  it("isCurrentRenderUpload: a succeeded job's own upload is current on its own (review M-1)", async () => {
+    const id = await rendering();
+    const job = await createRenderJob(db, { now: NOW, sponsorshipId: id });
+    const renderJobId = job?.renderJobId as string;
+    await markRenderRunning(db, { now: NOW, renderJobId });
+    await setRenderUpload(db, { renderJobId, uploadId: "upload-1" });
+    await completeRender(db, {
+      assetId: "asset-1",
+      now: NOW,
+      playbackId: "playback-1",
+      renderJobId,
+    });
+    // An asset id that is neither the job's nor the sponsorship's: only
+    // the status rule can answer true.
+    expect(
+      await isCurrentRenderUpload(db, {
+        assetId: "asset-other",
+        renderJobId,
+        uploadId: "upload-1",
+      })
+    ).toBe(true);
+    expect(
+      await isCurrentRenderUpload(db, {
+        assetId: "asset-other",
+        renderJobId,
+        uploadId: "upload-0",
+      })
+    ).toBe(false);
+  });
+
+  it("isCurrentRenderUpload: a failed job's upload is not current; an unknown job is", async () => {
+    const id = await rendering();
+    const job = await createRenderJob(db, { now: NOW, sponsorshipId: id });
+    const renderJobId = job?.renderJobId as string;
+    await markRenderRunning(db, { now: NOW, renderJobId });
+    await setRenderUpload(db, { renderJobId, uploadId: "upload-1" });
+    await failRender(db, {
+      error: "boom",
+      now: NOW,
+      renderJobId,
+      siteUrl: SITE_URL,
+    });
+    expect(
+      await isCurrentRenderUpload(db, {
+        assetId: "asset-1",
+        renderJobId,
+        uploadId: "upload-1",
+      })
+    ).toBe(false);
+    expect(
+      await isCurrentRenderUpload(db, {
+        assetId: "asset-1",
+        renderJobId: newId(),
+        uploadId: "upload-1",
+      })
+    ).toBe(true);
   });
 
   it("setRenderUpload stores the upload only while running, and leaves updated_at alone", async () => {

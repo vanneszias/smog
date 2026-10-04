@@ -73,6 +73,9 @@ export {
   type WorkflowStatusPort,
 } from "./render-watchdog";
 export {
+  ENGINE_ABORT_PREFIX,
+  isEngineAbort,
+  nonRetryableMessage,
   RENDER_JOB_FAILURE_CODES,
   RENDER_STEP_CONFIG,
   RENDER_WAITS,

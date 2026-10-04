@@ -15,6 +15,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createRenderJob, failRender } from "../src/server/render";
 import {
+  nonRetryableMessage,
   RENDER_STEP_CONFIG,
   RENDER_WAITS,
   RENDER_WATCHDOG_CEILING,
@@ -734,6 +735,35 @@ describe("runRenderJob: the ready wait (ruling 4, step 7)", () => {
     await expectFailed(job, addresses, "muxAssetErrored");
   });
 
+  it("fail deletes the asset the failed job's upload already made, never the gesture's own (task 5 I-3)", async () => {
+    const job = await queuedJob();
+    const step = createFakeStep();
+    masterReadyAt(step, job.gestureAssetId);
+    step.onWait = async (type) => {
+      const upload = await uploadOfType(type);
+      world.fake.errorAsset(upload.assetId as string, "Invalid input file");
+      step.sendEvent(type, {
+        assetId: upload.assetId ?? undefined,
+        error: "Invalid input file",
+        renderJobId: job.renderJobId,
+        type: "asset.errored",
+        uploadId: upload.id,
+      } satisfies Partial<RenderMuxEvent>);
+    };
+
+    expect(await runRenderJob(step, deps(), job)).toEqual({
+      code: "muxAssetErrored",
+      outcome: "failed",
+    });
+    expect(step.names().at(-1)).toBe("fail");
+    const [upload] = [...world.fake.uploads.values()];
+    // The upload was past `waiting`: left as it is, its asset deleted.
+    expect(upload?.status).toBe("asset_created");
+    expect(world.fake.assets.has(upload?.assetId as string)).toBe(false);
+    expect(world.fake.assets.has(job.gestureAssetId)).toBe(true);
+    expect((await jobRow(job.renderJobId))?.muxUploadId).toBe(upload?.id);
+  });
+
   it("an errored asset found by a poll fails the job", async () => {
     const job = await queuedJob();
     const step = createFakeStep();
@@ -878,6 +908,37 @@ describe("runRenderJob: the commit and its deletes (rulings 4.8 and 13)", () => 
   });
 });
 
+describe("runRenderJob: an engine abort is not a failure (review I-1)", () => {
+  const PAUSE = "Aborting engine: User called pause";
+
+  it("a pause during the ready wait is rethrown: no fail step, the job stays running, no email", async () => {
+    const addresses = await admins();
+    const job = await queuedJob();
+    const step = createFakeStep();
+    masterReadyAt(step, job.gestureAssetId);
+    step.onWait = () => {
+      throw new Error(PAUSE);
+    };
+
+    await expect(runRenderJob(step, deps(), job)).rejects.toThrow(PAUSE);
+    expect(step.names()).not.toContain("fail");
+    expect((await jobRow(job.renderJobId))?.status).toBe("running");
+    expect((await sponsorshipOf(job.sponsorshipId))?.status).toBe("rendering");
+    expect(emailsTo(addresses)).toHaveLength(0);
+  });
+
+  it("a pause at a sleep is rethrown too", async () => {
+    const job = await queuedJob();
+    const step = createFakeStep();
+    step.onSleep = () => {
+      throw new Error(PAUSE);
+    };
+    await expect(runRenderJob(step, deps(), job)).rejects.toThrow(PAUSE);
+    expect(step.names()).not.toContain("fail");
+    expect((await jobRow(job.renderJobId))?.status).toBe("running");
+  });
+});
+
 describe("runRenderJob: the failure path", () => {
   it("a replayed fail (its result lost) sends no second email", async () => {
     const addresses = await admins();
@@ -935,6 +996,21 @@ describe("summariseRenderError and RenderJobFailure", () => {
       toRenderJobFailure({ message: `NonRetryableError: ${failure.message}` })
         ?.code
     ).toBe("sourceUnavailable");
+    expect(
+      toRenderJobFailure(
+        new Error(
+          `Step threw a NonRetryableError with message "${failure.message}"`
+        )
+      )?.detail
+    ).toBe("no source");
+    expect(
+      nonRetryableMessage(
+        new RenderJobFailure(
+          "uploadFailed",
+          "PUT https://storage.mux.com/up?signature=x failed"
+        )
+      )
+    ).toBe("[render:uploadFailed] PUT [url] failed");
     expect(toRenderJobFailure(new Error("[render:bogus] x"))).toBeNull();
     expect(toRenderJobFailure(new Error("plain"))).toBeNull();
   });
@@ -954,15 +1030,24 @@ describe("the event type and the ceiling", () => {
   });
 
   it("RENDER_WATCHDOG_CEILING is above the sum of every step's worst case", () => {
-    const steps = Object.values(RENDER_STEP_CONFIG).reduce(
-      (sum, config) => sum + stepWorstCaseMs(config),
-      0
-    );
+    const { readyPoll, sourcePoll, ...once } = RENDER_STEP_CONFIG;
+    const steps =
+      Object.values(once).reduce(
+        (sum, config) => sum + stepWorstCaseMs(config),
+        0
+      ) +
+      RENDER_WAITS.sourcePolls * stepWorstCaseMs(sourcePoll) +
+      RENDER_WAITS.readyPolls * stepWorstCaseMs(readyPoll);
     const waits =
       RENDER_WAITS.readyTimeout +
       RENDER_WAITS.sourcePolls * RENDER_WAITS.sourcePollInterval +
       RENDER_WAITS.readyPolls * RENDER_WAITS.readyPollInterval;
+    expect(steps + waits).toBe(RENDER_WORKFLOW_MAX_MS);
     expect(RENDER_WATCHDOG_CEILING).toBeGreaterThan(steps + waits);
+    // Pinned, so a config change shows in review: 5 h 31 min of worst
+    // case, 6 h 01 min with the margin.
+    expect(RENDER_WORKFLOW_MAX_MS).toBe(19_860_000);
+    expect(RENDER_WATCHDOG_CEILING).toBe((6 * 60 + 1) * 60_000);
     expect(RENDER_WATCHDOG_CEILING).toBeGreaterThan(RENDER_WORKFLOW_MAX_MS);
     // 4 × 1 min + 5 s + 10 s + 20 s (exponential).
     expect(stepWorstCaseMs(RENDER_STEP_CONFIG.sourceLookup)).toBe(

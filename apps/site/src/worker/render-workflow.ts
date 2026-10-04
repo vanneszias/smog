@@ -6,6 +6,7 @@ import {
 import { NonRetryableError } from "cloudflare:workflows";
 import { createDb } from "@smog/db/client";
 import {
+  nonRetryableMessage,
   type RenderJobDeps,
   type RenderJobOutcome,
   type RenderStep,
@@ -56,7 +57,7 @@ function renderStepAdapter(step: WorkflowStep): RenderStep {
           const failure = toRenderJobFailure(error);
           if (failure && !failure.retryable) {
             // biome-ignore lint/style/useErrorCause: NonRetryableError(message, name) takes no cause; the message carries the code.
-            throw new NonRetryableError(failure.message);
+            throw new NonRetryableError(nonRetryableMessage(failure));
           }
           throw error;
         }

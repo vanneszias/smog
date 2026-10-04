@@ -219,8 +219,34 @@ export const RENDER_JOB_FAILURE_CODES = [
 
 export type RenderJobFailureCode = (typeof RENDER_JOB_FAILURE_CODES)[number];
 
-/** `[render:<code>] <detail>`: how a failure's code survives the engine. */
-const FAILURE_MESSAGE = /\[render:([A-Za-z]+)\] ([\s\S]*)$/;
+/**
+ * `[render:<code>] <detail>`: how a failure's code survives the engine. A
+ * replayed `NonRetryableError` may come back wrapped as `Step threw a
+ * NonRetryableError with message "[render:…] …"`: the closing quote is
+ * not part of the detail.
+ */
+const FAILURE_MESSAGE = /\[render:([A-Za-z]+)\] ([\s\S]*?)"?$/;
+
+/**
+ * The prefix of what the engine throws into the Workflow's code to stop it
+ * (a pause, a terminate, a restart: `ABORT_REASONS` in Miniflare's
+ * `workflows-shared`, e.g. `Aborting engine: User called pause`). Never a
+ * failure of the job: `run` rethrows it, so a paused instance resumes
+ * where it was instead of failing its job (task 6 review I-1).
+ */
+export const ENGINE_ABORT_PREFIX = "Aborting engine:";
+
+/** Whether `error` is the engine stopping the instance (`ENGINE_ABORT_PREFIX`). */
+export function isEngineAbort(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    String((error as { message: unknown }).message).startsWith(
+      ENGINE_ABORT_PREFIX
+    )
+  );
+}
 
 function isFailureCode(value: string): value is RenderJobFailureCode {
   return (RENDER_JOB_FAILURE_CODES as readonly string[]).includes(value);
@@ -275,6 +301,20 @@ export function toRenderJobFailure(error: unknown): RenderJobFailure | null {
 const URL_PATTERN = /\b(?:https?:\/\/|data:)\S+/gi;
 const WHITESPACE = /\s+/g;
 
+function withoutUrls(text: string): string {
+  return text.replace(URL_PATTERN, "[url]").replace(WHITESPACE, " ").trim();
+}
+
+/**
+ * The message a non-retryable failure crosses the engine with
+ * (`NonRetryableError`, stored in the instance's state): its code and its
+ * detail summarised as `summariseRenderError` does (no URL, ≤ 300).
+ */
+export function nonRetryableMessage(failure: RenderJobFailure): string {
+  const detail = withoutUrls(failure.detail) || "unknown error";
+  return `[render:${failure.code}] ${detail.slice(0, RENDER_ERROR_MAX)}`;
+}
+
 /**
  * The error stored on a failed job and logged: `code: detail` for a
  * `RenderJobFailure`, `name: message` otherwise, with every URL (signed
@@ -294,10 +334,7 @@ export function summariseRenderError(error: unknown): string {
   } else {
     text = String(error ?? "");
   }
-  const summary = text
-    .replace(URL_PATTERN, "[url]")
-    .replace(WHITESPACE, " ")
-    .trim();
+  const summary = withoutUrls(text);
   return (summary || "unknown error").slice(0, RENDER_ERROR_MAX);
 }
 
@@ -900,6 +937,9 @@ export async function runRenderJob(
       })
     );
   } catch (error) {
+    if (isEngineAbort(error)) {
+      throw error;
+    }
     return await failJob(step, deps, renderJobId, error);
   }
 }
