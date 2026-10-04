@@ -23,9 +23,7 @@ import {
 import { FIXTURE_INPUTS, FIXTURE_SECRETS, fixtureExport } from "./helpers";
 import {
   FIXTURE_LOGO_DATA_URL,
-  SPONSORSHIP_ADMIN_LOGS,
   SPONSORSHIP_BLOCKERS,
-  SPONSORSHIP_GESTURES,
 } from "./sponsorship-fixtures";
 
 const NOW = new Date("2026-10-04T12:00:00.000Z");
@@ -45,18 +43,11 @@ const overrides: OverlayOverrides = parseOverlayOverrides(
   readFileSync(FIXTURE_INPUTS.overrides, "utf8")
 );
 
-/** The fixture export, with the gestures and the admin log the sponsorships need (and the blocker rows when asked). */
+/** The fixture export (and the blocker rows when asked). */
 async function files(withBlockers = false): Promise<ExportFiles> {
   const base = await fixtureExport();
   return {
     ...base,
-    adminLogs: [
-      base.adminLogs,
-      readFileSync(SPONSORSHIP_ADMIN_LOGS, "utf8"),
-    ].join(""),
-    gestures: [base.gestures, readFileSync(SPONSORSHIP_GESTURES, "utf8")].join(
-      ""
-    ),
     sponsorships: [
       base.sponsorships,
       withBlockers ? readFileSync(SPONSORSHIP_BLOCKERS, "utf8") : "",

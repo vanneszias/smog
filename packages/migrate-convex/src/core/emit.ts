@@ -17,7 +17,8 @@
  * - `reset-imported-<nnn>.sql` deletes what the import created, from the
  *   key lists the transforms return, in RESTRICT order (ruling 14).
  * - `manifest.json` holds the target, `--now`, the input hashes and every
- *   file's statement count, size and SHA-256.
+ *   file's statement count, size and SHA-256, `preflight.json` (`apply`'s
+ *   facts, task 10) included.
  */
 import { rebuildGesturesFtsSql } from "@smog/db";
 import { sha256Hex } from "@smog/utils";
@@ -656,6 +657,8 @@ export interface Manifest {
   readonly inputs: InputHashes;
   /** `--now` as an ISO string. */
   readonly now: string;
+  /** `preflight.json`: what `apply`'s preflight checks (its statement count is 0). */
+  readonly preflight: ManifestFile;
   readonly report: { readonly blockers: number; readonly warnings: number };
   /** `reset-imported` (`apply --reset`), in order. */
   readonly reset: readonly ManifestFile[];
@@ -681,13 +684,18 @@ export interface EmitInput {
   >;
   readonly inputs: InputHashes;
   readonly now: Date;
+  /** `preflight.json`'s content (`renderPreflight`). */
+  readonly preflight: string;
   readonly report: { readonly blockers: number; readonly warnings: number };
   readonly resetKeys: ResetKeys;
   readonly target: Target;
 }
 
+/** The name of `apply`'s preflight facts in the plan folder. */
+export const PREFLIGHT_FILE = "preflight.json";
+
 export interface Emitted {
-  /** Every SQL file (the groups, then reset), with its content. */
+  /** Every SQL file (the groups, then reset), then `preflight.json`, with its content. */
   readonly files: readonly SqlFile[];
   readonly manifest: Manifest;
 }
@@ -713,12 +721,18 @@ export async function emitPlan(input: EmitInput): Promise<Emitted> {
     }))
   );
   const reset = await Promise.all(resetFiles.map(describe));
+  const preflight: SqlFile = {
+    content: input.preflight,
+    name: PREFLIGHT_FILE,
+    statements: 0,
+  };
   return {
-    files: [...grouped.map(({ file }) => file), ...resetFiles],
+    files: [...grouped.map(({ file }) => file), ...resetFiles, preflight],
     manifest: {
       files: manifestFiles,
       inputs: input.inputs,
       now: input.now.toISOString(),
+      preflight: await describe(preflight),
       report: input.report,
       reset,
       target: input.target,

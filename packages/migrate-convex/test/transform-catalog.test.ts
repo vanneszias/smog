@@ -8,11 +8,33 @@ import {
   sortRanks,
 } from "../src/core/transform/catalog";
 import {
+  type ContextOptions,
   cat,
   conflictProblems,
-  fixtureContext,
+  fixtureContext as wholeFixtureContext,
   ges,
 } from "./transform-helpers";
+
+/** Task 8's gestures (`…sg02`–`…sg12`), merged into the export by task 10. */
+const SPONSORSHIP_GESTURE = /sg\d\d$/;
+
+/**
+ * The fixture with task 7's four gestures only: these tests pin the
+ * catalogue rules on them (the sponsorship gestures task 10 merged into
+ * the export are plain gestures, covered by the plan tests).
+ */
+async function fixtureContext(options: ContextOptions = {}) {
+  const context = await wholeFixtureContext(options);
+  return {
+    ...context,
+    data: {
+      ...context.data,
+      gestures: context.data.gestures.filter(
+        (row) => !SPONSORSHIP_GESTURE.test(row._id)
+      ),
+    },
+  };
+}
 
 function byLegacy<T extends { legacyId?: string | null }>(
   rows: readonly T[],

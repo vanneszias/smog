@@ -72,7 +72,7 @@ async function runPlan(
 }
 
 describe("plan on the minimal fixture", () => {
-  test("writes the report and a manifest with nothing but empty SQL files", async () => {
+  test("writes the report, the SQL files, preflight.json and a manifest that hashes them", async () => {
     const out = join(scratch, "minimal");
     const { code, lines } = await runPlan([
       "--export",
@@ -83,11 +83,15 @@ describe("plan on the minimal fixture", () => {
       out,
       "--now",
       NOW,
+      "--overrides",
+      FIXTURE_INPUTS.overrides,
     ]);
     expect(code).toBe(0);
-    expect(lines).toEqual([
-      `[migrate-convex] plan (production, now ${NOW}): 0 blocker(s), 0 warning(s); 10 file(s) written to ${out}.`,
-    ]);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toStartWith(
+      `[migrate-convex] plan (production, now ${NOW}): 0 blocker(s), `
+    );
+    expect(lines[0]).toEndWith(`; 11 file(s) written to ${out}.`);
     const files = snapshot(out);
     expect(Object.keys(files)).toEqual([
       "10-users-001.sql",
@@ -97,29 +101,53 @@ describe("plan on the minimal fixture", () => {
       "50-sponsorships-001.sql",
       "90-fts-001.sql",
       "manifest.json",
+      "preflight.json",
       "report.json",
       "report.md",
       "reset-imported-001.sql",
     ]);
-    for (const [name, content] of Object.entries(files)) {
-      if (name.endsWith(".sql")) {
-        expect(content).toBe("");
-      }
-    }
     const manifest = JSON.parse(String(files["manifest.json"]));
     expect(manifest.target).toBe("production");
     expect(manifest.now).toBe(NOW);
     expect(manifest.inputs).toEqual({
       export: await hashExport(await fixtureExport()),
       muxMap: null,
-      overrides: null,
+      overrides: await new Bun.CryptoHasher("sha256")
+        .update(readFileSync(FIXTURE_INPUTS.overrides, "utf8"))
+        .digest("hex"),
       workosUsers: null,
     });
+    const sha = (text: string) =>
+      new Bun.CryptoHasher("sha256").update(text).digest("hex");
+    for (const file of [
+      ...manifest.files,
+      ...manifest.reset,
+      manifest.preflight,
+    ]) {
+      const content = String(files[file.name]);
+      expect(file.sha256).toBe(sha(content));
+      expect(file.bytes).toBe(Buffer.byteLength(content));
+      expect(file.statements).toBe(
+        content.split("\n").filter((line) => line.length > 0).length *
+          (file.name === "preflight.json" ? 0 : 1)
+      );
+    }
+    // Every group of the wired transforms has statements.
     expect(
-      manifest.files.every(
-        (file: { statements: number }) => file.statements === 0
-      )
-    ).toBe(true);
+      manifest.files.map((file: { statements: number }) => file.statements > 0)
+    ).toEqual([true, true, true, true, true, true]);
+    const preflight = JSON.parse(String(files["preflight.json"]));
+    expect(Object.keys(preflight)).toEqual([
+      "claims",
+      "mollieIds",
+      "shareTokens",
+      "slugs",
+      "version",
+    ]);
+    expect(preflight.claims.length).toBeGreaterThan(0);
+    expect(preflight.mollieIds.length).toBeGreaterThan(0);
+    expect(preflight.shareTokens.length).toBeGreaterThan(0);
+    expect(preflight.slugs.length).toBeGreaterThan(0);
     const report = JSON.parse(String(files["report.json"]));
     expect(report.blockers).toBe(0);
     const fixture = await fixtureExport();
@@ -132,6 +160,23 @@ describe("plan on the minimal fixture", () => {
       )
     );
     expect(Object.keys(report.export.tables)).toHaveLength(9);
+  });
+
+  test("blocks on an overlay over 35 characters without --overrides (sp08)", async () => {
+    const out = join(scratch, "no-overrides");
+    const { code } = await runPlan([
+      "--export",
+      FIXTURE_DIR,
+      "--target",
+      "production",
+      "--out",
+      out,
+      "--now",
+      NOW,
+    ]);
+    expect(code).toBe(1);
+    const report = JSON.parse(readFileSync(join(out, "report.json"), "utf8"));
+    expect(report.blockers).toBe(1);
   });
 
   test("is byte-identical across runs, and from the ZIP and the directory", async () => {
@@ -148,6 +193,8 @@ describe("plan on the minimal fixture", () => {
         out,
         "--now",
         NOW,
+        "--overrides",
+        FIXTURE_INPUTS.overrides,
       ];
       // biome-ignore lint/performance/noAwaitInLoops: three runs, one after another.
       const { code } = await runPlan(args);
@@ -176,7 +223,10 @@ describe("plan on the minimal fixture", () => {
     );
     writeFileSync(
       overrides,
-      JSON.stringify({ ks7spn000000000000000000000spn1: "Bakkerij" })
+      JSON.stringify({
+        ks7spn000000000000000000000sp08: "Slagerij Fixturelaan",
+        ks7spn000000000000000000000spn1: "Bakkerij",
+      })
     );
     const { code } = await runPlan([
       "--export",
@@ -239,6 +289,7 @@ describe("plan on the minimal fixture", () => {
     const out = join(scratch, "report-only");
     mkdirSync(out, { recursive: true });
     writeFileSync(join(out, "10-users-007.sql"), "stale");
+    writeFileSync(join(out, "preflight.json"), "stale");
     writeFileSync(join(out, "notes.txt"), "the owner's");
     const { code } = await runPlan([
       "--export",
@@ -249,6 +300,8 @@ describe("plan on the minimal fixture", () => {
       out,
       "--now",
       NOW,
+      "--overrides",
+      FIXTURE_INPUTS.overrides,
       "--report-only",
     ]);
     expect(code).toBe(0);
@@ -282,11 +335,18 @@ describe("plan on the minimal fixture", () => {
       "[migrate-convex] The plan has blockers (report.md lists them); apply refuses it."
     );
     const report = JSON.parse(readFileSync(join(out, "report.json"), "utf8"));
-    expect(report.blockers).toBe(1);
+    // The malformed row, and (with no user left) no admin.
+    expect(
+      report.sections.flatMap((part: { issues: { code: string; severity: string }[] }) =>
+        part.issues
+          .filter((issue) => issue.severity === "blocker")
+          .map((issue) => issue.code)
+      )
+    ).toEqual(["malformedRow", "noAdmin"]);
     expect(
       JSON.parse(readFileSync(join(out, "manifest.json"), "utf8")).report
         .blockers
-    ).toBe(1);
+    ).toBe(report.blockers);
   });
 });
 
@@ -433,6 +493,7 @@ describe("plan's transform wiring (task 10 fills TRANSFORMS)", () => {
       "50-sponsorships-001.sql",
       "90-fts-001.sql",
       "reset-imported-001.sql",
+      "preflight.json",
       "manifest.json",
     ]);
   });

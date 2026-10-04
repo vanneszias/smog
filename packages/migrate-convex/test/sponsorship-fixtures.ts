@@ -1,27 +1,12 @@
 /**
  * The sponsorship fixtures of phase 8 task 8, beside the export's
- * `sponsorships/documents.jsonl`:
- * - `sponsorship-gestures.jsonl`: the gestures the sponsorship rows need
- *   besides `Mama` (the `gestures` table is task 7's fixture, so these
- *   rows live here until task 10 merges them into the export);
+ * `sponsorships/documents.jsonl` (task 10 merged the gestures the rows
+ * need and sp15's `mark_paid_manually` log into the export):
  * - `sponsorships-blockers.jsonl`: rows that block a plan (a second
  *   blocking sponsorship on a gesture, a missing gesture, a Mollie payment
  *   whose rows are partly paid and partly open), kept out of the export so
- *   the fixture plan has no blocker with its overrides;
- * - `sponsorship-admin-logs.jsonl`: the old admin's `mark_paid_manually`
- *   log of sp15 (the `adminLogs` table is task 7's fixture, so task 10
- *   merges it too).
+ *   the fixture plan has no blocker with its overrides.
  */
-
-export const SPONSORSHIP_GESTURES = new URL(
-  "./fixtures/sponsorship-gestures.jsonl",
-  import.meta.url
-).pathname;
-
-export const SPONSORSHIP_ADMIN_LOGS = new URL(
-  "./fixtures/sponsorship-admin-logs.jsonl",
-  import.meta.url
-).pathname;
 
 /** The logo the old legacy flow kept in `overlayImageStorageId` (a 1x1 PNG). */
 export const FIXTURE_LOGO_DATA_URL =

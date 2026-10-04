@@ -1,8 +1,7 @@
 /**
  * `bun run migrate:convex <command>` (phase 8 ruling 6): the Convex → D1
- * importer's entry point. Bun only. Each command arrives with its task:
- * `plan` (task 5), `mux` and `we-moved` (task 9), `apply` (task 10); until
- * then a command prints that it is not built yet.
+ * importer's entry point. Bun only. The commands came with their tasks:
+ * `plan` (task 5), `mux` and `we-moved` (task 9), `apply` (task 10).
  *
  * `bun -F` runs this from `packages/migrate-convex`, not from where the
  * command was typed, so a relative path would silently resolve against
@@ -15,6 +14,7 @@ import { validateExport } from "../core/export-schema";
 import { InputError } from "../core/inputs";
 import { plan } from "../core/plan";
 import { isTarget, type Target } from "../core/target";
+import { ApplyRefusal, runApply } from "./apply";
 import {
   MUX_GET_RATE_DEFAULT,
   MUX_GET_RATE_MAX,
@@ -24,7 +24,11 @@ import {
 import { readExport } from "./read-export";
 import { type ProcessEnv, realTimer, type Timer } from "./remote";
 import { runWeMoved } from "./we-moved";
-import { type CommandRunner, createWrangler } from "./wrangler";
+import {
+  type CommandRunner,
+  createWrangler,
+  type WranglerEnv,
+} from "./wrangler";
 
 export const USAGE = `Usage: bun run migrate:convex <command> [options]
 
@@ -39,8 +43,18 @@ Commands:
       Touches nothing remote. A staging plan is always pseudonymised.
       --now defaults to the current time (recorded in manifest.json); pass
       it to get byte-identical plans from the same inputs.
-  apply --env <dev|staging|production> --out <dir> [--dry-run] [--yes] [--reset]
-      Preflight, then apply a plan to D1 (production needs --yes).
+  apply --env <dev|staging|production> --out <dir> [--dry-run] [--yes]
+        [--reset [--native-catalog]]
+      Check the plan folder against its manifest and the env (staging
+      takes only a staging plan, production only a production plan), run
+      the read-only preflight, then apply the SQL files in order with
+      wrangler d1 execute (--local on dev, --remote otherwise), bump
+      catalog:version and verify the counts (apply-report.json in --out).
+      Staging and production must be in maintenance. Production needs
+      --yes and refuses --reset. --dry-run prints every command and writes
+      nothing. --reset first deletes what this plan imports
+      (reset-imported-*.sql); --native-catalog (dev, staging) also deletes
+      the native catalogue rows whose slugs the plan uses.
   mux scan --export <zip|dir> --out <dir> [--get-rate <n>]
       Look up every playback id of the export in Mux (read-only) and write
       mux-map.json (plan's --mux-map) and mux-scan.json to --out.
@@ -72,6 +86,8 @@ export interface CommandContext {
     input: RequestInfo | URL,
     init?: RequestInit
   ) => Promise<Response>;
+  /** `apply`'s new `catalog:version` (a UUID unless a test fixes it). */
+  readonly newVersion?: () => string;
   readonly runWrangler?: CommandRunner;
   readonly timer: Timer;
   /** `apps/site/wrangler.jsonc` unless a test points elsewhere. */
@@ -160,7 +176,7 @@ function absolutePath(
 
 /** The files a plan writes; anything else in the folder is left alone. */
 const PLAN_FILE =
-  /^(report\.(json|md)|manifest\.json|\d\d-[a-z]+-\d{3}\.sql|reset-imported-\d{3}\.sql)$/;
+  /^(report\.(json|md)|manifest\.json|preflight\.json|\d\d-[a-z]+-\d{3}\.sql|reset-imported-\d{3}\.sql)$/;
 
 async function readText(path: string | undefined): Promise<string | undefined> {
   return path === undefined ? undefined : await Bun.file(path).text();
@@ -290,9 +306,45 @@ const weMovedCommand: Command = async (argv, out, context) => {
   );
 };
 
-/** The commands and, for those still to come, the phase 8 task that builds each. */
-const COMMANDS: Record<string, Command | number> = {
-  apply: 10,
+const applyCommand: Command = async (argv, out, context) => {
+  const options = parseOptions(
+    argv,
+    ["--env", "--out"],
+    ["--dry-run", "--yes", "--reset", "--native-catalog"]
+  );
+  const outDir = absolutePath(options, "--out", true);
+  const env = options.values.get("--env");
+  if (env !== "dev" && env !== "staging" && env !== "production") {
+    throw new UsageError("--env must be dev, staging or production");
+  }
+  try {
+    return await runApply(
+      {
+        dryRun: options.flags.has("--dry-run"),
+        env,
+        nativeCatalog: options.flags.has("--native-catalog"),
+        outDir,
+        reset: options.flags.has("--reset"),
+        yes: options.flags.has("--yes"),
+      },
+      {
+        newVersion: context.newVersion,
+        wrangler: createWrangler(env as WranglerEnv, context.runWrangler),
+      },
+      out
+    );
+  } catch (error) {
+    if (error instanceof ApplyRefusal) {
+      out.error(`[migrate-convex] apply refused: ${error.message}`);
+      return 1;
+    }
+    throw error;
+  }
+};
+
+/** The commands, by name. */
+const COMMANDS: Record<string, Command> = {
+  apply: applyCommand,
   mux: muxCommand,
   plan: planCommand,
   "we-moved": weMovedCommand,
@@ -318,12 +370,6 @@ export async function main(
   if (entry === undefined) {
     out.error(`[migrate-convex] Unknown command: ${command}\n\n${USAGE}`);
     return 2;
-  }
-  if (typeof entry === "number") {
-    out.error(
-      `[migrate-convex] \`${command}\` is not built yet (phase 8 task ${entry}).`
-    );
-    return 1;
   }
   try {
     return await entry(rest, out, context);
