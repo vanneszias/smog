@@ -322,7 +322,7 @@ New: React Email in `@smog/email`, localized nl (default) / en / fr from `@smog/
 | E-10 | (none) | Better Auth `emailOTP` | user | proposed nl: `Je SMOG-code` | n/a | `auth_otp` | New. | changed (D-AUTH) | [x] |
 | E-11 | (none) | Better Auth `magicLink` | user | proposed nl: `Je inloglink voor SMOG` | n/a | `auth_magic_link` | New. | changed (D-AUTH) | [x] |
 | E-12 | (none) | Password reset request | user | proposed nl: `Wachtwoord opnieuw instellen` | n/a | `auth_reset_password` | New. | changed (D-AUTH) | [x] |
-| E-13 | (none) | Cutover, optional (`--send-we-moved`) | migrated users | proposed nl: `SMOG is verhuisd` | n/a | `we_moved` | New, one-time (spec §8.3, §15). | improved (spec §15) | [ ] phase 8, with the migration script |
+| E-13 | (none) | Cutover, optional (`--send-we-moved`) | migrated users | proposed nl: `SMOG is verhuisd` | n/a | `we_moved` | New, one-time (spec §8.3, §15). | improved (spec §15) | [x] phase 8 task 9: built (`migrate:convex we-moved`, `transactional/we-moved`); sent at cutover by the owner |
 
 Not e-mailed in the old system and not in the new template list either (parity): sponsorship rejection, re-edit link (admin copies it manually), payment failure, expiry, cancellation. Whether to notify sponsors of a rejection or of a re-edit request is an open product question; the inventory keeps parity. Subjects marked "proposed" are not fixed by the spec.
 

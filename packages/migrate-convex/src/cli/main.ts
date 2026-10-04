@@ -9,12 +9,17 @@
  * the package. Every path option must therefore be absolute (task 1
  * review M6); a relative one is refused with that reason.
  */
-import { mkdirSync, readdirSync, rmSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { validateExport } from "../core/export-schema";
 import { InputError } from "../core/inputs";
 import { plan } from "../core/plan";
 import { isTarget, type Target } from "../core/target";
+import { runMuxRenditions, runMuxScan } from "./mux";
 import { readExport } from "./read-export";
+import { type ProcessEnv, realTimer, type Timer } from "./remote";
+import { runWeMoved } from "./we-moved";
+import { type CommandRunner, createWrangler } from "./wrangler";
 
 export const USAGE = `Usage: bun run migrate:convex <command> [options]
 
@@ -32,11 +37,19 @@ Commands:
   apply --env <dev|staging|production> --out <dir> [--dry-run] [--yes] [--reset]
       Preflight, then apply a plan to D1 (production needs --yes).
   mux scan --export <zip|dir> --out <dir>
-      Count the Mux assets the export uses (read-only).
-  mux renditions --map <file> [--apply]
-      Enable static renditions on the imported assets (billable; dry without --apply).
+      Look up every playback id of the export in Mux (read-only) and write
+      mux-map.json (plan's --mux-map) and mux-scan.json to --out.
+      Needs MUX_TOKEN_ID and MUX_TOKEN_SECRET (production's Mux environment).
+  mux renditions --map <mux-map.json> [--apply]
+      Request a \`highest\` static rendition on each gesture asset of the map
+      that has none (billable; dry without --apply). Ledger:
+      renditions-ledger.json beside the map. Needs MUX_TOKEN_ID and
+      MUX_TOKEN_SECRET.
   we-moved --out <dir> --env production [--apply]
-      Queue the one-time "we moved" email (production only; dry without --apply).
+      Queue the one-time "we moved" email to every migrated account
+      (production only, for a production plan; dry without --apply).
+      Ledger: we-moved-ledger.json in --out. Needs CLOUDFLARE_API_TOKEN
+      (Queues: Edit, D1) and CLOUDFLARE_ACCOUNT_ID.
   help
       Print this text.
 `;
@@ -46,7 +59,30 @@ export interface Output {
   log: (text: string) => void;
 }
 
-type Command = (argv: readonly string[], out: Output) => Promise<number>;
+/** What the commands that reach outside the plan folder use (fakes in tests). */
+export interface CommandContext {
+  readonly env: ProcessEnv;
+  readonly fetch: (
+    input: RequestInfo | URL,
+    init?: RequestInit
+  ) => Promise<Response>;
+  readonly runWrangler?: CommandRunner;
+  readonly timer: Timer;
+  /** `apps/site/wrangler.jsonc` unless a test points elsewhere. */
+  readonly wranglerConfigPath?: string;
+}
+
+const DEFAULT_CONTEXT: CommandContext = {
+  env: process.env,
+  fetch: (input, init) => fetch(input, init),
+  timer: realTimer,
+};
+
+type Command = (
+  argv: readonly string[],
+  out: Output,
+  context: CommandContext
+) => Promise<number>;
 
 class UsageError extends Error {}
 
@@ -182,18 +218,64 @@ const planCommand: Command = async (argv, out) => {
   return 0;
 };
 
+const muxCommand: Command = async (argv, out, context) => {
+  const [sub, ...rest] = argv;
+  if (sub === "scan") {
+    const options = parseOptions(rest, ["--export", "--out"], []);
+    const exportPath = absolutePath(options, "--export", true);
+    const outDir = absolutePath(options, "--out", true);
+    const { data } = validateExport(await readExport(exportPath));
+    return await runMuxScan({ data, outDir }, context, out);
+  }
+  if (sub === "renditions") {
+    const options = parseOptions(rest, ["--map"], ["--apply"]);
+    const mapPath = absolutePath(options, "--map", true);
+    return await runMuxRenditions(
+      {
+        apply: options.flags.has("--apply"),
+        mapPath,
+        mapText: readFileSync(mapPath, "utf8"),
+      },
+      context,
+      out
+    );
+  }
+  throw new UsageError("mux needs scan or renditions");
+};
+
+const weMovedCommand: Command = async (argv, out, context) => {
+  const options = parseOptions(argv, ["--out", "--env"], ["--apply"]);
+  const outDir = absolutePath(options, "--out", true);
+  const env = options.values.get("--env");
+  if (env === undefined) {
+    throw new UsageError(
+      "--env is required (we-moved runs on production only)"
+    );
+  }
+  // runWeMoved refuses every env but production before it reads anything.
+  return await runWeMoved(
+    { apply: options.flags.has("--apply"), env, outDir },
+    {
+      ...context,
+      wrangler: createWrangler("production", context.runWrangler),
+    },
+    out
+  );
+};
+
 /** The commands and, for those still to come, the phase 8 task that builds each. */
 const COMMANDS: Record<string, Command | number> = {
   apply: 10,
-  mux: 9,
+  mux: muxCommand,
   plan: planCommand,
-  "we-moved": 9,
+  "we-moved": weMovedCommand,
 };
 
 /** Runs the CLI with `argv` (without `bun` and the script) and returns the exit code. */
 export async function main(
   argv: readonly string[],
-  out: Output = console
+  out: Output = console,
+  context: CommandContext = DEFAULT_CONTEXT
 ): Promise<number> {
   const [command, ...rest] = argv;
   if (
@@ -217,7 +299,7 @@ export async function main(
     return 1;
   }
   try {
-    return await entry(rest, out);
+    return await entry(rest, out, context);
   } catch (error) {
     if (error instanceof UsageError) {
       out.error(`[migrate-convex] ${error.message}\n\n${USAGE}`);

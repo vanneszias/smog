@@ -38,10 +38,7 @@ import {
   type SponsorshipReceivedProps,
   sponsorshipReceived,
 } from "./templates/transactional/sponsorship-received";
-import {
-  type WeMovedProps,
-  weMoved,
-} from "./templates/transactional/we-moved";
+import { type WeMovedProps, weMoved } from "./templates/transactional/we-moved";
 import { type WelcomeProps, welcome } from "./templates/transactional/welcome";
 import type { EmailTemplate } from "./templates/types";
 

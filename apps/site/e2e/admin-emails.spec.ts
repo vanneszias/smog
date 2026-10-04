@@ -46,7 +46,11 @@ const PREVIEWS = [
     "Terugbetaling nodig (beheer)",
     "Openen in Mollie",
   ],
-  ["transactional/we-moved", "We zijn verhuisd", "Je oude wachtwoord werkt niet meer"],
+  [
+    "transactional/we-moved",
+    "We zijn verhuisd",
+    "Je oude wachtwoord werkt niet meer",
+  ],
 ] as const;
 
 test.describe("admin emails", () => {
