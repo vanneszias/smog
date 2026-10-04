@@ -15,6 +15,8 @@ import { join } from "node:path";
  * group (SIGTERM, SIGKILL after 10 s) and exits 124. In GitHub Actions it
  * also prints an `::error` annotation.
  *
+ * A command that exits 75 runs once more (one limit for both attempts).
+ *
  * Every test command of the turbo `test` task goes through it, so a stuck
  * Vitest pool, workerd, esbuild service or `bun test` fails in minutes and
  * names itself instead of running into the 45-minute job timeout with its
@@ -25,6 +27,13 @@ const DEFAULT_MINUTES = 25;
 const KILL_GRACE_MS = 10_000;
 const REPORT_WAIT_MS = 5000;
 const EXIT_TIMED_OUT = 124;
+/**
+ * A command that exits 75 (EX_TEMPFAIL) is run once more: `StallReporter`
+ * (`@smog/config/testing/vitest`) exits with it when a Vitest pool worker
+ * got stuck before every file ran and nothing failed.
+ */
+export const EXIT_RETRY = 75;
+const MAX_ATTEMPTS = 2;
 const MAX_STACK_LINES = 40;
 const MAX_HANDLES = 40;
 const CLOCK_TICKS = 100;
@@ -196,6 +205,33 @@ async function diagnose(pgid: number, reportDir: string): Promise<void> {
   }
 }
 
+function runOnce(
+  file: string,
+  args: string[],
+  nodeOptions: string,
+  label: string,
+  onStart: (pgid: number) => void
+): Promise<number> {
+  const child = spawn(file, args, {
+    detached: true,
+    env: { ...process.env, NODE_OPTIONS: nodeOptions },
+    stdio: "inherit",
+  });
+  if (child.pid === undefined) {
+    return Promise.resolve(1);
+  }
+  onStart(child.pid);
+  return new Promise<number>((resolve) => {
+    child.on("error", (error) => {
+      console.error(`[test-deadline] Failed to run ${label}:`, error);
+      resolve(1);
+    });
+    child.on("exit", (exitCode, signal) => {
+      resolve(exitCode ?? (signal ? 128 : 1));
+    });
+  });
+}
+
 async function main(): Promise<void> {
   const { command, minutes } = parseDeadlineArgs(
     process.argv.slice(2),
@@ -215,22 +251,19 @@ async function main(): Promise<void> {
     .join(" ");
 
   const started = Date.now();
-  const child = spawn(file, args, {
-    detached: true,
-    env: { ...process.env, NODE_OPTIONS: nodeOptions },
-    stdio: "inherit",
-  });
-  const pgid = child.pid;
-  if (pgid === undefined) {
-    throw new Error(`[test-deadline] Failed to start ${label}`);
-  }
+  let pgid: number | undefined;
 
   // The child has its own group, so the terminal's Ctrl+C and the runner's
   // SIGTERM reach it only through us.
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
-    process.on(signal, () => signalGroup(pgid, signal));
+    process.on(signal, () => {
+      if (pgid !== undefined) {
+        signalGroup(pgid, signal);
+      }
+    });
   }
 
+  // One limit for every attempt together.
   let timedOut = false;
   const timer = setTimeout(async () => {
     timedOut = true;
@@ -240,28 +273,40 @@ async function main(): Promise<void> {
     if (process.env.GITHUB_ACTIONS === "true") {
       console.error(`::error title=Test command hung::${message}`);
     }
+    if (pgid === undefined) {
+      return;
+    }
     try {
       await diagnose(pgid, reportDir);
     } catch (error) {
       console.error("[test-deadline] Failed to diagnose the hang:", error);
     }
     console.error(`[test-deadline] Killing process group ${pgid}.`);
-    signalGroup(pgid, "SIGTERM");
-    setTimeout(() => signalGroup(pgid, "SIGKILL"), KILL_GRACE_MS).unref();
+    const group = pgid;
+    signalGroup(group, "SIGTERM");
+    setTimeout(() => signalGroup(group, "SIGKILL"), KILL_GRACE_MS).unref();
   }, minutes * 60_000);
 
-  const code = await new Promise<number>((resolve) => {
-    child.on("error", (error) => {
-      console.error(`[test-deadline] Failed to run ${label}:`, error);
-      resolve(1);
+  let code = 1;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    // biome-ignore lint/performance/noAwaitInLoops: attempts run one after the other.
+    code = await runOnce(file, args, nodeOptions, label, (group) => {
+      pgid = group;
     });
-    child.on("exit", (exitCode, signal) => {
-      resolve(exitCode ?? (signal ? 128 : 1));
-    });
-  });
+    // Leave nothing behind (a workerd or esbuild the command orphaned).
+    if (pgid !== undefined) {
+      signalGroup(pgid, timedOut ? "SIGKILL" : "SIGTERM");
+    }
+    if (timedOut || code !== EXIT_RETRY || attempt === MAX_ATTEMPTS) {
+      break;
+    }
+    const message = `${label} exited ${EXIT_RETRY} (its test pool got stuck, see the [vitest-stall] line above); running it again, attempt ${attempt + 1} of ${MAX_ATTEMPTS}.`;
+    console.error(`[test-deadline] ${message}`);
+    if (process.env.GITHUB_ACTIONS === "true") {
+      console.error(`::warning title=Test command retried::${message}`);
+    }
+  }
   clearTimeout(timer);
-  // Leave nothing behind (a workerd or esbuild the command orphaned).
-  signalGroup(pgid, timedOut ? "SIGKILL" : "SIGTERM");
   rmSync(reportDir, { force: true, recursive: true });
   process.exit(timedOut ? EXIT_TIMED_OUT : code);
 }

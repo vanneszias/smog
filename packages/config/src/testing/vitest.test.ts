@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { StallReporter } from "./vitest";
 
 const ROOT = process.cwd();
+const GRACE_MS = 180_000;
 
 function moduleOf(name: string, state = "passed") {
   return { moduleId: `${ROOT}/test/${name}`, state: () => state };
@@ -20,6 +21,12 @@ function harness() {
     log: (line) => lines.push(line),
     now: () => now,
   });
+  const run = (...modules: ReturnType<typeof moduleOf>[]) => {
+    for (const module of modules) {
+      reporter.onTestModuleQueued(module);
+      reporter.onTestModuleEnd(module);
+    }
+  };
   return {
     advance: (ms: number) => {
       now += ms;
@@ -28,6 +35,7 @@ function harness() {
     exits,
     lines,
     reporter,
+    run,
   };
 }
 
@@ -41,50 +49,60 @@ describe("StallReporter", () => {
     advance(149_000);
     expect(lines).toEqual([]);
     advance(2000);
-    expect(lines.join("\n")).toContain("No test finished for 151s");
-    expect(lines.join("\n")).toContain("test/a.test.ts (running, 151s)");
-    expect(lines.join("\n")).toContain("> test 1 (151s)");
+    const text = lines.join("\n");
+    expect(text).toContain("No test finished for 151s");
+    expect(text).toContain("test/a.test.ts (running, 151s)");
+    expect(text).toContain("> test 1 (151s)");
   });
 
-  test("ends a run whose files all finished but whose pool never did", () => {
-    const { advance, exits, lines, reporter } = harness();
-    const a = moduleOf("a.test.ts");
-    const b = moduleOf("b.test.ts");
+  test("ends a run whose files all finished but whose pool never did (exit 0)", () => {
+    const { advance, exits, lines, reporter, run } = harness();
     reporter.onTestRunStart([{}, {}]);
-    for (const module of [a, b]) {
-      reporter.onTestModuleQueued(module);
-      reporter.onTestModuleEnd(module);
-    }
-    advance(59_000);
+    run(moduleOf("a.test.ts"), moduleOf("b.test.ts"));
+    advance(GRACE_MS - 1000);
     expect(exits).toEqual([]);
     advance(2000);
     expect(exits).toEqual([0]);
     expect(lines.join("\n")).toContain(
-      "All 2 test files finished (2 passed, 0 failed)"
+      "2 of 2 test files finished (2 passed, 0 failed)"
     );
   });
 
-  test("exits 1 when a file failed, and never before every file ended", () => {
-    const { advance, exits, reporter } = harness();
-    const a = moduleOf("a.test.ts", "failed");
-    reporter.onTestRunStart([{}, {}]);
-    reporter.onTestModuleQueued(a);
-    reporter.onTestModuleEnd(a);
-    advance(600_000);
-    expect(exits).toEqual([]);
-    const b = moduleOf("b.test.ts");
-    reporter.onTestModuleQueued(b);
-    reporter.onTestModuleEnd(b);
-    advance(61_000);
+  test("exits 75 (retry) when files never ran and none failed", () => {
+    const { advance, exits, lines, reporter, run } = harness();
+    reporter.onTestRunStart([{}, {}, {}]);
+    run(moduleOf("a.test.ts"));
+    advance(GRACE_MS + 1000);
+    expect(exits).toEqual([75]);
+    expect(lines.join("\n")).toContain(
+      "1 of 3 test files finished (1 passed, 0 failed)"
+    );
+    expect(lines.join("\n")).toContain("2 never ran");
+  });
+
+  test("exits 1 when a finished file failed", () => {
+    const { advance, exits, reporter, run } = harness();
+    reporter.onTestRunStart([{}]);
+    run(moduleOf("a.test.ts", "failed"));
+    advance(GRACE_MS + 1000);
     expect(exits).toEqual([1]);
   });
 
+  test("waits while a file is open, and for a slow next worker", () => {
+    const { advance, exits, reporter, run } = harness();
+    const b = moduleOf("b.test.ts");
+    reporter.onTestRunStart([{}, {}]);
+    run(moduleOf("a.test.ts"));
+    advance(GRACE_MS - 1000);
+    reporter.onTestModuleQueued(b);
+    advance(600_000);
+    expect(exits).toEqual([]);
+  });
+
   test("leaves a run that ends normally alone", () => {
-    const { advance, exits, reporter } = harness();
-    const a = moduleOf("a.test.ts");
+    const { advance, exits, reporter, run } = harness();
     reporter.onTestRunStart([{}]);
-    reporter.onTestModuleQueued(a);
-    reporter.onTestModuleEnd(a);
+    run(moduleOf("a.test.ts"));
     reporter.onTestRunEnd();
     advance(600_000);
     expect(exits).toEqual([]);

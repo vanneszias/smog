@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseDeadlineArgs } from "./test-deadline";
 
@@ -46,6 +48,31 @@ describe("test-deadline", () => {
       stderr: "pipe",
     });
     expect(await proc.exited).toBe(3);
+  });
+
+  test("runs a command that exits 75 once more, and only once", async () => {
+    const marker = join(
+      mkdtempSync(join(tmpdir(), "smog-deadline-test-")),
+      "ran"
+    );
+    const once = Bun.spawn(
+      [
+        "bun",
+        SCRIPT,
+        "--",
+        "sh",
+        "-c",
+        `if [ -e ${marker} ]; then exit 0; fi; touch ${marker}; exit 75`,
+      ],
+      { stderr: "pipe" }
+    );
+    expect(await once.exited).toBe(0);
+    expect(await new Response(once.stderr).text()).toContain("attempt 2 of 2");
+
+    const always = Bun.spawn(["bun", SCRIPT, "--", "sh", "-c", "exit 75"], {
+      stderr: "pipe",
+    });
+    expect(await always.exited).toBe(75);
   });
 
   test("kills a hung command's whole group, names it and exits 124", async () => {

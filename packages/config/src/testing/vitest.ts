@@ -10,8 +10,9 @@
  * timeout), a workerd that stops answering, nor a pool worker that never
  * reports its file done. `StallReporter` covers those: when no test has
  * finished for 2.5 minutes it prints which files are loading or running,
- * and which tests, and for how long; when every file has ended but the run
- * has not a minute later, it prints the result and exits. The wall-clock
+ * and which tests, and for how long; when a file ended and for 3 minutes
+ * neither a next file nor the end of the run followed, it prints the result
+ * and exits (0, 1, or 75 to have the command run again). The wall-clock
  * limit around the command (`scripts/test-deadline.ts`) is the last resort.
  */
 
@@ -30,9 +31,12 @@ interface ReportedTest {
 // Above the site warm-up (the first transform of the server entry takes up
 // to 2 minutes on a loaded machine), so a report means something.
 const STALL_MS = 150_000;
-// Every file has reported its end; a healthy pool ends the run in seconds.
-const FINISH_GRACE_MS = 60_000;
+// After a file ends, a healthy pool starts the next one (a worker start is
+// bounded at 90 s, then the setup files) or ends the run well within this.
+const FINISH_GRACE_MS = 180_000;
 const CHECK_MS = 15_000;
+/** `scripts/test-deadline.ts` runs a command that exits with it once more. */
+const EXIT_RETRY = 75;
 
 function seconds(ms: number): string {
   return `${Math.round(ms / 1000)}s`;
@@ -54,7 +58,7 @@ export class StallReporter {
   >();
   private expected = 0;
   private readonly ended: ReportedModule[] = [];
-  private allEndedAt: number | undefined;
+  private lastModuleEndAt: number | undefined;
   private runEnded = false;
   private lastProgress: number;
   private lastWarning = 0;
@@ -85,28 +89,45 @@ export class StallReporter {
   }
 
   /**
-   * Every test file reported its end, but the run did not: a pool worker
-   * never sent `testfileFinished`. Seen with `@cloudflare/vitest-plugin`
-   * 1.3.6 (the first worker's `workerd` idle with its socket open, Vitest
-   * waiting forever before its summary). The results are all in, so print
-   * them and end the process. Returns whether the run is in that state.
+   * A file reported its end, then nothing: no file open, no next file
+   * started, no end of the run. A pool worker never sent
+   * `testfileFinished`, so Vitest waits for it forever (seen with
+   * `@cloudflare/vitest-plugin` 1.3.6: that worker's `workerd` idle with its
+   * socket open). In parallel runs it shows once every file has ended; with
+   * one worker (2 CPUs) the files after it never start. Ends the process:
+   * 0 when every file finished and passed, 1 when one failed, 75 when files
+   * never ran (the deadline wrapper runs the command once more). Returns
+   * whether it is waiting out the grace period or exited.
    */
   private finishStuckRun(now: number): boolean {
-    if (this.allEndedAt === undefined || this.runEnded) {
+    if (
+      this.lastModuleEndAt === undefined ||
+      this.runEnded ||
+      this.modules.size > 0
+    ) {
       return false;
     }
-    if (now - this.allEndedAt < FINISH_GRACE_MS) {
-      return true;
+    if (now - this.lastModuleEndAt < FINISH_GRACE_MS) {
+      return this.ended.length >= this.expected;
     }
     const failed = this.ended.filter(
       (module) => module.state?.() === "failed"
     ).length;
     const passed = this.ended.length - failed;
-    const code = failed > 0 ? 1 : 0;
-    const message = `All ${this.ended.length} test files finished (${passed} passed, ${failed} failed), but Vitest did not end the run within ${seconds(now - this.allEndedAt)}: a pool worker never reported its file done. Exiting with code ${code}.`;
+    const missing = Math.max(this.expected - this.ended.length, 0);
+    // 75 (EX_TEMPFAIL): nothing failed but files never ran; the deadline
+    // wrapper runs the command once more.
+    let code = 0;
+    if (failed > 0) {
+      code = 1;
+    } else if (missing > 0) {
+      code = EXIT_RETRY;
+    }
+    const message = `${this.ended.length} of ${this.expected} test files finished (${passed} passed, ${failed} failed)${missing > 0 ? `, ${missing} never ran` : ""}; Vitest has done nothing for ${seconds(now - this.lastModuleEndAt)}: a pool worker never reported its file done. Exiting with code ${code}.`;
     this.log(`[vitest-stall] ${message}`);
     if (process.env.GITHUB_ACTIONS === "true") {
-      this.log(`::warning title=Vitest pool did not finish::${message}`);
+      const level = code === 1 ? "error" : "warning";
+      this.log(`::${level} title=Vitest pool did not finish::${message}`);
     }
     this.runEnded = true;
     clearInterval(this.timer);
@@ -176,9 +197,7 @@ export class StallReporter {
   onTestModuleEnd(module: ReportedModule): void {
     this.modules.delete(module.moduleId);
     this.ended.push(module);
-    if (this.expected > 0 && this.ended.length >= this.expected) {
-      this.allEndedAt = this.now();
-    }
+    this.lastModuleEndAt = this.now();
     this.progress();
   }
 
