@@ -12,8 +12,9 @@ import {
   failRender,
   fakeRenderStarter,
   markRenderRunning,
-  renderStarterFor,
+  readRenderJob,
   retryRenderStatements,
+  setRenderUpload,
 } from "../src/server/render";
 import { isStaleTransition } from "../src/server/transition";
 import {
@@ -100,8 +101,13 @@ describe("the render seam (ruling 7)", () => {
     const id = await rendering();
     const job = await createRenderJob(db, { now: NOW, sponsorshipId: id });
     const renderJobId = job?.renderJobId as string;
-    expect(await markRenderRunning(db, { now: NOW, renderJobId })).toBe(true);
-    expect(await markRenderRunning(db, { now: NOW, renderJobId })).toBe(false);
+    expect(await markRenderRunning(db, { now: NOW, renderJobId })).toBe(
+      "started"
+    );
+    // A replayed `start` continues (phase 7, B-2).
+    expect(await markRenderRunning(db, { now: NOW, renderJobId })).toBe(
+      "already-running"
+    );
     const done = await completeRender(db, {
       assetId: "asset-1",
       now: NOW,
@@ -249,16 +255,44 @@ describe("the render seam (ruling 7)", () => {
     });
   });
 
-  it("RENDER_MODE picks the starter: fake completes, container and local stay queued", async () => {
+  it("markRenderRunning answers final for a finished job and missing for an unknown one", async () => {
     const id = await rendering();
     const job = await createRenderJob(db, { now: NOW, sponsorshipId: id });
-    const input = renderInputSchema.parse((await jobsOf(id))[0]?.input);
     const renderJobId = job?.renderJobId as string;
-    await renderStarterFor("container", { db }).start({ input, renderJobId });
-    await renderStarterFor("local", { db }).start({ input, renderJobId });
-    expect((await jobsOf(id))[0]?.status).toBe("queued");
-    await renderStarterFor("fake", { db }).start({ input, renderJobId });
-    expect((await jobsOf(id))[0]?.status).toBe("succeeded");
+    await failRender(db, {
+      error: "boom",
+      now: NOW,
+      renderJobId,
+      siteUrl: SITE_URL,
+    });
+    expect(await markRenderRunning(db, { now: NOW, renderJobId })).toBe(
+      "final"
+    );
+    expect(
+      await markRenderRunning(db, { now: NOW, renderJobId: newId() })
+    ).toBe("missing");
+  });
+
+  it("setRenderUpload stores the upload only while running, and leaves updated_at alone", async () => {
+    const id = await rendering();
+    const job = await createRenderJob(db, { now: NOW, sponsorshipId: id });
+    const renderJobId = job?.renderJobId as string;
+    expect(
+      await setRenderUpload(db, { renderJobId, uploadId: "upload-0" })
+    ).toBe(false);
+    await markRenderRunning(db, { now: NOW, renderJobId });
+    expect(
+      await setRenderUpload(db, { renderJobId, uploadId: "upload-1" })
+    ).toBe(true);
+    const [stored] = await jobsOf(id);
+    expect(stored?.muxUploadId).toBe("upload-1");
+    expect(stored?.updatedAt.getTime()).toBe(NOW.getTime());
+    expect(await readRenderJob(db, renderJobId)).toMatchObject({
+      muxUploadId: "upload-1",
+      sponsorshipId: id,
+      status: "running",
+      videoAssetId: null,
+    });
   });
 });
 

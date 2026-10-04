@@ -65,6 +65,7 @@ import {
   reconcileRenderJobs,
   type WorkflowStatusPort,
 } from "./render-watchdog";
+import { RENDER_WATCHDOG_CEILING } from "./render-workflow";
 import { settlePayment } from "./settle";
 import {
   isStalePayment,
@@ -663,6 +664,7 @@ export async function runStaleSweep({
   result.resent = reconciled.resent;
   result.stuck = reconciled.stuck;
   const renders = await reconcileRenderJobs({
+    ceilingMs: RENDER_WATCHDOG_CEILING,
     db,
     now,
     queues,

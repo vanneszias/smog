@@ -20,7 +20,9 @@
  * The `queued` ceiling row is an addition to ruling 12 (task 7 review
  * M-5): an instance that never leaves `queued`/`paused` would otherwise
  * keep its job `queued` for ever. Both ceilings are measured from the
- * job's `updated_at`. Without a Workflow binding (`RENDER_MODE=fake`) only
+ * job's `updated_at` (`RENDER_WATCHDOG_CEILING`, derived from the
+ * Workflow's step configs; `queued → running` sets it, and nothing else in
+ * the Workflow moves it). Without a Workflow binding (`RENDER_MODE=fake`) only
  * the first row applies. Idempotent: it acts on `queued`/`running` jobs only, and a
  * re-enqueue moves the job's `updated_at` to now, so the next run waits
  * another 10 minutes before sending it again.
@@ -30,6 +32,10 @@ import type { Db } from "@smog/db/client";
 import { enqueueOutputs, type JobQueues } from "@smog/jobs";
 import { and, asc, eq, lt } from "drizzle-orm";
 import { failRender } from "./render";
+import {
+  RENDER_WATCHDOG_CEILING,
+  summariseRenderError,
+} from "./render-workflow";
 
 /** A `queued` job this old has lost its `render.requested` (or its start). */
 export const RENDER_QUEUED_GRACE_MS = 10 * 60_000;
@@ -39,16 +45,6 @@ export const RENDER_QUEUED_GRACE_MS = 10 * 60_000;
  * next hour continues.
  */
 export const RENDER_WATCHDOG_BUDGET = 25;
-/**
- * How long a job may stay `queued` or `running` with an active instance
- * (since its last `updated_at`) before
- * the watchdog terminates its instance: the Workflow's longest straight
- * path (about 2 h 40 min, ruling 4) plus a 30 minute margin. The
- * Workflow's own `RENDER_WATCHDOG_CEILING` (derived from
- * `RENDER_STEP_CONFIG`, Task 6) replaces this value when it lands.
- */
-export const RENDER_WATCHDOG_CEILING_MS = (2 * 60 + 40 + 30) * 60_000;
-
 /**
  * A Workflow instance's status: the runtime's `WorkflowInstanceStatus`
  * (`InstanceStatus["status"]`).
@@ -109,20 +105,15 @@ const ENDED_INSTANCE: ReadonlySet<WorkflowInstanceStatus> = new Set([
   "terminated",
 ]);
 
-const URL_PATTERN = /\bhttps?:\/\/\S+/gi;
-
 /**
  * The error stored for a job whose instance ended: the instance's own
- * error with every URL removed (signed Mux URLs never reach D1, a log or
- * an email). `failRender` caps it at 300 characters.
+ * error, summarised as the Workflow's own failures are
+ * (`summariseRenderError`: no URL, so signed Mux URLs never reach D1, a log
+ * or an email).
  */
 export function instanceErrorSummary(instance: WorkflowInstanceState): string {
-  const raw = instance.error
-    ? [instance.error.name, instance.error.message].filter(Boolean).join(": ")
-    : "";
-  const message = raw.replace(URL_PATTERN, "[url]").trim();
-  return message
-    ? `workflow ${instance.status}: ${message}`
+  return instance.error
+    ? `workflow ${instance.status}: ${summariseRenderError(instance.error)}`
     : `workflow ${instance.status}`;
 }
 
@@ -325,7 +316,7 @@ async function reconcileOne(
  * that fails to reconcile is logged and skipped; the next hour retries.
  */
 export async function reconcileRenderJobs({
-  ceilingMs = RENDER_WATCHDOG_CEILING_MS,
+  ceilingMs = RENDER_WATCHDOG_CEILING,
   db,
   now,
   queues,

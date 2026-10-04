@@ -6,12 +6,17 @@
  */
 import { env } from "cloudflare:workers";
 import { call } from "@orpc/server";
-import type { Gesture } from "@smog/db";
+import { type Gesture, sponsor, sponsorship } from "@smog/db";
 import { createDb, type Db } from "@smog/db/client";
 import { makeGesture } from "@smog/db/testing";
+import type { RenderStarter } from "@smog/jobs";
 import { FAKE_MOLLIE_API_KEY, type FakeMollie } from "@smog/payments/testing";
+import { type RenderInput, renderInputSchema } from "@smog/render/contract";
 import { makeRpcContext } from "@smog/rpc/testing";
-import { createSponsorshipsRouter } from "@smog/sponsorships/server";
+import {
+  createRenderJob,
+  createSponsorshipsRouter,
+} from "@smog/sponsorships/server";
 
 function d1(): D1Database {
   if (!env.DB) {
@@ -29,6 +34,14 @@ export function kv(): KVNamespace {
 
 export function testDb(): Db {
   return createDb(d1());
+}
+
+/**
+ * A starter that leaves the job `queued`, as a Workflow instance that has
+ * not run yet would (the render tests drive the real one).
+ */
+export function leaveQueued(): RenderStarter {
+  return { start: () => Promise.resolve() };
 }
 
 export interface RecordingQueue {
@@ -186,4 +199,84 @@ export async function makeAdmin() {
     .bind(id, email, Date.now(), Date.now())
     .run();
   return { email, id };
+}
+
+/**
+ * A `rendering` sponsorship (inserted directly) with its `queued` render
+ * job, as `payment.settled` leaves it (phase 7: the render Workflow tests).
+ */
+export async function renderingJob(): Promise<{
+  gesture: Gesture;
+  input: RenderInput;
+  renderJobId: string;
+  sponsorshipId: string;
+}> {
+  const db = testDb();
+  const gesture = await makeGesture(db, {
+    name: `Gebaar ${crypto.randomUUID()}`,
+  });
+  const sponsorId = crypto.randomUUID();
+  const sponsorshipId = crypto.randomUUID();
+  const now = new Date();
+  await db.batch([
+    db.insert(sponsor).values({
+      createdAt: now,
+      email: `${sponsorId}@smog.test`,
+      id: sponsorId,
+      locale: "nl",
+      name: "Alex Sponsor",
+    }),
+    db.insert(sponsorship).values({
+      createdAt: now,
+      displayName: "Acme BV",
+      gestureId: gesture.id,
+      id: sponsorshipId,
+      logoKey: null,
+      sponsorId,
+      status: "rendering",
+      updatedAt: now,
+    }),
+  ]);
+  const job = await createRenderJob(db, { now, sponsorshipId });
+  if (!job) {
+    throw new Error("[test] No render job created");
+  }
+  const [row] = await all<{ input: string }>(
+    "SELECT input FROM render_job WHERE id = ?",
+    job.renderJobId
+  );
+  return {
+    gesture,
+    input: renderInputSchema.parse(JSON.parse(row?.input ?? "null")),
+    renderJobId: job.renderJobId,
+    sponsorshipId,
+  };
+}
+
+/** One render job's row (plain D1 SQL). */
+export async function renderJobRow(renderJobId: string) {
+  const [row] = await all<{
+    error: string | null;
+    mux_asset_id: string | null;
+    mux_upload_id: string | null;
+    playback_id: string | null;
+    status: string;
+  }>(
+    "SELECT status, error, mux_upload_id, mux_asset_id, playback_id FROM render_job WHERE id = ?",
+    renderJobId
+  );
+  return row;
+}
+
+/** One sponsorship's status and video (plain D1 SQL). */
+export async function sponsorshipVideo(sponsorshipId: string) {
+  const [row] = await all<{
+    status: string;
+    video_asset_id: string | null;
+    video_playback_id: string | null;
+  }>(
+    "SELECT status, video_asset_id, video_playback_id FROM sponsorship WHERE id = ?",
+    sponsorshipId
+  );
+  return row;
 }

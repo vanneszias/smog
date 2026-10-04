@@ -36,4 +36,4 @@ export {
   InvalidMessageError,
   type QueueProducer,
 } from "./producers";
-export { pendingRenderStarter, type RenderStarter } from "./render-starter";
+export type { RenderStarter } from "./render-starter";

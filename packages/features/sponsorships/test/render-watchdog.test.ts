@@ -15,12 +15,12 @@ import {
   instanceErrorSummary,
   RENDER_QUEUED_GRACE_MS,
   RENDER_WATCHDOG_BUDGET,
-  RENDER_WATCHDOG_CEILING_MS,
   reconcileRenderJobs,
   type WorkflowInstanceState,
   type WorkflowStatusPort,
   watchdogQuery,
 } from "../src/server/render-watchdog";
+import { RENDER_WATCHDOG_CEILING } from "../src/server/render-workflow";
 import { runStaleSweep } from "../src/server/sweeps";
 import { clearSponsorships } from "./clean";
 import {
@@ -90,7 +90,7 @@ function fakePort(answers: Record<string, Answer>) {
 
 const OLD_QUEUED = new Date(NOW.getTime() - RENDER_QUEUED_GRACE_MS - 1);
 const FRESH_QUEUED = new Date(NOW.getTime() - RENDER_QUEUED_GRACE_MS + 60_000);
-const PAST_CEILING = new Date(NOW.getTime() - RENDER_WATCHDOG_CEILING_MS - 1);
+const PAST_CEILING = new Date(NOW.getTime() - RENDER_WATCHDOG_CEILING - 1);
 const RECENT = new Date(NOW.getTime() - 60_000);
 
 /** A `rendering` sponsorship with one job, `queued` or `running`, last touched at `updatedAt`. */
