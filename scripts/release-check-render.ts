@@ -47,7 +47,8 @@ export const OUT_DIR = join(ROOT, "packages", "render", ".render-out");
 
 export type RenderLanePlan =
   | { build: boolean; image: string; kind: "run" }
-  | { kind: "fail" | "skip"; message: string };
+  | { kind: "fail"; message: string }
+  | { kind: "skip"; message: string };
 
 /** What the lane does, from what this machine has. */
 export function renderLanePlan({
