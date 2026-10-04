@@ -24,7 +24,7 @@ import { type SQL, sql } from "drizzle-orm";
 import { REJECTED_VIDEO_RETENTION_MS } from "../schema/retention";
 
 /** The request for changes lost the race against the retention bound. */
-export const REJECTED_TOO_LONG_AGO_GUARD = "sponsorship-rejected-too-long-ago";
+const REJECTED_TOO_LONG_AGO_GUARD = "sponsorship-rejected-too-long-ago";
 
 const EVENT = sql.raw("ev");
 
@@ -41,7 +41,7 @@ function legacyReviewedAtSql(id: SQL | string): SQL {
 }
 
 /** When the sponsorship was rejected (ruling 13's order), epoch ms or NULL. */
-export function rejectedAtSql(id: SQL | string): SQL {
+function rejectedAtSql(id: SQL | string): SQL {
   return sql`coalesce(${rejectedEventAtSql(id)}, ${legacyReviewedAtSql(id)})`;
 }
 
