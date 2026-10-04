@@ -9,6 +9,7 @@ import {
   KV_PLACEHOLDER_ID,
   parseSecretList,
   runCheck,
+  spawnWithDeadline,
 } from "./check-deploy-config";
 import type {
   CommandRunner,
@@ -55,6 +56,12 @@ const AUTH_FAILURE = [
   "✘ [ERROR] A request to the Cloudflare API (/accounts/abc/workers/scripts/smog-site-staging/secrets) failed.",
   "",
   "  Authentication error [code: 10000]",
+].join("\n");
+
+/** wrangler 4.147.0 when it cannot pick an account without CLOUDFLARE_ACCOUNT_ID. */
+const NO_ACCOUNT = [
+  "✘ [ERROR] Failed to automatically retrieve account IDs for the logged in user.",
+  "In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your wrangler.jsonc file.",
 ].join("\n");
 
 const NO_TOKEN =
@@ -459,6 +466,12 @@ describe("explainSecretListFailure", () => {
     );
   });
 
+  test("no account id names CLOUDFLARE_ACCOUNT_ID, not the token (m-1)", () => {
+    const message = explainSecretListFailure(failed(NO_ACCOUNT), "staging");
+    expect(message).toContain("CLOUDFLARE_ACCOUNT_ID is not set");
+    expect(message).not.toContain("CLOUDFLARE_API_TOKEN is not set");
+  });
+
   test("anything else keeps the exit code and wrangler's last line", () => {
     const message = explainSecretListFailure(
       { code: 7, stderr: "first\nsomething odd happened\n\n", stdout: "" },
@@ -511,6 +524,53 @@ const FAILURES: [string, CommandRunner][] = [
 
 describe("runCheck", () => {
   const read = () => Promise.resolve(WRANGLER);
+
+  test("a wrangler call that hangs is bounded (I-1)", async () => {
+    const hanging: CommandRunner = () => new Promise(() => undefined);
+    const warned = recorder();
+    const started = Date.now();
+    expect(
+      await runCheck(
+        ["--env", "staging", "--warn-only"],
+        hanging,
+        warned.log,
+        read,
+        { secretListTimeoutMs: 50 }
+      )
+    ).toBe(0);
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(warned.output()).toContain("::warning::[deploy-config]");
+    expect(warned.output()).toContain("timed out");
+    const enforced = recorder();
+    expect(
+      await runCheck(["--env", "staging"], hanging, enforced.log, read, {
+        secretListTimeoutMs: 50,
+      })
+    ).toBe(1);
+    expect(enforced.output()).toContain("timed out");
+  });
+
+  test("refuses an --env that differs from CLOUDFLARE_ENV, even under --warn-only (m-3)", async () => {
+    const { calls, run } = answering({ code: 0, stderr: "", stdout: "[]" });
+    const out = recorder();
+    expect(
+      await runCheck(["--env", "staging", "--warn-only"], run, out.log, read, {
+        cloudflareEnv: "production",
+      })
+    ).toBe(1);
+    expect(calls).toEqual([]);
+    expect(out.output()).toContain("CLOUDFLARE_ENV is production");
+    expect(out.output()).not.toContain("::warning::");
+    expect(
+      await runCheck(
+        ["--env", "staging", "--offline"],
+        run,
+        recorder().log,
+        read,
+        { cloudflareEnv: "staging" }
+      )
+    ).toBe(0);
+  });
 
   test("staging --offline passes without calling wrangler", async () => {
     const { calls, run } = answering({ code: 1, stderr: "", stdout: "" });
@@ -673,6 +733,29 @@ describe("runCheck", () => {
  * wrangler: whatever wrangler does, staging stays green unless the owner
  * set SMOG_REQUIRE_SECRETS=1, and production never passes --warn-only.
  */
+describe("spawnWithDeadline (I-1)", () => {
+  test("kills a command that outlives its deadline and answers at once", async () => {
+    const started = Date.now();
+    const result = await spawnWithDeadline(["sleep", "30"], 200);
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(result.code).toBe(124);
+    expect(result.stderr).toContain("timed out after");
+  });
+
+  test("answers a command that finishes in time", async () => {
+    expect(await spawnWithDeadline(["echo", "[]"], 5000)).toEqual({
+      code: 0,
+      stderr: "",
+      stdout: "[]\n",
+    });
+  });
+
+  test("a missing command is exit 127, not a throw", async () => {
+    const result = await spawnWithDeadline(["smog-no-such-command"], 1000);
+    expect(result.code).toBe(127);
+  });
+});
+
 describe("deploy.yml's Check deploy config step", () => {
   const workflow = Bun.YAML.parse(
     readFileSync(join(ROOT, ".github", "workflows", "deploy.yml"), "utf8")
@@ -691,9 +774,9 @@ describe("deploy.yml's Check deploy config step", () => {
     "not JSON": "echo '<html>502 Bad Gateway</html>'\nexit 0",
   };
 
-  function fakeBunx(body: string): string {
+  function fakeBunx(body: string, tool = "bunx"): string {
     const dir = mkdtempSync(join(tmpdir(), "smog-fake-wrangler-"));
-    const path = join(dir, "bunx");
+    const path = join(dir, tool);
     writeFileSync(path, `#!/bin/sh\n${body}\n`);
     chmodSync(path, 0o755);
     return dir;
@@ -702,9 +785,10 @@ describe("deploy.yml's Check deploy config step", () => {
   function runStep(
     env: "staging" | "production",
     body: string,
-    requireSecrets?: string
+    requireSecrets?: string,
+    tool = "bunx"
   ) {
-    const fake = fakeBunx(body);
+    const fake = fakeBunx(body, tool);
     const result = Bun.spawnSync(
       ["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", script],
       {
@@ -728,6 +812,26 @@ describe("deploy.yml's Check deploy config step", () => {
   test("exists", () => {
     expect(script).toContain("scripts/check-deploy-config.ts");
   });
+
+  // A fake `bun` replaces the script itself: the `||` fallback (m-4).
+  for (const [name, body] of Object.entries({
+    "crashes (exit 1)": "echo 'SyntaxError: boom' >&2\nexit 1",
+    "is killed": "kill -9 $$",
+  })) {
+    test(`staging stays green when the check itself ${name}`, () => {
+      const { code, output } = runStep("staging", body, undefined, "bun");
+      expect(code).toBe(0);
+      expect(output).toContain(
+        "::warning::[deploy-config] the check itself failed"
+      );
+    });
+
+    test(`production fails when the check itself ${name}`, () => {
+      const { code, output } = runStep("production", body, undefined, "bun");
+      expect(code).not.toBe(0);
+      expect(output).not.toContain("::warning::");
+    });
+  }
 
   for (const [name, body] of Object.entries(FAKES)) {
     test(`staging warns and stays green when wrangler gives ${name}`, () => {

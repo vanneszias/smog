@@ -7,7 +7,6 @@ import {
   requiredWorkerConfig,
 } from "@smog/config/env/worker";
 import {
-  bunxWrangler,
   type CommandRunner,
   type DeployEnv,
   isPlaceholderOrigin,
@@ -45,6 +44,16 @@ import {
 
 const SITE_DIR = join(import.meta.dir, "..", "apps", "site");
 const TAG = "[deploy-config]";
+
+/**
+ * How long `wrangler secret list` may take (review I-1). A call that hangs
+ * is killed and reported, so a warn-only staging deploy stays green
+ * instead of running into the job's timeout; `deploy.yml` also bounds the
+ * step (`timeout-minutes: 5`).
+ */
+export const SECRET_LIST_TIMEOUT_MS = 120_000;
+/** The exit code `timeout(1)` uses for a command it killed. */
+const TIMED_OUT = 124;
 
 /** `wrangler.jsonc`'s D1 `database_id` until the owner creates the database. */
 export const D1_PLACEHOLDER_ID = "00000000-0000-4000-8000-000000000000";
@@ -300,7 +309,9 @@ export function parseSecretList(stdout: string): string[] {
 
 const WORKER_NOT_FOUND =
   /Worker "[^"]*"[^\n]* not found|\[code: 10007\]|script_not_found/i;
-const NO_TOKEN = /non-interactive environment|CLOUDFLARE_API_TOKEN/;
+// wrangler 4.147.0's two non-interactive messages name one variable each.
+const NO_TOKEN = /CLOUDFLARE_API_TOKEN/;
+const NO_ACCOUNT = /specify an account ID|CLOUDFLARE_ACCOUNT_ID/;
 const AUTH_FAILED =
   /\[code: 1000[01]\]|Authentication error|\(403\)|\b403 Forbidden\b|Unauthorized|permission/i;
 
@@ -317,6 +328,9 @@ export function explainSecretListFailure(
   if (NO_TOKEN.test(output)) {
     return `${base}: CLOUDFLARE_API_TOKEN is not set (and CLOUDFLARE_ACCOUNT_ID with it).`;
   }
+  if (NO_ACCOUNT.test(output)) {
+    return `${base}: CLOUDFLARE_ACCOUNT_ID is not set, and wrangler cannot pick the account without it.`;
+  }
   if (AUTH_FAILED.test(output)) {
     return `${base}: the API token (CLOUDFLARE_API_TOKEN) cannot read the Worker's secrets. It needs Account › Workers Scripts: Read (Edit includes it) on the account CLOUDFLARE_ACCOUNT_ID names.`;
   }
@@ -328,17 +342,91 @@ export function explainSecretListFailure(
   return last ? `${base}: ${snippet(last)}` : base;
 }
 
+/**
+ * Runs `command` from `apps/site` and kills it after `timeoutMs`,
+ * answering at once (exit 124) without waiting for its pipes, which a
+ * leftover child process may still hold open. A command that cannot start
+ * is exit 127 (the shell's "command not found").
+ */
+export async function spawnWithDeadline(
+  command: string[],
+  timeoutMs: number
+): Promise<WranglerResult> {
+  let proc: ReturnType<typeof Bun.spawn>;
+  try {
+    proc = Bun.spawn(command, {
+      cwd: SITE_DIR,
+      env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+  } catch (error) {
+    return { code: 127, stderr: message(error), stdout: "" };
+  }
+  const finished = Promise.all([
+    new Response(proc.stdout as ReadableStream).text(),
+    new Response(proc.stderr as ReadableStream).text(),
+    proc.exited,
+  ]).then(([stdout, stderr, code]) => ({ code, stderr, stdout }));
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<WranglerResult>((resolve) => {
+    timer = setTimeout(() => {
+      proc.kill("SIGKILL");
+      resolve({
+        code: TIMED_OUT,
+        stderr: `${command.join(" ")} timed out after ${timeoutMs} ms and was killed`,
+        stdout: "",
+      });
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([finished, deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** `bunx wrangler <args>` from `apps/site`, killed after the deadline. */
+const bunxWrangler: CommandRunner = (args) =>
+  spawnWithDeadline(["bunx", "wrangler", ...args], SECRET_LIST_TIMEOUT_MS);
+
+/** Resolves to `null` when `promise` is still pending after `timeoutMs`. */
+async function within<T>(
+  promise: Promise<T>,
+  timeoutMs: number
+): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function listSecrets(
   run: CommandRunner,
-  env: DeployEnv
+  env: DeployEnv,
+  timeoutMs: number
 ): Promise<string[]> {
-  let result: WranglerResult;
+  let result: WranglerResult | null;
   try {
-    result = await run(["secret", "list", "--env", env, "--format", "json"]);
+    // Any runner is bounded too, a little after the runner's own kill.
+    result = await within(
+      run(["secret", "list", "--env", env, "--format", "json"]),
+      timeoutMs + 1000
+    );
   } catch (error) {
     throw new Error(
       `wrangler secret list --env ${env} could not run: ${message(error)}`,
       { cause: error }
+    );
+  }
+  if (result === null) {
+    throw new Error(
+      `wrangler secret list --env ${env} timed out after ${timeoutMs} ms`
     );
   }
   if (result.code !== 0) {
@@ -393,14 +481,15 @@ async function check(
   run: CommandRunner,
   log: Logger,
   readWrangler: () => Promise<string>,
-  problems: string[]
+  problems: string[],
+  timeoutMs: number
 ): Promise<void> {
   const { env, offline } = parseCheckArgs(argv);
   const wrangler = await readWrangler();
   let secrets: string[] | null = null;
   if (!offline) {
     try {
-      secrets = await listSecrets(run, env);
+      secrets = await listSecrets(run, env, timeoutMs);
     } catch (error) {
       // The file checks still run: report every problem at once.
       problems.push(message(error));
@@ -422,6 +511,31 @@ async function check(
   }
 }
 
+export interface RunOptions {
+  /**
+   * The deploy job's `CLOUDFLARE_ENV`. When set it must equal `--env`, so a
+   * production job can never run the warn-only staging check (review m-3).
+   */
+  cloudflareEnv?: string;
+  secretListTimeoutMs?: number;
+}
+
+/** The refusals no flag turns into a warning. */
+function refuseOutright(
+  argv: readonly string[],
+  warnOnly: boolean,
+  cloudflareEnv: string | undefined
+): string | null {
+  const env = argEnv(argv);
+  if (warnOnly && env === "production") {
+    return "--warn-only is refused for production: production always enforces the deploy config";
+  }
+  if (cloudflareEnv && env !== cloudflareEnv) {
+    return `CLOUDFLARE_ENV is ${cloudflareEnv} but --env is ${JSON.stringify(env ?? null)}: the check must run for the env being deployed`;
+  }
+  return null;
+}
+
 /**
  * The command: 0 when the env may deploy, 1 otherwise. With `--warn-only`
  * (refused for production) every problem, and every unexpected failure
@@ -434,18 +548,25 @@ export async function runCheck(
   run: CommandRunner,
   log: Logger,
   readWrangler: () => Promise<string> = () =>
-    Bun.file(join(SITE_DIR, "wrangler.jsonc")).text()
+    Bun.file(join(SITE_DIR, "wrangler.jsonc")).text(),
+  options: RunOptions = {}
 ): Promise<number> {
   const warnOnly = argv.includes("--warn-only");
-  if (warnOnly && argEnv(argv) === "production") {
-    log.error(
-      `${TAG} --warn-only is refused for production: production always enforces the deploy config`
-    );
+  const refusal = refuseOutright(argv, warnOnly, options.cloudflareEnv);
+  if (refusal) {
+    log.error(`${TAG} ${refusal}`);
     return 1;
   }
   const problems: string[] = [];
   try {
-    await check(argv, run, log, readWrangler, problems);
+    await check(
+      argv,
+      run,
+      log,
+      readWrangler,
+      problems,
+      options.secretListTimeoutMs ?? SECRET_LIST_TIMEOUT_MS
+    );
   } catch (error) {
     problems.push(`the check failed: ${message(error)}`);
   }
@@ -474,13 +595,19 @@ export async function runCheck(
 if (import.meta.main) {
   const argv = process.argv.slice(2);
   try {
-    process.exitCode = await runCheck(argv, bunxWrangler, {
-      error: console.error,
-      log: console.log,
-    });
+    process.exitCode = await runCheck(
+      argv,
+      bunxWrangler,
+      { error: console.error, log: console.log },
+      undefined,
+      { cloudflareEnv: process.env.CLOUDFLARE_ENV || undefined }
+    );
   } catch (error) {
+    const cloudflareEnv = process.env.CLOUDFLARE_ENV;
     const warnOnly =
-      argv.includes("--warn-only") && argEnv(argv) !== "production";
+      argv.includes("--warn-only") &&
+      argEnv(argv) !== "production" &&
+      (!cloudflareEnv || cloudflareEnv === argEnv(argv));
     console.log(
       `${warnOnly ? "::warning::" : ""}${TAG} the check failed: ${message(error)}`
     );

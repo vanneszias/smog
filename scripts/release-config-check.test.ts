@@ -272,6 +272,34 @@ describe("checkDeployConfigStep (phase 8 ruling 1)", () => {
     ).toContain("vars.SMOG_REQUIRE_SECRETS");
   });
 
+  test("the staging test and the opt-in are joined by && (m-3)", () => {
+    expect(
+      errorsOf(
+        DEPLOY.replace(
+          '[ "$CLOUDFLARE_ENV" = "staging" ] && [ "$SMOG_REQUIRE_SECRETS" != "1" ]',
+          '[ "$CLOUDFLARE_ENV" = "staging" ] || [ "$SMOG_REQUIRE_SECRETS" != "1" ]'
+        )
+      )
+    ).toContain("&&");
+  });
+
+  test("the step is bounded, and only warn-only staging may continue on error (I-1)", () => {
+    expect(
+      errorsOf(DEPLOY.replace("        timeout-minutes: 5\n", ""))
+    ).toContain("timeout-minutes");
+    expect(
+      errorsOf(DEPLOY.replace("timeout-minutes: 5\n", "timeout-minutes: 30\n"))
+    ).toContain("timeout-minutes");
+    expect(
+      errorsOf(
+        DEPLOY.replace(
+          "env.CLOUDFLARE_ENV == 'staging' && vars.SMOG_REQUIRE_SECRETS != '1'",
+          "true"
+        )
+      )
+    ).toContain("continue-on-error");
+  });
+
   test("staging's warn-only run keeps even a crash green", () => {
     expect(
       errorsOf(

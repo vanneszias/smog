@@ -63,8 +63,14 @@ jobs:
       # SMOG_REQUIRE_SECRETS=1: --warn-only turns every problem (wrangler
       # errors, output that is not JSON, a missing Worker) into a
       # ::warning::, and the `||` keeps even a crash of the script green.
+      # A hang is bounded twice: the script kills `wrangler secret list`
+      # after 120 s, and the step stops after 5 minutes, which a warn-only
+      # staging run ignores (continue-on-error). The script also refuses
+      # an --env that differs from CLOUDFLARE_ENV.
       - name: Check deploy config
         if: steps.secrets.outputs.enabled == 'true'
+        timeout-minutes: 5
+        continue-on-error: ${{ env.CLOUDFLARE_ENV == 'staging' && vars.SMOG_REQUIRE_SECRETS != '1' }}
         env:
           SMOG_REQUIRE_SECRETS: ${{ vars.SMOG_REQUIRE_SECRETS }}
         run: |

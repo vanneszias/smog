@@ -745,8 +745,7 @@ async function spawn(command: string[]): Promise<WranglerResult> {
   return { code, stderr, stdout };
 }
 
-/** `bunx wrangler <args>` from `apps/site` (also `check-deploy-config.ts`). */
-export const bunxWrangler: WranglerRunner = (args) =>
+const bunxWrangler: WranglerRunner = (args) =>
   spawn(["bunx", "wrangler", ...args]);
 
 const bunDocker: CommandRunner = (args) => spawn(["docker", ...args]);

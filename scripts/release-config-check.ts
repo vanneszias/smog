@@ -19,10 +19,12 @@ import { CRON } from "@smog/jobs/cron";
  */
 
 interface Step {
+  "continue-on-error"?: unknown;
   env?: Record<string, unknown>;
   if?: string;
   name?: string;
   run?: string;
+  "timeout-minutes"?: unknown;
   uses?: string;
   with?: Record<string, unknown>;
   "working-directory"?: string;
@@ -59,8 +61,13 @@ const CONFIG_CHECK_COMMAND = "scripts/check-deploy-config.ts";
 const REQUIRE_SECRETS_FLAG = "SMOG_REQUIRE_SECRETS";
 const SHELL_IF = /^\s*(if|elif)\b/;
 const SHELL_ELSE = /^\s*(else|elif|fi)\b/;
-const STAGING_TEST = /"?\$CLOUDFLARE_ENV"?\s*=\s*"?staging"?/;
-const REQUIRE_SECRETS_TEST = /"?\$SMOG_REQUIRE_SECRETS"?\s*!=\s*"?1"?/;
+/** `[ staging ] && [ opt-in not set ]`: both must hold (review m-3). */
+const WARN_ONLY_CONDITION =
+  /"?\$CLOUDFLARE_ENV"?\s*=\s*"?staging"?\s*\]\s*&&\s*\[\s*"?\$SMOG_REQUIRE_SECRETS"?\s*!=\s*"?1"?/;
+/** The step's bound (review I-1); the script kills wrangler after 120 s. */
+const CONFIG_CHECK_MAX_MINUTES = 5;
+/** Only a warn-only staging run may continue past a failed step. */
+const CONFIG_CHECK_CONTINUE = `\${{ env.CLOUDFLARE_ENV == 'staging' && vars.${REQUIRE_SECRETS_FLAG} != '1' }}`;
 const STAGING_WARN_ONLY = /--env\s+"?staging"?\s/;
 const ENFORCING_RUN =
   /scripts\/check-deploy-config\.ts\s+--env\s+"\$CLOUDFLARE_ENV"\s*$/;
@@ -451,12 +458,12 @@ function checkWarnOnlyRuns(run: string, file: string): string[] {
     if (
       !(
         condition &&
-        STAGING_TEST.test(condition) &&
-        REQUIRE_SECRETS_TEST.test(condition)
+        WARN_ONLY_CONDITION.test(condition) &&
+        !condition.includes("||")
       )
     ) {
       errors.push(
-        `${file}: the --warn-only run must sit under an if that tests staging and "$${REQUIRE_SECRETS_FLAG}" != "1"`
+        `${file}: the --warn-only run must sit under \`if [ "$CLOUDFLARE_ENV" = "staging" ] && [ "$${REQUIRE_SECRETS_FLAG}" != "1" ]\` (both tests, joined by &&)`
       );
     }
     if (!line.includes("||")) {
@@ -466,6 +473,37 @@ function checkWarnOnlyRuns(run: string, file: string): string[] {
     }
     return errors;
   });
+}
+
+/**
+ * A hang cannot turn staging red (review I-1): the step has a small
+ * `timeout-minutes`, and `continue-on-error`, if set, is exactly the
+ * warn-only staging condition.
+ */
+function checkConfigCheckBounds(
+  step: Step | undefined,
+  file: string
+): string[] {
+  const errors: string[] = [];
+  const minutes = step?.["timeout-minutes"];
+  if (
+    !(
+      typeof minutes === "number" &&
+      minutes > 0 &&
+      minutes <= CONFIG_CHECK_MAX_MINUTES
+    )
+  ) {
+    errors.push(
+      `${file}: the deploy config check needs timeout-minutes of at most ${CONFIG_CHECK_MAX_MINUTES} (a hung wrangler call must not reach the job timeout)`
+    );
+  }
+  const proceed = step?.["continue-on-error"];
+  if (proceed !== undefined && proceed !== CONFIG_CHECK_CONTINUE) {
+    errors.push(
+      `${file}: the deploy config check's continue-on-error must be exactly ${CONFIG_CHECK_CONTINUE} (production never continues past it)`
+    );
+  }
+  return errors;
 }
 
 /**
@@ -510,6 +548,7 @@ function checkConfigCheckStep(steps: Step[], file: string): string[] {
     );
   }
   errors.push(...checkWarnOnlyRuns(run, file));
+  errors.push(...checkConfigCheckBounds(step, file));
   const enforcing = run
     .split("\n")
     .some((line) => ENFORCING_RUN.test(line) && !line.includes("--warn-only"));
