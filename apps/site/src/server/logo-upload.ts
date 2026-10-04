@@ -1,13 +1,19 @@
 import { AuthError, getSession, requireAdminUser } from "@smog/auth";
+import { createDb } from "@smog/db/client";
 import { checkRateLimit, isForeignRequest } from "@smog/rpc";
-import { LOGO_MAX_BYTES } from "@smog/sponsorships/schema";
+import {
+  LOGO_MAX_BYTES,
+  sponsorshipTokenSchema,
+} from "@smog/sponsorships/schema";
 import {
   isLogoContentType,
   LOGO_KEY_PREFIX,
+  readReeditLogo,
   sniffLogoType,
   verifyLogoUpload,
 } from "@smog/sponsorships/server";
 import { readCappedBody } from "@smog/utils";
+import { z } from "zod";
 import { getAuth, siteEnv } from "./auth";
 import { clientIp } from "./context";
 
@@ -24,6 +30,8 @@ import { clientIp } from "./context";
  *   `uploadedAt`, once: a URL whose key exists is a 409 (single use).
  * - `GET /api/logos/<uuid>`: an admin session only; logos are private, and
  *   only an image type is echoed (anything else is a download).
+ * - `POST /api/sponsor/reedit-logo` `{ token }`: the one logo an open
+ *   re-edit link keeps, for its preview (phase 7 task 9); see below.
  */
 
 const LOGO_ID = /^[0-9a-f-]{36}$/;
@@ -144,6 +152,61 @@ export async function handleLogoRead(
       "cross-origin-resource-policy": "same-origin",
       "x-content-type-options": "nosniff",
       ...(image ? {} : { "content-disposition": "attachment" }),
+    },
+  });
+}
+
+/** The re-edit logo read's body: the raw link token (never in the URL). */
+const reeditLogoBodySchema = z.object({ token: sponsorshipTokenSchema });
+
+/**
+ * `POST /api/sponsor/reedit-logo` `{ token }` (phase 7 task 9): the logo the
+ * open re-edit link keeps, for the re-edit preview, so it shows what the
+ * render will (`readReeditLogo`). The token is the only input, so a link
+ * reaches only its own sponsorship's logo. It checks `isForeignRequest` and
+ * `RL_API` per IP; a missing, malformed, wrong, used or expired token, a
+ * sponsorship no longer waiting for changes and a missing logo are all the
+ * same 404. Private and `no-store`, so nothing is cached across tokens.
+ */
+export async function handleReeditLogoRead(
+  request: Request
+): Promise<Response> {
+  const { db, rateLimits, worker } = siteEnv();
+  if (isForeignRequest(request, worker)) {
+    return json(403, { code: "FORBIDDEN" });
+  }
+  if (
+    !(await checkRateLimit(
+      rateLimits.RL_API,
+      `${clientIp(request)}:reedit-logo`
+    ))
+  ) {
+    return json(429, { code: "RATE_LIMITED" });
+  }
+  let body: unknown = null;
+  try {
+    body = await request.json();
+  } catch {
+    // A body that is not JSON: the same 404 as a wrong token.
+  }
+  const parsed = reeditLogoBodySchema.safeParse(body);
+  const logo = parsed.success
+    ? await readReeditLogo(createDb(db), media(), {
+        now: new Date(),
+        token: parsed.data.token,
+      })
+    : null;
+  if (!logo) {
+    return json(404, { code: "NOT_FOUND" });
+  }
+  return new Response(logo.bytes, {
+    headers: {
+      "cache-control": "private, no-store",
+      "content-length": String(logo.bytes.byteLength),
+      "content-security-policy": "default-src 'none'; sandbox",
+      "content-type": logo.contentType,
+      "cross-origin-resource-policy": "same-origin",
+      "x-content-type-options": "nosniff",
     },
   });
 }

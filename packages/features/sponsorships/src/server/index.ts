@@ -47,6 +47,7 @@ export {
   adminRecipients,
   emailAdmins,
 } from "./recipients";
+export { type ReeditLogo, readReeditLogo } from "./reedit";
 export {
   completeRender,
   createRenderJob,

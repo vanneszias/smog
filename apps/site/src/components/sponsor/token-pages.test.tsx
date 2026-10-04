@@ -1,13 +1,14 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderSite, rpcError } from "@/test/render";
 // The preview's Player and Mux reads, faked (before the page loads it).
-import "@/test/sponsor-preview-fakes";
+import { player, resetPreviewFakes } from "@/test/sponsor-preview-fakes";
 import { ReeditView } from "./reedit-view";
 import { RenewalView } from "./renewal-view";
 
 const LOGO = /^Logo/;
+const BLOB_URL = /^blob:/;
 
 const NAME_IN_VIDEO = /^Name in the video/;
 const TOKEN = "a".repeat(43);
@@ -39,9 +40,66 @@ function Renew({ token = TOKEN }: { token?: string | null }): ReactNode {
   );
 }
 
+const realFetch = globalThis.fetch;
+
+/**
+ * The kept-logo read (`POST /api/sponsor/reedit-logo`) answered with
+ * `status` (a PNG on 200); the rpc client has its own fetch.
+ */
+function stubKeptLogo(status: number) {
+  const requests: { body: unknown; method: string; url: string }[] = [];
+  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push({
+      body: JSON.parse(String(init?.body ?? "null")),
+      method: init?.method ?? "GET",
+      url: String(input),
+    });
+    return Promise.resolve(
+      status === 200
+        ? new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), {
+            headers: { "content-type": "image/png" },
+          })
+        : Response.json({ code: "NOT_FOUND" }, { status })
+    );
+  }) as typeof fetch;
+  return { requests };
+}
+
+/** A re-edit link on Broer, with or without a paid logo. */
+function reeditWithLogo(hasLogo: boolean) {
+  return {
+    "gestures/bySlug": {
+      canonicalSlug: "broer",
+      categories: [],
+      description: "",
+      id: "00000000-0000-4000-8000-000000000001",
+      keywords: [],
+      name: "Broer",
+      playbackId: "pb-broer",
+      publishedAt: 0,
+      slug: "broer",
+      sponsor: null,
+      updatedAt: 0,
+    },
+    "sponsorships/reedit/get": {
+      displayName: "Bakkerij Jansen",
+      expiresAt: Date.now() + DAY,
+      gesture: { name: "Broer", slug: "broer" },
+      hasLogo,
+    },
+  };
+}
+
+beforeEach(() => {
+  resetPreviewFakes();
+  // No test reaches the network: the kept logo is refused unless stubbed.
+  stubKeptLogo(404);
+});
+
 afterEach(() => {
   cleanup();
   redirects.length = 0;
+  globalThis.fetch = realFetch;
 });
 
 describe("the re-edit page (S-19)", () => {
@@ -128,36 +186,21 @@ describe("the re-edit page (S-19)", () => {
     ).toBeDefined();
   });
 
-  test("the preview says the kept logo is not shown in it (review M-5)", async () => {
-    const KEPT =
-      "Your current logo stays in the video. This preview does not show it; choose a new file to replace it.";
-    await renderSite(() => <Edit />, {
-      api: {
-        "gestures/bySlug": {
-          canonicalSlug: "broer",
-          categories: [],
-          description: "",
-          id: "00000000-0000-4000-8000-000000000001",
-          keywords: [],
-          name: "Broer",
-          playbackId: "pb-broer",
-          publishedAt: 0,
-          slug: "broer",
-          sponsor: null,
-          updatedAt: 0,
-        },
-        "sponsorships/reedit/get": {
-          displayName: "Bakkerij Jansen",
-          expiresAt: Date.now() + DAY,
-          gesture: { name: "Broer", slug: "broer" },
-          hasLogo: true,
-        },
+  test("the preview shows the kept logo until a new file is chosen (review M-5)", async () => {
+    const kept = stubKeptLogo(200);
+    await renderSite(() => <Edit />, { api: reeditWithLogo(true) });
+    await waitFor(() =>
+      expect(player.props?.inputProps.logoUrl).toMatch(BLOB_URL)
+    );
+    const keptUrl = player.props?.inputProps.logoUrl;
+    // The token travels in the body of a same-origin POST, never a URL.
+    expect(kept.requests).toEqual([
+      {
+        body: { token: TOKEN },
+        method: "POST",
+        url: "/api/sponsor/reedit-logo",
       },
-    });
-    expect(await screen.findByText(KEPT)).toBeDefined();
-    expect(
-      screen.getByRole("img", { name: "Preview for Broer" })
-    ).toBeDefined();
+    ]);
     const input = document.querySelector("input#logo-upload");
     if (!(input instanceof HTMLInputElement)) {
       throw new Error("no logo input");
@@ -169,7 +212,26 @@ describe("the re-edit page (S-19)", () => {
         ],
       },
     });
-    await waitFor(() => expect(screen.queryByText(KEPT)).toBeNull());
+    await waitFor(() => {
+      expect(player.props?.inputProps.logoUrl).toMatch(BLOB_URL);
+      expect(player.props?.inputProps.logoUrl).not.toBe(keptUrl);
+    });
+  });
+
+  test("reads no logo without one, and shows none when the read is refused", async () => {
+    const none = stubKeptLogo(200);
+    await renderSite(() => <Edit />, { api: reeditWithLogo(false) });
+    await waitFor(() => expect(player.props).not.toBeNull());
+    expect(none.requests).toEqual([]);
+    expect(player.props?.inputProps.logoUrl).toBeNull();
+    cleanup();
+    resetPreviewFakes();
+
+    const refused = stubKeptLogo(404);
+    await renderSite(() => <Edit />, { api: reeditWithLogo(true) });
+    await waitFor(() => expect(refused.requests).toHaveLength(1));
+    await waitFor(() => expect(player.props).not.toBeNull());
+    expect(player.props?.inputProps.logoUrl).toBeNull();
   });
 });
 

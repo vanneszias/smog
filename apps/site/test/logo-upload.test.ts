@@ -1,5 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { createFakeMollie } from "@smog/payments/testing";
+import { newSponsorshipToken } from "@smog/sponsorships/schema";
 import { signLogoUpload } from "@smog/sponsorships/server";
 import { describe, expect, it } from "vitest";
 import { getAuth, siteEnv } from "../src/server/auth";
@@ -273,5 +274,102 @@ describe("GET /api/logos/$key (an admin read)", () => {
       expect(response.status, missing).toBe(404);
       await response.body?.cancel();
     }
+  });
+});
+
+/**
+ * `POST /api/sponsor/reedit-logo` (phase 7 task 9, task 8 review M-5): the
+ * re-edit link holder reads the logo their sponsorship keeps, for the
+ * preview. The token is in the body (never a URL), the answer is private
+ * and never cached, and any refusal is the same 404.
+ */
+describe("POST /api/sponsor/reedit-logo (the kept logo of a re-edit)", () => {
+  /** A `changes_requested` sponsorship with a stored logo and an open link. */
+  async function reeditWithLogo(marker: number): Promise<string> {
+    const upload = await requestUpload();
+    expect(
+      (await put(upload.uploadUrl, file([...PNG_HEAD, marker]))).status
+    ).toBe(200);
+    const checkout = await checkoutVia(createFakeMollie(), {
+      count: 1,
+      logoKey: upload.key,
+    });
+    const id = checkout.sponsorshipIds[0] ?? "";
+    const { hash, token } = await newSponsorshipToken();
+    const { db } = siteEnv();
+    await db.batch([
+      db
+        .prepare(
+          "UPDATE sponsorship SET status = 'changes_requested' WHERE id = ?"
+        )
+        .bind(id),
+      db
+        .prepare(
+          "INSERT INTO sponsorship_token (id, sponsorship_id, purpose, token_hash, expires_at, created_at) VALUES (?, ?, 'reedit', ?, ?, ?)"
+        )
+        .bind(
+          crypto.randomUUID(),
+          id,
+          hash,
+          Date.now() + 86_400_000,
+          Date.now()
+        ),
+    ]);
+    return token;
+  }
+
+  function readLogo(
+    body: unknown,
+    headers: Record<string, string> = {}
+  ): Promise<Response> {
+    return exports.default.fetch(`${ORIGIN}/api/sponsor/reedit-logo`, {
+      body: JSON.stringify(body),
+      headers: {
+        "cf-connecting-ip": crypto.randomUUID(),
+        "content-type": "application/json",
+        origin: ORIGIN,
+        ...headers,
+      },
+      method: "POST",
+    });
+  }
+
+  it("gives the token holder their own logo, privately and never cached", async () => {
+    const first = await reeditWithLogo(1);
+    const second = await reeditWithLogo(2);
+
+    const response = await readLogo({ token: first });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("cross-origin-resource-policy")).toBe(
+      "same-origin"
+    );
+    expect(new Uint8Array(await response.arrayBuffer()).at(8)).toBe(1);
+
+    const other = await readLogo({ token: second });
+    expect(new Uint8Array(await other.arrayBuffer()).at(8)).toBe(2);
+  });
+
+  it("answers 404 without a token, for a wrong one and for a malformed body", async () => {
+    await reeditWithLogo(3);
+    for (const body of [{}, { token: "b".repeat(43) }, { token: 42 }, "x"]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one request at a time.
+      const response = await readLogo(body);
+      expect(response.status, JSON.stringify(body)).toBe(404);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      await response.body?.cancel();
+    }
+  });
+
+  it("refuses a foreign origin", async () => {
+    const token = await reeditWithLogo(4);
+    const response = await readLogo(
+      { token },
+      { origin: "https://evil.example" }
+    );
+    expect(response.status).toBe(403);
+    await response.body?.cancel();
   });
 });

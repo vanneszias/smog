@@ -55,6 +55,7 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiLogosKeyRouteImport } from './routes/api/logos/$key'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
+import { Route as ApiSponsorReeditLogoRouteImport } from './routes/api/sponsor/reedit-logo'
 import { Route as ApiWebhooksMollieRouteImport } from './routes/api/webhooks/mollie'
 import { Route as ApiWebhooksMuxRouteImport } from './routes/api/webhooks/mux'
 import { Route as ApiLogosUploadKeyRouteImport } from './routes/api/logos/upload.$key'
@@ -289,6 +290,11 @@ const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   path: '/api/rpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSponsorReeditLogoRoute = ApiSponsorReeditLogoRouteImport.update({
+  id: '/api/sponsor/reedit-logo',
+  path: '/api/sponsor/reedit-logo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWebhooksMollieRoute = ApiWebhooksMollieRouteImport.update({
   id: '/api/webhooks/mollie',
   path: '/api/webhooks/mollie',
@@ -350,6 +356,7 @@ export interface FileRoutesByFullPath {
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
@@ -400,6 +407,7 @@ export interface FileRoutesByTo {
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures': typeof AdminGesturesIndexRoute
@@ -452,6 +460,7 @@ export interface FileRoutesById {
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
@@ -505,6 +514,7 @@ export interface FileRouteTypes {
     | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor/reedit-logo'
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
@@ -555,6 +565,7 @@ export interface FileRouteTypes {
     | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor/reedit-logo'
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures'
@@ -606,6 +617,7 @@ export interface FileRouteTypes {
     | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor/reedit-logo'
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
@@ -649,6 +661,7 @@ export interface RootRouteChildren {
   ApiLogosKeyRoute: typeof ApiLogosKeyRoute
   ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
+  ApiSponsorReeditLogoRoute: typeof ApiSponsorReeditLogoRoute
   ApiWebhooksMollieRoute: typeof ApiWebhooksMollieRoute
   ApiWebhooksMuxRoute: typeof ApiWebhooksMuxRoute
   ApiLogosUploadKeyRoute: typeof ApiLogosUploadKeyRoute
@@ -978,6 +991,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sponsor/reedit-logo': {
+      id: '/api/sponsor/reedit-logo'
+      path: '/api/sponsor/reedit-logo'
+      fullPath: '/api/sponsor/reedit-logo'
+      preLoaderRoute: typeof ApiSponsorReeditLogoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/webhooks/mollie': {
       id: '/api/webhooks/mollie'
       path: '/api/webhooks/mollie'
@@ -1068,6 +1088,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLogosKeyRoute: ApiLogosKeyRoute,
   ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
+  ApiSponsorReeditLogoRoute: ApiSponsorReeditLogoRoute,
   ApiWebhooksMollieRoute: ApiWebhooksMollieRoute,
   ApiWebhooksMuxRoute: ApiWebhooksMuxRoute,
   ApiLogosUploadKeyRoute: ApiLogosUploadKeyRoute,
