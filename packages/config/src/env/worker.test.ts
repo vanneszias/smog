@@ -6,7 +6,9 @@ import {
   parseWorkerEnv,
   parseWorkerVars,
   publicAuthConfig,
+  RENDER_LOCAL_DEFAULT_URL,
   REQUIRED_WORKER_CONFIG,
+  requiredWorkerConfig,
   WORKER_BINDINGS,
   workerEnvSchema,
   workerSecretsSchema,
@@ -348,6 +350,131 @@ describe("the phase 6 settings (Mollie, R2, render)", () => {
   });
 });
 
+describe("the phase 7 render settings (ruling 11)", () => {
+  const base = {
+    BETTER_AUTH_SECRET: "x".repeat(32),
+    EMAIL_FROM: "SMOG <no-reply@example.com>",
+    EMAIL_REPLY_TO: "info@smog.vlaanderen",
+    SITE_URL: "https://smog.test",
+    TURNSTILE_SECRET_KEY: "turnstile",
+  };
+
+  test("RENDER_LOCAL_URL is unset by default and dev may set it", () => {
+    expect(RENDER_LOCAL_DEFAULT_URL).toBe("http://127.0.0.1:3002");
+    expect(
+      parseWorkerEnv({ ...base, ENVIRONMENT: "dev" }).RENDER_LOCAL_URL
+    ).toBeUndefined();
+    expect(
+      parseWorkerEnv({ ...base, ENVIRONMENT: "staging", RENDER_LOCAL_URL: "" })
+        .RENDER_LOCAL_URL
+    ).toBeUndefined();
+    expect(
+      parseWorkerEnv({
+        ...base,
+        ENVIRONMENT: "dev",
+        RENDER_LOCAL_URL: "http://127.0.0.1:3003",
+      }).RENDER_LOCAL_URL
+    ).toBe("http://127.0.0.1:3003");
+    expect(() =>
+      parseWorkerEnv({
+        ...base,
+        ENVIRONMENT: "dev",
+        RENDER_LOCAL_URL: "not a url",
+      })
+    ).toThrow("RENDER_LOCAL_URL");
+    for (const RENDER_LOCAL_URL of [
+      "ftp://127.0.0.1:3002",
+      "file:///tmp/render",
+      "javascript:alert(1)",
+    ]) {
+      expect(() =>
+        parseWorkerEnv({ ...base, ENVIRONMENT: "dev", RENDER_LOCAL_URL })
+      ).toThrow("RENDER_LOCAL_URL");
+    }
+  });
+
+  test("RENDER_LOCAL_URL and RENDER_MODE=local are refused outside dev", () => {
+    for (const ENVIRONMENT of ["staging", "production"]) {
+      expect(() =>
+        parseWorkerEnv({
+          ...base,
+          ENVIRONMENT,
+          RENDER_LOCAL_URL: RENDER_LOCAL_DEFAULT_URL,
+        })
+      ).toThrow("RENDER_LOCAL_URL");
+      expect(() =>
+        parseWorkerEnv({ ...base, ENVIRONMENT, RENDER_MODE: "local" })
+      ).toThrow("RENDER_MODE");
+      for (const RENDER_MODE of ["fake", "container"] as const) {
+        expect(
+          parseWorkerEnv({ ...base, ENVIRONMENT, RENDER_MODE }).RENDER_MODE
+        ).toBe(RENDER_MODE);
+      }
+    }
+    expect(
+      parseWorkerEnv({ ...base, ENVIRONMENT: "dev", RENDER_MODE: "local" })
+        .RENDER_MODE
+    ).toBe("local");
+  });
+
+  test("REMOTION_LICENSE_KEY is an optional secret (ruling 14)", () => {
+    expect(
+      parseWorkerEnv({
+        ...base,
+        ENVIRONMENT: "production",
+        REMOTION_LICENSE_KEY: "",
+      }).REMOTION_LICENSE_KEY
+    ).toBeUndefined();
+    expect(
+      parseWorkerEnv({
+        ...base,
+        ENVIRONMENT: "production",
+        REMOTION_LICENSE_KEY: "rm_key",
+      }).REMOTION_LICENSE_KEY
+    ).toBe("rm_key");
+    expect(Object.keys(workerSecretsSchema.shape)).toContain(
+      "REMOTION_LICENSE_KEY"
+    );
+  });
+});
+
+describe("requiredWorkerConfig (ruling 11)", () => {
+  const MUX_TRIO = [
+    "MUX_TOKEN_ID",
+    "MUX_TOKEN_SECRET",
+    "MUX_WEBHOOK_SECRET",
+  ] as const;
+
+  test("an env whose mode is container needs the Mux trio", () => {
+    expect(requiredWorkerConfig("staging", "container")).toEqual({
+      secrets: ["BETTER_AUTH_SECRET", "TURNSTILE_SECRET_KEY", ...MUX_TRIO],
+      vars: [],
+    });
+    expect(requiredWorkerConfig("staging", "fake")).toEqual({
+      secrets: ["BETTER_AUTH_SECRET", "TURNSTILE_SECRET_KEY"],
+      vars: [],
+    });
+    expect(requiredWorkerConfig("dev", "container").secrets).toEqual(MUX_TRIO);
+    expect(requiredWorkerConfig("dev", "local").secrets).toEqual([]);
+  });
+
+  test("production already lists the trio and gains no duplicate", () => {
+    expect(requiredWorkerConfig("production", "container")).toEqual(
+      REQUIRED_WORKER_CONFIG.production
+    );
+    const { secrets } = requiredWorkerConfig("production", "container");
+    expect(new Set(secrets).size).toBe(secrets.length);
+  });
+
+  test("REQUIRED_WORKER_CONFIG is the view at each env's file mode", () => {
+    expect(REQUIRED_WORKER_CONFIG).toEqual({
+      dev: requiredWorkerConfig("dev", "fake"),
+      production: requiredWorkerConfig("production", "container"),
+      staging: requiredWorkerConfig("staging", "fake"),
+    });
+  });
+});
+
 describe("REQUIRED_WORKER_CONFIG (ruling 12)", () => {
   test("lists what a production and a staging deploy need", () => {
     expect(REQUIRED_WORKER_CONFIG.production).toEqual({
@@ -403,6 +530,40 @@ describe("parseWorkerBindings (Phase 6 fix wave, jobs M-4)", () => {
     expect(bindings.EVENTS_QUEUE).toBe(queue);
     expect(bindings.MEDIA).toBe(bucket);
     expect(WORKER_BINDINGS).toEqual(["EMAIL_QUEUE", "EVENTS_QUEUE", "MEDIA"]);
+  });
+
+  test("the two render bindings are optional (phase 7 ruling 11)", () => {
+    const env = { EMAIL_QUEUE: queue, EVENTS_QUEUE: queue, MEDIA: bucket };
+    const without = parseWorkerBindings(env);
+    expect(without.RENDER_WORKFLOW).toBeUndefined();
+    expect(without.RENDERER).toBeUndefined();
+    const workflow = {
+      create: () => Promise.resolve({}),
+      createBatch: () => Promise.resolve([]),
+      get: () => Promise.resolve({}),
+    };
+    const renderer = {
+      get: () => ({}),
+      getByName: () => ({}),
+      idFromName: () => ({}),
+    };
+    const withBoth = parseWorkerBindings({
+      ...env,
+      RENDER_WORKFLOW: workflow,
+      RENDERER: renderer,
+    });
+    expect(withBoth.RENDER_WORKFLOW).toBe(workflow);
+    expect(withBoth.RENDERER).toBe(renderer);
+  });
+
+  test("a render binding that is present must have the right shape", () => {
+    const env = { EMAIL_QUEUE: queue, EVENTS_QUEUE: queue, MEDIA: bucket };
+    expect(() => parseWorkerBindings({ ...env, RENDER_WORKFLOW: {} })).toThrow(
+      "RENDER_WORKFLOW"
+    );
+    expect(() => parseWorkerBindings({ ...env, RENDERER: queue })).toThrow(
+      "RENDERER"
+    );
   });
 
   test("names every missing or malformed binding", () => {

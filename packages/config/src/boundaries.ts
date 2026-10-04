@@ -89,6 +89,8 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/email",
     "@smog/jobs",
     "@smog/render/contract",
+    // The fake renderer, for the sponsorships tests (phase 7 ruling 1).
+    "@smog/render/testing",
     "@smog/analytics/server",
     // Client hooks track through `useAnalytics()` (a no-op without a provider).
     "@smog/analytics/react",

@@ -1,7 +1,12 @@
 {
-  "extends": "@smog/config/tsconfig/library.json",
+  // The exported entries (`./contract`, `./composition`, `./metadata`,
+  // `./remotion`, `./testing`): React and the DOM, as the site and the
+  // Remotion bundle compile them. Their Bun tests use the Bun types.
+  "extends": "@smog/config/tsconfig/react.json",
   "compilerOptions": {
     "types": ["bun"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  // The render server and the package's tests: tsconfig.server.json.
+  "exclude": ["src/server"]
 }

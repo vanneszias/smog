@@ -1745,6 +1745,7 @@
           "failed": "Failed"
         }
       },
+      "retryRender": {},
       "tokens": {
         "title": "Links",
         "empty": "No links yet.",
@@ -2052,6 +2053,7 @@
       "amount": "Amount",
       "pay": "Renew and pay",
       "failed": "The payment could not start. Please try again."
-    }
+    },
+    "preview": {}
   }
 }

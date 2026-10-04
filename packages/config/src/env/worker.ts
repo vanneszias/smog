@@ -4,12 +4,19 @@ export const ENVIRONMENTS = ["dev", "staging", "production"] as const;
 export const RENDER_MODES = ["container", "local", "fake"] as const;
 
 export type Environment = (typeof ENVIRONMENTS)[number];
+export type RenderMode = (typeof RENDER_MODES)[number];
 
 /** The self-hosted OpenPanel (spec §12), for the relay and the native client. */
 export const OPENPANEL_DEFAULT_API_URL = "https://analytics.zias.be/api";
 
 /** The Mux Video API; `MUX_API_URL` points at the Mux fake in tests and e2e. */
 export const MUX_DEFAULT_API_URL = "https://api.mux.com";
+
+/**
+ * The render server of `RENDER_MODE=local` (`bun -F @smog/render serve`);
+ * `RENDER_LOCAL_URL` changes it, in dev only (phase 7 ruling 11).
+ */
+export const RENDER_LOCAL_DEFAULT_URL = "http://127.0.0.1:3002";
 
 /** The Mollie API; `MOLLIE_API_URL` points at the Mollie fake in dev and e2e. */
 export const MOLLIE_DEFAULT_API_URL = "https://api.mollie.com";
@@ -38,7 +45,19 @@ export const workerVarsSchema = z.object({
   OPENPANEL_API_URL: z.url().default(OPENPANEL_DEFAULT_API_URL),
   /** The account id of the R2 S3 endpoint (`<id>.r2.cloudflarestorage.com`). */
   R2_ACCOUNT_ID: optionalValue,
-  /** How a render job starts (ruling 7): `fake` in dev and staging until phase 7. */
+  /**
+   * The render server of `RENDER_MODE=local`, dev only (phase 7 ruling 11);
+   * unset means `RENDER_LOCAL_DEFAULT_URL`.
+   */
+  RENDER_LOCAL_URL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.url({ protocol: /^https?$/ }).optional()
+  ),
+  /**
+   * How a render job starts (phase 6 ruling 7, phase 7 ruling 2): `fake`
+   * in dev and staging until the owner turns the pipeline on, `container`
+   * in production, `local` (the dev render server) in dev only.
+   */
   RENDER_MODE: z.enum(RENDER_MODES).default("container"),
   SITE_URL: z.url(),
   /** The public Turnstile widget key; the widget is hidden without it. */
@@ -90,6 +109,11 @@ export const workerSecretsSchema = z.object({
    */
   R2_ACCESS_KEY_ID: optionalValue,
   R2_SECRET_ACCESS_KEY: optionalValue,
+  /**
+   * Remotion's company licence key (phase 7 ruling 14). Optional: the
+   * renderer passes it to `renderMedia` when set (a non-profit needs none).
+   */
+  REMOTION_LICENSE_KEY: optionalValue,
   TURNSTILE_SECRET_KEY: optionalValue,
 });
 
@@ -103,7 +127,8 @@ export type WorkerSecrets = z.infer<typeof workerSecretsSchema>;
  * real Mux API (the Basic token goes there). The same holds for
  * `MOLLIE_API_URL`; a Mollie key is `live_` in production and `test_`
  * elsewhere; and the R2 tokens come with `R2_ACCOUNT_ID` and
- * `MEDIA_BUCKET` (phase 6 rulings 2, 10 and 12).
+ * `MEDIA_BUCKET` (phase 6 rulings 2, 10 and 12). `RENDER_LOCAL_URL` and
+ * `RENDER_MODE=local` are dev only (phase 7 ruling 11).
  */
 export const workerEnvSchema = workerVarsSchema
   .extend(workerSecretsSchema.shape)
@@ -149,6 +174,17 @@ export const workerEnvSchema = workerVarsSchema
       path: ["MOLLIE_API_URL"],
     }
   )
+  .refine((env) => env.ENVIRONMENT === "dev" || env.RENDER_MODE !== "local", {
+    message: "local is dev only (the render server on this machine)",
+    path: ["RENDER_MODE"],
+  })
+  .refine(
+    (env) => env.ENVIRONMENT === "dev" || env.RENDER_LOCAL_URL === undefined,
+    {
+      message: "is dev only (the local render server)",
+      path: ["RENDER_LOCAL_URL"],
+    }
+  )
   .superRefine((env, context) => {
     // The presigned PUT needs the whole S3 identity, or none of it.
     if (
@@ -178,18 +214,17 @@ export type WorkerEnv = z.infer<typeof workerEnvSchema>;
 type SecretKey = keyof z.infer<typeof workerSecretsSchema>;
 type VarKey = keyof z.infer<typeof workerVarsSchema>;
 
+interface RequiredConfig {
+  secrets: readonly SecretKey[];
+  vars: readonly VarKey[];
+}
+
 /**
- * What a deploy of each env needs set (ruling 12): its secrets
- * (`wrangler secret put`) and its vars (`wrangler.jsonc` `env.<env>.vars`).
- * `scripts/release-config-check.ts` asserts each key is in the schema and
- * in `.dev.vars.example` or `wrangler.jsonc`; phase 8 makes the deploy
- * check the real values (`wrangler secret list`). Everything else is
- * optional and degrades cleanly when unset.
+ * What a deploy of each env needs set, whatever its render mode (phase 6
+ * ruling 12): its secrets (`wrangler secret put`) and its vars
+ * (`wrangler.jsonc` `env.<env>.vars`).
  */
-export const REQUIRED_WORKER_CONFIG: Record<
-  Environment,
-  { secrets: readonly SecretKey[]; vars: readonly VarKey[] }
-> = {
+const BASE_REQUIRED_CONFIG: Record<Environment, RequiredConfig> = {
   dev: { secrets: [], vars: [] },
   production: {
     secrets: [
@@ -208,6 +243,44 @@ export const REQUIRED_WORKER_CONFIG: Record<
     secrets: ["BETTER_AUTH_SECRET", "TURNSTILE_SECRET_KEY"],
     vars: [],
   },
+};
+
+/** The real render reads its source from Mux and uploads its result there. */
+const CONTAINER_REQUIRED_SECRETS: readonly SecretKey[] = [
+  "MUX_TOKEN_ID",
+  "MUX_TOKEN_SECRET",
+  "MUX_WEBHOOK_SECRET",
+];
+
+/**
+ * What a deploy of `env` needs set when it runs `renderMode` (phase 7
+ * ruling 11): the env's own list, plus the Mux trio for `container`.
+ * `scripts/release-config-check.ts` asserts each key is in the schema and
+ * in `.dev.vars.example` or `wrangler.jsonc`; phase 8 makes the deploy
+ * check the real values (`wrangler secret list`). Everything else is
+ * optional and degrades cleanly when unset.
+ */
+export function requiredWorkerConfig(
+  env: Environment,
+  renderMode: RenderMode
+): RequiredConfig {
+  const base = BASE_REQUIRED_CONFIG[env];
+  const extra = renderMode === "container" ? CONTAINER_REQUIRED_SECRETS : [];
+  return {
+    secrets: [...new Set([...base.secrets, ...extra])],
+    vars: [...base.vars],
+  };
+}
+
+/**
+ * `requiredWorkerConfig` at the render mode `wrangler.jsonc` gives each
+ * env today (`fake` in dev and staging, `container` in production), for
+ * the callers that read the file's view.
+ */
+export const REQUIRED_WORKER_CONFIG: Record<Environment, RequiredConfig> = {
+  dev: requiredWorkerConfig("dev", "fake"),
+  production: requiredWorkerConfig("production", "container"),
+  staging: requiredWorkerConfig("staging", "fake"),
 };
 
 /** Validates the vars and secrets once per isolate; names every invalid key. */
@@ -265,31 +338,66 @@ const bucketBinding = z.custom<object>(
   (value) => hasMethods(value, ["head", "get", "put", "delete", "list"]),
   "an R2 bucket binding"
 );
+const workflowBinding = z.custom<object>(
+  (value) => hasMethods(value, ["create", "get"]),
+  "a Workflow binding (create, get)"
+);
+const durableObjectBinding = z.custom<object>(
+  (value) => hasMethods(value, ["idFromName", "get"]),
+  "a Durable Object namespace binding (idFromName, get)"
+);
+
+/**
+ * The render pipeline's bindings (phase 7 ruling 11): the Workflow and the
+ * Container's Durable Object. Both are optional, because the build adds
+ * them only when the env's render mode needs them (ruling 2); a job that
+ * needs a missing one fails cleanly instead of the whole site.
+ */
+export const OPTIONAL_WORKER_BINDINGS = [
+  "RENDER_WORKFLOW",
+  "RENDERER",
+] as const;
+export type OptionalWorkerBinding = (typeof OPTIONAL_WORKER_BINDINGS)[number];
 
 export const workerBindingsSchema = z.object({
   EMAIL_QUEUE: queueBinding,
   EVENTS_QUEUE: queueBinding,
   MEDIA: bucketBinding,
-} satisfies Record<WorkerBinding, z.ZodType>);
+  RENDER_WORKFLOW: workflowBinding.optional(),
+  RENDERER: durableObjectBinding.optional(),
+} satisfies Record<WorkerBinding | OptionalWorkerBinding, z.ZodType>);
+
+/** The required bindings as given, and the render ones when the env has them. */
+export type WorkerBindingsOf<Env> = {
+  [K in WorkerBinding]: NonNullable<Env[K & keyof Env]>;
+} & {
+  [K in OptionalWorkerBinding]?: K extends keyof Env
+    ? NonNullable<Env[K]>
+    : never;
+};
 
 /**
- * Validates the queue and R2 bindings once per isolate and answers them
- * as given (typed by the caller's env); names every missing one.
+ * Validates the queue and R2 bindings, and the render bindings when they
+ * are present, once per isolate and answers them as given (typed by the
+ * caller's env); names every missing or malformed one.
  */
 export function parseWorkerBindings<
   Env extends Partial<Record<WorkerBinding, unknown>>,
->(env: Env): { [K in WorkerBinding]: NonNullable<Env[K]> } {
+>(env: Env): WorkerBindingsOf<Env> {
   const result = workerBindingsSchema.safeParse(env);
   if (!result.success) {
     throw new Error(
       `[config] Invalid worker bindings:\n${z.prettifyError(result.error)}`
     );
   }
+  const optional = env as Partial<Record<OptionalWorkerBinding, unknown>>;
   return {
-    EMAIL_QUEUE: env.EMAIL_QUEUE as NonNullable<Env["EMAIL_QUEUE"]>,
-    EVENTS_QUEUE: env.EVENTS_QUEUE as NonNullable<Env["EVENTS_QUEUE"]>,
-    MEDIA: env.MEDIA as NonNullable<Env["MEDIA"]>,
-  };
+    EMAIL_QUEUE: env.EMAIL_QUEUE,
+    EVENTS_QUEUE: env.EVENTS_QUEUE,
+    MEDIA: env.MEDIA,
+    RENDER_WORKFLOW: optional.RENDER_WORKFLOW ?? undefined,
+    RENDERER: optional.RENDERER ?? undefined,
+  } as WorkerBindingsOf<Env>;
 }
 
 /** What the sign-in screens may know about the server's auth setup. */

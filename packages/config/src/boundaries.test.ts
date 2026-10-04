@@ -121,6 +121,24 @@ describe("isAllowedImport", () => {
     expect(isAllowedImport("@smog/lists", "@smog/gestures")).toBe(false);
   });
 
+  test("a feature reaches the render contract and the fake renderer only (phase 7 ruling 1)", () => {
+    expect(isAllowedImport("@smog/sponsorships", "@smog/render/contract")).toBe(
+      true
+    );
+    expect(isAllowedImport("@smog/sponsorships", "@smog/render/testing")).toBe(
+      true
+    );
+    for (const subpath of ["composition", "metadata", "remotion", ""]) {
+      expect(
+        isAllowedImport(
+          "@smog/sponsorships",
+          subpath ? `@smog/render/${subpath}` : "@smog/render"
+        )
+      ).toBe(false);
+    }
+    expect(isAllowedImport("@smog/jobs", "@smog/render/testing")).toBe(false);
+  });
+
   test("a package may import itself", () => {
     expect(isAllowedImport("@smog/lists", "@smog/lists/server")).toBe(true);
   });

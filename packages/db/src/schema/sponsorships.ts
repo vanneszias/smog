@@ -208,6 +208,9 @@ export const renderJob = sqliteTable(
     ),
     index("render_job_mux_upload_id_idx").on(t.muxUploadId),
     index("render_job_mux_asset_id_idx").on(t.muxAssetId),
+    // The render watchdog's seek (phase 7 ruling 12): active jobs of one
+    // status, oldest first.
+    index("render_job_status_updated_idx").on(t.status, t.updatedAt),
   ]
 );
 

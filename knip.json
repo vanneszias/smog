@@ -12,6 +12,20 @@
     "packages/styles": {
       "project": ["src/**/*.ts", "scripts/**/*.ts", "generated/*.{css,cjs}"]
     },
+    "packages/render": {
+      "entry": [
+        "src/server/{main,bundle,fixture,ensure-browser}.ts",
+        "src/**/*.test.{ts,tsx}",
+        "test/**/*.test.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"],
+      "ignoreDependencies": [
+        "@remotion/fonts",
+        "@remotion/layout-utils",
+        "@remotion/renderer",
+        "mediabunny"
+      ]
+    },
     "packages/ui-web": {
       "project": ["src/**/*.{ts,tsx,css}"],
       "ignoreDependencies": ["tailwindcss"]
@@ -79,7 +93,11 @@
         "scripts/**/*.ts",
         "e2e/**/*.ts"
       ],
-      "ignoreDependencies": ["cloudflare"]
+      "ignoreDependencies": [
+        "cloudflare",
+        "@cloudflare/containers",
+        "@remotion/player"
+      ]
     },
     "apps/mobile": {
       "entry": [
