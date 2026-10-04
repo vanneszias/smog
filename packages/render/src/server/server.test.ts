@@ -18,6 +18,7 @@ import type { RenderPort } from "./render";
 import {
   createRenderServer,
   type MetadataPort,
+  RENDER_ATTEMPT_TIMEOUT_MS,
   RENDER_BODY_MAX_BYTES,
   type RenderLog,
   type RenderServer,
@@ -52,11 +53,16 @@ function request(overrides: Partial<RenderRequest> = {}): RenderRequest {
   };
 }
 
-function post(body: unknown, headers: Record<string, string> = {}): Request {
+function post(
+  body: unknown,
+  headers: Record<string, string> = {},
+  signal?: AbortSignal
+): Request {
   return new Request("http://renderer/render", {
     body: typeof body === "string" ? body : JSON.stringify(body),
     headers: { "content-type": "application/json", ...headers },
     method: "POST",
+    signal,
   });
 }
 
@@ -198,6 +204,7 @@ afterEach(async () => {
 function server(
   ports: {
     allowHttp?: boolean;
+    attemptTimeoutMs?: number;
     log?: RenderLog;
     metadata?: MetadataPort;
     renderer?: RenderPort;
@@ -205,6 +212,7 @@ function server(
   } = {}
 ): RenderServer {
   return createRenderServer({
+    attemptTimeoutMs: ports.attemptTimeoutMs,
     env: {
       PORT: 8080,
       RENDER_ALLOW_HTTP: ports.allowHttp ?? false,
@@ -620,5 +628,124 @@ describe("POST /render failures", () => {
     expect(
       await failure(await server({ renderer }).fetch(post(request())))
     ).toMatchObject({ code: "renderFailed", status: 500 });
+  });
+});
+
+describe("POST /render, bounded attempts (review I-3)", () => {
+  it("the deadline is under the Workflow's 20-minute render step timeout", () => {
+    expect(RENDER_ATTEMPT_TIMEOUT_MS).toBe(19 * 60_000);
+    expect(RENDER_ATTEMPT_TIMEOUT_MS).toBeLessThan(20 * 60_000);
+  });
+
+  it("a caller that disconnects aborts its attempt and frees the slot", async () => {
+    const gate = deferred();
+    const renderer = fakeRenderer({ gate: () => gate.promise });
+    const app = server({ renderer });
+    const caller = new AbortController();
+    const first = app.fetch(post(request(), {}, caller.signal));
+    await until(() => renderer.calls.length >= 1);
+    caller.abort();
+    const answer = await failure(await first);
+    expect(answer.code).toBe("renderFailed");
+    expect(answer.message).toBe("the caller disconnected");
+    expect(renderer.calls[0]?.cancelled).toBe(true);
+    expect(await readdir(tmp)).toEqual([]);
+    gate.resolve();
+    expect(
+      (await app.fetch(post(request({ renderJobId: OTHER_JOB })))).status
+    ).toBe(200);
+  });
+
+  it("an attempt past its deadline is aborted, even when a port ignores the signal", async () => {
+    const hung: MetadataPort = { read: () => new Promise(() => undefined) };
+    const app = server({ attemptTimeoutMs: 30, metadata: hung });
+    const answer = await failure(await app.fetch(post(request())));
+    expect(answer).toMatchObject({
+      code: "renderFailed",
+      message: "the render did not finish within its deadline",
+      status: 500,
+    });
+    expect(await readdir(tmp)).toEqual([]);
+    // The slot is free again.
+    const renderer = fakeRenderer();
+    expect(
+      (
+        await server({ renderer }).fetch(
+          post(request({ renderJobId: OTHER_JOB }))
+        )
+      ).status
+    ).toBe(200);
+  });
+
+  it("drain(timeout) aborts a render that outlives it", async () => {
+    const renderer = fakeRenderer({ gate: () => new Promise(() => undefined) });
+    const app = server({ renderer });
+    const first = app.fetch(post(request()));
+    await until(() => renderer.calls.length >= 1);
+    await app.drain(20);
+    const answer = await failure(await first);
+    expect(answer.message).toBe("the renderer is shutting down");
+    expect(renderer.calls[0]?.cancelled).toBe(true);
+  });
+});
+
+describe("POST /render, the slot hand-over (review minors 1, 2 and 11)", () => {
+  it("a same-job request with a bad logo is refused without cancelling the running one", async () => {
+    const gate = deferred();
+    const renderer = fakeRenderer({ gate: () => gate.promise });
+    const app = server({ renderer });
+    const first = app.fetch(post(request()));
+    await until(() => renderer.calls.length >= 1);
+    const jpegClaim = `data:image/jpeg;base64,${Buffer.from(PNG).toString("base64")}`;
+    expect(
+      await failure(await app.fetch(post(request({ logoDataUrl: jpegClaim }))))
+    ).toMatchObject({ code: "logoUnreadable" });
+    expect(renderer.calls[0]?.cancelled).toBe(false);
+    gate.resolve();
+    expect((await first).status).toBe(200);
+  });
+
+  it("the replacing request holds the slot at once: another job is busy meanwhile", async () => {
+    let attempt = 0;
+    const firstGate = deferred();
+    const renderer = fakeRenderer({
+      gate: () => {
+        attempt += 1;
+        return attempt === 1 ? firstGate.promise : Promise.resolve();
+      },
+    });
+    const log = recordingLog();
+    const app = server({ log, renderer });
+    const first = app.fetch(post(request()));
+    await until(() => renderer.calls.length >= 1);
+    const second = app.fetch(post(request()));
+    const other = app.fetch(post(request({ renderJobId: OTHER_JOB })));
+    expect(await failure(await other)).toMatchObject({ code: "busy" });
+    expect((await failure(await first)).message).toContain("superseded");
+    expect((await second).status).toBe(200);
+    // A superseded attempt is not logged as a failure.
+    expect(log.lines.some((line) => line.startsWith("error"))).toBe(false);
+    expect(log.lines.some((line) => line.includes("superseded"))).toBe(true);
+  });
+
+  it("three requests for one job: the latest wins", async () => {
+    let attempt = 0;
+    const firstGate = deferred();
+    const renderer = fakeRenderer({
+      gate: () => {
+        attempt += 1;
+        return attempt === 1 ? firstGate.promise : Promise.resolve();
+      },
+    });
+    const uploader = fakeUploader();
+    const app = server({ renderer, uploader });
+    const one = app.fetch(post(request({ uploadUrl: `${UPLOAD}&n=1` })));
+    await until(() => renderer.calls.length >= 1);
+    const two = app.fetch(post(request({ uploadUrl: `${UPLOAD}&n=2` })));
+    const three = app.fetch(post(request({ uploadUrl: `${UPLOAD}&n=3` })));
+    const answers = await Promise.all([one, two, three]);
+    expect(answers.map((answer) => answer.status)).toEqual([500, 500, 200]);
+    expect(uploader.calls.map((call) => call.url)).toEqual([`${UPLOAD}&n=3`]);
+    expect(await readdir(tmp)).toEqual([]);
   });
 });

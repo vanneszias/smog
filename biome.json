@@ -37,8 +37,8 @@
     {
       "includes": [
         "scripts/**",
-        "packages/render/src/server/**",
-        "packages/render/test/**",
+        "packages/render/src/server/**/*.ts",
+        "packages/render/test/**/*.ts",
         "**/*.test.ts",
         "**/*.test.tsx"
       ],

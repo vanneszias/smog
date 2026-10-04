@@ -8,6 +8,7 @@ import {
   LOCAL_IMAGE,
   layerSizes,
   NO_DOCKER_MESSAGE,
+  nodeModulesSizeArgs,
   parseNoBuild,
   renderLanePlan,
 } from "./release-check-render";
@@ -101,6 +102,20 @@ describe("the docker commands", () => {
     expect(args).toContain("RENDER_ALLOW_HTTP=1");
     expect(args).toContain("PORT=8080");
     expect(args.at(-1)).toBe(CI_IMAGE);
+  });
+
+  test("the node_modules size is read with du, past tini", () => {
+    expect(nodeModulesSizeArgs(CI_IMAGE)).toEqual([
+      "run",
+      "--rm",
+      "--platform",
+      "linux/amd64",
+      "--entrypoint",
+      "du",
+      CI_IMAGE,
+      "-sh",
+      "/app/node_modules",
+    ]);
   });
 
   test("layerSizes names the library and font layers", () => {

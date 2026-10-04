@@ -87,6 +87,7 @@ describe("createFetchUploader", () => {
     const uploader = createFetchUploader({
       fetch: () =>
         Promise.reject(new TypeError(`fetch failed: connect ${SIGNED}`)),
+      retryDelayMs: 1,
     });
     const error = await rejection(
       uploader.upload({
@@ -121,5 +122,51 @@ describe("createFetchUploader", () => {
         })
       )
     ).toBe(reason);
+  });
+});
+
+describe("one retry of the PUT (review minor 6)", () => {
+  function scripted(answers: (number | Error)[]) {
+    const calls: string[] = [];
+    const uploader = createFetchUploader({
+      fetch: (url) => {
+        calls.push(url);
+        const next = answers.shift() ?? 200;
+        return next instanceof Error
+          ? Promise.reject(next)
+          : Promise.resolve(new Response(null, { status: next }));
+      },
+      retryDelayMs: 1,
+    });
+    const upload = () =>
+      uploader.upload({
+        filePath: file,
+        signal: new AbortController().signal,
+        url: SIGNED,
+      });
+    return { calls, upload };
+  }
+
+  it("a 5xx or a network fault is retried once", async () => {
+    const fiveHundred = scripted([503, 200]);
+    expect(await fiveHundred.upload()).toEqual({ bytes: BYTES.byteLength });
+    expect(fiveHundred.calls).toHaveLength(2);
+    const network = scripted([new TypeError("socket hang up"), 200]);
+    expect(await network.upload()).toEqual({ bytes: BYTES.byteLength });
+    expect(network.calls).toHaveLength(2);
+  });
+
+  it("a 4xx is final, and a second failure is uploadFailed", async () => {
+    const refused = scripted([403]);
+    expect(await rejection(refused.upload())).toMatchObject({
+      code: "uploadFailed",
+    });
+    expect(refused.calls).toHaveLength(1);
+    const twice = scripted([502, 502]);
+    expect(await rejection(twice.upload())).toMatchObject({
+      code: "uploadFailed",
+      message: "the upload was refused (HTTP 502)",
+    });
+    expect(twice.calls).toHaveLength(2);
   });
 });

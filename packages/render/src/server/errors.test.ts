@@ -4,8 +4,8 @@ import { SourceFetchError, SourceUnreadableError } from "../metadata";
 import {
   describeError,
   failureResponse,
+  RenderAbortError,
   RenderServerError,
-  RenderSupersededError,
   scrubUrls,
   toRenderServerError,
 } from "./errors";
@@ -57,7 +57,9 @@ describe("toRenderServerError", () => {
   it("keeps a coded error and maps anything else to renderFailed", () => {
     const coded = new RenderServerError("uploadFailed", "refused");
     expect(toRenderServerError(coded)).toBe(coded);
-    expect(toRenderServerError(new RenderSupersededError())).toMatchObject({
+    expect(
+      toRenderServerError(new RenderAbortError("superseded"))
+    ).toMatchObject({
       code: "renderFailed",
       message: "superseded by a newer request for the same job",
     });

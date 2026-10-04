@@ -43,6 +43,7 @@ export const LOCAL_IMAGE = "smog-renderer:local";
 const CONTAINER_NAME = "smog-renderer-lane";
 const PORT = 8080;
 const HEALTH_TIMEOUT_MS = 120_000;
+const HEALTH_REQUEST_TIMEOUT_MS = 5000;
 export const OUT_DIR = join(ROOT, "packages", "render", ".render-out");
 
 export type RenderLanePlan =
@@ -125,6 +126,21 @@ export function dockerRunArgs(image: string): string[] {
   ];
 }
 
+/** `du` of the runtime's `node_modules`, in a throwaway container. */
+export function nodeModulesSizeArgs(image: string): string[] {
+  return [
+    "run",
+    "--rm",
+    "--platform",
+    "linux/amd64",
+    "--entrypoint",
+    "du",
+    image,
+    "-sh",
+    "/app/node_modules",
+  ];
+}
+
 /** The size of the image's apt layers, from `docker history` lines. */
 export function layerSizes(history: string): string[] {
   return history
@@ -173,7 +189,11 @@ async function waitForHealth(url: string): Promise<boolean> {
   while (Date.now() < deadline) {
     try {
       // biome-ignore lint/performance/noAwaitInLoops: polling until the container answers.
-      const response = await fetch(`${url}/health`);
+      const response = await fetch(`${url}/health`, {
+        // A container that accepts but never answers must not outlive the
+        // deadline (review minor 9).
+        signal: AbortSignal.timeout(HEALTH_REQUEST_TIMEOUT_MS),
+      });
       if (response.ok) {
         console.log(`[render] health: ${await response.text()}`);
         return true;
@@ -209,6 +229,13 @@ async function logImage(image: string): Promise<void> {
   for (const line of layerSizes(history.stdout)) {
     console.log(`[render] layer ${line}`);
   }
+  // The dependency tree, without peers (review I-2).
+  const modules = await run(["docker", ...nodeModulesSizeArgs(image)], {
+    capture: true,
+  });
+  console.log(
+    `[render] node_modules: ${modules.stdout.trim().split("\t")[0] || "size unknown"}`
+  );
 }
 
 async function lane(image: string, build: boolean): Promise<number> {

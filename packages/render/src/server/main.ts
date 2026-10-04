@@ -3,18 +3,30 @@
  * `bun -F @smog/render serve` for `RENDER_MODE=local`. It validates the env
  * with `@smog/config/env/render`, makes sure the bundle and the browser are
  * there, wires the real ports into `createRenderServer` and serves it with
- * `Bun.serve`. `SIGTERM` lets a running render finish, then exits.
+ * `Bun.serve`. `SIGTERM` lets a running render finish (at most
+ * `DRAIN_TIMEOUT_MS`), then exits. Every console line is URL-free.
  */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { parseRenderServerEnv } from "@smog/config/env/render";
 import { VERSION } from "remotion/version";
 import { readSourceMetadata } from "../metadata";
+import { scrubConsole } from "./console-scrub";
 import { describeBrowser, ensureRenderBrowser } from "./ensure-browser";
 import { describeError } from "./errors";
 import { createRemotionRenderer } from "./render";
 import { createRenderServer, type RenderLog } from "./server";
 import { createFetchUploader } from "./upload";
+
+// First of all: Remotion logs through `console.*` itself, naming the
+// signed source URL (review I-1).
+scrubConsole();
+
+/**
+ * How long `SIGTERM` waits for a running render before aborting it: under
+ * the platform's 15-minute grace period before `SIGKILL`.
+ */
+const DRAIN_TIMEOUT_MS = 14 * 60_000;
 
 function line(message: string, data?: Record<string, unknown>): string {
   return data
@@ -76,7 +88,7 @@ async function main(): Promise<void> {
 
   process.once("SIGTERM", async () => {
     log.info("SIGTERM: finishing the running render, then exiting");
-    await app.drain();
+    await app.drain(DRAIN_TIMEOUT_MS);
     await server.stop();
     process.exit(0);
   });

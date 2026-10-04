@@ -24,18 +24,37 @@ export class RenderServerError extends Error {
   }
 }
 
-/** The running render was replaced by a newer request for the same job. */
-export class RenderSupersededError extends Error {
-  override readonly name = "RenderSupersededError";
+/** Why the server itself stopped an attempt. */
+export type RenderAbortReason =
+  | "deadline"
+  | "disconnected"
+  | "shutdown"
+  | "superseded";
 
-  constructor() {
-    super("superseded by a newer request for the same job");
+const ABORT_MESSAGES: Record<RenderAbortReason, string> = {
+  deadline: "the render did not finish within its deadline",
+  disconnected: "the caller disconnected",
+  shutdown: "the renderer is shutting down",
+  superseded: "superseded by a newer request for the same job",
+};
+
+/** The server aborted the attempt (a newer request, a disconnect, …). */
+export class RenderAbortError extends Error {
+  override readonly name = "RenderAbortError";
+  readonly reason: RenderAbortReason;
+
+  constructor(reason: RenderAbortReason) {
+    super(ABORT_MESSAGES[reason]);
+    this.reason = reason;
   }
 }
 
-const URL_PATTERN = /\b(?:https?|wss?|data|blob|file):[^\s"'`<>)\]]*/gi;
+// `file:` and `data:` only in their URL forms, so prose such as "No such
+// file: …" keeps its words.
+const URL_PATTERN =
+  /\b(?:(?:https?|wss?|blob):|file:\/\/|data:[\w.+-]+\/)[^\s"'`<>)\]]*/gi;
 
-/** Replaces every URL (`http(s):`, `data:`, `file:`, …) with `<url>`. */
+/** Replaces every URL (`http(s):`, `ws(s):`, `blob:`, `file://`, `data:<type>/`) with `<url>`. */
 export function scrubUrls(text: string): string {
   return text.replace(URL_PATTERN, "<url>");
 }
@@ -73,7 +92,7 @@ export function toRenderServerError(error: unknown): RenderServerError {
   if (error instanceof SourceFetchError) {
     return new RenderServerError("renderFailed", error.message);
   }
-  if (error instanceof RenderSupersededError) {
+  if (error instanceof RenderAbortError) {
     return new RenderServerError("renderFailed", error.message);
   }
   return new RenderServerError("renderFailed", describeError(error));

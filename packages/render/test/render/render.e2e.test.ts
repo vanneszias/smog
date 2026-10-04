@@ -7,10 +7,16 @@
  * local servers here, so no test file ships in the image.
  *
  * Checks: the uploaded file is H.264 at the source's even size with its
- * frame count ± 1, and the last frame has at least 200 px within ΔE < 10
- * of the brand green inside line 1's box (`#00805F`). The render uses a
- * logo of about 2 MiB (the size limit) and a 35-character name. The last
- * frame is saved as a PNG for the parity review (a CI artifact).
+ * frame count ± 1, and the last frame has the brand green (`#00805F`) in
+ * line 1's rows. The full-size probe runs on a short name, where line 1
+ * keeps its base size: at least 300 px within ΔE < 10 (about 770 measured,
+ * so a shift of a few ΔE in the antialiasing cannot fail it). With the
+ * 35-character name both lines shrink to fit, and the line must still be
+ * there (at least 100 px; about 300 measured). A missing or wrong-colour
+ * line scores about 0 against the magenta fixture. The counts at several
+ * ΔE cut-offs are logged. The long-name render uses a logo of about 2 MiB
+ * (the size limit). The last frames are saved as PNGs for the parity
+ * review (a CI artifact).
  */
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { randomUUID } from "node:crypto";
@@ -26,7 +32,13 @@ import {
   type RenderRequest,
   renderResultSchema,
 } from "../../src/contract";
-import { countNear, encodePng, hexToRgb, lastFrame } from "../support/images";
+import {
+  countNear,
+  encodePng,
+  hexToRgb,
+  lastFrame,
+  type RgbFrame,
+} from "../support/images";
 import {
   type LocalServer,
   serveFiles,
@@ -43,11 +55,31 @@ const STARTUP_MS = 5 * 60_000;
 const SOURCE = { frames: 60, height: 640, width: 360 } as const;
 /** A 35-character name (`DISPLAY_NAME_MAX`), the longest a sponsor can type. */
 const LONG_NAME = "Bakkerij Van den Broeck & Zonen bv.";
-const ARABIC_NAME = "مخبز الأمل للحلويات";
+/** A short name in another script: line 1 keeps its base size. */
+const SHORT_ARABIC_NAME = "مخبز الأمل";
 const GREEN = hexToRgb(RENDER_OVERLAY_LAYOUT.text.color);
-const MIN_GREEN_PIXELS = 200;
 const MAX_DELTA_E = 10;
+const MIN_GREEN_SHORT_NAME = 300;
+const MIN_GREEN_LONG_NAME = 100;
+const LOGGED_DELTA_E = [6, 8, 10, 12, 15] as const;
 const TRAILING_SLASHES = /\/+$/;
+
+/** Line 1's brand-green pixels, logged at several ΔE cut-offs. */
+function greenInLine1(frame: RgbFrame, label: string): number {
+  const { fontSize, y } = RENDER_OVERLAY_LAYOUT.text;
+  const top = Math.floor(y * SOURCE.height);
+  const bottom = Math.ceil((y + 1.2 * fontSize) * SOURCE.height);
+  const counts = LOGGED_DELTA_E.map((maxDeltaE) => ({
+    count: countNear(frame, GREEN, { bottom, maxDeltaE, top }),
+    maxDeltaE,
+  }));
+  console.log(
+    `[render] ${label}: line 1 green (${RENDER_OVERLAY_LAYOUT.text.color}, rows ${top}..${bottom}) ${counts
+      .map(({ count, maxDeltaE }) => `ΔE<${maxDeltaE}: ${count}`)
+      .join(", ")}`
+  );
+  return countNear(frame, GREEN, { bottom, maxDeltaE: MAX_DELTA_E, top });
+}
 
 let serverUrl: string;
 let child: Subprocess | null = null;
@@ -212,30 +244,28 @@ describe("a real render", () => {
       input.dispose();
     }
 
-    // The last frame: the green intro line where line 1 sits.
+    // The last frame: line 1 is there, shrunk with the long name.
     const still = join(OUT_DIR, "render-last-frame.png");
     const { count, frame } = lastFrame(mp4, SOURCE, still);
     expect(Math.abs(count - SOURCE.frames)).toBeLessThanOrEqual(1);
-    const { fontSize, y } = RENDER_OVERLAY_LAYOUT.text;
-    const top = Math.floor(y * SOURCE.height);
-    const bottom = Math.ceil((y + 1.2 * fontSize) * SOURCE.height);
-    const green = countNear(frame, GREEN, {
-      bottom,
-      maxDeltaE: MAX_DELTA_E,
-      top,
-    });
-    console.log(
-      `[render] ${green} px within ΔE < ${MAX_DELTA_E} of ${RENDER_OVERLAY_LAYOUT.text.color} in rows ${top}..${bottom}; still: ${still}`
+    expect(greenInLine1(frame, "35-character name")).toBeGreaterThanOrEqual(
+      MIN_GREEN_LONG_NAME
     );
-    expect(green).toBeGreaterThanOrEqual(MIN_GREEN_PIXELS);
   });
 
-  it("renders a name in another script (Arabic) without a logo", async () => {
+  it("renders a short name in another script (Arabic): line 1 at full size", async () => {
     const { mp4, result } = await render(
-      { displayName: ARABIC_NAME, logoDataUrl: null },
+      { displayName: SHORT_ARABIC_NAME, logoDataUrl: null },
       "render-arabic"
     );
     expect(result).toMatchObject({ frames: SOURCE.frames });
-    lastFrame(mp4, SOURCE, join(OUT_DIR, "render-arabic-last-frame.png"));
+    const { frame } = lastFrame(
+      mp4,
+      SOURCE,
+      join(OUT_DIR, "render-arabic-last-frame.png")
+    );
+    expect(greenInLine1(frame, "short name")).toBeGreaterThanOrEqual(
+      MIN_GREEN_SHORT_NAME
+    );
   });
 });
