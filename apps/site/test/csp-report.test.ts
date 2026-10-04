@@ -65,6 +65,7 @@ describe("POST /api/csp-report", () => {
         "[csp] violation",
         {
           blocked: "inline",
+          count: 1,
           directive: "script-src-elem",
           disposition: "enforce",
           document: `${ORIGIN}/sponsor/edit`,
@@ -101,6 +102,7 @@ describe("POST /api/csp-report", () => {
         "[csp] violation",
         {
           blocked: "https://evil.example/x.js",
+          count: 1,
           directive: "script-src-elem",
           disposition: "enforce",
           document: `${ORIGIN}/lists/:token`,

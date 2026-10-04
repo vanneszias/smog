@@ -135,9 +135,40 @@ describe("redactReportUrl", () => {
     expect(redactReportUrl(`https://cdn.example/a/${TOKEN}/b.js`)).toBe(
       "https://cdn.example/a/:token/b.js"
     );
-    // Slugs stay readable.
+    // Slugs and UUIDs stay readable.
     expect(redactReportUrl("https://smog.example/gestures/goedemorgen")).toBe(
       "https://smog.example/gestures/goedemorgen"
+    );
+    expect(
+      redactReportUrl(
+        "https://smog.example/admin/gestures/0f5e7c1a-2b3d-4e5f-8a9b-0c1d2e3f4a5b"
+      )
+    ).toBe(
+      "https://smog.example/admin/gestures/0f5e7c1a-2b3d-4e5f-8a9b-0c1d2e3f4a5b"
+    );
+  });
+
+  test("masks list tokens in case-variant and double-slash paths (review M-1)", () => {
+    const hex = "0123456789abcdef0123456789abcdef";
+    expect(redactReportUrl("https://smog.example/LISTS/legacy-token-1")).toBe(
+      "https://smog.example/LISTS/:token"
+    );
+    expect(redactReportUrl(`https://smog.example/Lists/${hex}`)).toBe(
+      "https://smog.example/Lists/:token"
+    );
+    expect(redactReportUrl("https://smog.example//lists/legacytok")).toBe(
+      "https://smog.example/lists/:token"
+    );
+    expect(
+      redactReportUrl("https://smog.example///api//auth/Reset-Password/t")
+    ).toBe("https://smog.example/api/auth/Reset-Password/:token");
+    // A 32+ hex segment is a token anywhere (a migrated share token is 32
+    // lower-case hex, which the slug rule would keep).
+    expect(redactReportUrl(`https://smog.example/x/${hex}`)).toBe(
+      "https://smog.example/x/:token"
+    );
+    expect(redactReportUrl(`https://smog.example/x/${hex}abcdef0123`)).toBe(
+      "https://smog.example/x/:token"
     );
   });
 
@@ -260,16 +291,16 @@ describe("parseCspReports", () => {
     expect(parseCspReports("application/reports+json", null)).toEqual([]);
   });
 
-  test("keeps at most 5 violations per body", () => {
+  test("reads every CSP entry of a batch (the handler logs one line)", () => {
     const entries = Array.from({ length: 50 }, () => cspEntry());
     expect(parseCspReports("application/reports+json", entries)).toHaveLength(
-      5
+      50
     );
   });
 });
 
 describe("handleCspReport", () => {
-  test("logs one redacted line per violation and answers an empty 204", async () => {
+  test("logs one redacted line and answers an empty 204", async () => {
     const { logged, limited, options } = harness();
     const response = await handleCspReport(
       post(legacyReport(), { "cf-connecting-ip": "198.51.100.7" }),
@@ -284,6 +315,7 @@ describe("handleCspReport", () => {
         "[csp] violation",
         {
           blocked: "inline",
+          count: 1,
           directive: "script-src-elem",
           disposition: "enforce",
           document: "https://smog.example/sponsor/edit",
@@ -306,8 +338,27 @@ describe("handleCspReport", () => {
     expect(response.status).toBe(204);
     expect(logged).toHaveLength(1);
     expect(logged[0]?.[1]).toMatchObject({
+      count: 1,
       document: "https://smog.example/lists/:token",
     });
+  });
+
+  test("logs one line per body, the first violation with the count (review M-2)", async () => {
+    const { logged, options } = harness();
+    const entries = [
+      { type: "deprecation" },
+      cspEntry({ effectiveDirective: "img-src" }),
+      ...Array.from({ length: 19 }, () => cspEntry()),
+    ];
+    const response = await handleCspReport(
+      post(reportsJson(entries), {
+        "content-type": "application/reports+json",
+      }),
+      options
+    );
+    expect(response.status).toBe(204);
+    expect(logged).toHaveLength(1);
+    expect(logged[0]?.[1]).toMatchObject({ count: 20, directive: "img-src" });
   });
 
   test("answers 204 and logs nothing for a body without CSP entries", async () => {

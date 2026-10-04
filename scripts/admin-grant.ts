@@ -1,8 +1,8 @@
 import { join } from "node:path";
-import { buildGrantSql } from "@smog/config/admin-grant";
+import { buildGrantSql, normalizeGrantEmail } from "@smog/config/admin-grant";
 
 /**
- * `bun run admin:grant --env <dev|staging|production> [--create] [--dry-run] <email>`:
+ * `bun run admin:grant --env <dev|staging|production> [--create [--yes]] [--dry-run] <email>`:
  * gives an account the `admin` role (spec §6). It runs
  * `wrangler d1 execute DB` from `apps/site` (`--local` in dev, `--remote`
  * otherwise); `--dry-run` prints the command instead. It also lifts any
@@ -13,7 +13,10 @@ import { buildGrantSql } from "@smog/config/admin-grant";
  * inserts the account when no account has that email: verified, admin, no
  * password, `welcomed_at` set. It then signs in with an email code, also
  * during maintenance. With an existing account it is the plain grant. The
- * SQL is `@smog/config/admin-grant`'s; it never demotes anyone.
+ * SQL is `@smog/config/admin-grant`'s; it never demotes anyone. A typo
+ * would make a verified admin of someone else's address, so `--create` on
+ * staging or production needs `--yes` (not for `--dry-run`, which prints the
+ * normalized address to check).
  */
 
 const ENVS = ["dev", "staging", "production"] as const;
@@ -55,22 +58,35 @@ export interface GrantArgs {
   dryRun: boolean;
   email: string;
   env: GrantEnv;
+  yes: boolean;
+}
+
+/** The boolean flags, by their option. */
+const FLAGS = {
+  "--create": "create",
+  "--dry-run": "dryRun",
+  "--yes": "yes",
+} as const;
+
+function isFlag(arg: string): arg is keyof typeof FLAGS {
+  return Object.hasOwn(FLAGS, arg);
 }
 
 export function parseGrantArgs(argv: readonly string[]): GrantArgs {
   let env: string | undefined;
-  let dryRun = false;
-  let create = false;
+  const flags: Record<(typeof FLAGS)[keyof typeof FLAGS], boolean> = {
+    create: false,
+    dryRun: false,
+    yes: false,
+  };
   let expectEnv = false;
   const emails: string[] = [];
   for (const arg of argv) {
     if (expectEnv) {
       env = arg;
       expectEnv = false;
-    } else if (arg === "--dry-run") {
-      dryRun = true;
-    } else if (arg === "--create") {
-      create = true;
+    } else if (isFlag(arg)) {
+      flags[FLAGS[arg]] = true;
     } else if (arg === "--env") {
       expectEnv = true;
     } else if (arg.startsWith("--env=")) {
@@ -93,7 +109,17 @@ export function parseGrantArgs(argv: readonly string[]): GrantArgs {
   if (rest.length > 0) {
     throw new Error("[adminGrant] Pass one email at a time");
   }
-  return { create, dryRun, email, env };
+  if (flags.create && env !== "dev" && !flags.yes && !flags.dryRun) {
+    throw new Error(
+      `[adminGrant] --create on ${env} makes ${JSON.stringify(normalizeGrantEmail(email))} a verified admin: check the address (--dry-run prints it), then pass --yes`
+    );
+  }
+  return { ...flags, email, env };
+}
+
+/** One argument for a POSIX shell: single-quoted, so nothing in it expands. */
+export function shellQuote(arg: string): string {
+  return `'${arg.replaceAll("'", "'\\''")}'`;
 }
 
 /** What `--dry-run` prints: the command, then what it does besides. */
@@ -103,11 +129,16 @@ export function dryRunLines(
     create: args.create,
   })
 ): string[] {
-  const shown = command.map((arg) => JSON.stringify(arg)).join(" ");
+  const shown = command.map(shellQuote).join(" ");
   return [
     `(cd apps/site && bunx ${shown})`,
     UNBAN_NOTE,
-    ...(args.create ? [CREATE_NOTE] : []),
+    ...(args.create
+      ? [
+          CREATE_NOTE,
+          `[adminGrant] The address: ${JSON.stringify(normalizeGrantEmail(args.email))}.${args.env === "dev" ? "" : " Check it, then run again with --yes."}`,
+        ]
+      : []),
   ];
 }
 
@@ -147,7 +178,7 @@ if (import.meta.main) {
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     console.error(
-      "Usage: bun run admin:grant --env <dev|staging|production> [--create] [--dry-run] <email>"
+      "Usage: bun run admin:grant --env <dev|staging|production> [--create [--yes]] [--dry-run] <email>"
     );
     process.exit(1);
   }

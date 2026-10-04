@@ -218,6 +218,13 @@ test.describe("CSP (enforced in dev)", () => {
     expect(headers["reporting-endpoints"]).toBe(
       `csp="${baseURL}/api/csp-report"`
     );
+    // The request's own origin, whatever SITE_URL says (review I-1).
+    const otherHost = (baseURL ?? "").replace("localhost", "127.0.0.1");
+    const viaIp = await request.get(`${otherHost}/`);
+    expect(viaIp.headers()["reporting-endpoints"]).toBe(
+      `csp="${otherHost}/api/csp-report"`
+    );
+    await viaIp.dispose();
     await waitForApp(page);
     const event = await page.evaluate(
       (blocked) =>

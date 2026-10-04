@@ -14,8 +14,9 @@ import { readCappedBody } from "@smog/utils";
  * - The body is capped at 16 KiB (`readCappedBody`): an empty 413 past it.
  * - Every other request gets an empty 204 (`no-store`): nothing is echoed,
  *   so a caller learns nothing, whatever it sent.
- * - Each violation (at most 5 per body) is one log line,
- *   `[csp] violation { directive, blocked, document, source, line, disposition }`.
+ * - One log line per body (a Reporting API batch included), its first
+ *   violation and the count:
+ *   `[csp] violation { directive, blocked, document, source, line, disposition, count }`.
  *   URLs keep only their origin and path, never the query or fragment
  *   (re-edit and renewal links carry raw tokens there), and path segments
  *   that carry a token (`/lists/<shareToken>`, a reset token, a minted
@@ -29,8 +30,6 @@ import { readCappedBody } from "@smog/utils";
 
 export const CSP_REPORT_MAX_BYTES = 16 * 1024;
 
-/** A body of 50 entries logs 5 lines, never 50. */
-const MAX_VIOLATIONS = 5;
 const MAX_URL_LENGTH = 256;
 const MAX_INPUT_LENGTH = 4096;
 
@@ -49,6 +48,9 @@ const WEB_SCHEMES = new Set(["http:", "https:", "ws:", "wss:"]);
 const TOKEN_LIKE = /^[A-Za-z0-9_-]{20,}$/;
 /** Slugs and UUIDs stay readable: lower case, digits and single hyphens. */
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/** 32+ hex characters: a migrated share token (U-20) or a digest, never a slug. */
+const HEX_TOKEN = /^[0-9a-f]{32,}$/i;
+const REPEATED_SLASHES = /\/{2,}/g;
 /** Paths whose next segment is a capability, whatever it looks like. */
 const TOKEN_PREFIXES = [
   "/lists/",
@@ -66,19 +68,30 @@ export interface CspViolation {
   source: string | null;
 }
 
+function isTokenSegment(segment: string): boolean {
+  return (
+    HEX_TOKEN.test(segment) || (TOKEN_LIKE.test(segment) && !SLUG.test(segment))
+  );
+}
+
+/**
+ * The path with its token segments masked. Repeated slashes are collapsed
+ * and the prefixes compared case-insensitively first: the router matches
+ * `/Lists/<token>` and `//lists/<token>` too.
+ */
 function redactPath(pathname: string): string {
+  const path = pathname.replace(REPEATED_SLASHES, "/");
+  const lower = path.toLowerCase();
   for (const prefix of TOKEN_PREFIXES) {
-    if (pathname.startsWith(prefix) && pathname.length > prefix.length) {
-      const rest = pathname.slice(prefix.length);
+    if (lower.startsWith(prefix) && path.length > prefix.length) {
+      const rest = path.slice(prefix.length);
       const slash = rest.indexOf("/");
-      return `${prefix}${TOKEN_MARK}${slash === -1 ? "" : redactPath(rest.slice(slash))}`;
+      return `${path.slice(0, prefix.length)}${TOKEN_MARK}${slash === -1 ? "" : redactPath(rest.slice(slash))}`;
     }
   }
-  return pathname
+  return path
     .split("/")
-    .map((segment) =>
-      TOKEN_LIKE.test(segment) && !SLUG.test(segment) ? TOKEN_MARK : segment
-    )
+    .map((segment) => (isTokenSegment(segment) ? TOKEN_MARK : segment))
     .join("/");
 }
 
@@ -162,9 +175,6 @@ function fromReportingApi(body: unknown): CspViolation[] {
   }
   const violations: CspViolation[] = [];
   for (const entry of body) {
-    if (violations.length >= MAX_VIOLATIONS) {
-      break;
-    }
     if (
       !isRecord(entry) ||
       entry.type !== "csp-violation" ||
@@ -195,11 +205,16 @@ export function parseCspReports(
     : fromReportingApi(body);
 }
 
+/** The one line per body: its first violation and how many it held. */
+interface LoggedViolation extends CspViolation {
+  count: number;
+}
+
 export interface CspReportOptions {
   /** The `RL_ANALYTICS` check (`checkRateLimit`); `false` when over the limit. */
   limit: (key: string) => Promise<boolean>;
-  /** Where a violation line goes (`console.warn`). */
-  log?: (message: string, violation: CspViolation) => void;
+  /** Where the body's one line goes (`console.warn`). */
+  log?: (message: string, violation: LoggedViolation) => void;
   /** Where a failure goes (`console.error`). */
   logError?: (message: string, error: unknown) => void;
 }
@@ -246,8 +261,9 @@ export async function handleCspReport(
   } catch {
     return empty(204);
   }
-  for (const violation of parseCspReports(contentType, body)) {
-    log("[csp] violation", violation);
+  const [first, ...rest] = parseCspReports(contentType, body);
+  if (first) {
+    log("[csp] violation", { ...first, count: rest.length + 1 });
   }
   return empty(204);
 }

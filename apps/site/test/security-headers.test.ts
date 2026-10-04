@@ -61,7 +61,7 @@ describe("the CSP", () => {
     expect(reportingEndpoints("https://smog.example")).toBe(
       'csp="https://smog.example/api/csp-report"'
     );
-    // Only the origin of SITE_URL.
+    // Only the origin of the request's URL.
     expect(reportingEndpoints("http://localhost:5173/x?y")).toBe(
       'csp="http://localhost:5173/api/csp-report"'
     );
@@ -138,6 +138,18 @@ describe("security headers on the site", () => {
       );
     }
     expect(hashes).toContain(THEME_SCRIPT_HASH);
+  });
+
+  it("points Reporting-Endpoints at the request's own origin, never SITE_URL", async () => {
+    // SITE_URL is http://localhost:5173 in the tests; another host (a
+    // custom domain, a preview URL) must still report to itself.
+    const response = await exports.default.fetch(
+      "https://other-host.example/?token=secret"
+    );
+    expect(response.headers.get("reporting-endpoints")).toBe(
+      'csp="https://other-host.example/api/csp-report"'
+    );
+    await response.body?.cancel();
   });
 
   it("uses a fresh nonce per response", async () => {
@@ -262,11 +274,11 @@ describe("withSecurityHeaders", () => {
   it.each(["dev", "staging", "production"] as const)(
     "reports in %s: the directives and Reporting-Endpoints on documents",
     (environment) => {
-      const siteUrl = "https://smog.example";
+      const requestUrl = "https://smog.example";
       const page = withSecurityHeaders(html(), {
         environment,
         nonce: "n",
-        siteUrl,
+        requestUrl,
       });
       const csp =
         page.headers.get("content-security-policy") ??
@@ -278,7 +290,7 @@ describe("withSecurityHeaders", () => {
       );
       const redirect = withSecurityHeaders(
         Response.redirect("https://smog.example/", 302),
-        { environment, nonce: "n", siteUrl }
+        { environment, nonce: "n", requestUrl }
       );
       expect(redirect.headers.get("reporting-endpoints")).toBe(
         'csp="https://smog.example/api/csp-report"'
@@ -286,13 +298,13 @@ describe("withSecurityHeaders", () => {
       const json = withSecurityHeaders(Response.json({}), {
         environment,
         nonce: "n",
-        siteUrl,
+        requestUrl,
       });
       expect(json.headers.get("reporting-endpoints")).toBeNull();
     }
   );
 
-  it("sends no Reporting-Endpoints without a valid SITE_URL, and keeps a route's own", () => {
+  it("sends no Reporting-Endpoints without a valid request URL, and keeps a route's own", () => {
     expect(
       withSecurityHeaders(html(), {
         environment: "production",
@@ -301,7 +313,11 @@ describe("withSecurityHeaders", () => {
     ).toBeNull();
     const own = withSecurityHeaders(
       html({ headers: { "reporting-endpoints": 'x="https://a.example/r"' } }),
-      { environment: "production", nonce: "n", siteUrl: "https://smog.example" }
+      {
+        environment: "production",
+        nonce: "n",
+        requestUrl: "https://smog.example",
+      }
     );
     expect(own.headers.get("reporting-endpoints")).toBe(
       'x="https://a.example/r"'

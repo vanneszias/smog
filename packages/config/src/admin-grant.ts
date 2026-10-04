@@ -28,7 +28,7 @@ function quote(value: string): string {
 }
 
 /** The email as Better Auth stores it (trimmed, lower-cased), or a throw. */
-function normalizeGrantEmail(email: string): string {
+export function normalizeGrantEmail(email: string): string {
   const normalized = email.trim().toLowerCase();
   if (!EMAIL.test(normalized)) {
     throw new Error(

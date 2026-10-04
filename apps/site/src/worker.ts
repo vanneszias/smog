@@ -70,7 +70,7 @@ export default {
         ...devConnectSources(environment, muxApiUrl),
         ...r2ConnectSources(env.R2_ACCOUNT_ID),
       ],
-      siteUrl: env.SITE_URL,
+      requestUrl: request.url,
     });
   },
 

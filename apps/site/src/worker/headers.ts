@@ -10,8 +10,9 @@ import { r2Origin } from "@smog/sponsorships/server";
  * - Every response: `X-Content-Type-Options`, `Referrer-Policy` and, outside
  *   dev, `Strict-Transport-Security`.
  * - HTML and redirects also get the CSP, `X-Frame-Options`,
- *   `Permissions-Policy`, `Cross-Origin-Opener-Policy` and, with a valid
- *   `SITE_URL`, `Reporting-Endpoints` (the CSP's `report-to csp` group).
+ *   `Permissions-Policy`, `Cross-Origin-Opener-Policy` and
+ *   `Reporting-Endpoints` (the CSP's `report-to csp` group, on the
+ *   request's own origin).
  * - A header the route already set wins: this never overwrites one. A route
  *   that sends its own `Content-Security-Policy` (or `-Report-Only`), like
  *   `/turnstile-bridge`, gets neither CSP header from here, so its policy is
@@ -88,15 +89,18 @@ export function buildCsp(
 
 /**
  * The `Reporting-Endpoints` value for the CSP's `report-to` group:
- * `csp="<SITE_URL origin>/api/csp-report"`, or null when `SITE_URL` is not
- * an http(s) URL (the CSP's `report-uri` still reports then).
+ * `csp="<origin>/api/csp-report"` on the **request's own origin**, so the
+ * endpoint is always same-origin with the document (never `SITE_URL`: a
+ * placeholder or another host there would send unredacted reports
+ * elsewhere, or cross-origin where the route grants no CORS). Null when the
+ * URL is not http(s); the CSP's `report-uri` still reports then.
  */
-export function reportingEndpoints(siteUrl: unknown): string | null {
-  if (typeof siteUrl !== "string") {
+export function reportingEndpoints(requestUrl: unknown): string | null {
+  if (typeof requestUrl !== "string") {
     return null;
   }
   try {
-    const { origin, protocol } = new URL(siteUrl);
+    const { origin, protocol } = new URL(requestUrl);
     return protocol === "https:" || protocol === "http:"
       ? `${CSP_REPORT_GROUP}="${origin}${CSP_REPORT_PATH}"`
       : null;
@@ -111,8 +115,8 @@ export interface CspOptions {
 }
 
 export interface RespondOptions extends CspOptions {
-  /** `SITE_URL`, for `Reporting-Endpoints`. */
-  siteUrl?: unknown;
+  /** The request's URL, for `Reporting-Endpoints` (its origin). */
+  requestUrl?: unknown;
 }
 
 /**
@@ -160,8 +164,8 @@ export interface SecurityHeaderOptions {
   connectSrc?: readonly string[];
   environment: Environment;
   nonce: string;
-  /** `SITE_URL`, for `Reporting-Endpoints` (`reportingEndpoints`). */
-  siteUrl?: unknown;
+  /** The request's URL, for `Reporting-Endpoints` (`reportingEndpoints`). */
+  requestUrl?: unknown;
 }
 
 function isDocument(response: Response): boolean {
@@ -206,7 +210,7 @@ export function withSecurityHeaders(
     return secured;
   }
   setMissing(headers, DOCUMENT_HEADERS);
-  const endpoints = reportingEndpoints(options.siteUrl);
+  const endpoints = reportingEndpoints(options.requestUrl);
   if (endpoints) {
     setMissing(headers, { [REPORTING_ENDPOINTS]: endpoints });
   }
@@ -234,7 +238,7 @@ export function withSecurityHeaders(
 export async function respondSecurely(
   environment: Environment,
   handle: (nonce: string) => Promise<Response> | Response,
-  { connectSrc = [], siteUrl }: RespondOptions = {}
+  { connectSrc = [], requestUrl }: RespondOptions = {}
 ): Promise<Response> {
   const nonce = createNonce();
   let response: Response;
@@ -254,6 +258,6 @@ export async function respondSecurely(
     connectSrc,
     environment,
     nonce,
-    siteUrl,
+    requestUrl,
   });
 }

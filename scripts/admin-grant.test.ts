@@ -3,7 +3,12 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildGrantSql, buildGrantStatements } from "@smog/config/admin-grant";
-import { buildGrantCommand, dryRunLines, parseGrantArgs } from "./admin-grant";
+import {
+  buildGrantCommand,
+  dryRunLines,
+  parseGrantArgs,
+  shellQuote,
+} from "./admin-grant";
 
 const MIGRATIONS = join(import.meta.dir, "..", "packages", "db", "migrations");
 const ID = "0f5e7c1a-2b3d-4e5f-8a9b-0c1d2e3f4a5b";
@@ -232,6 +237,7 @@ describe("parseGrantArgs", () => {
       dryRun: false,
       email: "a@smog.test",
       env: "staging",
+      yes: false,
     });
     expect(
       parseGrantArgs(["a@smog.test", "--dry-run", "--env=production"])
@@ -240,15 +246,41 @@ describe("parseGrantArgs", () => {
       dryRun: true,
       email: "a@smog.test",
       env: "production",
+      yes: false,
     });
     expect(
-      parseGrantArgs(["--create", "--env", "production", "a@smog.test"])
+      parseGrantArgs([
+        "--create",
+        "--env",
+        "production",
+        "--yes",
+        "a@smog.test",
+      ])
     ).toEqual({
       create: true,
       dryRun: false,
       email: "a@smog.test",
       env: "production",
+      yes: true,
     });
+  });
+
+  test("--create on staging or production needs --yes (review I-2)", () => {
+    for (const env of ["staging", "production"]) {
+      expect(() =>
+        parseGrantArgs(["--create", "--env", env, " First@Gmial.com "])
+      ).toThrow(
+        `[adminGrant] --create on ${env} makes "first@gmial.com" a verified admin: check the address (--dry-run prints it), then pass --yes`
+      );
+      // A dry run only prints, and a plain grant cannot create anyone.
+      expect(
+        parseGrantArgs(["--create", "--dry-run", "--env", env, "a@x.be"]).create
+      ).toBe(true);
+      expect(parseGrantArgs(["--env", env, "a@x.be"]).create).toBe(false);
+    }
+    expect(
+      parseGrantArgs(["--create", "--env", "dev", "a@smog.test"]).yes
+    ).toBe(false);
   });
 
   test("refuses a missing or unknown env and a missing email", () => {
@@ -273,8 +305,9 @@ describe("dryRunLines", () => {
       dryRun: true,
       email: "a@smog.test",
       env: "staging",
+      yes: false,
     });
-    expect(lines[0]).toStartWith('(cd apps/site && bunx "wrangler"');
+    expect(lines[0]).toStartWith("(cd apps/site && bunx 'wrangler'");
     expect(lines[1]).toBe(
       "[adminGrant] This also lifts any ban on the account (banned, ban_reason and ban_expires are cleared)."
     );
@@ -285,8 +318,9 @@ describe("dryRunLines", () => {
     const args = {
       create: true,
       dryRun: true,
-      email: "first@example.test",
+      email: "First@Example.test",
       env: "production",
+      yes: false,
     } as const;
     const command = buildGrantCommand(args.env, args.email, {
       create: true,
@@ -294,11 +328,41 @@ describe("dryRunLines", () => {
     });
     const lines = dryRunLines(args, command);
     expect(lines[0]).toBe(
-      `(cd apps/site && bunx ${command.map((arg) => JSON.stringify(arg)).join(" ")})`
+      `(cd apps/site && bunx ${command.map(shellQuote).join(" ")})`
     );
     expect(lines[0]).toContain("INSERT INTO user");
     expect(lines[0]).toContain("--remote");
     expect(lines[2]).toStartWith("[adminGrant] --create:");
+    expect(lines[3]).toBe(
+      '[adminGrant] The address: "first@example.test". Check it, then run again with --yes.'
+    );
+  });
+
+  test("quotes each argument so a shell expands nothing (review M-3)", () => {
+    for (const arg of [
+      "plain",
+      "it's",
+      "$(id)@x.co",
+      "`id`@x.co",
+      "$HOME'\\\"!*?;|&<>",
+      "",
+    ]) {
+      const proc = Bun.spawnSync(["sh", "-c", `printf %s ${shellQuote(arg)}`]);
+      expect(proc.stdout.toString()).toBe(arg);
+    }
+    // The printed command, pasted into a shell, passes wrangler exactly
+    // these arguments (an email with a quote and a `$(…)` included).
+    const email = "o'brien$(id)@x.co";
+    const command = buildGrantCommand("dev", email, { create: true, id: ID });
+    const [line = ""] = dryRunLines(
+      { create: true, dryRun: true, email, env: "dev", yes: false },
+      command
+    );
+    const pasted = line
+      .replace("(cd apps/site && bunx ", "printf '%s\\n' ")
+      .slice(0, -1);
+    const proc = Bun.spawnSync(["sh", "-c", pasted]);
+    expect(proc.stdout.toString()).toBe(`${command.join("\n")}\n`);
   });
 
   test("the script's --dry-run prints and runs nothing", () => {
@@ -318,7 +382,8 @@ describe("dryRunLines", () => {
     const out = proc.stdout.toString();
     expect(proc.exitCode).toBe(0);
     expect(out).toContain("INSERT INTO user");
-    expect(out).toContain("UPDATE user SET role = 'admin'");
+    expect(out).toContain("UPDATE user SET role = ");
+    expect(out).toContain('[adminGrant] The address: "first@example.test".');
     expect(out).toContain("[adminGrant] --create:");
   });
 });
