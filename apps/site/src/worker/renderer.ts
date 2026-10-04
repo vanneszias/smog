@@ -14,7 +14,9 @@ import { type RendererPort, renderResultSchema } from "@smog/render/contract";
  * How `SmogRenderer` runs its container (phase 7 ruling 3):
  *
  * - `defaultPort` 8080, the render server's `PORT` in the image;
- * - `sleepAfter` 10 minutes (an in-flight request keeps it awake);
+ * - `sleepAfter` 10 minutes (an in-flight request keeps it awake), a
+ *   backstop only: `rendererFor` stops the container as soon as its render
+ *   answers, so the instance is free for the next job (fix wave C-1);
  * - `enableInternet`: it reads the Mux source and PUTs to the Mux upload;
  * - `envVars`: `RENDER_ENVIRONMENT` (an unknown value reads as
  *   `production`, the strictest) and `REMOTION_LICENSE_KEY` only when the
