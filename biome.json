@@ -35,7 +35,13 @@
   },
   "overrides": [
     {
-      "includes": ["scripts/**", "**/*.test.ts", "**/*.test.tsx"],
+      "includes": [
+        "scripts/**",
+        "packages/render/src/server/**",
+        "packages/render/test/**",
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
       "javascript": {
         "globals": ["Bun"]
       }

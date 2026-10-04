@@ -610,6 +610,7 @@
         "@remotion/renderer": "catalog:",
         "@smog/config": "workspace:*",
         "@smog/styles": "workspace:*",
+        "@smog/utils": "workspace:*",
         "mediabunny": "catalog:",
         "react": "catalog:",
         "react-dom": "catalog:",

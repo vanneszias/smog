@@ -1,0 +1,4 @@
+# The Remotion bundle `bun -F @smog/render serve` builds once.
+.render-bundle/
+# The render lane's still and MP4 (CI uploads them as an artifact).
+.render-out/

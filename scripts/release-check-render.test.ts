@@ -1,66 +1,117 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import {
+  CI_IMAGE,
   DOCKERFILE,
+  dockerBuildArgs,
+  dockerRunArgs,
+  LOCAL_IMAGE,
+  layerSizes,
   NO_DOCKER_MESSAGE,
-  PLACEHOLDER_MESSAGE,
-  renderLaneStep,
+  parseNoBuild,
+  renderLanePlan,
 } from "./release-check-render";
 
-/**
- * `release:check:render` (phase 7 ruling 16). Task 2 ships the lane with a
- * placeholder body: it passes only while the render image does not exist
- * (`packages/render/container/Dockerfile`, task 4). Once the Dockerfile is
- * there, the placeholder fails, so task 4 cannot land without the lane.
- */
-describe("renderLaneStep", () => {
-  test("no Dockerfile yet: the placeholder passes with its message", () => {
-    for (const docker of [true, false]) {
-      for (const ci of [true, false]) {
-        expect(renderLaneStep({ ci, docker, dockerfile: false })).toEqual({
-          code: 0,
-          message: PLACEHOLDER_MESSAGE,
-        });
-      }
-    }
-    expect(PLACEHOLDER_MESSAGE).toBe(
-      "[render] The render image arrives in phase 7 task 4 (packages/render/container/Dockerfile); nothing to check yet."
-    );
-  });
-
-  test("with the Dockerfile, the placeholder no longer passes", () => {
-    for (const ci of [true, false]) {
-      const step = renderLaneStep({ ci, docker: true, dockerfile: true });
-      expect(step.code).toBe(1);
-      expect(step.message).toContain(
-        "[render] packages/render/container/Dockerfile exists, but release:check:render is still the task 2 placeholder"
-      );
-    }
-    // In CI, a missing Docker daemon is a failure, never a skip.
-    expect(
-      renderLaneStep({ ci: true, docker: false, dockerfile: true }).code
-    ).toBe(1);
-  });
-
+/** `release:check:render` (phase 7 ruling 16), the render lane. */
+describe("renderLanePlan", () => {
   test("locally without a Docker daemon: skipped, and said not to be equivalent", () => {
-    expect(
-      renderLaneStep({ ci: false, docker: false, dockerfile: true })
-    ).toEqual({ code: 0, message: NO_DOCKER_MESSAGE });
+    for (const noBuild of [true, false]) {
+      expect(
+        renderLanePlan({ ci: false, docker: false, dockerfile: true, noBuild })
+      ).toEqual({ kind: "skip", message: NO_DOCKER_MESSAGE });
+    }
     expect(NO_DOCKER_MESSAGE).toBe(
       "[render] Docker daemon not available: the render lane runs in CI only (not equivalent)"
     );
   });
 
-  test("the guard reads the real Dockerfile path", () => {
+  test("in CI a missing daemon fails, never skips", () => {
+    expect(
+      renderLanePlan({
+        ci: true,
+        docker: false,
+        dockerfile: true,
+        noBuild: true,
+      }).kind
+    ).toBe("fail");
+  });
+
+  test("CI runs the image its build step loaded, without building", () => {
+    expect(
+      renderLanePlan({
+        ci: true,
+        docker: true,
+        dockerfile: true,
+        noBuild: true,
+      })
+    ).toEqual({ build: false, image: CI_IMAGE, kind: "run" });
+  });
+
+  test("locally with Docker it builds the image itself", () => {
+    expect(
+      renderLanePlan({
+        ci: false,
+        docker: true,
+        dockerfile: true,
+        noBuild: false,
+      })
+    ).toEqual({ build: true, image: LOCAL_IMAGE, kind: "run" });
+  });
+
+  test("without the Dockerfile the lane fails", () => {
+    for (const ci of [true, false]) {
+      expect(
+        renderLanePlan({ ci, docker: true, dockerfile: false, noBuild: false })
+          .kind
+      ).toBe("fail");
+    }
+  });
+
+  test("the Dockerfile exists", () => {
     expect(DOCKERFILE.endsWith("packages/render/container/Dockerfile")).toBe(
       true
     );
-    // Today's repository: the placeholder is allowed only while this holds.
-    const step = renderLaneStep({
-      ci: false,
-      docker: false,
-      dockerfile: existsSync(DOCKERFILE),
-    });
-    expect(step.code).toBe(0);
+    expect(existsSync(DOCKERFILE)).toBe(true);
+  });
+});
+
+describe("parseNoBuild", () => {
+  test("--no-build or SMOG_RENDER_NO_BUILD=1", () => {
+    expect(parseNoBuild(["--no-build"], {})).toBe(true);
+    expect(parseNoBuild([], { SMOG_RENDER_NO_BUILD: "1" })).toBe(true);
+    expect(parseNoBuild([], {})).toBe(false);
+    expect(parseNoBuild([], { SMOG_RENDER_NO_BUILD: "" })).toBe(false);
+  });
+});
+
+describe("the docker commands", () => {
+  test("the build is linux/amd64 from the repository root", () => {
+    const args = dockerBuildArgs(LOCAL_IMAGE);
+    expect(args.slice(0, 3)).toEqual(["build", "--platform", "linux/amd64"]);
+    expect(args).toContain(DOCKERFILE);
+    expect(args.at(-1)).toBe(
+      DOCKERFILE.replace("/packages/render/container/Dockerfile", "")
+    );
+  });
+
+  test("the container runs on the host network with the dev-only http", () => {
+    const args = dockerRunArgs(CI_IMAGE);
+    expect(args.join(" ")).toContain("--network host");
+    expect(args).toContain("RENDER_ENVIRONMENT=dev");
+    expect(args).toContain("RENDER_ALLOW_HTTP=1");
+    expect(args).toContain("PORT=8080");
+    expect(args.at(-1)).toBe(CI_IMAGE);
+  });
+
+  test("layerSizes names the library and font layers", () => {
+    expect(
+      layerSizes(
+        [
+          "120MB\tRUN /bin/sh -c set -eux; apt-get update; apt-get install -y --no-install-recommends ca-certificates libnss3",
+          "85MB\tRUN /bin/sh -c set -eux; apt-get update; apt-get install -y --no-install-recommends fonts-noto-core;",
+          "0B\tUSER 1001",
+        ].join("\n")
+      )
+    ).toEqual(["Chrome libraries: 120MB", "fonts-noto-core: 85MB"]);
   });
 });

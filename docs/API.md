@@ -312,3 +312,18 @@ payment's sponsorships still holds its gesture (a blocking status).
 - The 18 columns in the old order (A-09): ID, Status, Sponsor name (`display_name`), Sponsor email, Contact name, Company, Invoice name, VAT number, Invoice email, Invoice requested, Has logo, Payment amount (€) (the checkout's item amount, `"50.00"`), Mollie payment ID, Start date, End date, Duration (years), Gesture ID, Created at (ISO 8601).
 - The CSV starts with a UTF-8 BOM. Every field is quoted with `"` doubled; rows end in CRLF. A cell that starts with a tab, CR or LF, or whose first character after leading whitespace is `=`, `+`, `-`, `@` (full-width forms folded by NFKC, and U+2212) gets a leading `'` (formula injection).
 - Oldest first, read in keyset pages of 500 with no 10,000 row cap; over 50,000 rows is `INVALID_STATE tooMany` (narrow the date range). `filename` is `sponsorships-YYYY-MM-DD.csv` (the Brussels date).
+
+## The render server (`@smog/render`, the `SmogRenderer` Container)
+
+Bun, `packages/render/src/server/*` (phase 7 ruling 7). In the Container it listens on `0.0.0.0:8080` and is reached only through the `RENDERER` Durable Object binding (no public route, no key); `bun -F @smog/render serve` (`RENDER_MODE=local`) listens on `127.0.0.1:3002`. Its env is `renderServerEnvSchema` (`@smog/config/env/render`). The Worker and the server validate the same schemas (`@smog/render/contract`).
+
+| Route | Body | Answer |
+|---|---|---|
+| `GET /health` | none | `200 { ok: true, version, browser }` (`version` is `remotion <x.y.z>`, `browser` how Chrome Headless Shell was found) |
+| `POST /render` | `RenderRequest` `{ v: 1, renderJobId, input, sourceUrl, logoDataUrl, uploadUrl }`, at most 4 MiB | `RenderResult`: `200 { ok: true, frames, width, height, bytes, ms }` or `{ ok: false, code, message }` with `RENDER_ERROR_STATUS[code]` |
+| `GET /assets/<renderJobId>/logo` | none | the running job's decoded logo, to loopback peers only (the render's own browser); `404` otherwise |
+
+- Refusals before any work, all `422 invalidInput`: a body over 4 MiB, not JSON or not the schema (a logo `data:` URL over 2 MiB of bytes included), a `sourceUrl` or `uploadUrl` that is not `https:`, or an `uploadUrl` whose host is not `*.mux.com` (both allowed in dev with `RENDER_ALLOW_HTTP=1`). A logo whose bytes are not the PNG, JPEG or WebP it claims is `422 logoUnreadable`.
+- One render slot, keyed by `renderJobId`: a request for the job already rendering cancels that attempt (its answer is `500 renderFailed` "superseded …", its temp files are deleted) and starts again with the new request's upload URL; a request for another job is `503 busy`, logged as an anomaly. After `SIGTERM` every new request is `503 busy` and the running render finishes first.
+- Then: the logo is written to the job's temp directory and served at `/assets/<id>/logo`; `readSourceMetadata(sourceUrl)` (a source that cannot be fetched is `500 renderFailed`, retryable; one that cannot be read is `422 sourceUnreadable`); the props are validated with `sponsoredVideoPropsSchema`; `renderMedia` (H.264, JPEG frames, `concurrency: 1`); the file is `PUT` to `uploadUrl` with `Content-Type: video/mp4` and its `Content-Length` (a refusal or a network fault is `502 uploadFailed`). The temp files are deleted whatever happens. Any other failure is `500 renderFailed`.
+- Messages and logs (`[render] …`) never hold a URL: every message is scrubbed (`scrubUrls`), and an error's `cause` is never logged or answered.

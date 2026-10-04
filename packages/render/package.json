@@ -14,9 +14,9 @@
     "bundle": "bun src/server/bundle.ts",
     "check-types": "tsc -b && tsc -p tsconfig.server.json",
     "fixture": "bun src/server/fixture.ts",
-    "serve": "PORT=3002 RENDER_ENVIRONMENT=dev RENDER_ALLOW_HTTP=1 bun src/server/main.ts",
+    "serve": "PORT=3002 RENDER_ENVIRONMENT=dev RENDER_ALLOW_HTTP=1 RENDER_BUNDLE_DIR=$PWD/.render-bundle bun src/server/main.ts",
     "test": "bun ../../scripts/test-deadline.ts -- bun test --path-ignore-patterns='test/render/**' --path-ignore-patterns='**/*.dom.test.tsx' && bun ../../scripts/test-deadline.ts -- bun test --timeout=20000 --preload @smog/config/testing/happy-dom .dom.test",
-    "test:render": "bun test ./test/render"
+    "test:render": "bun ../../scripts/test-deadline.ts --minutes 20 -- bun test --timeout=900000 ./test/render"
   },
   "dependencies": {
     "@fontsource/inter": "catalog:",
@@ -25,6 +25,7 @@
     "@remotion/renderer": "catalog:",
     "@smog/config": "workspace:*",
     "@smog/styles": "workspace:*",
+    "@smog/utils": "workspace:*",
     "mediabunny": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

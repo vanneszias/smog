@@ -17,11 +17,11 @@
     "packages/render": {
       "entry": [
         "src/server/{main,bundle,fixture,ensure-browser}.ts",
+        "src/server/fixture-card.tsx",
         "src/**/*.test.{ts,tsx}",
         "test/**/*.test.ts"
       ],
-      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"],
-      "ignoreDependencies": ["@remotion/renderer"]
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"]
     },
     "packages/ui-web": {
       "entry": ["src/**/*.test.{ts,tsx}"],
