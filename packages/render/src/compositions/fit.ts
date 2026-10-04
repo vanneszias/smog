@@ -3,8 +3,19 @@ import { RENDER_OVERLAY_LAYOUT } from "../contract";
 /** The share of the video's width the widest text line may take. */
 export const OVERLAY_TEXT_MAX_WIDTH = 0.9;
 
-/** The width in px of `text` set in the overlay font at `fontSize` px. */
-export type TextMeasure = (text: string, fontSize: number) => number;
+/** Which overlay line is measured: the fixed intro, or the sponsor's name. */
+export type OverlayLine = "intro" | "name";
+
+/**
+ * The width in px of `text` set in the overlay font at `fontSize` px. The
+ * line tells the composition's measure which one may prove the font has
+ * loaded: only the fixed Latin intro can (a name may be in any script).
+ */
+export type TextMeasure = (
+  text: string,
+  fontSize: number,
+  line: OverlayLine
+) => number;
 
 export interface OverlayFontSizeInput {
   displayName: string;
@@ -29,7 +40,10 @@ export function overlayFontSize({
   width,
 }: OverlayFontSizeInput): number {
   const base = RENDER_OVERLAY_LAYOUT.text.fontSize * height;
-  const widest = Math.max(measure(intro, base), measure(displayName, base));
+  const widest = Math.max(
+    measure(intro, base, "intro"),
+    measure(displayName, base, "name")
+  );
   const room = OVERLAY_TEXT_MAX_WIDTH * width;
   return widest > room ? (base * room) / widest : base;
 }

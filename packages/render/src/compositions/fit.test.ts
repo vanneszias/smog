@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { RENDER_OVERLAY_LAYOUT } from "../contract";
-import { overlayFontSize, type TextMeasure } from "./fit";
+import { type OverlayLine, overlayFontSize, type TextMeasure } from "./fit";
 
 const { intro } = RENDER_OVERLAY_LAYOUT.text;
 
@@ -10,7 +10,7 @@ function monospace(advance: number): TextMeasure {
 }
 
 describe("overlayFontSize", () => {
-  it("keeps the old 3.8 % of the height for a short name", () => {
+  it("keeps the old 4 % of the height for a short name", () => {
     const size = overlayFontSize({
       displayName: "SMOG & Co",
       height: 1920,
@@ -18,7 +18,7 @@ describe("overlayFontSize", () => {
       measure: monospace(0.5),
       width: 1080,
     });
-    expect(size).toBeCloseTo(0.038 * 1920, 6);
+    expect(size).toBeCloseTo(0.04 * 1920, 6);
   });
 
   it("shrinks 35 wide characters at 1080 × 1920 to fit 90 % of the width", () => {
@@ -31,16 +31,16 @@ describe("overlayFontSize", () => {
       measure,
       width: 1080,
     });
-    expect(size).toBeLessThan(0.038 * 1920);
-    expect(measure(displayName, size)).toBeCloseTo(0.9 * 1080, 6);
+    expect(size).toBeLessThan(0.04 * 1920);
+    expect(measure(displayName, size, "name")).toBeCloseTo(0.9 * 1080, 6);
     // Both lines share that size, and the shorter intro fits too.
-    expect(measure(intro, size)).toBeLessThan(0.9 * 1080);
+    expect(measure(intro, size, "intro")).toBeLessThan(0.9 * 1080);
   });
 
-  it("measures both lines at the base size and fits the wider one", () => {
-    const calls: [string, number][] = [];
-    const measure: TextMeasure = (text, fontSize) => {
-      calls.push([text, fontSize]);
+  it("measures both lines at the base size, says which line, and fits the wider one", () => {
+    const calls: [string, number, OverlayLine][] = [];
+    const measure: TextMeasure = (text, fontSize, line) => {
+      calls.push([text, fontSize, line]);
       return text === intro ? 2000 : 100;
     };
     const size = overlayFontSize({
@@ -50,8 +50,9 @@ describe("overlayFontSize", () => {
       measure,
       width: 1000,
     });
-    expect(calls.map(([text]) => text).sort()).toEqual(["A", intro].sort());
-    expect(calls.every(([, fontSize]) => fontSize === 38)).toBe(true);
-    expect(size).toBeCloseTo((38 * 900) / 2000, 6);
+    expect(calls).toContainEqual([intro, 40, "intro"]);
+    expect(calls).toContainEqual(["A", 40, "name"]);
+    expect(calls).toHaveLength(2);
+    expect(size).toBeCloseTo((40 * 900) / 2000, 6);
   });
 });

@@ -4,6 +4,7 @@ import {
   createOverlayFontLoader,
   OVERLAY_FONT_FAMILY,
   OVERLAY_FONT_FILES,
+  OVERLAY_FONT_STACK,
 } from "./font";
 
 describe("the overlay font loader", () => {
@@ -29,10 +30,30 @@ describe("the overlay font loader", () => {
     }
   });
 
-  it("has a disjoint unicode range per subset", () => {
-    const [latin, latinExt] = OVERLAY_FONT_FILES;
-    expect(latin.unicodeRange).toContain("U+0000-00FF");
-    expect(latinExt.unicodeRange).toContain("U+0100-02BA");
+  it("covers Latin, Cyrillic, Greek and Vietnamese, each subset scoped by its range", () => {
+    expect(OVERLAY_FONT_FILES.map(({ subset }) => subset)).toEqual([
+      "latin",
+      "latin-ext",
+      "cyrillic",
+      "cyrillic-ext",
+      "greek",
+      "greek-ext",
+      "vietnamese",
+    ]);
+    const range = (subset: string): string =>
+      OVERLAY_FONT_FILES.find((file) => file.subset === subset)?.unicodeRange ??
+      "";
+    expect(range("latin")).toContain("U+0000-00FF");
+    expect(range("latin-ext")).toContain("U+0100-02BA");
+    expect(range("cyrillic")).toContain("U+0400-045F");
+    expect(range("greek")).toContain("U+03A3-03FF");
+    expect(range("vietnamese")).toContain("U+1EA0-1EF9");
+  });
+
+  it("falls back to Noto Sans, then the generic sans-serif", () => {
+    expect(OVERLAY_FONT_STACK).toBe(
+      `"${OVERLAY_FONT_FAMILY}", "Noto Sans", sans-serif`
+    );
   });
 
   it("forgets a failed load, so the next call tries again", async () => {

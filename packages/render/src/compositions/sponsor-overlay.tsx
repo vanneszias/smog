@@ -2,11 +2,12 @@ import { measureText } from "@remotion/layout-utils";
 import { useEffect, useMemo, useState } from "react";
 import { Img, useCurrentFrame, useDelayRender, useVideoConfig } from "remotion";
 import { RENDER_OVERLAY_LAYOUT } from "../contract";
+import { useFailure } from "./failure";
 import { overlayFontSize, type TextMeasure } from "./fit";
 import {
   isOverlayFontLoaded,
   loadOverlayFont,
-  OVERLAY_FONT_FAMILY,
+  OVERLAY_FONT_STACK,
   OVERLAY_FONT_WEIGHT,
 } from "./font";
 import {
@@ -15,23 +16,33 @@ import {
   overlayTiming,
 } from "./geometry";
 
-/** Measures in the overlay font; only called once it has loaded. */
-const measureOverlayText: TextMeasure = (text, fontSize) =>
+const FONT_FAILED = "the overlay font could not be loaded";
+const LOGO_FAILED = "the logo could not be loaded";
+
+/**
+ * Measures in the overlay font; only called once it has loaded. Only the
+ * fixed Latin intro proves the font loaded (`validateFontIsLoaded`): a name
+ * in a script Inter lacks is drawn, and measured, in the fallback font, and
+ * validating it would throw (task 3 review, I-1).
+ */
+const measureOverlayText: TextMeasure = (text, fontSize, line) =>
   measureText({
-    fontFamily: OVERLAY_FONT_FAMILY,
+    fontFamily: OVERLAY_FONT_STACK,
     fontSize,
     fontWeight: OVERLAY_FONT_WEIGHT,
     text,
-    validateFontIsLoaded: true,
+    validateFontIsLoaded: line === "intro",
   }).width;
 
 /**
- * Whether the overlay font has loaded (ruling 6). Until then the render is
- * held with `delayRender`; a failure cancels it. The handle is continued
- * after the commit that shows the text, or when the overlay unmounts.
+ * Whether the overlay font has loaded (ruling 6). Until then the frame is
+ * held with `delayRender`; the handle is continued in the cleanup after the
+ * commit that shows the text, or when the overlay unmounts. A failure
+ * cancels a render, and in the Player reaches its `errorFallback`.
  */
 function useOverlayFont(): boolean {
-  const { cancelRender, continueRender, delayRender } = useDelayRender();
+  const { continueRender, delayRender } = useDelayRender();
+  const fail = useFailure(FONT_FAILED);
   const [ready, setReady] = useState(isOverlayFontLoaded);
   useEffect(() => {
     if (ready) {
@@ -47,7 +58,7 @@ function useOverlayFont(): boolean {
       },
       (error: unknown) => {
         if (active) {
-          cancelRender(error);
+          fail(error);
         }
       }
     );
@@ -55,15 +66,15 @@ function useOverlayFont(): boolean {
       active = false;
       continueRender(handle);
     };
-  }, [cancelRender, continueRender, delayRender, ready]);
+  }, [continueRender, delayRender, fail, ready]);
   return ready;
 }
 
 /**
  * The old `SponsorOverlay` (phase 7 ruling 5): in the last
  * `overlaySeconds`, the logo and the two lines fade in with a damped spring
- * and slide up together. Documented changes: the bundled font, a size that
- * fits the width, and a pinned line height of 1.2.
+ * and slide up together. Documented changes: the bundled font with a Noto
+ * fallback, a size that fits the width, and a pinned line height of 1.2.
  */
 export function SponsorOverlay({
   displayName,
@@ -75,6 +86,7 @@ export function SponsorOverlay({
   const frame = useCurrentFrame();
   const { durationInFrames, fps, height, width } = useVideoConfig();
   const fontReady = useOverlayFont();
+  const failLogo = useFailure(LOGO_FAILED);
   const { intro, color } = RENDER_OVERLAY_LAYOUT.text;
   const fontSize = useMemo(
     () =>
@@ -101,7 +113,7 @@ export function SponsorOverlay({
   });
   const line = {
     color,
-    fontFamily: `"${OVERLAY_FONT_FAMILY}"`,
+    fontFamily: OVERLAY_FONT_STACK,
     fontSize,
     fontWeight: Number(OVERLAY_FONT_WEIGHT),
     left: "50%",
@@ -122,6 +134,7 @@ export function SponsorOverlay({
     >
       {logoUrl ? (
         <Img
+          onError={failLogo}
           src={logoUrl}
           style={{
             height: logo.height,

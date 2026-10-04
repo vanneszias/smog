@@ -6,6 +6,7 @@
 // biome-ignore-all lint/performance/noBarrelFile: the package's `./composition` entry.
 export {
   OVERLAY_TEXT_MAX_WIDTH,
+  type OverlayLine,
   overlayFontSize,
   type TextMeasure,
 } from "./fit";
@@ -14,6 +15,7 @@ export {
   loadOverlayFont,
   OVERLAY_FONT_FAMILY,
   OVERLAY_FONT_FILES,
+  OVERLAY_FONT_STACK,
   OVERLAY_FONT_WEIGHT,
 } from "./font";
 export {

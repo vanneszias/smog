@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { bundle } from "@remotion/bundler";
 import { build } from "vite";
+import { OVERLAY_FONT_FILES } from "../src/compositions/font";
 import { RENDER_OVERLAY_LAYOUT, SPONSORED_VIDEO_ID } from "../src/contract";
 
 const PACKAGE_DIR = fileURLToPath(new URL("..", import.meta.url));
@@ -54,7 +55,7 @@ describe("the Remotion bundle of ./remotion", () => {
 
       const files = await filesUnder(outDir);
       const fonts = files.filter((file) => WOFF2.test(file));
-      expect(fonts).toHaveLength(2);
+      expect(fonts).toHaveLength(OVERLAY_FONT_FILES.length);
 
       const scripts = files.filter((file) => file.endsWith(".js"));
       const source = (
@@ -96,7 +97,7 @@ describe("the Vite build of ./composition (the Player's side)", () => {
 
       const files = await filesUnder(outDir);
       const fonts = files.filter((file) => WOFF2.test(file));
-      expect(fonts).toHaveLength(2);
+      expect(fonts).toHaveLength(OVERLAY_FONT_FILES.length);
       const source = (
         await Promise.all(
           files
