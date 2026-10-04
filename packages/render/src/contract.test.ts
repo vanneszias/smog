@@ -58,18 +58,18 @@ describe("renderInputSchema (v1, ruling 7)", () => {
   });
 });
 
-describe("RENDER_OVERLAY_LAYOUT (the old SPONSOR_OVERLAY_CONFIG preset)", () => {
+describe("RENDER_OVERLAY_LAYOUT (the layout the old wizard's previews were rendered with)", () => {
   it("fixes the logo box, the text line and the colour", () => {
     expect(RENDER_OVERLAY_LAYOUT).toEqual({
       fadeInSeconds: 1,
-      logo: { centerX: 0.5, centerY: 0.78, size: 0.15 },
+      logo: { centerX: 0.5, centerY: 0.76, size: 0.22 },
       overlaySeconds: 5,
       slideUpPx: 30,
       text: {
         color: "#00805F",
-        fontSize: 0.04,
+        fontSize: 0.038,
         intro: "Met de warme steun van:",
-        y: 0.85,
+        y: 0.87,
       },
     });
   });

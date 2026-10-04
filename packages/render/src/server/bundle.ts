@@ -2,7 +2,7 @@
  * Builds the Remotion bundle of `./remotion` (phase 7 ruling 7): when the
  * image is built (`bun src/server/bundle.ts` → `RENDER_BUNDLE_DIR`), never
  * at request time as the old server did. `bun -F @smog/render serve`
- * builds it once into `.render-bundle/` when it is missing. Bun only;
+ * builds it into `.render-bundle/` on every start (`bundleAction`). Bun only;
  * `@remotion/bundler` is a devDependency, absent from the runtime image.
  */
 import { fileURLToPath } from "node:url";

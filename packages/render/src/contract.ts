@@ -38,23 +38,27 @@ export const RENDER_FPS = 30;
  * the display name (phase 7 ruling 5: the old overlay put the first line's
  * top there, it never centred the text at `y`).
  *
- * The values are the old production layout, `SPONSOR_OVERLAY_CONFIG`
- * (`getSponsorOverlayConfig()`, sent with every old render since March
- * 2026): the logo 15 % × 15 % at (50 %, 78 %), the text 4 % of the height
- * at 85 %. The spec's 22 / 76 / 3.8 / 87 were the composition's unused
- * fallback (phase 7 task 3 review, I-3; the owner may override).
+ * The values are the layout the old system's sponsored videos carry: the
+ * API router's `SPONSOR_OVERLAY_CONFIG` (`packages/api/src/routers/
+ * sponsorships.ts` on `origin/master`, since 2026-05-30), which rendered
+ * the wizard's preview (`generatePreview`) and the re-edit's
+ * (`reSubmitSponsorship`); a paid sponsorship's video was that preview,
+ * never re-rendered (`processSuccessfulPayment`). The logo 22 % × 22 % at
+ * (50 %, 76 %), the text 3.8 % of the height at 87 %. The 15 / 78 / 4 / 85
+ * preset (`getSponsorOverlayConfig()`) only rendered sponsorships without a
+ * preview (phase 7 task 9 parity walk, superseding the task 3 review's I-3).
  */
 export const RENDER_OVERLAY_LAYOUT = {
   fadeInSeconds: 1,
-  logo: { centerX: 0.5, centerY: 0.78, size: 0.15 },
+  logo: { centerX: 0.5, centerY: 0.76, size: 0.22 },
   overlaySeconds: 5,
   slideUpPx: 30,
   text: {
     color: tokens.color.brand.green,
-    fontSize: 0.04,
+    fontSize: 0.038,
     // The old video's fixed line, in Dutch whatever the viewer's language.
     intro: "Met de warme steun van:",
-    y: 0.85,
+    y: 0.87,
   },
 } as const;
 

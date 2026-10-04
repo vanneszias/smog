@@ -188,19 +188,19 @@ describe("SponsoredVideo in a Thumbnail", () => {
     expect(intro.style.whiteSpace).toBe("nowrap");
     expect(intro.style.lineHeight).toBe("1.2");
 
-    // The geometry reaches the component: the preset layout at 1080 × 1920.
+    // The geometry reaches the component: the old router's layout at 1080 × 1920.
     const fontSize = Number.parseFloat(intro.style.fontSize);
-    expect(fontSize).toBeCloseTo(0.04 * 1920, 3);
-    expect(Number.parseFloat(intro.style.top)).toBeCloseTo(1632, 3);
+    expect(fontSize).toBeCloseTo(0.038 * 1920, 3);
+    expect(Number.parseFloat(intro.style.top)).toBeCloseTo(1670.4, 3);
     expect(Number.parseFloat(name.style.top)).toBeCloseTo(
-      1632 + 1.5 * fontSize,
+      1670.4 + 1.5 * fontSize,
       3
     );
     const logo = imageWithSource(container, PROPS.logoUrl);
-    expect(Number.parseFloat(logo.style.width)).toBeCloseTo(162, 3);
-    expect(Number.parseFloat(logo.style.height)).toBeCloseTo(288, 3);
-    expect(Number.parseFloat(logo.style.left)).toBeCloseTo(540 - 81, 3);
-    expect(Number.parseFloat(logo.style.top)).toBeCloseTo(1497.6 - 144, 3);
+    expect(Number.parseFloat(logo.style.width)).toBeCloseTo(237.6, 3);
+    expect(Number.parseFloat(logo.style.height)).toBeCloseTo(422.4, 3);
+    expect(Number.parseFloat(logo.style.left)).toBeCloseTo(540 - 118.8, 3);
+    expect(Number.parseFloat(logo.style.top)).toBeCloseTo(1459.2 - 211.2, 3);
     imageWithSource(container, PROPS.background.src);
 
     // Only the intro validates the font; the name is measured as drawn.

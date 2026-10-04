@@ -18,7 +18,7 @@ describe("overlayFontSize", () => {
       measure: monospace(0.5),
       width: 1080,
     });
-    expect(size).toBeCloseTo(0.04 * 1920, 6);
+    expect(size).toBeCloseTo(0.038 * 1920, 6);
   });
 
   it("shrinks 35 wide characters at 1080 × 1920 to fit 90 % of the width", () => {
@@ -31,7 +31,7 @@ describe("overlayFontSize", () => {
       measure,
       width: 1080,
     });
-    expect(size).toBeLessThan(0.04 * 1920);
+    expect(size).toBeLessThan(0.038 * 1920);
     expect(measure(displayName, size, "name")).toBeCloseTo(0.9 * 1080, 6);
     // Both lines share that size, and the shorter intro fits too.
     expect(measure(intro, size, "intro")).toBeLessThan(0.9 * 1080);
@@ -50,9 +50,9 @@ describe("overlayFontSize", () => {
       measure,
       width: 1000,
     });
-    expect(calls).toContainEqual([intro, 40, "intro"]);
-    expect(calls).toContainEqual(["A", 40, "name"]);
+    expect(calls).toContainEqual([intro, 38, "intro"]);
+    expect(calls).toContainEqual(["A", 38, "name"]);
     expect(calls).toHaveLength(2);
-    expect(size).toBeCloseTo((40 * 900) / 2000, 6);
+    expect(size).toBeCloseTo((38 * 900) / 2000, 6);
   });
 });

@@ -2,28 +2,28 @@ import { describe, expect, it } from "bun:test";
 import { RENDER_FPS } from "../contract";
 import { overlayGeometry, overlayStartFrame, overlayTiming } from "./geometry";
 
-describe("overlayGeometry (the old SponsorOverlay's formulas, the preset layout)", () => {
+describe("overlayGeometry (the old SponsorOverlay's formulas, the old router's layout)", () => {
   it("at 1080 × 1920", () => {
-    const fontSize = 0.04 * 1920;
+    const fontSize = 0.038 * 1920;
     const geometry = overlayGeometry({ fontSize, height: 1920, width: 1080 });
-    expect(geometry.logo.width).toBeCloseTo(162, 6);
-    expect(geometry.logo.height).toBeCloseTo(288, 6);
+    expect(geometry.logo.width).toBeCloseTo(237.6, 6);
+    expect(geometry.logo.height).toBeCloseTo(422.4, 6);
     expect(geometry.logo.left + geometry.logo.width / 2).toBeCloseTo(540, 6);
-    expect(geometry.logo.top + geometry.logo.height / 2).toBeCloseTo(1497.6, 6);
-    expect(geometry.line1Top).toBeCloseTo(1632, 6);
+    expect(geometry.logo.top + geometry.logo.height / 2).toBeCloseTo(1459.2, 6);
+    expect(geometry.line1Top).toBeCloseTo(1670.4, 6);
     // Old: textY + lineHeight (1.2 × fontSize) + 0.3 × fontSize.
-    expect(geometry.line2Top).toBeCloseTo(1632 + 1.5 * fontSize, 6);
+    expect(geometry.line2Top).toBeCloseTo(1670.4 + 1.5 * fontSize, 6);
   });
 
   it("at 720 × 1280", () => {
-    const fontSize = 0.04 * 1280;
+    const fontSize = 0.038 * 1280;
     const geometry = overlayGeometry({ fontSize, height: 1280, width: 720 });
-    expect(geometry.logo.width).toBeCloseTo(0.15 * 720, 6);
-    expect(geometry.logo.height).toBeCloseTo(0.15 * 1280, 6);
-    expect(geometry.logo.left).toBeCloseTo(0.5 * 720 - (0.15 * 720) / 2, 6);
-    expect(geometry.logo.top).toBeCloseTo(0.78 * 1280 - (0.15 * 1280) / 2, 6);
-    expect(geometry.line1Top).toBeCloseTo(0.85 * 1280, 6);
-    expect(geometry.line2Top).toBeCloseTo(0.85 * 1280 + 1.5 * fontSize, 6);
+    expect(geometry.logo.width).toBeCloseTo(0.22 * 720, 6);
+    expect(geometry.logo.height).toBeCloseTo(0.22 * 1280, 6);
+    expect(geometry.logo.left).toBeCloseTo(0.5 * 720 - (0.22 * 720) / 2, 6);
+    expect(geometry.logo.top).toBeCloseTo(0.76 * 1280 - (0.22 * 1280) / 2, 6);
+    expect(geometry.line1Top).toBeCloseTo(0.87 * 1280, 6);
+    expect(geometry.line2Top).toBeCloseTo(0.87 * 1280 + 1.5 * fontSize, 6);
   });
 });
 
