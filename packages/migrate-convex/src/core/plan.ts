@@ -271,7 +271,14 @@ export async function plan(request: PlanRequest): Promise<PlanOutput> {
     inputs: hashes,
     now: request.now,
     preflight: renderPreflight(
-      mergePreflight(results.map((result) => result.preflight ?? {}))
+      mergePreflight(
+        results.map((result) => result.preflight ?? {}),
+        {
+          blockers: report.blockers,
+          reportSha256: await sha256Hex(files.get("report.json") ?? ""),
+          target: request.target,
+        }
+      )
     ),
     report: { blockers: report.blockers, warnings: report.warnings },
     resetKeys: mergeResetKeys(results.map((result) => result.resetKeys)),

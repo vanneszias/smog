@@ -12,6 +12,11 @@ import { join } from "node:path";
 import { buildGrantStatements } from "@smog/config/admin-grant";
 import { type CommandContext, main } from "../src/cli/main";
 import { legacyUuid } from "../src/core/ids";
+import {
+  type D1Query,
+  preflightFactsSchema,
+  runPreflight,
+} from "../src/core/preflight";
 import { FIXTURE_DIR, FIXTURE_INPUTS, FIXTURE_SECRETS } from "./helpers";
 import {
   migratedDatabase,
@@ -232,7 +237,7 @@ describe("apply's target guard (B2)", () => {
     }
   });
 
-  test("staging refuses an unsanitised plan even when its manifest says staging", async () => {
+  test("a manifest whose target was edited to staging is refused before the preflight (I-2)", async () => {
     const dir = planCopy("production");
     const manifestPath = join(dir, "manifest.json");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
@@ -245,11 +250,29 @@ describe("apply's target guard (B2)", () => {
     });
     const result = await apply(wrangler, ["--env", "staging", "--out", dir]);
     expect(result.code).toBe(1);
-    expect(result.lines.error.join("\n")).toContain(
-      "Refused (unsanitisedOnStaging)"
+    expect(result.lines.error).toEqual([
+      "[migrate-convex] apply refused: manifest.json does not match the plan that made it (its target or blocker count was changed). Plan again; never edit a plan file.",
+    ]);
+    expect(wrangler.calls).toEqual([]);
+  });
+
+  test("the preflight still refuses production addresses on staging (the second guard)", async () => {
+    const db = migratedDatabase();
+    const query: D1Query = (sql) =>
+      Promise.resolve(db.query(sql).all() as Record<string, unknown>[]);
+    const facts = preflightFactsSchema.parse(
+      JSON.parse(readFileSync(join(plans.production, "preflight.json"), "utf8"))
     );
-    expect(wrangler.files).toEqual([]);
-    expect(counts(wrangler).user).toBe(0);
+    const result = await runPreflight(query, {
+      env: "staging",
+      facts,
+      maintenance: MAINTENANCE_ON,
+      nativeCatalog: false,
+      target: "staging",
+    });
+    expect(result.refusals.map((refusal) => refusal.code)).toEqual([
+      "unsanitisedOnStaging",
+    ]);
   });
 });
 
@@ -279,22 +302,65 @@ describe("apply's manifest", () => {
     expect(wrangler.calls).toEqual([]);
   });
 
-  test("refuses a plan with blockers", async () => {
-    const dir = planCopy("staging");
-    const manifestPath = join(dir, "manifest.json");
+  test("refuses a plan with blockers, and one whose blocker count was edited away (I-2)", async () => {
+    const blocked = join(scratch, "plan-blocked");
+    const { out } = capture();
+    // Without --overrides, sp08's 36-character overlay blocks.
+    expect(
+      await main(
+        [
+          "plan",
+          "--export",
+          FIXTURE_DIR,
+          "--target",
+          "staging",
+          "--out",
+          blocked,
+          "--now",
+          NOW,
+        ],
+        out
+      )
+    ).toBe(1);
+    const wrangler = sqliteWrangler(migratedDatabase());
+    const result = await apply(wrangler, ["--env", "dev", "--out", blocked]);
+    expect(result.code).toBe(1);
+    expect(result.lines.error[0]).toContain("The plan has 1 blocker(s)");
+    const manifestPath = join(blocked, "manifest.json");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     writeFileSync(
       manifestPath,
-      JSON.stringify({ ...manifest, report: { blockers: 2, warnings: 0 } })
+      JSON.stringify({
+        ...manifest,
+        report: { ...manifest.report, blockers: 0 },
+      })
     );
-    const result = await apply(sqliteWrangler(migratedDatabase()), [
-      "--env",
-      "dev",
-      "--out",
-      dir,
+    const edited = await apply(wrangler, ["--env", "dev", "--out", blocked]);
+    expect(edited.code).toBe(1);
+    expect(edited.lines.error[0]).toContain(
+      "manifest.json does not match the plan that made it"
+    );
+    expect(wrangler.calls).toEqual([]);
+  });
+
+  test("refuses a missing or an edited report.json (I-2)", async () => {
+    const wrangler = sqliteWrangler(migratedDatabase());
+    const missing = planCopy("staging");
+    rmSync(join(missing, "report.json"));
+    const gone = await apply(wrangler, ["--env", "dev", "--out", missing]);
+    expect(gone.code).toBe(1);
+    expect(gone.lines.error[0]).toContain("report.json is missing");
+    const edited = planCopy("staging");
+    const reportPath = join(edited, "report.json");
+    const report = JSON.parse(readFileSync(reportPath, "utf8"));
+    report.sections[1].counts.migrated += 1;
+    writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
+    const changed = await apply(wrangler, ["--env", "dev", "--out", edited]);
+    expect(changed.code).toBe(1);
+    expect(changed.lines.error).toEqual([
+      "[migrate-convex] apply refused: report.json does not match the plan that made it. Plan again; never edit a plan file.",
     ]);
-    expect(result.code).toBe(1);
-    expect(result.lines.error[0]).toContain("The plan has 2 blocker(s)");
+    expect(wrangler.calls).toEqual([]);
   });
 });
 
@@ -332,6 +398,14 @@ describe("apply's preflight", () => {
         kv: {
           maintenance: JSON.stringify({ bypassVersion: 1, enabled: false }),
         },
+      }),
+      "staging",
+      "maintenanceOff"
+    );
+    // The site's parser reads this as off (no bypassVersion): so does apply (I-1).
+    await refusal(
+      sqliteWrangler(migratedDatabase(), {
+        kv: { maintenance: JSON.stringify({ enabled: true }) },
       }),
       "staging",
       "maintenanceOff"
@@ -376,6 +450,15 @@ describe("apply's preflight", () => {
       "INSERT INTO user (id, name, email, email_verified, created_at, updated_at, role, legacy_id) VALUES ('u-1', '', 'ada.fixture@example.test', 1, 0, 0, 'admin', 'jd7usrOTHER')"
     );
     await refusal(wrangler, "dev", "addressClaimedByOtherLegacyId");
+  });
+
+  test("refuses a claim whose legacy id is already on another address (review M-2)", async () => {
+    const wrangler = sqliteWrangler(migratedDatabase());
+    wrangler.db.exec(
+      `INSERT INTO user (id, name, email, email_verified, created_at, updated_at, role, legacy_id) VALUES ('u-old', '', 'ada.old@example.test', 1, 0, 0, 'admin', '${ADA}');
+       INSERT INTO user (id, name, email, email_verified, created_at, updated_at, role) VALUES ('u-native', '', 'ada.fixture@example.test', 1, 0, 0, 'user');`
+    );
+    await refusal(wrangler, "dev", "legacyIdOnOtherAddress");
   });
 
   test("refuses an import that would leave no admin", async () => {
@@ -460,7 +543,7 @@ describe("apply on each env", () => {
       "[migrate-convex] Would run: wrangler kv key put catalog:version catalog-version-test --binding KV --env dev --local",
     ]);
     expect(result.lines.log.at(-1)).toBe(
-      "[migrate-convex] Dry run: nothing was written."
+      "[migrate-convex] Dry run: nothing was written to D1 or KV (apply-report.json records it)."
     );
     expect(wrangler.files).toEqual([]);
     expect(wrangler.calls.every((call) => call.includes("--command"))).toBe(
@@ -544,6 +627,64 @@ describe("apply on each env", () => {
     for (const secret of FIXTURE_SECRETS) {
       expect(text).not.toContain(secret);
     }
+  });
+});
+
+describe("apply's verification and progress", () => {
+  test("on production, more rows than the report is a loud warning, not a failure (review M-4)", async () => {
+    const dir = planCopy("production");
+    const wrangler = sqliteWrangler(migratedDatabase(), {
+      kv: { maintenance: MAINTENANCE_ON },
+    });
+    wrangler.db.run(
+      "INSERT INTO audit_log (id, action, target_type, data, created_at) VALUES ('native-legacy', 'legacy', 'system', '{}', 0)"
+    );
+    const result = await apply(wrangler, [
+      "--env",
+      "production",
+      "--out",
+      dir,
+      "--yes",
+    ]);
+    expect(result.code).toBe(0);
+    expect(result.lines.error).toEqual([
+      "[migrate-convex] WARNING: on production, audit_log (10 in D1, 9 in the report) hold more rows than the report. Check that nothing wrote to D1 during the import.",
+    ]);
+    expect(
+      record(dir).counts.find(
+        (entry: { name: string }) => entry.name === "audit_log"
+      )
+    ).toMatchObject({ status: "more" });
+  });
+
+  test("records each applied file, and files_applied when the catalogue bump then fails (review M-5)", async () => {
+    const dir = planCopy("staging");
+    const wrangler = sqliteWrangler(migratedDatabase());
+    const failing: SqliteWrangler = {
+      ...wrangler,
+      run: (args) =>
+        args[0] === "kv" && args[2] === "put"
+          ? Promise.resolve({ code: 1, stderr: "kv down", stdout: "" })
+          : wrangler.run(args),
+    };
+    const { lines, out } = capture();
+    const code = await main(
+      ["apply", "--env", "dev", "--out", dir],
+      out,
+      context(failing)
+    );
+    expect(code).toBe(1);
+    expect(lines.error.join("\n")).toContain(
+      "wrangler kv key put catalog:version failed"
+    );
+    const manifest = JSON.parse(
+      readFileSync(join(dir, "manifest.json"), "utf8")
+    );
+    const recorded = record(dir);
+    expect(recorded.status).toBe("files_applied");
+    expect(recorded.filesApplied).toEqual(
+      manifest.files.map((file: { name: string }) => join(dir, file.name))
+    );
   });
 });
 
@@ -662,5 +803,9 @@ describe("apply's re-runs and reset", () => {
     );
     expect(lines.error.join("\n")).toContain("UNIQUE constraint failed");
     expect(existsSync(join(dir, "apply-report.json"))).toBe(true);
+    expect(record(dir)).toMatchObject({
+      filesApplied: [join(dir, "10-users-001.sql")],
+      status: "failed",
+    });
   });
 });

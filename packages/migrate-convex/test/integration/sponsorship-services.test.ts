@@ -9,6 +9,7 @@ import {
 } from "@smog/payments/testing";
 import { renderInputSchema } from "@smog/render/contract";
 import { makeRpcContext } from "@smog/rpc/testing";
+import { hashSponsorshipToken } from "@smog/sponsorships/schema";
 import {
   approveStatements,
   createSponsorshipsRouter,
@@ -372,11 +373,12 @@ describe("the admin's actions and the sweeps on migrated rows", () => {
   });
 
   it("a changes_requested row with a paid logo and none stored resubmits, and renders without a logo", async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
     const id = await sponsorshipId("15");
     expect((await row("15")).status).toBe("in_review");
     const plan = await requestChangesStatements(db, {
       actorId: PRE_EXISTING.id,
-      now: new Date(),
+      now: NOW,
       siteUrl: SITE_URL,
       sponsorshipId: id,
     });
@@ -434,6 +436,57 @@ describe("the admin's actions and the sweeps on migrated rows", () => {
       expiresAt: new Date("2026-10-08T10:00:00Z").getTime(),
       gesture: { slug: "fixtuurgebaar-06" },
     });
+  });
+
+  it("a migrated changes_requested row resubmits with its old raw token: rendering, one job, the token used (review M-1)", async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    const before = await row("07");
+    expect(before.status).toBe("changes_requested");
+    const token = "5b0e7c1a-3f2d-4c8e-9a6b-1d2e3f4a5b6c";
+    const router = createSponsorshipsRouter();
+    const events: EventMessage[] = [];
+    await call(
+      router.reedit.submit as unknown as AnyProcedure,
+      { displayName: "Gust Fixtureatelier", token },
+      {
+        context: makeRpcContext({
+          db,
+          env: {
+            EVENTS_QUEUE: {
+              send: (body: EventMessage) => {
+                events.push(body);
+                return Promise.resolve();
+              },
+            } as unknown as Queue,
+            MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY,
+          },
+          kv: env.KV,
+        }),
+        path: ["sponsorships", "reedit", "submit"],
+      }
+    );
+    expect((await row("07")).status).toBe("rendering");
+    const jobs = await renderJobsOf("07");
+    expect(jobs).toHaveLength(1);
+    expect(events).toEqual([
+      { renderJobId: jobs[0]?.id, type: "render.requested" },
+    ]);
+    const stored = await env.DB.prepare(
+      "SELECT used_at FROM sponsorship_token WHERE token_hash = ?"
+    )
+      .bind(await hashSponsorshipToken(token))
+      .first<{ used_at: number | null }>();
+    expect(stored?.used_at).toBe(NOW.getTime());
+    const trail = await env.DB.prepare(
+      "SELECT type FROM sponsorship_event WHERE sponsorship_id = ? ORDER BY created_at, rowid"
+    )
+      .bind(before.id)
+      .all<{ type: string }>();
+    expect(trail.results.map((event) => event.type)).toEqual([
+      "legacy",
+      "resubmitted",
+      "render_started",
+    ]);
   });
 
   it("the rejected-video purge leaves a migrated rejected row alone, and its old review bounds Request changes", async () => {

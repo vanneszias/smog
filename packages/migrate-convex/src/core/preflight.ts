@@ -21,6 +21,7 @@
  * and every list is chunked so one command stays far below the shell's
  * argument limit.
  */
+import { parseMaintenanceSetting } from "@smog/config/maintenance";
 import { z } from "zod";
 import { sqlLiteral } from "./emit";
 import type { Report } from "./report";
@@ -28,7 +29,12 @@ import type { Target } from "./target";
 
 /** The last migration `apply` needs (0012: `user.welcomed_at`). */
 export const REQUIRED_MIGRATION = 12;
-/** Values per `json_each` list in one preflight query. */
+/**
+ * Values per `json_each` list in one preflight query. Kept at 300 (task 10
+ * review M-6): D1 refuses a SQL statement over 100 KB, and an address may
+ * be 254 characters (plus its JSON quotes and comma), so 1000 addresses
+ * could reach about 260 KB, while 300 stay under about 80 KB.
+ */
 export const PREFLIGHT_CHUNK = 300;
 
 export const APPLY_ENVS = ["dev", "staging", "production"] as const;
@@ -52,6 +58,17 @@ export const preflightFactsSchema = z.strictObject({
   ),
   /** The emitted payments with a Mollie id. */
   mollieIds: z.array(z.strictObject({ id: z.string(), mollieId: z.string() })),
+  /**
+   * What `apply` checks the manifest and `report.json` against (task 10
+   * review I-2): the plan's target, its blocker count and the SHA-256 of
+   * `report.json`. This file is hashed in the manifest, so editing the
+   * manifest's target or blockers, or the report, is caught.
+   */
+  plan: z.strictObject({
+    blockers: z.number().int().nonnegative(),
+    reportSha256: z.string().regex(/^[0-9a-f]{64}$/),
+    target: z.enum(["staging", "production"]),
+  }),
   /** The emitted share tokens. */
   shareTokens: z.array(z.strictObject({ id: z.string(), token: z.string() })),
   /** The emitted slugs of categories and gestures. */
@@ -67,7 +84,7 @@ export const preflightFactsSchema = z.strictObject({
 export type PreflightFacts = z.infer<typeof preflightFactsSchema>;
 
 /** What one transform adds to `preflight.json`. */
-export type PreflightPart = Partial<Omit<PreflightFacts, "version">>;
+export type PreflightPart = Partial<Omit<PreflightFacts, "plan" | "version">>;
 
 function byText<T>(key: (item: T) => string): (a: T, b: T) => number {
   return (a, b) => {
@@ -82,7 +99,8 @@ function byText<T>(key: (item: T) => string): (a: T, b: T) => number {
 
 /** The transforms' parts in one, sorted, so the file is byte-identical for the same inputs. */
 export function mergePreflight(
-  parts: readonly PreflightPart[]
+  parts: readonly PreflightPart[],
+  planFacts: PreflightFacts["plan"]
 ): PreflightFacts {
   return {
     claims: parts
@@ -91,6 +109,7 @@ export function mergePreflight(
     mollieIds: parts
       .flatMap((part) => part.mollieIds ?? [])
       .sort(byText((item) => `${item.mollieId}\u0000${item.id}`)),
+    plan: planFacts,
     shareTokens: parts
       .flatMap((part) => part.shareTokens ?? [])
       .sort(byText((item) => `${item.token}\u0000${item.id}`)),
@@ -221,16 +240,9 @@ async function lastMigration(query: D1Query): Promise<number | null> {
   return last;
 }
 
+/** On exactly as the site's gate reads it: a malformed value is off (task 10 review I-1). */
 function maintenanceOn(raw: string | null): boolean {
-  if (raw === null) {
-    return false;
-  }
-  try {
-    const parsed = JSON.parse(raw) as { enabled?: unknown } | null;
-    return parsed?.enabled === true;
-  } catch {
-    return false;
-  }
+  return parseMaintenanceSetting(raw)?.enabled === true;
 }
 
 /** An admin with no ban in force (the same rule as 0007's trigger and the reset). */
@@ -243,11 +255,17 @@ interface ClaimCheck {
   roleDifferences: RoleDifference[];
 }
 
-async function checkClaims(
+interface Account {
+  readonly legacyId: string | null;
+  readonly role: string;
+}
+
+/** The D1 accounts holding the emitted addresses, and the emitted legacy ids D1 already has. */
+async function claimLookups(
   query: D1Query,
   facts: PreflightFacts
-): Promise<ClaimCheck> {
-  const byEmail = new Map<string, { legacyId: string | null; role: string }>();
+): Promise<{ byEmail: Map<string, Account>; knownLegacy: Set<string> }> {
+  const byEmail = new Map<string, Account>();
   for (const row of await lookup(
     query,
     facts.claims.map((claim) => claim.email),
@@ -273,6 +291,35 @@ async function checkClaims(
       .map((row) => text(row.legacy_id))
       .filter((value): value is string => value !== null)
   );
+  return { byEmail, knownLegacy };
+}
+
+type Claim = PreflightFacts["claims"][number];
+
+/** What happens to one claim against D1. */
+function classifyClaim(
+  claim: Claim,
+  existing: Account | undefined,
+  knownLegacy: ReadonlySet<string>
+): "insert" | "insertAdmin" | "foreign" | "moved" | "claim" | "present" {
+  if (!existing) {
+    return claim.role === "admin" && !knownLegacy.has(claim.legacyId)
+      ? "insertAdmin"
+      : "insert";
+  }
+  if (existing.legacyId !== null) {
+    return existing.legacyId === claim.legacyId ? "present" : "foreign";
+  }
+  // The claim would set a legacy id another row holds: UNIQUE fails
+  // mid-file (task 10 review M-2).
+  return knownLegacy.has(claim.legacyId) ? "moved" : "claim";
+}
+
+async function checkClaims(
+  query: D1Query,
+  facts: PreflightFacts
+): Promise<ClaimCheck> {
+  const { byEmail, knownLegacy } = await claimLookups(query, facts);
   const result: ClaimCheck = {
     claims: [],
     inserted: 0,
@@ -280,31 +327,31 @@ async function checkClaims(
     roleDifferences: [],
   };
   const foreign: string[] = [];
+  const moved: string[] = [];
   for (const claim of facts.claims) {
     const existing = byEmail.get(claim.email);
-    if (!existing) {
-      if (claim.role === "admin" && !knownLegacy.has(claim.legacyId)) {
-        result.inserted += 1;
-      }
-      continue;
-    }
-    if (existing.legacyId !== null && existing.legacyId !== claim.legacyId) {
+    const kind = classifyClaim(claim, existing, knownLegacy);
+    if (kind === "insertAdmin") {
+      result.inserted += 1;
+    } else if (kind === "foreign") {
       foreign.push(claim.legacyId);
-      continue;
-    }
-    result.claims.push({
-      email: claim.email,
-      legacyId: claim.legacyId,
-      role: existing.role,
-      state: existing.legacyId === null ? "claim" : "present",
-    });
-    if (existing.role !== claim.role) {
-      result.roleDifferences.push({
-        convexRole: claim.role,
-        d1Role: existing.role,
+    } else if (kind === "moved") {
+      moved.push(claim.legacyId);
+    } else if (existing && (kind === "claim" || kind === "present")) {
+      result.claims.push({
         email: claim.email,
         legacyId: claim.legacyId,
+        role: existing.role,
+        state: kind,
       });
+      if (existing.role !== claim.role) {
+        result.roleDifferences.push({
+          convexRole: claim.role,
+          d1Role: existing.role,
+          email: claim.email,
+          legacyId: claim.legacyId,
+        });
+      }
     }
   }
   if (foreign.length > 0) {
@@ -312,6 +359,13 @@ async function checkClaims(
       code: "addressClaimedByOtherLegacyId",
       ids: foreign,
       message: `${foreign.length} emitted address(es) belong to D1 accounts that another legacy id already claimed (a rehearsal of another export?); their rows would attach to nobody. Reset that import first.`,
+    });
+  }
+  if (moved.length > 0) {
+    result.refusals.push({
+      code: "legacyIdOnOtherAddress",
+      ids: moved,
+      message: `${moved.length} legacy id(s) are already on an account with another address, while the plan's address belongs to an unclaimed account (a plan made with a newer WorkOS file?). Reset the earlier import first.`,
     });
   }
   return result;

@@ -6,19 +6,28 @@
  * 1. The flags: production needs `--yes` (unless `--dry-run`) and refuses
  *    `--reset`; `--native-catalog` needs `--reset` and is not for
  *    production.
- * 2. The plan folder: `manifest.json` must parse, have no blockers and
- *    match the env (B2: staging takes only a staging plan, production only
- *    a production plan, dev either), and every file it lists must still
- *    have its size and SHA-256 (a changed file is refused).
+ * 2. The plan folder: `manifest.json` must parse, and every file it lists
+ *    must still have its size and SHA-256 (a changed file is refused). The
+ *    hashed `preflight.json` names the plan's target, blocker count and
+ *    the SHA-256 of `report.json`: the manifest and the report must agree
+ *    with it (an edited manifest or report is refused, task 10 review
+ *    I-2). Then the plan must have no blockers and match the env (B2:
+ *    staging takes only a staging plan, production only a production plan,
+ *    dev either).
  * 3. The preflight (`runPreflight`, reads only): the migrations, the
  *    maintenance key, the slugs, share tokens and Mollie ids, the claimed
  *    addresses and the admins.
  * 4. With `--dry-run`: print every wrangler command it would run, and stop.
+ *    Nothing reaches D1 or KV; only `apply-report.json` (and, with
+ *    `--native-catalog`, `reset-native-catalog.sql`) are written to `--out`.
  * 5. `--reset`: `reset-imported-*.sql` (from the manifest), then with
  *    `--native-catalog` `reset-native-catalog.sql` (the native rows whose
  *    slugs collide, and their `gesture_fts` rows).
  * 6. The files in manifest order, each with `d1 execute --file`.
- * 7. `catalog:version` gets a new value, then the counts are verified.
+ * 7. `catalog:version` gets a new value, then the counts are verified. On
+ *    production, a table holding more rows than the report is a loud
+ *    warning (the first import runs under maintenance, so it should not
+ *    happen there); fewer rows fail.
  *
  * `apply-report.json` in `--out` records the result, whatever it is,
  * including the claimed addresses (personal data, like the SQL). The
@@ -244,12 +253,20 @@ interface ApplyRecord {
   counts?: VerifiedCount[];
   dryRun: boolean;
   env: ApplyEnv;
+  /** The files that ran, in order, recorded as each completes. */
+  filesApplied: string[];
   manifestSha256: string;
   nativeCatalog: boolean;
   preflight?: PreflightResult;
   reset: boolean;
   startedAt: string;
-  status: "refused" | "dry-run" | "failed" | "applied" | "verification-failed";
+  status:
+    | "refused"
+    | "dry-run"
+    | "failed"
+    | "files_applied"
+    | "applied"
+    | "verification-failed";
   steps: string[];
   target: Target;
   version: 1;
@@ -286,24 +303,78 @@ function printPreflight(result: PreflightResult, out: Output): void {
   }
 }
 
-/** The checked plan folder: its manifest and preflight facts (steps 1 and 2). */
-function loadPlan(
-  request: ApplyRequest,
-  env: ApplyEnv
-): { facts: PreflightFacts; manifest: Manifest } {
+const reportSchema = z.looseObject({
+  blockers: z.number().int().nonnegative(),
+  sections: z.array(
+    z.looseObject({
+      counts: z.record(z.string(), z.number()),
+      domain: z.string(),
+    })
+  ),
+  target: z.enum(TARGETS),
+});
+
+/** `report.json`, checked against the hash `preflight.json` holds. */
+function readReport(
+  outDir: string,
+  facts: PreflightFacts
+): Pick<Report, "sections"> {
+  const path = join(outDir, "report.json");
+  if (!existsSync(path)) {
+    throw new ApplyRefusal(
+      `${path} is missing: the verification needs the plan's report. Plan again.`
+    );
+  }
+  const text = readFileSync(path, "utf8");
+  if (sha256(text) !== facts.plan.reportSha256) {
+    throw new ApplyRefusal(
+      "report.json does not match the plan that made it. Plan again; never edit a plan file."
+    );
+  }
+  const parsed = reportSchema.safeParse(JSON.parse(text));
+  if (
+    !parsed.success ||
+    parsed.data.target !== facts.plan.target ||
+    parsed.data.blockers !== facts.plan.blockers
+  ) {
+    throw new ApplyRefusal(
+      "report.json is not this plan's report. Plan again; never edit a plan file."
+    );
+  }
+  return parsed.data as unknown as Pick<Report, "sections">;
+}
+
+interface LoadedPlan {
+  readonly facts: PreflightFacts;
+  readonly manifest: Manifest;
+  readonly report: Pick<Report, "sections">;
+}
+
+/** The checked plan folder: its manifest, preflight facts and report (steps 1 and 2). */
+function loadPlan(request: ApplyRequest, env: ApplyEnv): LoadedPlan {
   const manifest = readManifest(request.outDir);
-  if (!targetFits(env, manifest.target)) {
-    throw new ApplyRefusal(
-      `The plan in ${request.outDir} was made for ${manifest.target}; apply --env ${env} refuses it (B2: staging never receives a production plan, and production only takes its own).`
-    );
-  }
-  if (manifest.report.blockers > 0) {
-    throw new ApplyRefusal(
-      `The plan has ${manifest.report.blockers} blocker(s) (report.md lists them): fix them and plan again.`
-    );
-  }
   const texts = readPlanFiles(request.outDir, manifest);
-  return { facts: readFacts(texts.get(PREFLIGHT_FILE) ?? ""), manifest };
+  const facts = readFacts(texts.get(PREFLIGHT_FILE) ?? "");
+  if (
+    facts.plan.target !== manifest.target ||
+    facts.plan.blockers !== manifest.report.blockers
+  ) {
+    throw new ApplyRefusal(
+      "manifest.json does not match the plan that made it (its target or blocker count was changed). Plan again; never edit a plan file."
+    );
+  }
+  const report = readReport(request.outDir, facts);
+  if (!targetFits(env, facts.plan.target)) {
+    throw new ApplyRefusal(
+      `The plan in ${request.outDir} was made for ${facts.plan.target}; apply --env ${env} refuses it (B2: staging never receives a production plan, and production only takes its own).`
+    );
+  }
+  if (facts.plan.blockers > 0) {
+    throw new ApplyRefusal(
+      `The plan has ${facts.plan.blockers} blocker(s) (report.md lists them): fix them and plan again.`
+    );
+  }
+  return { facts, manifest, report };
 }
 
 /** The `d1 execute --file` steps, in order: the reset (with `--reset`), then the plan's files. */
@@ -336,6 +407,7 @@ function stepsOf(
 async function runSteps(
   steps: readonly Step[],
   wrangler: Wrangler,
+  progress: { outDir: string; record: ApplyRecord },
   out: Output
 ): Promise<void> {
   for (const step of steps) {
@@ -348,6 +420,8 @@ async function runSteps(
       );
       throw error;
     }
+    progress.record.filesApplied.push(step.file);
+    writeRecord(progress.outDir, progress.record);
     out.log(`${PREFIX} Applied ${step.file}.`);
   }
 }
@@ -355,18 +429,23 @@ async function runSteps(
 /** Step 7's verification; true when no table holds fewer rows than the report. */
 async function verify(
   query: D1Query,
-  outDir: string,
+  report: Pick<Report, "sections">,
   record: ApplyRecord,
   out: Output
 ): Promise<boolean> {
-  const report = JSON.parse(
-    readFileSync(join(outDir, "report.json"), "utf8")
-  ) as Pick<Report, "sections">;
   const counts = await verifyCounts(query, report);
   record.counts = counts;
   for (const count of counts) {
     out.log(
       `${PREFIX} ${count.name}: ${count.actual} in D1, ${count.expected} in the report (${count.status}).`
+    );
+  }
+  const more = counts.filter((count) => count.status === "more");
+  if (record.env === "production" && more.length > 0) {
+    // Under maintenance on a fresh production D1 this should not happen
+    // (task 10 review M-4): loud, recorded, but not a failure.
+    out.error(
+      `${PREFIX} WARNING: on production, ${more.map((count) => `${count.name} (${count.actual} in D1, ${count.expected} in the report)`).join(", ")} hold more rows than the report. Check that nothing wrote to D1 during the import.`
     );
   }
   const missing = counts.filter((count) => count.status === "missing");
@@ -385,7 +464,7 @@ export async function runApply(
   out: Output
 ): Promise<number> {
   const env = checkFlags(request);
-  const { facts, manifest } = loadPlan(request, env);
+  const { facts, manifest, report } = loadPlan(request, env);
   const { wrangler } = context;
   if (wrangler.env !== env) {
     throw new Error(`${PREFIX} The wrangler runner is for ${wrangler.env}`);
@@ -393,6 +472,7 @@ export async function runApply(
   const record: ApplyRecord = {
     dryRun: request.dryRun,
     env,
+    filesApplied: [],
     manifestSha256: sha256(
       readFileSync(join(request.outDir, "manifest.json"), "utf8")
     ),
@@ -435,19 +515,25 @@ export async function runApply(
   if (request.dryRun) {
     record.status = "dry-run";
     writeRecord(request.outDir, record);
-    out.log(`${PREFIX} Dry run: nothing was written.`);
+    out.log(
+      `${PREFIX} Dry run: nothing was written to D1 or KV (${APPLY_REPORT_FILE} records it).`
+    );
     return 0;
   }
 
   record.status = "failed";
   try {
-    await runSteps(steps, wrangler, out);
+    await runSteps(steps, wrangler, { outDir: request.outDir, record }, out);
   } finally {
     writeRecord(request.outDir, record);
   }
+  // Every file ran: recorded before the bump and the verification, so a
+  // failure there still shows the import itself completed (review M-5).
+  record.status = "files_applied";
+  writeRecord(request.outDir, record);
   await wrangler.kvPut(CATALOG_VERSION_KEY, version);
   record.catalogVersion = version;
-  const verified = await verify(query, request.outDir, record, out);
+  const verified = await verify(query, report, record, out);
   record.status = verified ? "applied" : "verification-failed";
   writeRecord(request.outDir, record);
   if (!verified) {

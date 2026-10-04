@@ -52,7 +52,9 @@ Commands:
       catalog:version and verify the counts (apply-report.json in --out).
       Staging and production must be in maintenance. Production needs
       --yes and refuses --reset. --dry-run prints every command and writes
-      nothing. --reset first deletes what this plan imports
+      nothing to D1 or KV (only its local reports in --out:
+      apply-report.json, and reset-native-catalog.sql with
+      --native-catalog). --reset first deletes what this plan imports
       (reset-imported-*.sql); --native-catalog (dev, staging) also deletes
       the native catalogue rows whose slugs the plan uses.
   mux scan --export <zip|dir> --out <dir> [--get-rate <n>]

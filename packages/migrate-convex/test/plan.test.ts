@@ -140,10 +140,17 @@ describe("plan on the minimal fixture", () => {
     expect(Object.keys(preflight)).toEqual([
       "claims",
       "mollieIds",
+      "plan",
       "shareTokens",
       "slugs",
       "version",
     ]);
+    // The plan's own facts, hashed with it (task 10 review I-2).
+    expect(preflight.plan).toEqual({
+      blockers: 0,
+      reportSha256: sha(String(files["report.json"])),
+      target: "production",
+    });
     expect(preflight.claims.length).toBeGreaterThan(0);
     expect(preflight.mollieIds.length).toBeGreaterThan(0);
     expect(preflight.shareTokens.length).toBeGreaterThan(0);
