@@ -113,10 +113,15 @@ function fakeRenderer(
         await Promise.race([
           options.gate(),
           new Promise<void>((_, reject) => {
-            cancelSignal.addEventListener("abort", () => {
+            const cancel = (): void => {
               call.cancelled = true;
               reject(cancelSignal.reason);
-            });
+            };
+            // The abort may come before this point (a loaded machine).
+            if (cancelSignal.aborted) {
+              cancel();
+            }
+            cancelSignal.addEventListener("abort", cancel);
           }),
         ]);
       }
