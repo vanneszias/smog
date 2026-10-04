@@ -26,10 +26,14 @@ export const OVERLAY_FONT_WEIGHT = "600";
 
 /**
  * Inter 600 (OFL-1.1, `@fontsource/inter`) as asset URLs: the bundler emits
- * each file and answers its URL. Each file carries `@fontsource/inter`'s own
- * unicode range, so the browser only fetches a subset a text uses. The
- * ranges overlap on a few combining marks (U+0300-0309, U+0323, U+0329);
- * the browser then picks either file, and both draw them.
+ * each file and answers its URL. Each file is registered with
+ * `@fontsource/inter`'s own unicode range, so the browser draws each
+ * character from the file whose range holds it. `@remotion/fonts`
+ * `loadFont` fetches a file as soon as it is registered (a `fetch`, then
+ * `FontFace.load()`), so the range does not make the fetch lazy: which
+ * files load is chosen here (`overlayFontSubsets`). The ranges overlap on
+ * a few combining marks (U+0300-0309, U+0323, U+0329); the browser then
+ * picks either file, and both draw them.
  */
 export const OVERLAY_FONT_FILES = [
   {
@@ -74,42 +78,108 @@ export const OVERLAY_FONT_FILES = [
   },
 ] as const;
 
+/** One `@fontsource/inter` subset's name (`latin`, `cyrillic`, …). */
+type OverlayFontSubset = (typeof OVERLAY_FONT_FILES)[number]["subset"];
+
+/** The fixed intro is Latin, and `measureText` validates the font on it. */
+const ALWAYS_LOADED: readonly OverlayFontSubset[] = ["latin", "latin-ext"];
+
+const RANGE_PREFIX = /^U\+/;
+
+/** `"U+0000-00FF,U+0131"` → `[[0x0, 0xff], [0x131, 0x131]]`. */
+function parseRanges(unicodeRange: string): [number, number][] {
+  return unicodeRange.split(",").map((part): [number, number] => {
+    const [from = "", to = from] = part
+      .trim()
+      .replace(RANGE_PREFIX, "")
+      .split("-");
+    return [Number.parseInt(from, 16), Number.parseInt(to, 16)];
+  });
+}
+
+const SUBSET_RANGES = OVERLAY_FONT_FILES.map(({ subset, unicodeRange }) => ({
+  ranges: parseRanges(unicodeRange),
+  subset,
+}));
+
+function holds(ranges: [number, number][], point: number): boolean {
+  return ranges.some(([from, to]) => point >= from && point <= to);
+}
+
+/**
+ * The subsets a text needs (fix wave M-2): latin and latin-ext always,
+ * plus every subset whose range holds one of its characters, in
+ * `OVERLAY_FONT_FILES` order. Without a text, every subset (the render: its
+ * files are local). A character no subset holds (Arabic, CJK) needs none:
+ * the fallback font draws it.
+ */
+export function overlayFontSubsets(text?: string): OverlayFontSubset[] {
+  if (text === undefined) {
+    return OVERLAY_FONT_FILES.map(({ subset }) => subset);
+  }
+  const points = [
+    ...new Set(Array.from(text, (character) => character.codePointAt(0) ?? 0)),
+  ];
+  return SUBSET_RANGES.filter(
+    ({ ranges, subset }) =>
+      ALWAYS_LOADED.includes(subset) ||
+      points.some((point) => holds(ranges, point))
+  ).map(({ subset }) => subset);
+}
+
 export interface OverlayFontLoader {
-  /** Whether every file has loaded (the overlay may measure text). */
-  isLoaded: () => boolean;
-  /** Loads every file once; a failed load is forgotten and tried again. */
-  load: () => Promise<void>;
+  /**
+   * Whether every subset `text` needs has loaded (every subset without a
+   * text), so the overlay may measure it.
+   */
+  isLoaded: (text?: string) => boolean;
+  /**
+   * Loads the subsets `text` needs (every subset without a text), each
+   * file once. A subset that fails fails the load, is forgotten and is
+   * tried again next time; the subsets that loaded stay loaded. A subset
+   * no text needs is never fetched, so it cannot fail a preview.
+   */
+  load: (text?: string) => Promise<void>;
 }
 
 /** The loader over a `loadFont` (`@remotion/fonts`, or a test's fake). */
 export function createOverlayFontLoader(
   load: (options: LoadFontOptions) => Promise<void>
 ): OverlayFontLoader {
-  let pending: Promise<void> | null = null;
-  let loaded = false;
+  const pending = new Map<OverlayFontSubset, Promise<void>>();
+  const loaded = new Set<OverlayFontSubset>();
+  const loadSubset = (subset: OverlayFontSubset): Promise<void> => {
+    const known = pending.get(subset);
+    if (known) {
+      return known;
+    }
+    const file = OVERLAY_FONT_FILES.find((entry) => entry.subset === subset);
+    if (!file) {
+      return Promise.reject(new Error(`no overlay font subset ${subset}`));
+    }
+    const next = load({
+      family: OVERLAY_FONT_FAMILY,
+      format: "woff2",
+      unicodeRange: file.unicodeRange,
+      url: file.url,
+      weight: OVERLAY_FONT_WEIGHT,
+    }).then(
+      () => {
+        loaded.add(subset);
+      },
+      (error: unknown) => {
+        pending.delete(subset);
+        throw error;
+      }
+    );
+    pending.set(subset, next);
+    return next;
+  };
   return {
-    isLoaded: () => loaded,
-    load: () => {
-      pending ??= Promise.all(
-        OVERLAY_FONT_FILES.map(({ unicodeRange, url }) =>
-          load({
-            family: OVERLAY_FONT_FAMILY,
-            format: "woff2",
-            unicodeRange,
-            url,
-            weight: OVERLAY_FONT_WEIGHT,
-          })
-        )
-      ).then(
-        () => {
-          loaded = true;
-        },
-        (error: unknown) => {
-          pending = null;
-          throw error;
-        }
-      );
-      return pending;
+    isLoaded: (text) =>
+      overlayFontSubsets(text).every((subset) => loaded.has(subset)),
+    load: async (text) => {
+      await Promise.all(overlayFontSubsets(text).map(loadSubset));
     },
   };
 }
@@ -117,15 +187,16 @@ export function createOverlayFontLoader(
 const overlayFont = createOverlayFontLoader(loadFont);
 
 /**
- * Loads the overlay font into this document (ruling 6). The composition
- * calls it under `delayRender`; the wizard calls it before the Player
- * mounts, so the first frame already has its text.
+ * Loads the overlay font into this document (ruling 6): the subsets `text`
+ * needs, or every subset without a text. The render loads them all under
+ * `delayRender`; the Player's overlay and the wizard pass the display name,
+ * so a preview fetches only the files it draws with (fix wave M-2).
  */
-export function loadOverlayFont(): Promise<void> {
-  return overlayFont.load();
+export function loadOverlayFont(text?: string): Promise<void> {
+  return overlayFont.load(text);
 }
 
-/** Whether `loadOverlayFont` has resolved in this document. */
-export function isOverlayFontLoaded(): boolean {
-  return overlayFont.isLoaded();
+/** Whether `loadOverlayFont(text)` has resolved in this document. */
+export function isOverlayFontLoaded(text?: string): boolean {
+  return overlayFont.isLoaded(text);
 }

@@ -97,7 +97,7 @@ mock.module("@remotion/layout-utils", () => ({
 const { Thumbnail } = await import("@remotion/player");
 const { SponsoredVideo } = await import("./sponsored-video");
 const { Background } = await import("./background");
-const { OVERLAY_FONT_STACK } = await import("./font");
+const { OVERLAY_FONT_FILES, OVERLAY_FONT_STACK } = await import("./font");
 
 const PROPS = {
   background: {
@@ -119,7 +119,10 @@ function errorFallback({ error }: { error: Error }): React.ReactNode {
 
 function thumbnail(
   frame: number,
-  props: Partial<typeof PROPS> | { displayName: string } = {}
+  props:
+    | Partial<typeof PROPS>
+    | { displayName: string }
+    | { logoUrl: string } = {}
 ): React.ReactNode {
   return (
     <Thumbnail
@@ -211,6 +214,14 @@ describe("SponsoredVideo in a Thumbnail", () => {
         word.text === RENDER_OVERLAY_LAYOUT.text.intro
       );
     }
+    // In the Player only the subsets the name needs were fetched (M-2).
+    expect([...loaded].sort()).toEqual(
+      OVERLAY_FONT_FILES.filter(({ subset }) =>
+        ["latin", "latin-ext"].includes(subset)
+      )
+        .map(({ url }) => url)
+        .sort()
+    );
     // The frame was held while the font loaded, and released once.
     expect(delayed.length).toBeGreaterThan(0);
     expect([...handles.continued].sort()).toEqual([...delayed].sort());
@@ -229,6 +240,82 @@ describe("SponsoredVideo in a Thumbnail", () => {
       unmount();
     });
   }
+
+  it("in the Player, a name in another subset loads that subset too", () => {
+    const cyrillic = OVERLAY_FONT_FILES.find(
+      ({ subset }) => subset === "cyrillic"
+    );
+    expect(loaded.has(cyrillic?.url ?? "")).toBe(true);
+    const greekExt = OVERLAY_FONT_FILES.find(
+      ({ subset }) => subset === "greek-ext"
+    );
+    expect(loaded.has(greekExt?.url ?? "")).toBe(false);
+  });
+
+  it("in the Player, a logo that fails is dropped: the text stays, and a new logo shows (M-1)", async () => {
+    resetHandles();
+    const { warn } = console;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args);
+    };
+    try {
+      const { container, rerender, unmount } = render(thumbnail(LAST));
+      await screen.findByText(PROPS.displayName);
+      const logo = imageWithSource(container, PROPS.logoUrl);
+      // `Img` retries twice before it gives up.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        fireEvent.error(logo);
+      }
+      await waitFor(() => {
+        expect(
+          [...container.querySelectorAll("img")].some(
+            (img) => img.getAttribute("src") === PROPS.logoUrl
+          )
+        ).toBe(false);
+      });
+      expect(screen.getByText(PROPS.displayName)).toBeDefined();
+      expect(screen.getByText(RENDER_OVERLAY_LAYOUT.text.intro)).toBeDefined();
+      expect(screen.queryByText(FAILED)).toBe(null);
+      expect(handles.cancelled).toEqual([]);
+      // Remotion's `Img` warns about its own retries first.
+      expect(
+        warnings
+          .map(([message]) => message)
+          .filter((message) => String(message).startsWith("[sponsorOverlay]"))
+      ).toEqual([
+        "[sponsorOverlay] The logo could not be loaded; the preview shows none:",
+      ]);
+      const next = "https://example.test/next-logo.png";
+      rerender(thumbnail(LAST, { logoUrl: next }));
+      await waitFor(() => imageWithSource(container, next));
+      unmount();
+    } finally {
+      console.warn = warn;
+    }
+  });
+
+  it("while rendering, a logo that fails cancels the render", async () => {
+    resetHandles();
+    state.rendering = true;
+    try {
+      const { container, unmount } = render(thumbnail(LAST));
+      await screen.findByText(PROPS.displayName);
+      const logo = imageWithSource(container, PROPS.logoUrl);
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        fireEvent.error(logo);
+      }
+      await waitFor(() => {
+        expect(handles.cancelled).toHaveLength(1);
+      });
+      expect((handles.cancelled[0] as Error).message).toBe(
+        "the logo could not be loaded"
+      );
+      unmount();
+    } finally {
+      state.rendering = false;
+    }
+  });
 
   it("shows no overlay before its start frame", async () => {
     const { container, unmount } = render(thumbnail(0));
