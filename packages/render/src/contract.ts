@@ -117,13 +117,15 @@ export const renderRequestSchema = z.object({
 export type RenderRequest = z.infer<typeof renderRequestSchema>;
 
 /**
- * Why a render failed. The first three are the request's own fault and
+ * Why a render failed. The first four are the request's own fault and
  * final; the last three may pass on a retry (`isRetryableRenderError`).
+ * `busy` (no renderer free) is a wait for the Workflow, not a failure.
  */
 export const RENDER_ERROR_CODES = [
   "invalidInput",
   "sourceUnreadable",
   "logoUnreadable",
+  "sourceTooLong",
   "busy",
   "renderFailed",
   "uploadFailed",
@@ -137,9 +139,18 @@ export const RENDER_ERROR_STATUS: Record<RenderErrorCode, number> = {
   invalidInput: 422,
   logoUnreadable: 422,
   renderFailed: 500,
+  sourceTooLong: 422,
   sourceUnreadable: 422,
   uploadFailed: 502,
 };
+
+/**
+ * The longest source the server renders (phase 7 fix wave, infra M-3):
+ * about 110 s of 1080 × 1920 fits in one 19-minute attempt on one vCPU
+ * (0.34 s a frame, DECISIONS), so a longer one would burn three attempts
+ * and then fail. It fails at once instead, as `sourceTooLong` (final).
+ */
+export const RENDER_SOURCE_MAX_SECONDS = 120;
 
 /** Whether the Workflow's `render` step retries after this failure. */
 export function isRetryableRenderError(code: RenderErrorCode): boolean {

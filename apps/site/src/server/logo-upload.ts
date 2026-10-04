@@ -156,6 +156,9 @@ export async function handleLogoRead(
   });
 }
 
+/** The re-edit logo read's body cap: a longer body is the same 404. */
+const REEDIT_LOGO_BODY_MAX_BYTES = 1024;
+
 /** The re-edit logo read's body: the raw link token (never in the URL). */
 const reeditLogoBodySchema = z.object({ token: sponsorshipTokenSchema });
 
@@ -165,7 +168,8 @@ const reeditLogoBodySchema = z.object({ token: sponsorshipTokenSchema });
  * render will (`readReeditLogo`). The token is the only input, so a link
  * reaches only its own sponsorship's logo. It checks `isForeignRequest` and
  * `RL_API` per IP; a missing, malformed, wrong, used or expired token, a
- * sponsorship no longer waiting for changes and a missing logo are all the
+ * sponsorship no longer waiting for changes, a missing logo and a body over
+ * 1 KiB (read capped, never buffered whole) are all the
  * same 404. Private and `no-store`, so nothing is cached across tokens.
  */
 export async function handleReeditLogoRead(
@@ -183,11 +187,15 @@ export async function handleReeditLogoRead(
   ) {
     return json(429, { code: "RATE_LIMITED" });
   }
+  // At most 1 KiB is read (fix wave M-3): a token is 43 characters.
+  const capped = await readCappedBody(request, REEDIT_LOGO_BODY_MAX_BYTES);
   let body: unknown = null;
-  try {
-    body = await request.json();
-  } catch {
-    // A body that is not JSON: the same 404 as a wrong token.
+  if (capped.ok) {
+    try {
+      body = JSON.parse(new TextDecoder().decode(capped.bytes));
+    } catch {
+      // A body that is not JSON: the same 404 as a wrong token.
+    }
   }
   const parsed = reeditLogoBodySchema.safeParse(body);
   const logo = parsed.success

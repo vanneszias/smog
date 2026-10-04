@@ -21,7 +21,10 @@
  * 6. `render`: the job's previous upload cancelled, a fresh Mux upload
  *    (its id stored on the job), the signed master URL re-read, then
  *    `POST /render` to the renderer. The spec's separate `upload` step is
- *    folded in (DECISIONS): each attempt gets its own upload URL.
+ *    folded in (DECISIONS): each attempt gets its own upload URL. A
+ *    renderer with no capacity (`busy`) is a wait, not a failure:
+ *    `render-slot-wait-<n>` (n ≤ 12, 5 min apart) and `render-<n + 1>`,
+ *    then `rendererBusy` (phase 7 fix wave, pipeline C-1).
  * 7. `ready-<uploadId>`: the webhook's `mux-asset-<uploadId>` event, or
  *    after an hour `ready-wait-<n>` + `ready-poll-<n>` (n ≤ 15, 2 min apart).
  * 8. `commit`: `completeRender`; the previous sponsored asset is deleted,
@@ -65,6 +68,7 @@ import {
   completeRender,
   failRender,
   markRenderRunning,
+  type RenderJobRecord,
   readRenderJob,
   setRenderUpload,
 } from "./render";
@@ -115,6 +119,13 @@ export const RENDER_WAITS = {
   readyPolls: 15,
   /** How long `ready-<uploadId>` waits for the webhook's event. */
   readyTimeout: HOUR_MS,
+  /**
+   * Between a `busy` render (no renderer free) and the next attempt
+   * (`render-slot-wait-<n>`, then `render-<n + 1>`).
+   */
+  renderSlotInterval: 5 * MINUTE_MS,
+  /** Waits for a free renderer before `rendererBusy`: an hour in all. */
+  renderSlotWaits: 12,
   /** Between two `source-poll-<n>`. */
   sourcePollInterval: 10 * SECOND_MS,
   sourcePolls: 30,
@@ -138,8 +149,10 @@ export function stepWorstCaseMs(config: RenderStepConfig): number {
 
 /**
  * The longest straight path of one instance, every step at its worst:
- * `start`, the source (30 polls), `logo`, `render`, the hour's wait and
- * 15 polls, `commit` and `fail`.
+ * `start`, the source (30 polls), `logo`, `render` and every slot wait
+ * with its own `render-<n>` (a `busy` attempt may follow failed attempts
+ * of the same step, so each counts at its worst), the hour's wait and 15
+ * polls, `commit` and `fail`.
  */
 export const RENDER_WORKFLOW_MAX_MS =
   stepWorstCaseMs(RENDER_STEP_CONFIG.start) +
@@ -150,6 +163,9 @@ export const RENDER_WORKFLOW_MAX_MS =
   stepWorstCaseMs(RENDER_STEP_CONFIG.sourceResolve) +
   stepWorstCaseMs(RENDER_STEP_CONFIG.logo) +
   stepWorstCaseMs(RENDER_STEP_CONFIG.render) +
+  RENDER_WAITS.renderSlotWaits *
+    (RENDER_WAITS.renderSlotInterval +
+      stepWorstCaseMs(RENDER_STEP_CONFIG.render)) +
   RENDER_WAITS.readyTimeout +
   RENDER_WAITS.readyPolls *
     (RENDER_WAITS.readyPollInterval +
@@ -161,7 +177,9 @@ export const RENDER_WORKFLOW_MAX_MS =
  * How long a job may stay `queued`/`running` with an active instance
  * before the watchdog terminates it (ruling 12): the Workflow's longest
  * path plus a 30 minute margin. The clock is the job's `updated_at`, set
- * by `queued → running` (`setRenderUpload` leaves it alone).
+ * by `queued → running` (`setRenderUpload` leaves it alone). The slot
+ * waits make it long (19 h 37 min); an instance that errors or ends is
+ * failed by the next hourly run whatever its age.
  */
 export const RENDER_WATCHDOG_CEILING = RENDER_WORKFLOW_MAX_MS + 30 * MINUTE_MS;
 
@@ -212,8 +230,10 @@ export const RENDER_JOB_FAILURE_CODES = [
   "muxAssetErrored",
   "muxAssetTimeout",
   "muxUnavailable",
+  "rendererBusy",
   "rendererUnavailable",
   "sourceUnavailable",
+  "workflowNeverStarted",
   "workflowUnavailable",
 ] as const;
 
@@ -401,6 +421,13 @@ interface RenderOutput {
   uploadId: string;
   width: number;
 }
+
+/** A render attempt that found no free renderer: the slot loop waits. */
+interface BusyOutput {
+  busy: true;
+}
+
+type RenderAttempt = RenderOutput | BusyOutput;
 
 interface ReadyAsset {
   assetId: string;
@@ -629,6 +656,26 @@ async function dropUpload(
   }
 }
 
+/**
+ * A failed job's upload released (ruling 13: none may leak): cancelled,
+ * and the asset it already made deleted, unless that asset is the
+ * gesture's own or the sponsorship's video. The Workflow's `fail` and the
+ * watchdog's failures both run it (phase 7 fix wave, pipeline I-1), so an
+ * asset whose `asset.ready` was already handled is not left behind.
+ */
+export async function releaseRenderUpload(
+  mux: Mux | null,
+  job: Pick<RenderJobRecord, "gestureAssetId" | "muxUploadId" | "videoAssetId">
+): Promise<void> {
+  if (!(mux && job.muxUploadId)) {
+    return;
+  }
+  await dropUpload(mux, job.muxUploadId, [
+    job.gestureAssetId,
+    job.videoAssetId,
+  ]);
+}
+
 /** The URL the renderer reads, resolved inside `render` (never step state). */
 async function sourceUrlOf(
   mux: Mux,
@@ -666,7 +713,7 @@ async function renderStep(
     renderJobId: string;
     source: SourceOutput;
   }
-): Promise<RenderOutput> {
+): Promise<RenderAttempt> {
   const { renderer } = deps;
   if (!renderer) {
     throw new RenderJobFailure(
@@ -689,9 +736,22 @@ async function renderStep(
     renderJobId,
     test: deps.environment === "dev",
   });
-  if (!(await setRenderUpload(deps.db, { renderJobId, uploadId: upload.id }))) {
+  const stored = await setRenderUpload(deps.db, {
+    previousUploadId: job.muxUploadId,
+    renderJobId,
+    uploadId: upload.id,
+  });
+  if (stored !== "set") {
     await dropUpload(mux, upload.id, keep);
-    throw new RenderJobFailure("jobNotRunning", "the job is not running");
+    if (stored === "not-running") {
+      throw new RenderJobFailure("jobNotRunning", "the job is not running");
+    }
+    // Another attempt stored its upload after this one read the job (an
+    // attempt that went on past its timeout, review M-1): this one gives
+    // way, and the step's next attempt starts from the stored upload.
+    throw new Error(
+      `[sponsorships] The upload of render job ${renderJobId} changed during this attempt`
+    );
   }
   const sourceUrl = await sourceUrlOf(mux, input, source);
   const logoUrl =
@@ -704,6 +764,14 @@ async function renderStep(
     uploadUrl: upload.url,
     v: RENDER_REQUEST_VERSION,
   });
+  if (!result.ok && result.code === "busy") {
+    // No renderer free (the platform's capacity refusal or the server's
+    // own slot): a wait, not a failure. The next attempt cancels this upload.
+    console.warn(
+      `[sponsorships] No renderer free for render job ${renderJobId}; waiting for a slot`
+    );
+    return { busy: true };
+  }
   if (!result.ok) {
     throw new RenderJobFailure(result.code, result.message, {
       retryable: isRetryableRenderError(result.code),
@@ -715,6 +783,39 @@ async function renderStep(
     uploadId: upload.id,
     width: result.width,
   };
+}
+
+/**
+ * Step 6 with its slot waits: `render`, then while no renderer is free
+ * `render-slot-wait-<n>` + `render-<n + 1>`, at most
+ * `RENDER_WAITS.renderSlotWaits` times, then `rendererBusy` (final). A
+ * `busy` attempt returns, so it uses none of its step's retries.
+ */
+async function renderWithSlot(
+  step: RenderStep,
+  deps: RenderJobDeps,
+  args: Parameters<typeof renderStep>[1]
+): Promise<RenderOutput> {
+  for (let wait = 0; ; wait += 1) {
+    const name = wait === 0 ? "render" : `render-${wait + 1}`;
+    // biome-ignore lint/performance/noAwaitInLoops: the attempts are sequential steps, a slot wait apart.
+    const attempt = await step.do(name, RENDER_STEP_CONFIG.render, () =>
+      renderStep(deps, args)
+    );
+    if (!("busy" in attempt)) {
+      return attempt;
+    }
+    if (wait >= RENDER_WAITS.renderSlotWaits) {
+      throw new RenderJobFailure(
+        "rendererBusy",
+        `no renderer was free after ${RENDER_WAITS.renderSlotWaits} waits`
+      );
+    }
+    await step.sleep(
+      `render-slot-wait-${wait + 1}`,
+      RENDER_WAITS.renderSlotInterval
+    );
+  }
 }
 
 function assetFromEvent(event: RenderMuxEvent): ReadyAsset {
@@ -847,17 +948,49 @@ async function commitStep(
   return { outcome: committed ? "completed" : "noop" };
 }
 
-/** The failure path: `fail` once, then the instance completes as `failed`. */
+/**
+ * A job that had already succeeded when `fail` ran (`completeRender`
+ * committed, then `commit` was cut short: its read failed, or the
+ * watchdog's terminate landed): the commit's own cleanup, the previous
+ * sponsored asset deleted unless it is the video now or the gesture's own
+ * (review M-2).
+ */
+async function finishCommitCleanup(
+  deps: RenderJobDeps,
+  renderJobId: string,
+  previousAssetId: string | null
+): Promise<void> {
+  if (!(deps.mux && previousAssetId)) {
+    return;
+  }
+  const job = await readRenderJob(deps.db, renderJobId);
+  if (job?.status !== "succeeded") {
+    return;
+  }
+  await dropAsset(
+    deps.mux,
+    previousAssetId,
+    [job.videoAssetId, job.gestureAssetId],
+    "replaced by a new render"
+  );
+}
+
+/**
+ * The failure path: `fail` once, then the instance completes as `failed`,
+ * or as `noop` when the job was already final (review M-5: the instance's
+ * outcome never contradicts D1).
+ */
 async function failJob(
   step: RenderStep,
   deps: RenderJobDeps,
   renderJobId: string,
-  error: unknown
+  error: unknown,
+  started: StartedJob | null
 ): Promise<RenderJobOutcome> {
   const code = toRenderJobFailure(error)?.code ?? "unexpected";
   const summary = summariseRenderError(error);
   console.error(`[sponsorships] Render job ${renderJobId} failed: ${summary}`);
-  await step.do("fail", RENDER_STEP_CONFIG.fail, async () => {
+  const failed = await step.do("fail", RENDER_STEP_CONFIG.fail, async () => {
     const result = await failRender(deps.db, {
       error: summary,
       now: deps.clock(),
@@ -865,6 +998,11 @@ async function failJob(
       siteUrl: deps.siteUrl,
     });
     if (result.outcome !== "failed") {
+      await finishCommitCleanup(
+        deps,
+        renderJobId,
+        started?.previousAssetId ?? null
+      );
       return { outcome: result.outcome };
     }
     // Keyed per job and admin: a replay sends nothing new.
@@ -874,15 +1012,14 @@ async function failJob(
       { onFailure: "throw" }
     );
     const job = await readRenderJob(deps.db, renderJobId);
-    if (deps.mux && job?.muxUploadId) {
-      await dropUpload(deps.mux, job.muxUploadId, [
-        job.gestureAssetId,
-        job.videoAssetId,
-      ]);
+    if (job) {
+      await releaseRenderUpload(deps.mux, job);
     }
     return { outcome: result.outcome };
   });
-  return { code, outcome: "failed" };
+  return failed.outcome === "failed"
+    ? { code, outcome: "failed" }
+    : { outcome: "noop" };
 }
 
 /**
@@ -896,6 +1033,7 @@ export async function runRenderJob(
   deps: RenderJobDeps,
   { renderJobId }: { renderJobId: string }
 ): Promise<RenderJobOutcome> {
+  let running: StartedJob | null = null;
   try {
     const started = await step.do("start", RENDER_STEP_CONFIG.start, () =>
       startStep(deps, renderJobId)
@@ -906,6 +1044,7 @@ export async function runRenderJob(
       );
       return { outcome: "noop" };
     }
+    running = started;
     const { input } = started;
     const lookup = await step.do(
       "source-lookup",
@@ -924,9 +1063,12 @@ export async function runRenderJob(
           checkLogo(deps, logoKey)
         )
       : null;
-    const rendered = await step.do("render", RENDER_STEP_CONFIG.render, () =>
-      renderStep(deps, { input, logo, renderJobId, source })
-    );
+    const rendered = await renderWithSlot(step, deps, {
+      input,
+      logo,
+      renderJobId,
+      source,
+    });
     const asset = await waitForAsset(step, deps, rendered.uploadId);
     return await step.do("commit", RENDER_STEP_CONFIG.commit, () =>
       commitStep(deps, {
@@ -940,6 +1082,6 @@ export async function runRenderJob(
     if (isEngineAbort(error)) {
       throw error;
     }
-    return await failJob(step, deps, renderJobId, error);
+    return await failJob(step, deps, renderJobId, error, running);
   }
 }

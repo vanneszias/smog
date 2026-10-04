@@ -6,13 +6,16 @@
  * migration 0011's index.
  */
 import { env } from "cloudflare:workers";
-import { renderJob } from "@smog/db";
+import { gesture, renderJob, sponsorship } from "@smog/db";
 import type { EmailMessage, EventMessage, JobQueues } from "@smog/jobs";
+import { createRenderUpload, type Mux } from "@smog/video";
+import { createFakeMux } from "@smog/video/testing";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createRenderJob, markRenderRunning } from "../src/server/render";
 import {
   instanceErrorSummary,
+  RENDER_NEVER_STARTED_MS,
   RENDER_QUEUED_GRACE_MS,
   RENDER_WATCHDOG_BUDGET,
   reconcileRenderJobs,
@@ -34,6 +37,9 @@ import {
 } from "./helpers";
 
 const db = testDb();
+const UNAVAILABLE_ERROR = /^workflowUnavailable: /;
+const NEVER_STARTED_ERROR = /^workflowNeverStarted: /;
+const NEVER_STARTED_UNREADABLE = /^workflowNeverStarted: .*status unreadable/;
 
 beforeEach(async () => {
   await clearSponsorships(db);
@@ -93,8 +99,15 @@ const FRESH_QUEUED = new Date(NOW.getTime() - RENDER_QUEUED_GRACE_MS + 60_000);
 const PAST_CEILING = new Date(NOW.getTime() - RENDER_WATCHDOG_CEILING - 1);
 const RECENT = new Date(NOW.getTime() - 60_000);
 
-/** A `rendering` sponsorship with one job, `queued` or `running`, last touched at `updatedAt`. */
-async function job(status: "queued" | "running", updatedAt: Date) {
+/**
+ * A `rendering` sponsorship with one job, `queued` or `running`, last
+ * touched at `updatedAt` and created at `createdAt` (`NOW` by default).
+ */
+async function job(
+  status: "queued" | "running",
+  updatedAt: Date,
+  createdAt: Date = NOW
+) {
   const seeded = await seedCheckout(db, {
     count: 1,
     paymentStatus: "paid",
@@ -106,7 +119,10 @@ async function job(status: "queued" | "running", updatedAt: Date) {
   if (status === "running") {
     await markRenderRunning(db, { now: NOW, renderJobId: id });
   }
-  await db.update(renderJob).set({ updatedAt }).where(eq(renderJob.id, id));
+  await db
+    .update(renderJob)
+    .set({ createdAt, updatedAt })
+    .where(eq(renderJob.id, id));
   return { id, sponsorshipId };
 }
 
@@ -118,10 +134,12 @@ async function jobRow(id: string) {
 async function run(
   workflow: WorkflowStatusPort | null,
   queues: JobQueues,
-  now = NOW
+  now = NOW,
+  mux: Mux | null = null
 ) {
   return await reconcileRenderJobs({
     db,
+    mux,
     now,
     queues,
     siteUrl: SITE_URL,
@@ -146,9 +164,9 @@ describe("reconcileRenderJobs (ruling 12)", () => {
     expect((await jobRow(fresh.id))?.status).toBe("queued");
   });
 
-  it("without a binding only the requeue row applies (fake mode)", async () => {
+  it("without a binding: queued jobs are re-sent, running ones before the ceiling are left (fake mode)", async () => {
     const queued = await job("queued", OLD_QUEUED);
-    const running = await job("running", PAST_CEILING);
+    const running = await job("running", RECENT);
     const { events, queues } = recordingQueues();
 
     const result = await run(null, queues);
@@ -159,6 +177,191 @@ describe("reconcileRenderJobs (ruling 12)", () => {
     ]);
     expect((await jobRow(running.id))?.status).toBe("running");
     expect(await statusOf(db, running.sponsorshipId)).toBe("rendering");
+  });
+
+  it("without a binding, a running job past the ceiling fails: the pipeline was turned off (fix wave M-4)", async () => {
+    await makeAdmin(db);
+    const running = await job("running", PAST_CEILING);
+    const { emails, queues } = recordingQueues();
+
+    expect(await run(null, queues)).toEqual({
+      failed: 1,
+      requeued: 0,
+      timedOut: 0,
+    });
+    expect(await run(null, queues)).toEqual({
+      failed: 0,
+      requeued: 0,
+      timedOut: 0,
+    });
+    const stored = await jobRow(running.id);
+    expect(stored?.status).toBe("failed");
+    expect(stored?.error).toMatch(UNAVAILABLE_ERROR);
+    expect(await statusOf(db, running.sponsorshipId)).toBe("render_failed");
+    expectAdminEmails(emails, running.id);
+  });
+
+  it.each([
+    ["not found", "not-found"],
+    ["unknown", { status: "unknown" }],
+  ] as const)(
+    "fails a queued job created over 6 hours ago whose instance is %s: workflowNeverStarted (fix wave I-2)",
+    async (_label, answer) => {
+      await makeAdmin(db);
+      // Re-sent a minute ago (updated_at moved), created long before.
+      const queued = await job(
+        "queued",
+        OLD_QUEUED,
+        new Date(NOW.getTime() - RENDER_NEVER_STARTED_MS - 1)
+      );
+      const young = await job("queued", OLD_QUEUED);
+      const { calls, port } = fakePort({
+        [queued.id]: answer as Answer,
+        [young.id]: answer as Answer,
+      });
+      const { emails, events, queues } = recordingQueues();
+
+      const first = await run(port, queues);
+
+      expect(first.failed).toBe(1);
+      const stored = await jobRow(queued.id);
+      expect(stored?.status).toBe("failed");
+      expect(stored?.error).toMatch(NEVER_STARTED_ERROR);
+      expect(await statusOf(db, queued.sponsorshipId)).toBe("render_failed");
+      expectAdminEmails(
+        emails.filter((email) =>
+          email.idempotencyKey?.includes(`:${queued.id}:`)
+        ),
+        queued.id
+      );
+      // No re-send for it; a young job is left (unknown) or re-sent (not found).
+      expect(events).not.toContainEqual({
+        renderJobId: queued.id,
+        type: "render.requested",
+      });
+      expect((await jobRow(young.id))?.status).toBe("queued");
+      if (answer !== "not-found") {
+        // An instance that may exist is terminated first, best effort.
+        expect(calls).toContain(`terminate:${queued.id}`);
+      }
+      expect(await run(port, queues)).toMatchObject({ failed: 0 });
+    }
+  );
+
+  it("a queued job whose status keeps throwing is left within the bound, then fails past it (fix wave I-2)", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const young = await job("queued", OLD_QUEUED);
+    const old = await job(
+      "queued",
+      OLD_QUEUED,
+      new Date(NOW.getTime() - RENDER_NEVER_STARTED_MS - 1)
+    );
+    const { calls, port } = fakePort({});
+    port.status = () => Promise.reject(new Error("engine down"));
+    const { queues } = recordingQueues();
+
+    expect(await run(port, queues)).toEqual({
+      failed: 1,
+      requeued: 0,
+      timedOut: 0,
+    });
+    expect((await jobRow(young.id))?.status).toBe("queued");
+    expect(await jobRow(old.id)).toMatchObject({ status: "failed" });
+    expect((await jobRow(old.id))?.error).toMatch(NEVER_STARTED_UNREADABLE);
+    expect(calls).toContain(`terminate:${old.id}`);
+    error.mockRestore();
+  });
+
+  it("a running job created longer ago than the ceiling whose instance is unknown or unreadable fails (fix wave I-2)", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const longAgo = new Date(NOW.getTime() - RENDER_WATCHDOG_CEILING - 1);
+    const unknown = await job("running", RECENT, longAgo);
+    const unreadable = await job("running", RECENT, longAgo);
+    const { port } = fakePort({ [unknown.id]: { status: "unknown" } });
+    const { status } = port;
+    port.status = (id) =>
+      id === unreadable.id
+        ? Promise.reject(new Error("engine down"))
+        : status(id);
+    const { queues } = recordingQueues();
+
+    expect(await run(port, queues)).toMatchObject({ failed: 2 });
+    expect(await jobRow(unknown.id)).toMatchObject({
+      error: "timed out (status unknown)",
+      status: "failed",
+    });
+    expect(await jobRow(unreadable.id)).toMatchObject({
+      error: "timed out (status unreadable)",
+      status: "failed",
+    });
+    error.mockRestore();
+  });
+
+  it("a failure releases the job's upload: an asset already made is deleted, the gesture's and the video kept (fix wave I-1)", async () => {
+    const fake = createFakeMux();
+    const running = await job("running", RECENT);
+    const own = fake.addAsset({ playbackId: "own" });
+    const previous = fake.addAsset({ playbackId: "previous" });
+    const upload = await createRenderUpload(fake.mux, {
+      corsOrigin: SITE_URL,
+      renderJobId: running.id,
+      test: true,
+    });
+    fake.completeUpload(upload.id);
+    const made = fake.uploads.get(upload.id)?.assetId as string;
+    fake.readyAsset(made);
+    await db
+      .update(renderJob)
+      .set({ muxUploadId: upload.id })
+      .where(eq(renderJob.id, running.id));
+    const [row] = await db
+      .select({ gestureId: sponsorship.gestureId })
+      .from(sponsorship)
+      .where(eq(sponsorship.id, running.sponsorshipId));
+    await db
+      .update(gesture)
+      .set({ muxAssetId: own.id })
+      .where(eq(gesture.id, row?.gestureId as string));
+    await db
+      .update(sponsorship)
+      .set({ videoAssetId: previous.id })
+      .where(eq(sponsorship.id, running.sponsorshipId));
+    // The current asset.ready was handled already; then the instance errored.
+    const { port } = fakePort({ [running.id]: { status: "errored" } });
+    const { queues } = recordingQueues();
+
+    expect(await run(port, queues, NOW, fake.mux)).toMatchObject({
+      failed: 1,
+    });
+    expect(fake.assets.has(made)).toBe(false);
+    expect(fake.assets.has(own.id)).toBe(true);
+    expect(fake.assets.has(previous.id)).toBe(true);
+  });
+
+  it("a failure cancels a waiting upload (fix wave I-1)", async () => {
+    const fake = createFakeMux();
+    const running = await job("running", PAST_CEILING);
+    const upload = await createRenderUpload(fake.mux, {
+      corsOrigin: SITE_URL,
+      renderJobId: running.id,
+      test: true,
+    });
+    await db
+      .update(renderJob)
+      // `updated_at` set again: the column's `$onUpdate` would move it.
+      .set({ muxUploadId: upload.id, updatedAt: PAST_CEILING })
+      .where(eq(renderJob.id, running.id));
+    const { port } = fakePort({ [running.id]: { status: "waiting" } });
+    const { queues } = recordingQueues();
+
+    expect(await run(port, queues, NOW, fake.mux)).toMatchObject({
+      timedOut: 1,
+    });
+    expect(fake.uploads.get(upload.id)?.status).toBe("cancelled");
   });
 
   it.each(["complete", "errored", "terminated"] as const)(
@@ -495,6 +698,7 @@ describe("runStaleSweep runs the render watchdog", () => {
     const result = await runStaleSweep({
       db,
       mollie: null,
+      mux: null,
       now: NOW,
       queues,
       siteUrl: SITE_URL,

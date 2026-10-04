@@ -599,6 +599,7 @@ async function staleStep(
 export async function runStaleSweep({
   db,
   mollie,
+  mux,
   now,
   queues,
   siteUrl,
@@ -606,6 +607,8 @@ export async function runStaleSweep({
 }: {
   db: Db;
   mollie: MollieClient | null;
+  /** The render watchdog releases a failed job's Mux upload (fix wave I-1). */
+  mux: Mux | null;
   now: Date;
   queues: JobQueues;
   siteUrl: string;
@@ -666,6 +669,7 @@ export async function runStaleSweep({
   const renders = await reconcileRenderJobs({
     ceilingMs: RENDER_WATCHDOG_CEILING,
     db,
+    mux,
     now,
     queues,
     siteUrl,

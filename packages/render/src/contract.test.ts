@@ -10,6 +10,7 @@ import {
   RENDER_LOGO_MAX_BYTES,
   RENDER_OVERLAY_LAYOUT,
   RENDER_REQUEST_VERSION,
+  RENDER_SOURCE_MAX_SECONDS,
   renderInputSchema,
   renderRequestSchema,
   renderResultSchema,
@@ -223,6 +224,7 @@ describe("the render server's HTTP contract (phase 7 ruling 1)", () => {
       "invalidInput",
       "sourceUnreadable",
       "logoUnreadable",
+      "sourceTooLong",
       "busy",
       "renderFailed",
       "uploadFailed",
@@ -239,5 +241,8 @@ describe("the render server's HTTP contract (phase 7 ruling 1)", () => {
     }
     expect(RENDER_ERROR_STATUS.invalidInput).toBe(422);
     expect(RENDER_ERROR_STATUS.busy).toBe(503);
+    // A source over the cap fails at once, never retried (fix wave M-3).
+    expect(RENDER_ERROR_STATUS.sourceTooLong).toBe(422);
+    expect(RENDER_SOURCE_MAX_SECONDS).toBe(120);
   });
 });

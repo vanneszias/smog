@@ -65,6 +65,7 @@ export {
 } from "./render";
 export {
   instanceErrorSummary,
+  RENDER_NEVER_STARTED_MS,
   RENDER_QUEUED_GRACE_MS,
   RENDER_WATCHDOG_BUDGET,
   type RenderWatchdogResult,
@@ -89,6 +90,7 @@ export {
   type RenderJobOutcome,
   type RenderStep,
   type RenderStepConfig,
+  releaseRenderUpload,
   renderEventType,
   runRenderJob,
   stepWorstCaseMs,

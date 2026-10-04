@@ -15,6 +15,7 @@ import {
   sponsoredVideoPropsSchema,
 } from "../compositions/props";
 import {
+  RENDER_SOURCE_MAX_SECONDS,
   type RenderRequest,
   type RenderResult,
   renderRequestSchema,
@@ -225,6 +226,12 @@ export function createRenderServer(options: RenderServerOptions): RenderServer {
       renderJobId,
       width: source.width,
     });
+    if (source.durationInSeconds > RENDER_SOURCE_MAX_SECONDS) {
+      throw new RenderServerError(
+        "sourceTooLong",
+        `the source is ${Math.ceil(source.durationInSeconds)} s long; at most ${RENDER_SOURCE_MAX_SECONDS} s can be rendered`
+      );
+    }
 
     const props = sponsoredVideoPropsSchema.safeParse({
       background: { kind: "video", src: request.sourceUrl },
