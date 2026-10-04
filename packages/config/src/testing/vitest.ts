@@ -8,7 +8,7 @@
  * workerd, and the shutdown (`teardownTimeout`). It does not bound loading
  * a test file (its imports go to the main process over an RPC without a
  * timeout), nor a workerd that stops answering. `StallReporter` covers
- * those: when no test has finished for a minute it prints which files are
+ * those: when no test has finished for 2.5 minutes it prints which files are
  * loading or running, and which tests, and for how long. The wall-clock
  * limit around the command (`scripts/test-deadline.ts`) then kills it.
  */
@@ -23,7 +23,9 @@ interface ReportedTest {
   module: ReportedModule;
 }
 
-const STALL_MS = 60_000;
+// Above the site warm-up (the first transform of the server entry takes up
+// to 2 minutes on a loaded machine), so a report means something.
+const STALL_MS = 150_000;
 const CHECK_MS = 15_000;
 
 function seconds(ms: number): string {
