@@ -81,7 +81,8 @@ function location(env: WranglerEnv): "--local" | "--remote" {
   return env === "dev" ? "--local" : "--remote";
 }
 
-function d1ExecuteArgs(env: WranglerEnv, input: D1Input): string[] {
+/** `wrangler d1 execute DB …` for `env` (what `apply` prints and runs). */
+export function d1ExecuteArgs(env: WranglerEnv, input: D1Input): string[] {
   const source =
     "command" in input ? ["--command", input.command] : ["--file", input.file];
   return [
@@ -111,7 +112,12 @@ function kvGetArgs(env: WranglerEnv, key: string): string[] {
   ];
 }
 
-function kvPutArgs(env: WranglerEnv, key: string, value: string): string[] {
+/** `wrangler kv key put …` on `KV` for `env`. */
+export function kvPutArgs(
+  env: WranglerEnv,
+  key: string,
+  value: string
+): string[] {
   return [
     "kv",
     "key",

@@ -61,17 +61,6 @@ describe("migrate:convex", () => {
     );
   });
 
-  test("says which task builds a command that is not there yet (exit 1)", async () => {
-    for (const [command, task] of [["apply", 10]] as const) {
-      const { lines, out } = capture();
-      // biome-ignore lint/performance/noAwaitInLoops: one case after another, each with its own output.
-      expect(await main([command, "--env", "dev"], out)).toBe(1);
-      expect(lines.error).toEqual([
-        `[migrate-convex] \`${command}\` is not built yet (phase 8 task ${task}).`,
-      ]);
-    }
-  });
-
   test("mux needs scan or renditions, and absolute paths (exit 2)", async () => {
     for (const argv of [
       ["mux"],

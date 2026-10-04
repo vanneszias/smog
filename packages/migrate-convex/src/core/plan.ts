@@ -4,8 +4,8 @@
  * The CLI reads the files and hands their text over; everything here is
  * pure, so the same inputs and `--now` always give the same bytes. The
  * transforms (phase 8 tasks 7 and 8) each return their statements, reset
- * keys and report section; task 10 lists them in `TRANSFORMS`. Until then
- * a plan holds the report, the manifest and empty SQL files.
+ * keys and report section, and `TRANSFORMS` (task 10) adds what `apply`'s
+ * preflight needs from each (`preflight.json`).
  */
 import { sha256Hex } from "@smog/utils";
 import {
@@ -32,6 +32,11 @@ import {
   type WorkosUser,
 } from "./inputs";
 import {
+  mergePreflight,
+  type PreflightPart,
+  renderPreflight,
+} from "./preflight";
+import {
   buildReport,
   PlanBlocker,
   type Report,
@@ -41,6 +46,11 @@ import {
   section,
 } from "./report";
 import type { Target } from "./target";
+import { accountTransform } from "./transform/account";
+import { catalogTransform } from "./transform/catalog";
+import { learningTransform } from "./transform/learning";
+import { transformSponsorships } from "./transform/sponsorships";
+import { usersTransform } from "./transform/users";
 
 /** The parsed optional inputs a transform may use. */
 export interface PlanInputs {
@@ -60,6 +70,8 @@ export interface TransformResult {
   /** The migrated gestures, whose `gesture_fts` rows the last file rebuilds. */
   readonly ftsGestureIds?: readonly string[];
   readonly group: Exclude<FileGroup, "90-fts">;
+  /** What `apply`'s preflight checks against D1 (`preflight.json`). */
+  readonly preflight?: PreflightPart;
   readonly resetKeys: ResetKeys;
   readonly sections: readonly ReportSection[];
   readonly statements: readonly string[];
@@ -69,8 +81,60 @@ export type Transform = (
   context: TransformContext
 ) => TransformResult | Promise<TransformResult>;
 
-/** The transforms `plan` runs, in file order (task 10 wires tasks 7 and 8 in). */
-export const TRANSFORMS: readonly Transform[] = [];
+/**
+ * The transforms `plan` runs, in file order: users first (every other row
+ * finds its user by `legacy_id`), then the catalogue (gestures and
+ * categories), the learning rows (favorites and lists need both), the
+ * consents and audit rows, and the sponsorships (gestures, users through
+ * `reviewedBy`). Each adds its preflight facts: the claimed addresses, the
+ * slugs, the share tokens and the Mollie ids.
+ */
+export const TRANSFORMS: readonly Transform[] = [
+  async (context) => {
+    const result = await usersTransform(context);
+    return { ...result, preflight: { claims: [...result.claims] } };
+  },
+  async (context) => {
+    const result = await catalogTransform(context);
+    const slugs = (
+      [
+        ["category", result.rows.category],
+        ["gesture", result.rows.gesture],
+      ] as const
+    ).flatMap(([table, rows]) =>
+      rows.map((row) => ({
+        legacyId: row.legacyId ?? "",
+        slug: row.slug,
+        table,
+      }))
+    );
+    return { ...result, preflight: { slugs } };
+  },
+  async (context) => {
+    const result = await learningTransform(context);
+    return {
+      ...result,
+      preflight: {
+        shareTokens: result.rows.listShare.map((row) => ({
+          id: row.id,
+          token: row.token,
+        })),
+      },
+    };
+  },
+  accountTransform,
+  async (context) => {
+    const result = await transformSponsorships(context);
+    return {
+      ...result,
+      preflight: {
+        mollieIds: result.rows.payments.flatMap((row) =>
+          row.mollieId ? [{ id: row.id, mollieId: row.mollieId }] : []
+        ),
+      },
+    };
+  },
+];
 
 /** An input file's text (the CLI reads it). */
 export type InputText = string | null | undefined;
@@ -206,6 +270,16 @@ export async function plan(request: PlanRequest): Promise<PlanOutput> {
     groups,
     inputs: hashes,
     now: request.now,
+    preflight: renderPreflight(
+      mergePreflight(
+        results.map((result) => result.preflight ?? {}),
+        {
+          blockers: report.blockers,
+          reportSha256: await sha256Hex(files.get("report.json") ?? ""),
+          target: request.target,
+        }
+      )
+    ),
     report: { blockers: report.blockers, warnings: report.warnings },
     resetKeys: mergeResetKeys(results.map((result) => result.resetKeys)),
     target: request.target,

@@ -9,7 +9,8 @@
  *
  * Task 5 built the export schemas, the ids, the pseudonymiser, B1's
  * gesture video rule, the inputs, the report, the SQL emitter and `plan`;
- * the transforms arrive with tasks 7 and 8, wired in by task 10.
+ * tasks 7 and 8 the transforms; task 10 wired them in and added `apply`'s
+ * preflight and verification.
  */
 export {
   type EmitInput,
@@ -28,6 +29,7 @@ export {
   type Manifest,
   type ManifestFile,
   mergeResetKeys,
+  PREFLIGHT_FILE,
   type RawSql,
   RESET_CHUNK,
   RESET_GROUP,
@@ -114,6 +116,29 @@ export {
   type TransformContext,
   type TransformResult,
 } from "./plan";
+export {
+  APPLY_ENVS,
+  type ApplyEnv,
+  type ClaimLine,
+  type D1Query,
+  isApplyEnv,
+  mergePreflight,
+  type NativeCatalog,
+  PREFLIGHT_CHUNK,
+  type PreflightFacts,
+  type PreflightInput,
+  type PreflightPart,
+  type PreflightRefusal,
+  type PreflightResult,
+  preflightFactsSchema,
+  REQUIRED_MIGRATION,
+  type RoleDifference,
+  renderPreflight,
+  runPreflight,
+  VERIFY_COUNTS,
+  type VerifiedCount,
+  verifyCounts,
+} from "./preflight";
 export {
   buildReport,
   type DetailValue,

@@ -2,6 +2,9 @@
   // The integration suite (Vitest, workerd) and its config.
   "extends": "@smog/config/tsconfig/base.json",
   "compilerOptions": {
+    // The suite drives the auth and sponsorship services, which reach
+    // `@smog/email`'s templates (TSX).
+    "jsx": "react-jsx",
     "noEmit": true,
     "types": ["@cloudflare/vitest-plugin/types"]
   },

@@ -333,6 +333,7 @@ describe("emitPlan and the manifest", () => {
       },
       inputs: INPUTS,
       now: NOW,
+      preflight: "{}\n",
       report: { blockers: 0, warnings: 1 },
       resetKeys: { rows: { category: ["c1"] } },
       target: "staging",
@@ -351,9 +352,11 @@ describe("emitPlan and the manifest", () => {
       ["reset-imported-001.sql", 1],
     ]);
     for (const file of emitted.files) {
-      const entry = [...manifest.files, ...manifest.reset].find(
-        (item) => item.name === file.name
-      );
+      const entry = [
+        ...manifest.files,
+        ...manifest.reset,
+        manifest.preflight,
+      ].find((item) => item.name === file.name);
       expect(entry?.sha256).toBe(sha(file.content));
       expect(entry?.bytes).toBe(Buffer.byteLength(file.content));
     }

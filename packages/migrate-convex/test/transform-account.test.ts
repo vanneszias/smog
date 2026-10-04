@@ -141,7 +141,8 @@ describe("the account transform", () => {
     expect(await entry("log8")).toMatchObject({ actorId: null });
     expect(await entry("old1")).toBeUndefined();
     const counts = result.sections[0]?.counts ?? {};
-    expect(counts.auditLogs).toBe(8);
+    // log1–log8, and sp15's `mark_paid_manually` (task 8's row).
+    expect(counts.auditLogs).toBe(9);
     expect(counts.auditLogsDroppedTooOld).toBe(1);
     expect(counts.auditLogsSystemTarget).toBe(1);
     expect(counts.auditLogsUnmappedTarget).toBe(1);

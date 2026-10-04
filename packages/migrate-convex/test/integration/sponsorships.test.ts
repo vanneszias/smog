@@ -14,8 +14,6 @@ import sponsorshipsText from "../fixtures/export/sponsorships/documents.jsonl?ra
 import usersText from "../fixtures/export/users/documents.jsonl?raw";
 import muxMapText from "../fixtures/mux-map.json?raw";
 import overridesText from "../fixtures/overlay-overrides.json?raw";
-import sponsorshipAdminLogsText from "../fixtures/sponsorship-admin-logs.jsonl?raw";
-import sponsorshipGesturesText from "../fixtures/sponsorship-gestures.jsonl?raw";
 
 /*
  * Task 8's smoke on a D1 with every migration: the sponsorship transform's
@@ -61,8 +59,8 @@ async function counts(): Promise<Record<string, number>> {
 
 async function transform(target: Target) {
   const validated = validateExport({
-    adminLogs: `${adminLogsText}${sponsorshipAdminLogsText}`,
-    gestures: `${gesturesText}${sponsorshipGesturesText}`,
+    adminLogs: adminLogsText,
+    gestures: gesturesText,
     sponsorships: sponsorshipsText,
     users: usersText,
   });
