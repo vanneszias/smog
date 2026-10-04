@@ -67,6 +67,7 @@ bun -F @smog/mobile test     # Jest (jest-expo)
 bun -F @smog/mobile check-types
 bun -F @smog/mobile export   # expo export for iOS + Android into dist/
 bun -F @smog/mobile doctor   # expo-doctor (needs network, see SMOG_OFFLINE above)
+bun -F @smog/mobile update -- --profile <development|staging|production> [eas update args]  # OTA update with the profile's eas.json origin keys (never a bare `eas update`)
 ```
 
 Local runs need the `EXPO_PUBLIC_*` env: copy `apps/mobile/.env.example` to `apps/mobile/.env` (the app points at the local site on port 5173; use your LAN address on a device).

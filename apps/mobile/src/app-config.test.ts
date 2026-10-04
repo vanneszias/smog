@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import { APP_MAGIC_LINK_PATH } from "@smog/auth/react";
@@ -7,6 +7,7 @@ import { parseMobileEnv } from "@smog/config/env/mobile";
 import { tokens } from "@smog/styles/tokens";
 import type { ConfigContext, ExpoConfig } from "expo/config";
 import createConfig from "../app.config";
+import easJson from "../eas.json";
 import { devToolsAvailable } from "./lib/dev-tools";
 
 const PROJECT_ID = "9fa68b63-dfa5-498a-9196-5eba93ecac29";
@@ -20,9 +21,7 @@ interface EasProfile {
   environment?: string;
 }
 
-const eas = JSON.parse(
-  readFileSync(join(process.cwd(), "eas.json"), "utf8")
-) as {
+const eas = easJson as {
   build: Record<string, EasProfile | undefined>;
   cli: { appVersionSource?: string; version?: string };
   submit: Record<string, unknown>;
@@ -82,7 +81,8 @@ describe("app.config", () => {
     const config = load();
     expect(config.version).toBe("3.0.0");
     // EAS cannot write an autoIncrement into a dynamic app.config.ts; the
-    // owner seeds the remote counters at iOS 52 / Android 81 (ruling 3).
+    // owner seeds the remote counters at the stores' last values, iOS 51 /
+    // Android 80, so the first build is 52 / 81 (ruling 3).
     expect(config.ios?.buildNumber).toBeUndefined();
     expect(config.android?.versionCode).toBeUndefined();
     expect(eas.cli.appVersionSource).toBe("remote");
@@ -242,6 +242,9 @@ describe("eas.json profiles", () => {
     const production = profile("production");
     expect(production.distribution).toBe("store");
     expect(production.autoIncrement).toBe(true);
+    // A dev client never reaches the store.
+    expect(production.developmentClient).not.toBe(true);
+    expect(profile("staging").developmentClient).not.toBe(true);
     expect(profile("development").developmentClient).toBe(true);
     expect(profile("development").distribution).toBe("internal");
     expect(profile("staging").distribution).toBe("internal");

@@ -9,6 +9,7 @@ import {
   checkDeployConfigStep,
   checkDeployWorkflow,
   checkEasProfiles,
+  checkEasUpdateScripts,
   checkReleaseConfig,
   checkReleaseScripts,
   checkRequiredConfig,
@@ -744,6 +745,56 @@ describe("checkAppLinks", () => {
   });
 });
 
+describe("checkEasUpdateScripts (OTA updates carry the profile's origin)", () => {
+  const MOBILE = readFileSync(
+    join(ROOT, "apps", "mobile", "package.json"),
+    "utf8"
+  );
+  const withScript = (source: string, name: string, run: string): string => {
+    const parsed = JSON.parse(source) as { scripts: Record<string, string> };
+    return JSON.stringify({
+      ...parsed,
+      scripts: { ...parsed.scripts, [name]: run },
+    });
+  };
+
+  test("passes on the real package scripts", () => {
+    expect(checkEasUpdateScripts({ mobile: MOBILE, root: PACKAGE })).toEqual(
+      []
+    );
+  });
+
+  test("refuses a root or mobile script that calls eas update directly", () => {
+    expect(
+      checkEasUpdateScripts({
+        mobile: withScript(MOBILE, "ota", "eas update --channel production"),
+        root: PACKAGE,
+      })
+    ).toEqual([
+      'apps/mobile/package.json: script "ota" calls eas update directly; use scripts/eas-update.ts (bun -F @smog/mobile update -- --profile <profile>)',
+    ]);
+    expect(
+      checkEasUpdateScripts({
+        mobile: MOBILE,
+        root: withScript(PACKAGE, "ota", "cd apps/mobile && bunx eas update"),
+      })
+    ).toEqual([
+      'package.json: script "ota" calls eas update directly; use scripts/eas-update.ts (bun -F @smog/mobile update -- --profile <profile>)',
+    ]);
+  });
+
+  test("requires the mobile update script to be the wrapper", () => {
+    expect(
+      checkEasUpdateScripts({
+        mobile: withScript(MOBILE, "update", "expo export"),
+        root: PACKAGE,
+      })
+    ).toEqual([
+      'apps/mobile/package.json: script "update" must run ../../scripts/eas-update.ts',
+    ]);
+  });
+});
+
 describe("checkEasProfiles (phase 8 ruling 3)", () => {
   const EAS = readFileSync(join(ROOT, "apps", "mobile", "eas.json"), "utf8");
   const STAGING = "https://smog-site-staging.zias.workers.dev";
@@ -864,6 +915,17 @@ describe("checkEasProfiles (phase 8 ruling 3)", () => {
     );
     expect(errorsOf({ eas })).toEqual([
       "apps/mobile/eas.json: build.production.env.EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET belongs in the EAS environment variables, not in git",
+    ]);
+  });
+
+  test("keeps the production profile a store build without a dev client", () => {
+    const eas = EAS.replace(
+      '"distribution": "store",',
+      '"distribution": "internal", "developmentClient": true,'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      'apps/mobile/eas.json: build.production.distribution must be "store"',
+      "apps/mobile/eas.json: build.production must not be a developmentClient build",
     ]);
   });
 

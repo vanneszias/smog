@@ -10,7 +10,8 @@
     "doctor": "expo-doctor",
     "export": "expo export --platform ios --platform android --output-dir dist --clear",
     "ios": "expo run:ios",
-    "test": "bun ../../scripts/test-deadline.ts -- jest"
+    "test": "bun ../../scripts/test-deadline.ts -- jest",
+    "update": "bun ../../scripts/eas-update.ts"
   },
   "dependencies": {
     "@openpanel/react-native": "catalog:",

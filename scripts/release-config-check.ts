@@ -1374,6 +1374,15 @@ export function checkEasProfiles({
         : { label: `${env}'s SITE_URL`, url: urls[env] ?? "" };
     errors.push(...checkEasProfile(name, build[name], origin));
   }
+  const production = isRecord(build.production) ? build.production : {};
+  if (isRecord(build.production) && production.distribution !== "store") {
+    errors.push(`${EAS_FILE}: build.production.distribution must be "store"`);
+  }
+  if (production.developmentClient === true) {
+    errors.push(
+      `${EAS_FILE}: build.production must not be a developmentClient build`
+    );
+  }
   for (const [name, profile] of Object.entries(build)) {
     if (
       isRecord(profile) &&
@@ -1398,6 +1407,48 @@ export function checkEasProfiles({
     );
   }
   return { errors, warnings };
+}
+
+const EAS_UPDATE_WRAPPER = "../../scripts/eas-update.ts";
+const DIRECT_EAS_UPDATE = /\beas\s+update\b/;
+
+function packageScripts(source: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(source);
+  return isRecord(parsed) && isRecord(parsed.scripts) ? parsed.scripts : {};
+}
+
+/**
+ * `eas update` does not read a build profile's `env`, so an OTA update must
+ * go through `scripts/eas-update.ts`, which loads the profile's origin keys.
+ * No root or mobile script may call `eas update` itself, and the mobile
+ * `update` script is the wrapper.
+ */
+export function checkEasUpdateScripts({
+  mobile,
+  root,
+}: {
+  mobile: string;
+  root: string;
+}): string[] {
+  const direct = (file: string, source: string): string[] =>
+    Object.entries(packageScripts(source))
+      .filter(
+        ([, run]) => typeof run === "string" && DIRECT_EAS_UPDATE.test(run)
+      )
+      .map(
+        ([name]) =>
+          `${file}: script "${name}" calls eas update directly; use scripts/eas-update.ts (bun -F @smog/mobile update -- --profile <profile>)`
+      );
+  const { update } = packageScripts(mobile);
+  return [
+    ...direct("package.json", root),
+    ...direct("apps/mobile/package.json", mobile),
+    ...(typeof update === "string" && update.includes(EAS_UPDATE_WRAPPER)
+      ? []
+      : [
+          `apps/mobile/package.json: script "update" must run ${EAS_UPDATE_WRAPPER}`,
+        ]),
+  ];
 }
 
 /** Evaluates `app.config.ts` the way Expo does (no base config). */
@@ -1484,6 +1535,10 @@ export function checkReleaseConfig(
     }),
     ...appLinkErrors,
     ...eas.errors,
+    ...checkEasUpdateScripts({
+      mobile: read("apps/mobile/package.json"),
+      root: read("package.json"),
+    }),
   ];
 }
 
