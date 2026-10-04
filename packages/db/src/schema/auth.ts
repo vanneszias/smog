@@ -1,7 +1,8 @@
 /**
  * Better Auth tables (spec §5.1): core schema plus the admin plugin
  * (`role`, `banned`, `banReason`, `banExpires`, `impersonatedBy`) and the
- * passkey plugin (`passkey`), and our own `locale` and `legacyId`.
+ * passkey plugin (`passkey`), and our own `locale`, `legacyId` and
+ * `welcomedAt` (server-only).
  *
  * Written by hand from Better Auth's documented schema (the shape its CLI
  * generates for SQLite: snake_case columns, `timestamp_ms` dates); phase 2
@@ -47,6 +48,14 @@ export const user = sqliteTable(
     banExpires: timestamp("ban_expires"),
     locale: text("locale", { enum: LOCALES }),
     legacyId: text("legacy_id").unique(),
+    /**
+     * When the welcome email was claimed (migration 0012, phase 8 ruling
+     * 16): `welcome()` sets it with a guarded `UPDATE … WHERE welcomed_at
+     * IS NULL` and enqueues only when it won. Server-only: not a Better
+     * Auth additional field, so no client sees or sets it. The Convex
+     * import sets it, so a migrated user is never welcomed.
+     */
+    welcomedAt: timestamp("welcomed_at"),
   },
   (t) => [
     check("user_role_check", inValues(t.role, ROLES)),

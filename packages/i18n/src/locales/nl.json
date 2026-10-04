@@ -631,7 +631,8 @@
         "reasonChargeback": "Teruggeboekt: de bank heeft de betaling teruggedraaid (chargeback). Controleer de sponsoring en neem zo nodig contact op met de sponsor.",
         "steps": "Betaal het bedrag terug in het Mollie-dashboard. Staat de terugbetaling daarna niet in het beheer? Registreer ze dan bij de betaling.",
         "button": "Openen in Mollie"
-      }
+      },
+      "weMoved": {}
     }
   },
   "devTools": {

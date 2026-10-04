@@ -51,6 +51,59 @@ describe("BOUNDARIES", () => {
     }
   });
 
+  test("migrate-convex reaches the data packages and feature schemas (phase 8 ruling 6)", () => {
+    const name = "@smog/migrate-convex";
+    for (const target of [
+      "@smog/config",
+      "@smog/utils",
+      "@smog/db",
+      "@smog/video",
+      "@smog/jobs",
+      "@smog/email",
+      "@smog/sponsorships/schema",
+      "@smog/admin/schema",
+    ]) {
+      expect(isAllowedImport(name, target)).toBe(true);
+    }
+    // Its integration tests drive the real services.
+    for (const target of [
+      "@smog/sponsorships/server",
+      "@smog/auth",
+      "@smog/rpc",
+      "@smog/payments/testing",
+      "@smog/render/testing",
+    ]) {
+      expect(isAllowedImport(name, target)).toBe(true);
+    }
+    expect(isAllowedImport(name, "@smog/render/composition")).toBe(false);
+    for (const target of [
+      "@smog/site",
+      "@smog/mobile",
+      "@smog/api",
+      "@smog/analytics",
+      "@smog/i18n",
+    ]) {
+      expect(isAllowedDependency(name, target)).toBe(false);
+    }
+  });
+
+  test("no package may depend on migrate-convex (it is a tool, not a library)", () => {
+    for (const [name, targets] of Object.entries(BOUNDARIES)) {
+      const listed = targets.filter(
+        (target) =>
+          target === "@smog/migrate-convex" ||
+          target.startsWith("@smog/migrate-convex/")
+      );
+      expect({ listed, name }).toEqual({ listed: [], name });
+    }
+    expect(isAllowedDependency(ROOT_PACKAGE, "@smog/migrate-convex")).toBe(
+      false
+    );
+    expect(isAllowedDependency("@smog/site", "@smog/migrate-convex")).toBe(
+      false
+    );
+  });
+
   test("config depends on nothing", () => {
     expect(allowedTargets("@smog/config")).toEqual([]);
   });

@@ -1,0 +1,22 @@
+{
+  // Test-only Worker config for the integration suite: a local D1 as `DB`
+  // (migrations applied by `@smog/db/testing/apply-migrations`) and a KV as
+  // `KV` (`catalog:version`, the maintenance key).
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "smog-migrate-convex-test",
+  "compatibility_date": "2026-09-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "smog-test",
+      "database_id": "00000000-0000-4000-8000-000000000000"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "00000000000000000000000000000000"
+    }
+  ]
+}

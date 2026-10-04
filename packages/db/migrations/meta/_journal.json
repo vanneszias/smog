@@ -85,6 +85,13 @@
       "when": 1791076412241,
       "tag": "0011_render_job_status_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1791116003496,
+      "tag": "0012_user_welcomed_at",
+      "breakpoints": true
     }
   ]
 }

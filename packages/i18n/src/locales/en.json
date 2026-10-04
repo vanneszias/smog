@@ -631,7 +631,8 @@
         "reasonChargeback": "Charged back: the bank reversed the payment. Check the sponsorship and contact the sponsor if needed.",
         "steps": "Refund the amount in the Mollie dashboard. If the refund does not show in the admin afterwards, record it on the payment.",
         "button": "Open in Mollie"
-      }
+      },
+      "weMoved": {}
     }
   },
   "devTools": {

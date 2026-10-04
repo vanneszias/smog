@@ -25,7 +25,7 @@ import {
   sendVerificationEmailFn,
 } from "better-auth/api";
 import { admin, captcha, emailOTP, magicLink } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { COOKIE_PREFIX } from "./cookie";
 import type { AuthEnv } from "./env";
 import {
@@ -307,16 +307,46 @@ export function createAuth(options: CreateAuthOptions) {
   }
 
   /**
+   * Claims the welcome email for an account (phase 8 ruling 16, migration
+   * 0012): sets `welcomed_at` only while it is NULL, and answers whether
+   * this call set it. D1 runs one write at a time, so of two concurrent
+   * verifications exactly one wins. `updated_at` keeps its value (Drizzle
+   * would bump it): the claim is not a profile change. Drizzle directly,
+   * not Better Auth's adapter: the column is server-only.
+   */
+  async function claimWelcome(id: string): Promise<boolean> {
+    const claimed = await db
+      .update(user)
+      .set({ updatedAt: sql`${user.updatedAt}`, welcomedAt: new Date() })
+      .where(and(eq(user.id, id), isNull(user.welcomedAt)))
+      .returning({ id: user.id });
+    return claimed.length > 0;
+  }
+
+  /**
    * The welcome email (E-01, ruling 8): once per account, when its address
-   * becomes verified, keyed `welcome:<userId>`. A failure is logged and
-   * never fails the sign-up or the verification: the account is fine
-   * without it. The sign-in-only server never sends it.
+   * becomes verified. The D1 claim decides first (`welcomed_at`, so an
+   * account marked by the 0012 backfill or the Convex import is never
+   * welcomed); the outbox key `welcome:<userId>` stays as a second filter
+   * in the consumer. A failure is logged and never fails the sign-up or the
+   * verification: the account is fine without it. A claim that throws
+   * skips the enqueue (a missed welcome is harmless, a duplicate is what
+   * the claim prevents), and a claimed welcome whose enqueue fails is not
+   * retried. The sign-in-only server never claims or sends it.
    */
   async function welcome(
     target: { email: string; id: string; locale?: unknown; name: string },
     request: Request | undefined
   ): Promise<void> {
     if (signInOnly) {
+      return;
+    }
+    try {
+      if (!(await claimWelcome(target.id))) {
+        return;
+      }
+    } catch (error) {
+      console.error("[auth] Failed to claim the welcome email:", error);
       return;
     }
     try {

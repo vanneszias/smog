@@ -126,6 +126,27 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/utils",
   ],
   "@smog/local-store": ["@smog/config", "@smog/utils"],
+  // The Convex → D1 importer (phase 8 ruling 6), a Bun tool nothing depends
+  // on (a test asserts no entry lists it). Its runtime needs the data
+  // packages and the feature schemas. The rest is for its integration
+  // tests only, which drive the real services: the feature servers,
+  // `@smog/auth`, `@smog/rpc`, and the Mollie and render fakes the
+  // sponsorship services take. `src/core` is held tighter by its own test
+  // (`packages/migrate-convex/test/core-rules.test.ts`).
+  "@smog/migrate-convex": [
+    "@smog/config",
+    "@smog/utils",
+    "@smog/db",
+    "@smog/video",
+    "@smog/jobs",
+    "@smog/email",
+    FEATURE_PATTERN,
+    "@smog/auth",
+    "@smog/rpc",
+    "@smog/payments",
+    "@smog/render/contract",
+    "@smog/render/testing",
+  ],
   "@smog/payments": ["@smog/config", "@smog/utils"],
   "@smog/render": [
     "@smog/config",
