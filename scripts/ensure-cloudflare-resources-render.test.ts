@@ -8,6 +8,7 @@ import {
   planResources,
   renderGateRefusal,
   renderPipelineEnabled,
+  renderPipelineOutput,
   type WranglerResult,
 } from "./ensure-cloudflare-resources";
 
@@ -137,6 +138,11 @@ describe("renderPipelineEnabled", () => {
       false
     );
     expect(renderPipelineEnabled(WRANGLER, "production", "1")).toBe(true);
+  });
+
+  test("is written to GITHUB_OUTPUT for the deploy job's image cache (fix wave M-1)", () => {
+    expect(renderPipelineOutput(true)).toBe("render_pipeline=true\n");
+    expect(renderPipelineOutput(false)).toBe("render_pipeline=false\n");
   });
 });
 

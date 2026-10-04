@@ -26,7 +26,9 @@
  * It waits for `in_review`, checks the committed playback id and the job,
  * reads the uploaded file with mediabunny (H.264 at the source's size and
  * frame count ± 1) and saves it to `packages/render/.render-out/` (or
- * `RENDER_LOOP_OUT_DIR`). Everything it made is removed at the end.
+ * `RENDER_LOOP_OUT_DIR`). Everything it made is removed at the end, and
+ * on Ctrl+C or SIGTERM too (exit 130 or 143); its servers run in their
+ * own process groups, so the site is still up to remove its fixtures.
  *
  * Ports: `RENDER_LOOP_SITE_PORT` (5296) and `RENDER_LOOP_MUX_PORT` (4216).
  * A `.dev.vars` with Mux or `RENDER_LOCAL_URL` values overrides what this
@@ -170,6 +172,10 @@ function start(
 ): Subprocess {
   const child = spawn(command, {
     cwd,
+    // Its own process group: a Ctrl+C reaches only this script, which then
+    // removes its fixtures through the still running site before it stops
+    // the children (task 9 review M-5).
+    detached: true,
     env: { ...process.env, ...env },
     stderr: "inherit",
     stdout: "inherit",
@@ -195,6 +201,36 @@ async function stopChildren(): Promise<void> {
       Promise.race([child.exited, sleep(10_000).then(() => child.kill())])
     )
   );
+}
+
+/** What to undo, in the order it was set up (run last first). */
+type Cleanup = () => Promise<void>;
+const cleanups: Cleanup[] = [];
+let cleaning: Promise<void> | null = null;
+
+function onCleanup(cleanup: Cleanup): void {
+  cleanups.push(cleanup);
+}
+
+/**
+ * Runs every cleanup, last registered first, each once; one that fails is
+ * logged and the others still run.
+ */
+export async function runCleanups(list: Cleanup[]): Promise<void> {
+  for (let cleanup = list.pop(); cleanup; cleanup = list.pop()) {
+    try {
+      // biome-ignore lint/performance/noAwaitInLoops: undone in reverse order, one at a time.
+      await cleanup();
+    } catch (error) {
+      console.error("[render-loop] Failed to clean up:", error);
+    }
+  }
+}
+
+/** The cleanup, once: the end of `main` and a signal share it. */
+function cleanUp(): Promise<void> {
+  cleaning ??= runCleanups(cleanups);
+  return cleaning;
 }
 
 /** A failure that ends a wait at once (a `render_failed` job). */
@@ -383,101 +419,130 @@ async function runLoop(mux: FakeMuxServer, site: SiteClient): Promise<void> {
   await site.signIn();
   const fixture = await makeFixture(site, source.id);
   log(`gesture ${fixture.slug} (playback ${PLAYBACK_ID}, asset ${source.id})`);
-  try {
-    const logoKey = await uploadLogo(site);
-    const id = `e2e-loop-${crypto.randomUUID().slice(0, 8)}`;
-    await site.seed([
-      {
-        displayName: "Bakkerij De Lus",
-        gestureSlugs: [fixture.slug],
-        id,
-        logo: true,
-        logoKey,
-        op: "sponsorshipCheckout",
-        paymentStatus: "open",
-        status: "awaiting_payment",
-      },
-    ]);
-    const sponsorshipId = `${id}-0`;
-    const started = Date.now();
-    await site.rpc("admin/sponsorships/markPaid", { paymentId: id });
-    log(`marked ${id} paid; waiting for the Workflow`);
+  // Removed at the end, or on Ctrl+C while the site still runs.
+  onCleanup(() => removeFixture(site, fixture));
+  const logoKey = await uploadLogo(site);
+  const id = `e2e-loop-${crypto.randomUUID().slice(0, 8)}`;
+  await site.seed([
+    {
+      displayName: "Bakkerij De Lus",
+      gestureSlugs: [fixture.slug],
+      id,
+      logo: true,
+      logoKey,
+      op: "sponsorshipCheckout",
+      paymentStatus: "open",
+      status: "awaiting_payment",
+    },
+  ]);
+  const sponsorshipId = `${id}-0`;
+  const started = Date.now();
+  await site.rpc("admin/sponsorships/markPaid", { paymentId: id });
+  log(`marked ${id} paid; waiting for the Workflow`);
 
-    let detail: Detail | null = null;
-    await waitFor(
-      "in_review",
-      async () => {
-        detail = await site.rpc<Detail>("admin/sponsorships/get", {
-          id: sponsorshipId,
-        });
-        const { status } = detail.sponsorship;
-        if (status === "render_failed") {
-          throw new LoopFailure(
-            `[render-loop] render_failed: ${detail.renderJobs[0]?.error ?? "?"}`
-          );
-        }
-        return status === "in_review";
-      },
-      RENDER_DEADLINE_MS
-    );
-    const final = detail as Detail | null;
-    const seconds = ((Date.now() - started) / 1000).toFixed(1);
-    const job = final?.renderJobs[0];
-    if (!(final && job)) {
-      throw new Error("[render-loop] no render job");
-    }
-    log(
-      `in_review after ${seconds} s: job ${job.id} ${job.status}, attempt ${job.attempt}`
-    );
-    const asset = renderAssetOf(mux.fake.assets.values(), job.id);
-    if (!asset?.file) {
-      throw new Error("[render-loop] the render asset has no uploaded file");
-    }
-    const problems: string[] = [];
-    if (job.status !== "succeeded") {
-      problems.push(`job ${job.status}`);
-    }
-    if (final.video.playbackId !== asset.playbackId || final.video.fakeRender) {
-      problems.push(
-        `sponsorship video ${final.video.playbackId} (fake render: ${final.video.fakeRender}), expected ${asset.playbackId}`
-      );
-    }
-    if (!final.sponsorship.hasLogo) {
-      problems.push("the sponsorship has no logo");
-    }
-    if (source.master?.status !== "ready") {
-      problems.push(`source master ${source.master?.status ?? "off"}`);
-    }
-    const video = await readRenderedVideo(asset.file);
-    problems.push(...checkRenderedVideo(video, SOURCE));
-    await mkdir(OUT_DIR, { recursive: true });
-    const out = join(OUT_DIR, "local-loop.mp4");
-    await writeFile(out, asset.file);
-    log(
-      `rendered ${asset.file.byteLength} bytes: ${video?.codec} ${video?.width} × ${video?.height}, ${video?.frames} frames → ${out}`
-    );
-    if (problems.length > 0) {
-      throw new Error(`[render-loop] ${problems.join("; ")}`);
-    }
-    log("ok: a paid sponsorship reached in_review through the real Workflow");
-  } finally {
-    await removeFixture(site, fixture).catch((error: unknown) => {
-      console.error("[render-loop] Failed to remove the fixture:", error);
-    });
+  let detail: Detail | null = null;
+  await waitFor(
+    "in_review",
+    async () => {
+      detail = await site.rpc<Detail>("admin/sponsorships/get", {
+        id: sponsorshipId,
+      });
+      const { status } = detail.sponsorship;
+      if (status === "render_failed") {
+        throw new LoopFailure(
+          `[render-loop] render_failed: ${detail.renderJobs[0]?.error ?? "?"}`
+        );
+      }
+      return status === "in_review";
+    },
+    RENDER_DEADLINE_MS
+  );
+  const final = detail as Detail | null;
+  const seconds = ((Date.now() - started) / 1000).toFixed(1);
+  const job = final?.renderJobs[0];
+  if (!(final && job)) {
+    throw new Error("[render-loop] no render job");
   }
+  log(
+    `in_review after ${seconds} s: job ${job.id} ${job.status}, attempt ${job.attempt}`
+  );
+  const asset = renderAssetOf(mux.fake.assets.values(), job.id);
+  if (!asset?.file) {
+    throw new Error("[render-loop] the render asset has no uploaded file");
+  }
+  const problems: string[] = [];
+  if (job.status !== "succeeded") {
+    problems.push(`job ${job.status}`);
+  }
+  if (final.video.playbackId !== asset.playbackId || final.video.fakeRender) {
+    problems.push(
+      `sponsorship video ${final.video.playbackId} (fake render: ${final.video.fakeRender}), expected ${asset.playbackId}`
+    );
+  }
+  if (!final.sponsorship.hasLogo) {
+    problems.push("the sponsorship has no logo");
+  }
+  if (source.master?.status !== "ready") {
+    problems.push(`source master ${source.master?.status ?? "off"}`);
+  }
+  const video = await readRenderedVideo(asset.file);
+  problems.push(...checkRenderedVideo(video, SOURCE));
+  await mkdir(OUT_DIR, { recursive: true });
+  const out = join(OUT_DIR, "local-loop.mp4");
+  await writeFile(out, asset.file);
+  log(
+    `rendered ${asset.file.byteLength} bytes: ${video?.codec} ${video?.width} × ${video?.height}, ${video?.frames} frames → ${out}`
+  );
+  if (problems.length > 0) {
+    throw new Error(`[render-loop] ${problems.join("; ")}`);
+  }
+  log("ok: a paid sponsorship reached in_review through the real Workflow");
 }
 
 /** The local dev mailbox's KV key (`DEV_MAIL_KEY` in `@smog/email`). */
 const DEV_MAIL_KEY = "dev:mail";
 
-/** `wrangler kv key get` output as a stored mailbox (a JSON list), or none. */
-export function devMailOf(stdout: string): string | null {
+/** What `wrangler kv key get dev:mail` found. */
+export type DevMail =
+  | { kind: "absent" }
+  /** A stored mailbox (a JSON list), to put back as it was. */
+  | { kind: "mailbox"; value: string }
+  /** Output this script cannot read: the key is left alone, never deleted. */
+  | { kind: "unreadable" };
+
+const VALUE_NOT_FOUND = /^Value not found\b/m;
+
+/**
+ * `wrangler kv key get` output as the mailbox it found (task 9 review
+ * M-5): a JSON list is the mailbox, wrangler's "Value not found" (on
+ * stdout or stderr, with nothing else) means there is none, and anything
+ * else (a warning before the value, a parse failure) is `unreadable`, so
+ * the restore never deletes a mailbox it could not read.
+ */
+export function devMailOf(stdout: string, stderr = ""): DevMail {
   const value = stdout.trim();
-  return value.startsWith("[") ? value : null;
+  if (value.startsWith("[")) {
+    try {
+      if (Array.isArray(JSON.parse(value))) {
+        return { kind: "mailbox", value };
+      }
+    } catch {
+      return { kind: "unreadable" };
+    }
+  }
+  if (
+    (value === "" || VALUE_NOT_FOUND.test(value)) &&
+    (VALUE_NOT_FOUND.test(value) || VALUE_NOT_FOUND.test(stderr))
+  ) {
+    return { kind: "absent" };
+  }
+  return { kind: "unreadable" };
 }
 
-/** Runs `wrangler kv key …` on the local dev KV; its stdout. */
-async function devKv(args: string[]): Promise<string> {
+/** Runs `wrangler kv key …` on the local dev KV; its output. */
+async function devKv(
+  args: string[]
+): Promise<{ stderr: string; stdout: string }> {
   const child = spawn(
     [
       "bunx",
@@ -494,32 +559,43 @@ async function devKv(args: string[]): Promise<string> {
     {
       cwd: SITE_DIR,
       env: { ...process.env, CLOUDFLARE_ENV: "dev" },
-      stderr: "ignore",
+      stderr: "pipe",
       stdout: "pipe",
     }
   );
-  const out = await new Response(child.stdout).text();
+  const [stdout, stderr] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+  ]);
   if ((await child.exited) !== 0) {
     throw new Error(`[render-loop] wrangler kv key ${args[0]} failed`);
   }
-  return out;
+  return { stderr, stdout };
 }
 
 /**
  * The loop's emails are rendered for its own origin and land in the shared
  * local dev mailbox, where the e2e (which reads `/dev/mail` on its own
  * port) would find them: the mailbox is saved first and put back after.
+ * A mailbox that could not be read is left as it is (with a warning).
  */
-async function saveDevMail(): Promise<() => Promise<void>> {
-  const saved = devMailOf(await devKv(["get", DEV_MAIL_KEY]));
+async function saveDevMail(): Promise<Cleanup> {
+  const read = await devKv(["get", DEV_MAIL_KEY]);
+  const saved = devMailOf(read.stdout, read.stderr);
   return async () => {
-    if (saved === null) {
+    if (saved.kind === "unreadable") {
+      console.warn(
+        `[render-loop] The dev mailbox (${DEV_MAIL_KEY}) could not be read before the loop: it is left as it is, with the loop's emails in it`
+      );
+      return;
+    }
+    if (saved.kind === "absent") {
       await devKv(["delete", DEV_MAIL_KEY]);
       return;
     }
     const file = join(OUT_DIR, "dev-mail.json");
     await mkdir(OUT_DIR, { recursive: true });
-    await writeFile(file, saved);
+    await writeFile(file, saved.value);
     await devKv(["put", DEV_MAIL_KEY, "--path", file]);
     await rm(file, { force: true });
   };
@@ -533,13 +609,16 @@ async function main(): Promise<void> {
       `[render-loop] port ${RENDER_PORT} is taken (a render server already runs?): stop it first`
     );
   }
-  const restoreDevMail = await saveDevMail();
+  onCleanup(await saveDevMail());
   const mux = startFakeMuxServer({
     playbackId: PLAYBACK_ID,
     port: MUX_PORT,
     readyAfterMs: 1000,
     webhook: { secret: WEBHOOK_SECRET, url: `${ORIGIN}/api/webhooks/mux` },
   });
+  onCleanup(() => mux.stop());
+  // Stopped after the fixtures are removed (they need the site).
+  onCleanup(stopChildren);
   try {
     start("the render server", ["bun", "src/server/main.ts"], RENDER_DIR, {
       PORT: String(RENDER_PORT),
@@ -573,15 +652,25 @@ async function main(): Promise<void> {
     log("servers up");
     await runLoop(mux, siteClient());
   } finally {
-    await stopChildren();
-    await mux.stop();
-    await restoreDevMail().catch((error: unknown) => {
-      console.error("[render-loop] Failed to restore the dev mailbox:", error);
-    });
+    await cleanUp();
   }
 }
 
+/** The exit status of a run ended by `signal` (128 + its number). */
+const SIGNAL_EXIT: Record<"SIGINT" | "SIGTERM", number> = {
+  SIGINT: 130,
+  SIGTERM: 143,
+};
+
 if (import.meta.main) {
+  // Ctrl+C (or a SIGTERM) runs the same cleanup as the end of the loop:
+  // the fixtures, the children, the Mux fake and the dev mailbox (M-5).
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => {
+      log(`${signal}: cleaning up`);
+      cleanUp().finally(() => process.exit(SIGNAL_EXIT[signal]));
+    });
+  }
   try {
     await main();
     process.exit(0);
