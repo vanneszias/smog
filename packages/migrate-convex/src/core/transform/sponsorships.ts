@@ -537,7 +537,7 @@ const encoder = new TextEncoder();
  * bytes, sha256 }` (its decoded size and the SHA-256 of the whole URL),
  * anything else `{ kind: "storageId", sha256 }`.
  */
-export interface OverlayImageMarker {
+interface OverlayImageMarker {
   readonly bytes?: number;
   readonly kind: "dataUrl" | "storageId";
   readonly sha256: string;
