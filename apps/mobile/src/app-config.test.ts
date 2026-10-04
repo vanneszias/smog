@@ -21,7 +21,7 @@ interface EasProfile {
 }
 
 const eas = JSON.parse(
-  readFileSync(join(import.meta.dirname, "..", "eas.json"), "utf8")
+  readFileSync(join(process.cwd(), "eas.json"), "utf8")
 ) as {
   build: Record<string, EasProfile | undefined>;
   cli: { appVersionSource?: string; version?: string };
