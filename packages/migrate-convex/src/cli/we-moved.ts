@@ -70,20 +70,20 @@ export const RECIPIENTS_SQL =
   "SELECT id, email, locale FROM user WHERE legacy_id IS NOT NULL AND (banned IS NULL OR banned = 0) ORDER BY id";
 
 /** How long one Cloudflare API request may take. */
-export const CLOUDFLARE_REQUEST_TIMEOUT_MS = 30_000;
+const CLOUDFLARE_REQUEST_TIMEOUT_MS = 30_000;
 
 /** Reserved and fixture domains (RFC 2606, RFC 6761): never a real recipient. */
 const PLACEHOLDER_DOMAIN =
   /(^|\.)(invalid|test|example|localhost)$|(^|\.)example\.(com|org|net)$/;
 
 /** Whether `email`'s domain is a placeholder (`@staging.invalid`, `@example.test`, …). */
-export function isPlaceholderAddress(email: string): boolean {
+function isPlaceholderAddress(email: string): boolean {
   const domain = email.trim().toLowerCase().split("@").at(-1) ?? "";
   return PLACEHOLDER_DOMAIN.test(domain);
 }
 
 /** The providers production enables, from its secret names, as `@smog/auth` does. */
-export function enabledProviders(secretNames: readonly string[]): {
+function enabledProviders(secretNames: readonly string[]): {
   partial: string[];
   providers: WeMovedProvider[];
 } {
