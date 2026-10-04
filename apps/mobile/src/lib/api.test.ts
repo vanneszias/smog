@@ -17,9 +17,10 @@ describe("mobile api client", () => {
 
   beforeEach(() => {
     sent.length = 0;
-    process.env.EXPO_PUBLIC_API_URL = "https://smog-site-staging.workers.dev";
+    process.env.EXPO_PUBLIC_API_URL =
+      "https://smog-site-staging.zias.workers.dev";
     process.env.EXPO_PUBLIC_ENVIRONMENT = "staging";
-    process.env.EXPO_PUBLIC_SITE_HOST = "smog-site-staging.workers.dev";
+    process.env.EXPO_PUBLIC_SITE_HOST = "smog-site-staging.zias.workers.dev";
     globalThis.fetch = jest.fn(
       (input: RequestInfo | URL, init?: RequestInit) => {
         const request = input as Request;
@@ -41,7 +42,7 @@ describe("mobile api client", () => {
       ok: true,
     });
     expect(sent[0]?.url).toBe(
-      "https://smog-site-staging.workers.dev/api/rpc/system/health"
+      "https://smog-site-staging.zias.workers.dev/api/rpc/system/health"
     );
     expect(sent[0]?.headers.get("cookie")).toBe(SESSION_COOKIE);
     // The cookie is set by hand, so the platform cookie jar stays out of it.

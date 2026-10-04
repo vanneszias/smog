@@ -1,13 +1,14 @@
 {
   "cli": {
-    "version": ">= 24.8.0",
-    "appVersionSource": "local"
+    "version": ">= 24.10.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
+      "environment": "development",
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "dev",
         "EXPO_PUBLIC_API_URL": "http://localhost:5173",
@@ -17,24 +18,35 @@
     "staging": {
       "distribution": "internal",
       "channel": "staging",
+      "environment": "preview",
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "staging",
-        "EXPO_PUBLIC_API_URL": "https://smog-site-staging.workers.dev",
-        "EXPO_PUBLIC_SITE_HOST": "smog-site-staging.workers.dev"
+        "EXPO_PUBLIC_API_URL": "https://smog-site-staging.zias.workers.dev",
+        "EXPO_PUBLIC_SITE_HOST": "smog-site-staging.zias.workers.dev"
       }
     },
     "production": {
       "distribution": "store",
       "autoIncrement": true,
       "channel": "production",
+      "environment": "production",
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "production",
-        "EXPO_PUBLIC_API_URL": "https://smog-site-production.workers.dev",
-        "EXPO_PUBLIC_SITE_HOST": "smog-site-production.workers.dev"
+        "EXPO_PUBLIC_API_URL": "https://smog-site-production.zias.workers.dev",
+        "EXPO_PUBLIC_SITE_HOST": "smog-site-production.zias.workers.dev"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6758547774",
+        "appleTeamId": "96XKP6MU2A"
+      },
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }

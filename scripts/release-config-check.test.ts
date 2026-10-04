@@ -8,6 +8,7 @@ import {
   checkCiWorkflow,
   checkDeployConfigStep,
   checkDeployWorkflow,
+  checkEasProfiles,
   checkReleaseConfig,
   checkReleaseScripts,
   checkRequiredConfig,
@@ -739,6 +740,136 @@ describe("checkAppLinks", () => {
     );
     expect(errors).toEqual([
       "apps/site/public/_headers: /.well-known/apple-app-site-association needs Content-Type: application/json",
+    ]);
+  });
+});
+
+describe("checkEasProfiles (phase 8 ruling 3)", () => {
+  const EAS = readFileSync(join(ROOT, "apps", "mobile", "eas.json"), "utf8");
+  const STAGING = "https://smog-site-staging.zias.workers.dev";
+  const PRODUCTION = "https://smog-site-production.zias.workers.dev";
+  const base = {
+    eas: EAS,
+    fallbackHost: "smog-site-staging.zias.workers.dev",
+    launchOrigin: PRODUCTION,
+    wrangler: WRANGLER,
+  };
+  const errorsOf = (input: Partial<typeof base>): string[] =>
+    checkEasProfiles({ ...base, ...input }).errors;
+
+  test("passes on the real eas.json, wrangler.jsonc and launch origin", () => {
+    expect(checkEasProfiles(base)).toEqual({ errors: [], warnings: [] });
+  });
+
+  test("fails when the staging profile's URL is not staging's SITE_URL", () => {
+    const eas = EAS.replace(
+      `"EXPO_PUBLIC_API_URL": "${STAGING}"`,
+      '"EXPO_PUBLIC_API_URL": "https://smog-site-staging.workers.dev"'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      `apps/mobile/eas.json: build.staging.env.EXPO_PUBLIC_API_URL must be ${STAGING} (staging's SITE_URL)`,
+    ]);
+  });
+
+  test("fails when the staging profile's host is not staging's host", () => {
+    const eas = EAS.replace(
+      '"EXPO_PUBLIC_SITE_HOST": "smog-site-staging.zias.workers.dev"',
+      '"EXPO_PUBLIC_SITE_HOST": "smog-site-staging.workers.dev"'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      "apps/mobile/eas.json: build.staging.env.EXPO_PUBLIC_SITE_HOST must be smog-site-staging.zias.workers.dev",
+    ]);
+  });
+
+  test("fails when the development profile leaves dev's SITE_URL", () => {
+    const eas = EAS.replace(
+      '"EXPO_PUBLIC_API_URL": "http://localhost:5173"',
+      '"EXPO_PUBLIC_API_URL": "http://localhost:3000"'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      "apps/mobile/eas.json: build.development.env.EXPO_PUBLIC_API_URL must be http://localhost:5173 (dev's SITE_URL)",
+    ]);
+  });
+
+  test("fails when the production profile is not PRODUCTION_LAUNCH_ORIGIN", () => {
+    const domain = "https://app.smog.vlaanderen";
+    const result = checkEasProfiles({ ...base, launchOrigin: domain });
+    expect(result.errors).toEqual([
+      `apps/mobile/eas.json: build.production.env.EXPO_PUBLIC_API_URL must be ${domain} (PRODUCTION_LAUNCH_ORIGIN)`,
+      "apps/mobile/eas.json: build.production.env.EXPO_PUBLIC_SITE_HOST must be app.smog.vlaanderen",
+    ]);
+  });
+
+  test("warns, not fails, when PRODUCTION_LAUNCH_ORIGIN is not production's SITE_URL", () => {
+    const domain = "https://app.smog.vlaanderen";
+    const result = checkEasProfiles({
+      ...base,
+      eas: EAS.replace(
+        `"EXPO_PUBLIC_API_URL": "${PRODUCTION}"`,
+        `"EXPO_PUBLIC_API_URL": "${domain}"`
+      ).replace(
+        '"EXPO_PUBLIC_SITE_HOST": "smog-site-production.zias.workers.dev"',
+        '"EXPO_PUBLIC_SITE_HOST": "app.smog.vlaanderen"'
+      ),
+      launchOrigin: domain,
+    });
+    expect(result).toEqual({
+      errors: [],
+      warnings: [
+        `PRODUCTION_LAUNCH_ORIGIN (${domain}) differs from production's SITE_URL (${PRODUCTION}): the production app is built for another origin than the site deploys to`,
+      ],
+    });
+  });
+
+  test("fails when a profile has autoIncrement and versions are local", () => {
+    const eas = EAS.replace(
+      '"appVersionSource": "remote"',
+      '"appVersionSource": "local"'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      'apps/mobile/eas.json: cli.appVersionSource must be "remote" while build.production has autoIncrement (app.config.ts is dynamic)',
+    ]);
+  });
+
+  test("fails when app.config.ts falls back to another host", () => {
+    expect(errorsOf({ fallbackHost: "smog-site-staging.workers.dev" })).toEqual(
+      [
+        "apps/mobile/app.config.ts: the fallback host must be staging's host smog-site-staging.zias.workers.dev, not smog-site-staging.workers.dev",
+      ]
+    );
+  });
+
+  test("fails when a profile is missing or names the wrong environment", () => {
+    const parsed = JSON.parse(EAS) as { build: Record<string, unknown> };
+    const { staging: _staging, ...rest } = parsed.build;
+    expect(
+      errorsOf({ eas: JSON.stringify({ ...parsed, build: rest }) })
+    ).toEqual(["apps/mobile/eas.json: build.staging is missing"]);
+    expect(
+      errorsOf({
+        eas: EAS.replace(
+          '"EXPO_PUBLIC_ENVIRONMENT": "staging"',
+          '"EXPO_PUBLIC_ENVIRONMENT": "production"'
+        ),
+      })
+    ).toEqual([
+      "apps/mobile/eas.json: build.staging.env.EXPO_PUBLIC_ENVIRONMENT must be staging",
+    ]);
+  });
+
+  test("fails when a profile's env holds more than the public origin keys", () => {
+    const eas = EAS.replace(
+      '"EXPO_PUBLIC_ENVIRONMENT": "production",',
+      '"EXPO_PUBLIC_ENVIRONMENT": "production", "EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET": "sec",'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      "apps/mobile/eas.json: build.production.env.EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET belongs in the EAS environment variables, not in git",
+    ]);
+  });
+
+  test("fails on invalid JSON", () => {
+    expect(errorsOf({ eas: "{" })).toEqual([
+      "apps/mobile/eas.json: invalid JSON",
     ]);
   });
 });
