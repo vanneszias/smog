@@ -1,10 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-  checkRenderedVideo,
-  cookieHeader,
-  devMailOf,
-  renderAssetOf,
-} from "./render-local-loop";
+import { cookieHeader, devMailOf, renderAssetOf } from "./render-local-loop";
 
 describe("cookieHeader", () => {
   it("keeps each cookie's name and value, without attributes", () => {
@@ -53,35 +48,5 @@ describe("renderAssetOf", () => {
         "job-1"
       )
     ).toBeNull();
-  });
-});
-
-describe("checkRenderedVideo", () => {
-  const SOURCE = { frames: 60, height: 640, width: 360 };
-
-  it("passes an H.264 file at the source's size and frame count", () => {
-    expect(
-      checkRenderedVideo(
-        { codec: "avc", frames: 61, height: 640, width: 360 },
-        SOURCE
-      )
-    ).toEqual([]);
-  });
-
-  it("names every difference", () => {
-    expect(
-      checkRenderedVideo(
-        { codec: "vp9", frames: 30, height: 360, width: 640 },
-        SOURCE
-      )
-    ).toEqual([
-      "codec vp9, expected avc (H.264)",
-      "size 640 × 360, expected 360 × 640",
-      "30 frames, expected 60 ± 1",
-    ]);
-  });
-
-  it("refuses a file without a video track", () => {
-    expect(checkRenderedVideo(null, SOURCE)).toEqual(["no video track"]);
   });
 });

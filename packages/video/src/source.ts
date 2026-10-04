@@ -2,19 +2,12 @@ import type { MuxFetch } from "./client";
 
 /**
  * The render's fallback source (phase 7 ruling 4, `source-resolve`): the
- * public static MP4 renditions of a playback id. They are public, not
- * signed, so they may appear in step state.
+ * first public static MP4 rendition (`renditionUrls`, `./renditions`) that
+ * answers.
  */
-const MUX_STREAM_ORIGIN = "https://stream.mux.com";
 
 /** How long one `HEAD` may take before the next URL is tried. */
 const FIRST_REACHABLE_TIMEOUT_MS = 10_000;
-
-/** `highest.mp4`, then `high.mp4` (the wizard preview tries the same). */
-export function renditionUrls(playbackId: string): string[] {
-  const base = `${MUX_STREAM_ORIGIN}/${encodeURIComponent(playbackId)}`;
-  return [`${base}/highest.mp4`, `${base}/high.mp4`];
-}
 
 /** The file name of a URL (`highest.mp4`): what a log may name, never the URL. */
 function fileName(url: string): string {

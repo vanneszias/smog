@@ -7,8 +7,10 @@
     "./contract": "./src/contract.ts",
     "./composition": "./src/compositions/index.ts",
     "./metadata": "./src/metadata/index.ts",
+    "./metadata/mp4": "./src/metadata/mp4.ts",
     "./remotion": "./src/remotion/index.ts",
-    "./testing": "./src/testing/index.ts"
+    "./testing": "./src/testing/index.ts",
+    "./testing/video": "./src/testing/rendered-video.ts"
   },
   "scripts": {
     "bundle": "bun src/server/bundle.ts",
