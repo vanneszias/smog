@@ -30,9 +30,11 @@
  *
  * Ports: `RENDER_LOOP_SITE_PORT` (5296) and `RENDER_LOOP_MUX_PORT` (4216).
  * A `.dev.vars` with Mux or `RENDER_LOCAL_URL` values overrides what this
- * script sets: leave them commented out (as `.dev.vars.example` does).
+ * script sets: leave them commented out (as `.dev.vars.example` does). The
+ * local dev mailbox is saved first and put back after, so the loop's
+ * emails (rendered for its port) never reach the e2e's `/dev/mail`.
  */
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -465,6 +467,64 @@ async function runLoop(mux: FakeMuxServer, site: SiteClient): Promise<void> {
   }
 }
 
+/** The local dev mailbox's KV key (`DEV_MAIL_KEY` in `@smog/email`). */
+const DEV_MAIL_KEY = "dev:mail";
+
+/** `wrangler kv key get` output as a stored mailbox (a JSON list), or none. */
+export function devMailOf(stdout: string): string | null {
+  const value = stdout.trim();
+  return value.startsWith("[") ? value : null;
+}
+
+/** Runs `wrangler kv key …` on the local dev KV; its stdout. */
+async function devKv(args: string[]): Promise<string> {
+  const child = spawn(
+    [
+      "bunx",
+      "wrangler",
+      "kv",
+      "key",
+      ...args,
+      "--binding",
+      "KV",
+      "--local",
+      "--env",
+      "dev",
+    ],
+    {
+      cwd: SITE_DIR,
+      env: { ...process.env, CLOUDFLARE_ENV: "dev" },
+      stderr: "ignore",
+      stdout: "pipe",
+    }
+  );
+  const out = await new Response(child.stdout).text();
+  if ((await child.exited) !== 0) {
+    throw new Error(`[render-loop] wrangler kv key ${args[0]} failed`);
+  }
+  return out;
+}
+
+/**
+ * The loop's emails are rendered for its own origin and land in the shared
+ * local dev mailbox, where the e2e (which reads `/dev/mail` on its own
+ * port) would find them: the mailbox is saved first and put back after.
+ */
+async function saveDevMail(): Promise<() => Promise<void>> {
+  const saved = devMailOf(await devKv(["get", DEV_MAIL_KEY]));
+  return async () => {
+    if (saved === null) {
+      await devKv(["delete", DEV_MAIL_KEY]);
+      return;
+    }
+    const file = join(OUT_DIR, "dev-mail.json");
+    await mkdir(OUT_DIR, { recursive: true });
+    await writeFile(file, saved);
+    await devKv(["put", DEV_MAIL_KEY, "--path", file]);
+    await rm(file, { force: true });
+  };
+}
+
 async function main(): Promise<void> {
   if (
     await answers(`http://127.0.0.1:${RENDER_PORT}/health`).catch(() => false)
@@ -473,6 +533,7 @@ async function main(): Promise<void> {
       `[render-loop] port ${RENDER_PORT} is taken (a render server already runs?): stop it first`
     );
   }
+  const restoreDevMail = await saveDevMail();
   const mux = startFakeMuxServer({
     playbackId: PLAYBACK_ID,
     port: MUX_PORT,
@@ -514,6 +575,9 @@ async function main(): Promise<void> {
   } finally {
     await stopChildren();
     await mux.stop();
+    await restoreDevMail().catch((error: unknown) => {
+      console.error("[render-loop] Failed to restore the dev mailbox:", error);
+    });
   }
 }
 

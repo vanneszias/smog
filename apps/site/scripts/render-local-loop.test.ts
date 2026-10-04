@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   checkRenderedVideo,
   cookieHeader,
+  devMailOf,
   renderAssetOf,
 } from "./render-local-loop";
 
@@ -17,6 +18,14 @@ describe("cookieHeader", () => {
 
   it("is empty without cookies", () => {
     expect(cookieHeader([])).toBe("");
+  });
+});
+
+describe("devMailOf", () => {
+  it("keeps a stored mailbox (a JSON list) and reads anything else as none", () => {
+    expect(devMailOf('[{"to":"a@b.c"}]\n')).toBe('[{"to":"a@b.c"}]');
+    expect(devMailOf("Value not found\n")).toBeNull();
+    expect(devMailOf("")).toBeNull();
   });
 });
 
