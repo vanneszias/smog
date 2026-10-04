@@ -145,6 +145,33 @@ describe("processEmailMessage", () => {
     ]);
   });
 
+  it("renders and sends a we_moved message as migrate:convex queues it (E-13)", async () => {
+    const sender = new MemoryEmailSender();
+    // The body `we-moved` sends through the Queues HTTP API (phase 8 ruling 15).
+    const body = {
+      id: crypto.randomUUID(),
+      idempotencyKey: `we_moved:${crypto.randomUUID()}`,
+      locale: "fr",
+      props: {
+        providers: ["google"],
+        url: "https://smog-site-production.zias.workers.dev",
+      },
+      template: "transactional/we-moved",
+      to: "alex@smog.example",
+    };
+
+    const first = await processEmailMessage(delivery(body), deps(sender));
+    const again = await processEmailMessage(delivery(body, 2), deps(sender));
+
+    expect(first).toEqual({ action: "ack", outcome: "sent" });
+    expect(again).toEqual({ action: "ack", outcome: "duplicate" });
+    expect(sender.sent).toHaveLength(1);
+    const [message] = sender.sent;
+    expect(message?.subject).toBe("SMOG a déménagé");
+    expect(message?.to).toBe("alex@smog.example");
+    expect(message?.text).toContain("smog-site-production.zias.workers.dev");
+  });
+
   it("retries a failed send with backoff and marks nothing", async () => {
     const error = vi
       .spyOn(console, "error")

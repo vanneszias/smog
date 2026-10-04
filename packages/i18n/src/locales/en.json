@@ -632,7 +632,23 @@
         "steps": "Refund the amount in the Mollie dashboard. If the refund does not show in the admin afterwards, record it on the payment.",
         "button": "Open in Mollie"
       },
-      "weMoved": {}
+      "weMoved": {
+        "subject": "SMOG has moved",
+        "preheader": "Your account, your favourites and your lists have moved with us. Here is how to sign in.",
+        "heading": "SMOG has moved",
+        "body": "SMOG & Co now runs on a new system. Your account has moved with it, with your favourite gestures and your lists.",
+        "newAddress": "SMOG & Co has a new address:",
+        "signInTitle": "Your old password no longer works. Sign in with:",
+        "signInCode": "a code we email you",
+        "signInLink": "a sign-in link by email",
+        "signInGoogleApple": "Google or Apple, if you use the same email address there",
+        "signInGoogle": "Google, if you use the same email address there",
+        "signInApple": "Apple, if you use the same email address there",
+        "signInReset": "or choose ‘Forgot your password’ and set a new password",
+        "app": "Using the app? Then update the app to the latest version: the old version no longer works.",
+        "button": "Sign in",
+        "footer": "You get this email once, because you have an account with SMOG & Co."
+      }
     }
   },
   "devTools": {
@@ -1469,7 +1485,8 @@
         "renewalReminder": "Renewal reminder",
         "adminNewSponsorship": "New sponsorship (admin)",
         "adminRenderFailed": "Render failed (admin)",
-        "adminRefundNeeded": "Refund needed (admin)"
+        "adminRefundNeeded": "Refund needed (admin)",
+        "weMoved": "We moved"
       },
       "locale": "Language",
       "width": "Width",

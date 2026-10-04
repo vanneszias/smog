@@ -2,10 +2,16 @@
   // The CLI (`src/cli`, Bun only) and the Bun tests (`bun test`).
   "extends": "@smog/config/tsconfig/base.json",
   "compilerOptions": {
+    // `we-moved` reaches `@smog/email`'s templates (TSX) through
+    // `@smog/jobs`, and `mux` the `@smog/video` client (the DOM's fetch
+    // types), as `@smog/video`'s own config does.
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM"],
     "noEmit": true,
     "types": ["bun"]
   },
-  // `@smog/db`'s D1 type, without the Workers runtime types.
-  "files": ["test/d1-ambient.d.ts"],
+  // The Workers types `@smog/db` and `@smog/email` name, without the
+  // Workers runtime types.
+  "files": ["test/d1-ambient.d.ts", "test/email-ambient.d.ts"],
   "include": ["src/cli", "src/**/*.test.ts", "test/*.test.ts"]
 }

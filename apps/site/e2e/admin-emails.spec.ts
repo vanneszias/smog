@@ -46,6 +46,11 @@ const PREVIEWS = [
     "Terugbetaling nodig (beheer)",
     "Openen in Mollie",
   ],
+  [
+    "transactional/we-moved",
+    "We zijn verhuisd",
+    "Je oude wachtwoord werkt niet meer",
+  ],
 ] as const;
 
 test.describe("admin emails", () => {
@@ -82,7 +87,7 @@ test.describe("admin emails", () => {
     expect(errors.filter((line) => !SANDBOX_BLOCKED.test(line))).toEqual([]);
   });
 
-  test("previews all twelve templates, each with the logo from the site", async ({
+  test("previews all thirteen templates, each with the logo from the site", async ({
     page,
   }) => {
     test.setTimeout(120_000);

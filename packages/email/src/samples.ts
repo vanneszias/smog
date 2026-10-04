@@ -88,6 +88,10 @@ export const EMAIL_SAMPLES: {
     gestureName: "Hond",
     name: "Alex",
   },
+  "transactional/we-moved": {
+    providers: ["google", "apple"],
+    url: SAMPLE_ORIGIN,
+  },
   "transactional/welcome": { name: "Alex", url: SAMPLE_ORIGIN },
 };
 

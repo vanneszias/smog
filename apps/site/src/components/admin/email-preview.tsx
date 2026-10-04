@@ -45,6 +45,7 @@ const TEMPLATE_LABELS = {
   "transactional/sponsorship-live": "admin.emails.template.sponsorshipLive",
   "transactional/sponsorship-received":
     "admin.emails.template.sponsorshipReceived",
+  "transactional/we-moved": "admin.emails.template.weMoved",
   "transactional/welcome": "admin.emails.template.welcome",
 } as const satisfies Record<EmailTemplateId, TranslationKey>;
 

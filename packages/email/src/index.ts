@@ -31,3 +31,7 @@ export {
   type StoredEmail,
   sendErrorCode,
 } from "./sender";
+export {
+  WE_MOVED_OLD_ORIGIN,
+  type WeMovedProvider,
+} from "./templates/transactional/we-moved";
