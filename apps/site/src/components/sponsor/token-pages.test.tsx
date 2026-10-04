@@ -2,6 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderSite, rpcError } from "@/test/render";
+// The preview's Player and Mux reads, faked (before the page loads it).
+import "@/test/sponsor-preview-fakes";
 import { ReeditView } from "./reedit-view";
 import { RenewalView } from "./renewal-view";
 

@@ -1,0 +1,2 @@
+# The client build manifest: read by the deploy guard, never served.
+.vite

@@ -32,7 +32,7 @@ import { Turnstile } from "@/components/auth/turnstile";
 import { detailsErrorMessage, mutationErrorMessage } from "./errors";
 import { LinkState } from "./link-state";
 import { LogoDropzone, LogoGuidelines } from "./logo-dropzone";
-import { SponsorOverlayPreview } from "./overlay-preview";
+import { SponsorPreviewSlot } from "./preview-slot";
 
 export interface ReeditViewProps {
   token: string | null;
@@ -147,8 +147,7 @@ function ReeditForm({
       </div>
       <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         {gesture.data ? (
-          <SponsorOverlayPreview
-            className="max-w-[20rem]"
+          <SponsorPreviewSlot
             displayName={displayName.trim()}
             logo={logoError ? null : logo}
             name={link.gesture.name}
