@@ -1,9 +1,9 @@
 /**
- * The render seam (ruling 7): what phase 7's pipeline plugs into. Phase 6
- * creates the jobs, starts them through a `RenderStarter` chosen by
- * `RENDER_MODE`, and records their result; the render itself is a fake
- * (the gesture's own video) until phase 7 replaces only the starter switch
- * with `RENDER_WORKFLOW.create(…)`.
+ * The render seam (phase 6 ruling 7): the jobs, their start through a
+ * `RenderStarter` chosen by `RENDER_MODE` (the site's `worker/render.ts`:
+ * `fakeRenderStarter`, or `RENDER_WORKFLOW.create(…)` since phase 7), and
+ * their result. The Workflow's steps are `runRenderJob`
+ * (`render-workflow.ts`).
  *
  * - `createRenderJobStatements`: a `queued` job (`id` = the Workflow
  *   instance id, `attempt` counted up) and its `render_started` event, for
@@ -14,8 +14,9 @@
  *   (`render_retried`) and the next job in one batch.
  * - `markRenderRunning`, `completeRender`, `failRender`: idempotent (a
  *   final job is a no-op).
+ * - `readRenderJob`, `setRenderUpload`, `isCurrentRenderUpload`: the
+ *   Workflow's and the Mux webhook's reads and the upload id write.
  */
-import type { WorkerEnv } from "@smog/config/env/worker";
 import {
   failWhen,
   gesture,
@@ -29,11 +30,7 @@ import {
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import type { OutboxEmail } from "@smog/email";
-import {
-  type EventMessage,
-  pendingRenderStarter,
-  type RenderStarter,
-} from "@smog/jobs";
+import type { EventMessage, RenderStarter } from "@smog/jobs";
 import { RENDER_INPUT_VERSION, renderInputSchema } from "@smog/render/contract";
 import { newId } from "@smog/utils";
 import { and, eq, type SQL, sql } from "drizzle-orm";
@@ -53,8 +50,6 @@ const FINAL_JOB_GUARD = "render-final";
 
 /** The job statuses that are not final. */
 const ACTIVE: readonly RenderJobStatus[] = ["queued", "running"];
-
-type RenderMode = WorkerEnv["RENDER_MODE"];
 
 /** A `queued`/`running` job of the sponsorship `sponsorshipId` names. */
 function activeJobExists(sponsorshipId: SQL | string): SQL {
@@ -255,11 +250,24 @@ export async function createRenderJob(
   return { after: plan.after, renderJobId: plan.renderJobId };
 }
 
-/** `queued → running`; `false` when the job is not queued (any more). */
+/** What `markRenderRunning` found (phase 7 ruling 4, step `start`). */
+export type MarkRunningState =
+  | "started"
+  | "already-running"
+  | "final"
+  | "missing";
+
+/**
+ * `queued → running` (its `updated_at` starts the watchdog's ceiling
+ * clock). A job already `running` answers `already-running`: its Workflow
+ * instance id is the job id, so only that instance can be running it, and
+ * a replayed `start` continues (B-2). A finished job is `final`, an unknown
+ * one `missing`.
+ */
 export async function markRenderRunning(
   db: Db,
   input: { now: Date; renderJobId: string }
-): Promise<boolean> {
+): Promise<MarkRunningState> {
   const rows = await db
     .update(renderJob)
     .set({ status: "running", updatedAt: input.now })
@@ -267,7 +275,118 @@ export async function markRenderRunning(
       and(eq(renderJob.id, input.renderJobId), eq(renderJob.status, "queued"))
     )
     .returning({ id: renderJob.id });
+  if (rows.length > 0) {
+    return "started";
+  }
+  const [row] = await db
+    .select({ status: renderJob.status })
+    .from(renderJob)
+    .where(eq(renderJob.id, input.renderJobId))
+    .limit(1);
+  if (!row) {
+    return "missing";
+  }
+  return row.status === "running" ? "already-running" : "final";
+}
+
+/** A render job as the Workflow reads it (`readRenderJob`). */
+export interface RenderJobRecord {
+  /** The gesture's own Mux asset: never deleted by a render. */
+  gestureAssetId: string | null;
+  input: unknown;
+  muxAssetId: string | null;
+  muxUploadId: string | null;
+  sponsorshipId: string;
+  sponsorshipStatus: typeof sponsorship.$inferSelect.status;
+  status: RenderJobStatus;
+  /** The sponsorship's video asset: the previous render's, or this one's once committed. */
+  videoAssetId: string | null;
+}
+
+/** One render job with its sponsorship's and gesture's asset ids, or `null`. */
+export async function readRenderJob(
+  db: Db,
+  renderJobId: string
+): Promise<RenderJobRecord | null> {
+  const [row] = await db
+    .select({
+      gestureAssetId: gesture.muxAssetId,
+      input: renderJob.input,
+      muxAssetId: renderJob.muxAssetId,
+      muxUploadId: renderJob.muxUploadId,
+      sponsorshipId: renderJob.sponsorshipId,
+      sponsorshipStatus: sponsorship.status,
+      status: renderJob.status,
+      videoAssetId: sponsorship.videoAssetId,
+    })
+    .from(renderJob)
+    .innerJoin(sponsorship, eq(sponsorship.id, renderJob.sponsorshipId))
+    .innerJoin(gesture, eq(gesture.id, sponsorship.gestureId))
+    .where(eq(renderJob.id, renderJobId))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Stores the job's current Mux upload (step `render`), only while the job
+ * is `running`; `false` when it is not (the watchdog failed it). Its
+ * `updated_at` is left alone on purpose: the watchdog's ceiling clock runs
+ * from `queued → running`, so a retried render does not restart it.
+ * Nothing clears `mux_upload_id` afterwards: it stays the committed (or
+ * last) upload, which `isCurrentRenderUpload` relies on.
+ */
+export async function setRenderUpload(
+  db: Db,
+  input: { renderJobId: string; uploadId: string }
+): Promise<boolean> {
+  const rows = await db
+    .update(renderJob)
+    // Kept as it is (the column's `$onUpdate` would move it to now).
+    .set({
+      muxUploadId: input.uploadId,
+      updatedAt: sql`${renderJob.updatedAt}`,
+    })
+    .where(
+      and(eq(renderJob.id, input.renderJobId), eq(renderJob.status, "running"))
+    )
+    .returning({ id: renderJob.id });
   return rows.length > 0;
+}
+
+/** The job statuses whose upload still may be, or was, committed. */
+const CURRENT_UPLOAD_STATUSES: readonly RenderJobStatus[] = [
+  "queued",
+  "running",
+  "succeeded",
+];
+
+/**
+ * The Mux webhook's `isCurrentUpload` (phase 7 ruling 9, as amended by the
+ * task 5 review), from one row read: whether a render job's
+ * `asset.ready`/`asset.errored` may still be, or already was, committed.
+ * True when the job's `mux_upload_id` is `uploadId` and it is `queued`,
+ * `running` or `succeeded`, or when `assetId` is the job's `mux_asset_id`
+ * or the sponsorship's `video_asset_id` (a committed asset is never
+ * deleted).
+ *
+ * An unknown job answers `true` too: its asset is not this env's to delete
+ * (staging and production may share a Mux environment until phase 8
+ * separates them), and forwarding it finds no instance (`gone`).
+ */
+export async function isCurrentRenderUpload(
+  db: Db,
+  input: { assetId: string; renderJobId: string; uploadId: string }
+): Promise<boolean> {
+  const job = await readRenderJob(db, input.renderJobId);
+  if (!job) {
+    return true;
+  }
+  return (
+    (job.muxUploadId === input.uploadId &&
+      CURRENT_UPLOAD_STATUSES.includes(job.status)) ||
+    input.assetId === job.muxAssetId ||
+    input.assetId === job.videoAssetId
+  );
 }
 
 interface JobRow {
@@ -458,9 +577,10 @@ async function failedOutcome(
 }
 
 /**
- * `RENDER_MODE=fake` (dev, tests, e2e and staging until phase 7): the
- * render "succeeds" at once with the gesture's own video and no asset
- * (spec §8.2; the admin labels it "fake render (no overlay)").
+ * `RENDER_MODE=fake` (dev, tests, e2e, and staging until the owner turns
+ * the pipeline on): the render "succeeds" at once with the gesture's own
+ * video and no asset (spec §8.2; the admin labels it "fake render (no
+ * overlay)").
  */
 export function fakeRenderStarter(
   db: Db,
@@ -476,18 +596,4 @@ export function fakeRenderStarter(
       });
     },
   };
-}
-
-/**
- * The starter for `RENDER_MODE`: `fake` completes at once; `container` and
- * `local` leave the job `queued` (logged) until phase 7. Phase 7 replaces
- * only this switch.
- */
-export function renderStarterFor(
-  mode: RenderMode,
-  deps: { clock?: () => Date; db: Db }
-): RenderStarter {
-  return mode === "fake"
-    ? fakeRenderStarter(deps.db, deps.clock)
-    : pendingRenderStarter(mode);
 }

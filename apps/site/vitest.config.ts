@@ -67,6 +67,16 @@ export default defineConfig(async () => ({
             simple: { limit: 5, period: 60 },
           },
         },
+        // A test-only `RENDER_WORKFLOW` (phase 7 task 6): `wrangler.jsonc`
+        // never declares it (the build's render gate adds it, ruling 2),
+        // and `introspectWorkflow` needs a binding. `RENDER_MODE` stays
+        // `fake`, so nothing but the render tests creates an instance.
+        workflows: {
+          RENDER_WORKFLOW: {
+            className: "RenderSponsorshipVideo",
+            name: "smog-dev-render",
+          },
+        },
       },
       wrangler: { configPath: "./wrangler.jsonc", environment: "dev" },
     }),

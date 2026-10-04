@@ -2,7 +2,7 @@ import { exports } from "cloudflare:workers";
 import { MAINTENANCE_KV_KEY } from "@smog/config/maintenance";
 import { createPayment } from "@smog/payments";
 import { createFakeMollie, type FakeMollie } from "@smog/payments/testing";
-import { markFanout, renderStarterFor } from "@smog/sponsorships/server";
+import { markFanout } from "@smog/sponsorships/server";
 import { DAY_MS } from "@smog/utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -15,6 +15,7 @@ import {
   checkoutVia,
   jobsOf,
   kv,
+  leaveQueued,
   makeAdmin,
   paymentStatusOf,
   type RecordingQueue,
@@ -88,7 +89,7 @@ async function drainEvents(
       email: options.email ?? recordingQueue(),
       events: recordingQueue(),
     },
-    renderStarter: renderStarterFor("container", { db }),
+    renderStarter: leaveQueued(),
     siteUrl: ORIGIN,
   };
   const messages = queues.events.messages.splice(0);

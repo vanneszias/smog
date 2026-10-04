@@ -40,7 +40,7 @@ export interface WorkflowStatusBinding {
  */
 const NOT_FOUND = /\binstance\.not_found\b/;
 
-function isInstanceNotFound(error: unknown): boolean {
+export function isInstanceNotFound(error: unknown): boolean {
   return error instanceof Error && NOT_FOUND.test(error.message);
 }
 

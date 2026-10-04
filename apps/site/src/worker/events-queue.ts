@@ -93,10 +93,16 @@ export async function handleEventsBatch(
 ): Promise<void> {
   const { bindings, db: d1, vars } = siteEnv();
   const db = createDb(d1);
+  const queues = { email: bindings.EMAIL_QUEUE, events: bindings.EVENTS_QUEUE };
   const deps: EventsDeps = {
     db,
-    queues: { email: bindings.EMAIL_QUEUE, events: bindings.EVENTS_QUEUE },
-    renderStarter: renderStarter(vars, db),
+    queues,
+    renderStarter: renderStarter({
+      db,
+      queues,
+      renderWorkflow: bindings.RENDER_WORKFLOW,
+      vars,
+    }),
     siteUrl: vars.SITE_URL,
   };
   for (const message of batch.messages) {

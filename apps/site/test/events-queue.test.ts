@@ -4,7 +4,7 @@ import {
   FAKE_MOLLIE_API_KEY,
   type FakeMollie,
 } from "@smog/payments/testing";
-import { renderStarterFor } from "@smog/sponsorships/server";
+import { fakeRenderStarter } from "@smog/sponsorships/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { siteEnv } from "../src/server/auth";
 import { handleMollieWebhook } from "../src/server/mollie-webhook";
@@ -18,6 +18,7 @@ import {
   checkoutVia,
   jobsOf,
   kv,
+  leaveQueued,
   makeAdmin,
   recordingQueue,
   statusesOf,
@@ -83,7 +84,7 @@ function deps(overrides: Partial<EventsDeps> = {}): EventsDeps {
   return {
     db,
     queues: { email: recordingQueue(), events: recordingQueue() },
-    renderStarter: renderStarterFor("fake", { db }),
+    renderStarter: fakeRenderStarter(db),
     siteUrl: ORIGIN,
     ...overrides,
   };
@@ -152,14 +153,13 @@ describe("the events consumer, end to end on the real queues", () => {
 });
 
 describe("processEventMessage", () => {
-  it("render.requested with RENDER_MODE=container leaves the job queued and logs", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  it("render.requested hands a queued job to the starter; once completed, a second request is a no-op", async () => {
     const checkout = await checkoutVia(fake, { count: 1 });
     fake.setStatus(checkout.mollieId, "paid");
     const requested = recordingQueue();
     const consumer = deps({
       queues: { email: recordingQueue(), events: requested },
-      renderStarter: renderStarterFor("container", { db }),
+      renderStarter: leaveQueued(),
     });
     const settledQueues = { email: recordingQueue(), events: recordingQueue() };
     await handleMollieWebhook(
@@ -192,9 +192,6 @@ describe("processEventMessage", () => {
       (await jobsOf(checkout.sponsorshipIds)).map((j) => j.status)
     ).toEqual(["queued"]);
     expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["rendering"]);
-    expect(warn).toHaveBeenCalledWith(
-      "[render] RENDER_MODE=container is not available before phase 7"
-    );
 
     // The fake starter completes it; a second request is a no-op.
     const fakeRender = deps();
@@ -319,7 +316,7 @@ describe("enqueue fails → 503 → Mollie retries → exactly one effect (I-3)"
   async function consume(messages: readonly unknown[]) {
     const consumer = deps({
       queues: { email: realQueues().email, events: recordingQueue() },
-      renderStarter: renderStarterFor("container", { db }),
+      renderStarter: leaveQueued(),
     });
     for (const [index, body] of messages.entries()) {
       // biome-ignore lint/performance/noAwaitInLoops: one message at a time.
