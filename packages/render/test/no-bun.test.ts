@@ -30,7 +30,9 @@ describe("no Bun.* outside the server", () => {
   it("scans the exported entries", async () => {
     const files = await sources();
     expect(files.some((file) => file.endsWith("contract.ts"))).toBe(true);
-    expect(files.some((file) => file.includes("/compositions/"))).toBe(true);
+    for (const dir of ["compositions", "metadata", "remotion", "testing"]) {
+      expect(files.some((file) => file.includes(`/${dir}/`))).toBe(true);
+    }
     const contents = await Promise.all(
       files.map((file) => readFile(file, "utf8"))
     );
