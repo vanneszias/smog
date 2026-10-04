@@ -136,6 +136,9 @@ export function isRetryableRenderError(code: RenderErrorCode): boolean {
   return RENDER_ERROR_STATUS[code] >= 500;
 }
 
+/** The longest failure message a result may carry (the server truncates). */
+export const RENDER_ERROR_MESSAGE_MAX = 2000;
+
 /** A positive even size (H.264 needs even dimensions; ruling 5). */
 const evenSize = z
   .number()
@@ -157,7 +160,7 @@ export const renderResultSchema = z.discriminatedUnion("ok", [
   z.object({
     code: z.enum(RENDER_ERROR_CODES),
     /** A summary without URLs (the server never logs or answers one). */
-    message: z.string(),
+    message: z.string().max(RENDER_ERROR_MESSAGE_MAX),
     ok: z.literal(false),
   }),
 ]);

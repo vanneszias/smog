@@ -3,6 +3,7 @@ import {
   isRetryableRenderError,
   logoDataUrlByteLength,
   RENDER_ERROR_CODES,
+  RENDER_ERROR_MESSAGE_MAX,
   RENDER_ERROR_STATUS,
   RENDER_FPS,
   RENDER_INPUT_VERSION,
@@ -191,6 +192,21 @@ describe("the render server's HTTP contract (phase 7 ruling 1)", () => {
       renderResultSchema.safeParse({ code: "teapot", message: "x", ok: false })
         .success
     ).toBe(false);
+    expect(
+      renderResultSchema.safeParse({
+        code: "renderFailed",
+        message: "x".repeat(RENDER_ERROR_MESSAGE_MAX),
+        ok: false,
+      }).success
+    ).toBe(true);
+    expect(
+      renderResultSchema.safeParse({
+        code: "renderFailed",
+        message: "x".repeat(RENDER_ERROR_MESSAGE_MAX + 1),
+        ok: false,
+      }).success
+    ).toBe(false);
+    expect(RENDER_ERROR_MESSAGE_MAX).toBe(2000);
     expect(renderResultSchema.safeParse({ ...ok, frames: 0 }).success).toBe(
       false
     );

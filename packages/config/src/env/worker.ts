@@ -51,7 +51,7 @@ export const workerVarsSchema = z.object({
    */
   RENDER_LOCAL_URL: z.preprocess(
     (value) => (value === "" ? undefined : value),
-    z.url().optional()
+    z.url({ protocol: /^https?$/ }).optional()
   ),
   /**
    * How a render job starts (phase 6 ruling 7, phase 7 ruling 2): `fake`

@@ -41,12 +41,7 @@ export function createFakeRenderer(
   return {
     async render(request: RenderRequest): Promise<RenderResult> {
       requests.push(request);
-      if (options.delayMs !== undefined) {
-        await new Promise((resolve) => setTimeout(resolve, options.delayMs));
-      }
-      if (options.error) {
-        throw options.error;
-      }
+      // The real server validates the body first and answers 422 at once.
       const parsed = renderRequestSchema.safeParse(request);
       if (!parsed.success) {
         return {
@@ -56,6 +51,12 @@ export function createFakeRenderer(
             .join(", "),
           ok: false,
         };
+      }
+      if (options.delayMs !== undefined) {
+        await new Promise((resolve) => setTimeout(resolve, options.delayMs));
+      }
+      if (options.error) {
+        throw options.error;
       }
       const { result = FAKE_RENDER_RESULT } = options;
       return typeof result === "function" ? result(parsed.data) : result;

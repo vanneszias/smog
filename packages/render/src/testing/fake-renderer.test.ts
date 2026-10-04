@@ -62,6 +62,18 @@ describe("createFakeRenderer", () => {
     expect(result).toMatchObject({ code: "invalidInput", ok: false });
   });
 
+  it("refuses an invalid request at once, before the delay or the error", async () => {
+    const renderer = createFakeRenderer({
+      delayMs: 5000,
+      error: new Error("socket hang up"),
+    });
+    const started = performance.now();
+    const result = await renderer.render({ ...REQUEST, v: 2 as 1 });
+    expect(result).toMatchObject({ code: "invalidInput", ok: false });
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(renderer.requests).toHaveLength(1);
+  });
+
   it("waits delayMs before answering", async () => {
     const renderer = createFakeRenderer({ delayMs: 30 });
     const started = performance.now();

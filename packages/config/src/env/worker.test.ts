@@ -382,6 +382,15 @@ describe("the phase 7 render settings (ruling 11)", () => {
         RENDER_LOCAL_URL: "not a url",
       })
     ).toThrow("RENDER_LOCAL_URL");
+    for (const RENDER_LOCAL_URL of [
+      "ftp://127.0.0.1:3002",
+      "file:///tmp/render",
+      "javascript:alert(1)",
+    ]) {
+      expect(() =>
+        parseWorkerEnv({ ...base, ENVIRONMENT: "dev", RENDER_LOCAL_URL })
+      ).toThrow("RENDER_LOCAL_URL");
+    }
   });
 
   test("RENDER_LOCAL_URL and RENDER_MODE=local are refused outside dev", () => {
