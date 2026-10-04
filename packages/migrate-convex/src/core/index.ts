@@ -43,6 +43,7 @@ export {
   type SqlFile,
   type SqlValue,
   sqlLiteral,
+  unwritableText,
 } from "./emit";
 export {
   type AdminLogRow,
@@ -65,6 +66,7 @@ export {
   type SponsorshipRow,
   sponsorshipSchema,
   TABLE_DOMAINS,
+  TABLE_LIST,
   type UserConsentRow,
   type UserFavoriteRow,
   type UserRow,
@@ -83,7 +85,7 @@ export {
   resolveGesturePlayback,
   resolveGesturePlaybacks,
 } from "./gesture-video";
-export { legacyUuid, legacyUuids } from "./ids";
+export { legacyKey, legacyUuid, legacyUuids } from "./ids";
 export {
   InputError,
   type MuxMap,
@@ -117,6 +119,7 @@ export {
   type DetailValue,
   type ExportSummary,
   mergeSections,
+  PlanBlocker,
   REPORT_DOMAINS,
   type Report,
   type ReportDomain,
@@ -135,7 +138,10 @@ export {
   pseudoEmail,
   pseudoName,
   pseudonymiser,
+  pseudoShareToken,
   STAGING_EMAIL_DOMAIN,
+  STAGING_TEXT,
+  STAGING_TEXT_KEYS,
   TARGETS,
   type Target,
 } from "./target";

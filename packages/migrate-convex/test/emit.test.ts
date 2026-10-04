@@ -16,9 +16,12 @@ import {
   renderSql,
   resetStatements,
   sqlLiteral,
+  unwritableText,
 } from "../src/core/emit";
+import { PlanBlocker } from "../src/core/report";
 
 const FTS_INSERT = /^INSERT INTO gesture_fts /;
+const STAMPS = { createdAt: new Date(0), updatedAt: new Date(0) };
 const NOW = new Date("2026-10-04T12:00:00.000Z");
 const INPUTS = {
   export: "e".repeat(64),
@@ -37,7 +40,9 @@ describe("sqlLiteral", () => {
     expect(sqlLiteral("")).toBe("''");
     expect(sqlLiteral(null)).toBe("NULL");
     expect(sqlLiteral(42)).toBe("42");
-    expect(sqlLiteral(-1.5)).toBe("-1.5");
+    expect(sqlLiteral(-1.5)).toBe("(-1.5)");
+    expect(sqlLiteral(-0)).toBe("0");
+    expect(sqlLiteral(-10n)).toBe("(-10)");
     expect(sqlLiteral(true)).toBe("1");
     expect(sqlLiteral(false)).toBe("0");
     expect(sqlLiteral(10n)).toBe("10");
@@ -106,7 +111,14 @@ describe("renderSql and insertRow", () => {
     expect(
       insertRow(
         category,
-        { id: "c1", name: "A", publishedAt: null, slug: "a", sortOrder: 0 },
+        {
+          ...STAMPS,
+          id: "c1",
+          name: "A",
+          publishedAt: null,
+          slug: "a",
+          sortOrder: 0,
+        },
         [[category.legacyId]]
       )
     ).toContain(`"published_at"`);
@@ -123,6 +135,55 @@ describe("renderSql and insertRow", () => {
       insertRow(category, { colour: "red", id: "c1" } as never, [[category.id]])
     ).toThrow("category has no column colour");
     expect(() => rawSql("a\nb")).toThrow("one line");
+  });
+
+  test("never let a negative number turn into a comment (M1)", () => {
+    expect(renderSql(sql`SELECT 3 -${-5}`)).toBe("SELECT 3 -(-5);");
+  });
+
+  test("refuse at plan time a NOT NULL column left out or NULL, and an unwritable string (I3, M4)", () => {
+    const complete = {
+      ...STAMPS,
+      id: "c1",
+      legacyId: "kc1",
+      name: "A",
+      slug: "a",
+    };
+    expect(insertRow(category, complete, [[category.legacyId]])).toContain(
+      "INSERT INTO"
+    );
+    const blocker = (row: Record<string, unknown>): PlanBlocker => {
+      try {
+        insertRow(category, row as never, [[category.legacyId]]);
+      } catch (error) {
+        if (error instanceof PlanBlocker) {
+          return error;
+        }
+        throw error;
+      }
+      throw new Error("insertRow accepted the row");
+    };
+    // `created_at` has only a $defaultFn (new Date()), which is never run.
+    const { createdAt: _created, ...noCreatedAt } = complete;
+    const missing = blocker(noCreatedAt);
+    expect(missing.code).toBe("missingColumn");
+    expect(missing.domain).toBe("catalog");
+    expect(missing.ids).toEqual(["kc1", "c1"]);
+    expect(missing.message).toBe(
+      "category.created_at is NOT NULL with no SQL default, and the row leaves it out."
+    );
+    expect(blocker({ ...complete, name: null }).message).toBe(
+      "category.name is NOT NULL with no SQL default, and the row sets it to NULL."
+    );
+    // `sort_order` has a SQL default, so it may be left out (above).
+    const nul = blocker({ ...complete, name: "a\0b" });
+    expect(nul.code).toBe("unwritableValue");
+    expect(nul.message).toBe("category.name holds a NUL byte.");
+    expect(blocker({ ...complete, name: "a\ud800" }).message).toBe(
+      "category.name holds a lone surrogate."
+    );
+    expect(() => sqlLiteral("x\udfff")).toThrow("lone surrogate");
+    expect(unwritableText("ok 😀")).toBeNull();
   });
 });
 

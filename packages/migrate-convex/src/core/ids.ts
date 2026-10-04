@@ -7,7 +7,8 @@
  * The id is a UUID v8 (RFC 9562 §5.8): the first 16 bytes of the SHA-256
  * of `smog-convex:<table>:<key>`, with the version and variant bits set.
  * `table` is the D1 table the row goes to (`user`, `gesture`, …); `key` is
- * the Convex `_id`, or a composite key the transform documents.
+ * the Convex `_id`, or `legacyKey(...parts)` (a JSON array) for a key made
+ * of several parts.
  */
 
 const PREFIX = "smog-convex";
@@ -46,6 +47,22 @@ export async function legacyUuid(table: string, key: string): Promise<string> {
     text.slice(16, 20),
     text.slice(20),
   ].join("-");
+}
+
+/**
+ * The key of a row made from several parts (task 5 review M5): the JSON
+ * array of the parts, for example `legacyKey(listId, "2")` for the second
+ * part of a split list or `legacyKey(userId, gestureId)` for a favorite.
+ * JSON keeps the parts apart whatever they hold (a `:` in a slug or a
+ * keyword); a row with one Convex `_id` uses that `_id` as it is.
+ */
+export function legacyKey(...parts: readonly string[]): string {
+  if (parts.length < 2) {
+    throw new Error(
+      "[migrate-convex] legacyKey is for composite keys: use the _id itself"
+    );
+  }
+  return JSON.stringify(parts);
 }
 
 /** `legacyUuid(table, key)` for each distinct key, as a map from key to id. */

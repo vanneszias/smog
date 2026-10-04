@@ -27,6 +27,8 @@ Commands:
        [--overrides <overlay-overrides.json>] [--report-only]
       Read a Convex export and write the report and the SQL batches.
       Touches nothing remote. A staging plan is always pseudonymised.
+      --now defaults to the current time (recorded in manifest.json); pass
+      it to get byte-identical plans from the same inputs.
   apply --env <dev|staging|production> --out <dir> [--dry-run] [--yes] [--reset]
       Preflight, then apply a plan to D1 (production needs --yes).
   mux scan --export <zip|dir> --out <dir>

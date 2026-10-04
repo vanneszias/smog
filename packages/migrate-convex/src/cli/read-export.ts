@@ -5,7 +5,9 @@
  * The export holds `<table>/documents.jsonl` per table, beside system
  * folders (`_storage/` with the file blobs, `_tables/`,
  * `_scheduled_functions/`, …). Every top-level name that starts with `_`
- * is skipped, and so is anything that is not a `documents.jsonl`
+ * is skipped (except `_tables/documents.jsonl`, the deployment's table
+ * list, which the core uses to tell a missing table file from an empty
+ * table), and so is anything that is not a `documents.jsonl`
  * (`generated_schema.jsonl`, `README.md`). The ZIP is loaded whole into
  * memory and `fflate`'s `filter` skips the rest before it is inflated.
  *
@@ -27,6 +29,10 @@ export function exportTableOf(path: string): string | null {
     return null;
   }
   const [table] = parts;
+  if (table === "_tables") {
+    // The deployment's table list: the core checks no table is missing.
+    return table;
+  }
   if (!table || table.startsWith("_")) {
     return null;
   }

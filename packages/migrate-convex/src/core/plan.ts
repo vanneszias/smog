@@ -33,10 +33,12 @@ import {
 } from "./inputs";
 import {
   buildReport,
+  PlanBlocker,
   type Report,
   type ReportSection,
   renderReportJson,
   renderReportMarkdown,
+  section,
 } from "./report";
 import type { Target } from "./target";
 
@@ -118,6 +120,15 @@ const GROUP_ORDER: readonly Exclude<FileGroup, "90-fts">[] = [
   "50-sponsorships",
 ];
 
+function blockedResult(blocker: PlanBlocker): TransformResult {
+  return {
+    group: "10-users",
+    resetKeys: {},
+    sections: [section(blocker.domain, {}, [blocker.toIssue()])],
+    statements: [],
+  };
+}
+
 /** Runs a plan (see the module comment). An invalid input file throws `InputError`. */
 export async function plan(request: PlanRequest): Promise<PlanOutput> {
   if (Number.isNaN(request.now.getTime())) {
@@ -150,8 +161,19 @@ export async function plan(request: PlanRequest): Promise<PlanOutput> {
   };
   // Pure functions of the same context: their order in the list is the
   // order of their statements, whatever order they finish in.
+  // A `PlanBlocker` (a row `insertRow` refuses, …) becomes a blocker and
+  // leaves that transform's statements out; any other error fails the plan.
   const results = await Promise.all(
-    (request.transforms ?? TRANSFORMS).map((transform) => transform(context))
+    (request.transforms ?? TRANSFORMS).map(async (transform) => {
+      try {
+        return await transform(context);
+      } catch (error) {
+        if (error instanceof PlanBlocker) {
+          return blockedResult(error);
+        }
+        throw error;
+      }
+    })
   );
   const report = buildReport({
     export: {

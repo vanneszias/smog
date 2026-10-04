@@ -3,6 +3,7 @@ import {
   EXPORT_SCHEMAS,
   EXPORT_TABLES,
   type ExportFiles,
+  TABLE_LIST,
   validateExport,
 } from "../src/core/export-schema";
 import type { ReportIssue } from "../src/core/report";
@@ -155,7 +156,7 @@ describe("the export schemas", () => {
     expect(issues(result).map((issue) => issue.code)).toEqual(["malformedRow"]);
   });
 
-  test("read an absent table as empty with a warning, and an empty export as a blocker", async () => {
+  test("make a table that _tables lists but the export lacks a blocker (M3)", async () => {
     const files = Object.fromEntries(
       Object.entries(await fixtureExport()).filter(
         ([table]) => table !== "adminLogs"
@@ -163,12 +164,69 @@ describe("the export schemas", () => {
     );
     const result = validateExport(files);
     expect(result.data.adminLogs).toEqual([]);
+    expect(
+      issues(result).map((issue) => [issue.code, issue.severity, issue.ids])
+    ).toEqual([["missingTable", "blocker", ["adminLogs"]]]);
+  });
+
+  test("without _tables, read an absent table as empty with warnings; an empty export is a blocker", async () => {
+    const files = Object.fromEntries(
+      Object.entries(await fixtureExport()).filter(
+        ([table]) => table !== "adminLogs" && table !== TABLE_LIST
+      )
+    );
+    const result = validateExport(files);
+    expect(result.data.adminLogs).toEqual([]);
     expect(issues(result).map((issue) => [issue.code, issue.severity])).toEqual(
-      [["absentTable", "warning"]]
+      [
+        ["noTableList", "warning"],
+        ["absentTable", "warning"],
+      ]
     );
     const empty = issues(validateExport({}));
     expect(empty[0]?.code).toBe("emptyExport");
     expect(empty[0]?.severity).toBe("blocker");
+    // A table list that names nothing readable counts as none.
+    const unreadable = validateExport({
+      ...files,
+      [TABLE_LIST]: "{}\nnot json\n",
+    });
+    expect(issues(unreadable).map((issue) => issue.code)).toEqual([
+      "noTableList",
+      "absentTable",
+    ]);
+    // A listed table that is not active (or a system table) is not required.
+    const inactive = validateExport({
+      ...files,
+      [TABLE_LIST]: jsonl([
+        { name: "users" },
+        { name: "adminLogs", state: "deleting" },
+        { name: "_storage" },
+      ]),
+    });
+    expect(issues(inactive).map((issue) => issue.code)).toEqual([
+      "absentTable",
+    ]);
+  });
+
+  test("make a string D1 cannot store a row blocker naming the field (M4)", async () => {
+    const files = await fixtureExport();
+    const row = JSON.parse(String(files.gestures).trim());
+    for (const [info, problem] of [
+      ["a\u0000b", "a NUL byte"],
+      ["a\ud800b", "a lone surrogate"],
+    ] as const) {
+      const text = jsonl([{ ...row, concept: ["ok", info] }]);
+      const [issue] = issues(
+        validateExport(withTable(files, "gestures", text))
+      );
+      expect(issue).toEqual({
+        code: "unwritableString",
+        ids: ["kg7ges000000000000000000000mam1"],
+        message: `gestures: row kg7ges000000000000000000000mam1 has ${problem} in \`concept.1\`, which D1 cannot store as it is.`,
+        severity: "blocker",
+      });
+    }
   });
 
   test("sort rows by _creationTime, then _id, whatever the line order", () => {

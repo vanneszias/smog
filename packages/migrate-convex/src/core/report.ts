@@ -74,6 +74,39 @@ export interface Report {
   readonly warnings: number;
 }
 
+/**
+ * A problem a transform cannot write around (for example a row `insertRow`
+ * refuses): `plan` turns it into a blocker of `domain`, and that
+ * transform's statements are left out.
+ */
+export class PlanBlocker extends Error {
+  readonly code: string;
+  readonly domain: ReportDomain;
+  readonly ids: readonly string[];
+  constructor(
+    domain: ReportDomain,
+    code: string,
+    message: string,
+    ids: readonly string[] = []
+  ) {
+    super(message);
+    this.name = "PlanBlocker";
+    this.code = code;
+    this.domain = domain;
+    this.ids = ids;
+  }
+
+  /** The blocker as a report issue. */
+  toIssue(): ReportIssue {
+    return {
+      code: this.code,
+      ids: this.ids,
+      message: this.message,
+      severity: "blocker",
+    };
+  }
+}
+
 const SEVERITY_RANK: Record<Severity, number> = {
   blocker: 0,
   info: 2,

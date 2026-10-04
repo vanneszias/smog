@@ -17,7 +17,12 @@ import { insertRow } from "../src/core/emit";
 import { legacyUuid } from "../src/core/ids";
 import { hashExport, plan, type Transform } from "../src/core/plan";
 import { section } from "../src/core/report";
-import { FIXTURE_DIR, FIXTURE_SECRETS, fixtureExport } from "./helpers";
+import {
+  FIXTURE_DIR,
+  FIXTURE_INPUTS,
+  FIXTURE_SECRETS,
+  fixtureExport,
+} from "./helpers";
 
 const NOW = "2026-10-04T12:00:00.000Z";
 const scratch = mkdtempSync(join(tmpdir(), "migrate-convex-plan-"));
@@ -203,7 +208,7 @@ describe("plan on the minimal fixture", () => {
     expect(manifest.inputs.overrides).toBe(sha(overrides));
   });
 
-  test("a staging plan and the CLI's output hold no fixture address, name, token or id", async () => {
+  test("a staging plan with every optional input, and the CLI's output, hold no fixture address, name, token or id", async () => {
     const out = join(scratch, "staging");
     const { code, lines } = await runPlan([
       "--export",
@@ -214,6 +219,12 @@ describe("plan on the minimal fixture", () => {
       out,
       "--now",
       NOW,
+      "--workos-users",
+      FIXTURE_INPUTS.workosUsers,
+      "--mux-map",
+      FIXTURE_INPUTS.muxMap,
+      "--overrides",
+      FIXTURE_INPUTS.overrides,
     ]);
     expect(code).toBe(0);
     const text = [...Object.values(snapshot(out)), ...lines].join("\n");
@@ -425,6 +436,62 @@ describe("plan's transform wiring (task 10 fills TRANSFORMS)", () => {
       "reset-imported-001.sql",
       "manifest.json",
     ]);
+  });
+
+  test("turns a PlanBlocker into a blocker of its domain and leaves that transform out (I3)", async () => {
+    const forgetful: Transform = () => ({
+      group: "20-catalog",
+      resetKeys: {},
+      sections: [],
+      statements: [
+        // created_at and updated_at have only $defaultFns: refused.
+        insertRow(
+          category,
+          { id: "c1", legacyId: "kc1", name: "A", slug: "a" },
+          [[category.legacyId]]
+        ),
+      ],
+    });
+    const fine: Transform = () => ({
+      group: "10-users",
+      resetKeys: {},
+      sections: [section("users", { users: 0 })],
+      statements: [],
+    });
+    const result = await plan({
+      export: await fixtureExport(),
+      now: new Date(NOW),
+      target: "production",
+      transforms: [forgetful, fine],
+    });
+    expect(result.report.blockers).toBe(1);
+    const catalog = result.report.sections.find(
+      (part) => part.domain === "catalog"
+    );
+    expect(catalog?.issues).toEqual([
+      {
+        code: "missingColumn",
+        ids: ["kc1", "c1"],
+        message:
+          "category.created_at is NOT NULL with no SQL default, and the row leaves it out.",
+        severity: "blocker",
+      },
+    ]);
+    expect(result.files.get("20-catalog-001.sql")).toBe("");
+    expect(result.manifest?.report.blockers).toBe(1);
+    // Any other error still fails the plan.
+    await expect(
+      plan({
+        export: await fixtureExport(),
+        now: new Date(NOW),
+        target: "production",
+        transforms: [
+          () => {
+            throw new Error("a bug");
+          },
+        ],
+      })
+    ).rejects.toThrow("a bug");
   });
 
   test("refuses an invalid --now", async () => {

@@ -176,7 +176,12 @@ function failureReason(result: CommandResult): string {
   return lines.at(-1) ?? "no output";
 }
 
-const NOT_FOUND = /\b404\b|not found/i;
+/**
+ * A missing key on the remote KV: the API's "key not found" (code 10009) or
+ * its 404 answer. Nothing broader: "namespace not found", a missing binding
+ * or a shell's "command not found" must throw, not read as a missing key.
+ */
+const KEY_NOT_FOUND = /\[code: 10009\]|\b404: Not Found\b/;
 const VALUE_NOT_FOUND = "Value not found";
 const FINAL_NEWLINE = /\n$/;
 
@@ -215,7 +220,7 @@ export function createWrangler(
     async kvGet(key) {
       const result = await run(kvGetArgs(env, key));
       if (result.code !== 0) {
-        if (NOT_FOUND.test(`${result.stderr}\n${result.stdout}`)) {
+        if (KEY_NOT_FOUND.test(`${result.stderr}\n${result.stdout}`)) {
           return null;
         }
         throw new WranglerError(

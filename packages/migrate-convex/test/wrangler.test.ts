@@ -191,6 +191,31 @@ describe("the wrangler runner, against the fake", () => {
     );
   });
 
+  test("throws on a binding, namespace or command error instead of reading it as a missing key (M2)", async () => {
+    for (const stderr of [
+      "✘ [ERROR] KV namespace binding KV not found in env.staging\n",
+      "✘ [ERROR] A request to the Cloudflare API failed. namespace not found [code: 10013]\n",
+      "bunx: command not found: wrangler\n",
+    ]) {
+      const failing: CommandRunner = () =>
+        Promise.resolve({ code: 1, stderr, stdout: "" });
+      // biome-ignore lint/performance/noAwaitInLoops: one case after another.
+      await expect(
+        createWrangler("staging", failing).kvGet("maintenance")
+      ).rejects.toThrow("wrangler kv key get maintenance failed on staging");
+    }
+    const missing: CommandRunner = () =>
+      Promise.resolve({
+        code: 1,
+        stderr:
+          "✘ [ERROR] A request to the Cloudflare API failed. key not found [code: 10009]\n",
+        stdout: "",
+      });
+    expect(
+      await createWrangler("production", missing).kvGet("absent")
+    ).toBeNull();
+  });
+
   test("the fake refuses what wrangler would not run", async () => {
     const fake = createFakeWrangler();
     expect((await fake.run(["d1", "execute", "DB", "--json"])).code).toBe(1);

@@ -13,14 +13,19 @@
  * - a field the schema does not know is a **warning** (the field is
  *   dropped);
  * - a table that is not among the nine is listed and ignored;
- * - a table that is absent reads as empty, with a warning; an export with
- *   none of the nine is a blocker.
+ * - a table that the deployment's table list (`_tables/documents.jsonl`)
+ *   names but whose `documents.jsonl` is missing is a blocker (a truncated
+ *   export); without that list an absent table reads as empty, with a
+ *   warning; an export with none of the nine is a blocker;
+ * - a string D1 cannot store as it is (a NUL byte, a lone surrogate) is a
+ *   blocker naming the row and the field.
  *
  * Messages name tables, fields, ids and Zod's reason, never a value.
  * Rows come back sorted by `_creationTime`, then `_id`, so the order of
  * the export's lines never changes the plan.
  */
 import { z } from "zod";
+import { unwritableText } from "./emit";
 import type { ReportDomain, ReportIssue, ReportSection } from "./report";
 import { section } from "./report";
 
@@ -258,6 +263,27 @@ interface SystemRow {
   _id: string;
 }
 
+/** The first string in `value` that D1 cannot store (`unwritableText`), with its path. */
+function unwritablePath(
+  value: unknown,
+  path = ""
+): { path: string; problem: string } | null {
+  if (typeof value === "string") {
+    const problem = unwritableText(value);
+    return problem ? { path: path || "(row)", problem } : null;
+  }
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  for (const [key, inner] of Object.entries(value)) {
+    const found = unwritablePath(inner, path ? `${path}.${key}` : key);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+}
+
 type ParsedLine =
   | { readonly issue: ReportIssue }
   | { readonly fields: readonly string[]; readonly row: SystemRow };
@@ -293,6 +319,17 @@ function parseLine(
         code: "malformedRow",
         ids: id ? [id] : [],
         message: `${table}: ${id ? `row ${id}` : `line ${lineNumber}`} does not match the schema (${zodReason(parsed.error)}).`,
+        severity: "blocker",
+      },
+    };
+  }
+  const unwritable = unwritablePath(record);
+  if (unwritable) {
+    return {
+      issue: {
+        code: "unwritableString",
+        ids: id ? [id] : [],
+        message: `${table}: ${id ? `row ${id}` : `line ${lineNumber}`} has ${unwritable.problem} in \`${unwritable.path}\`, which D1 cannot store as it is.`,
         severity: "blocker",
       },
     };
@@ -358,6 +395,41 @@ function validateTable(table: ExportTable, text: string): TableResult {
   return { issues, rows };
 }
 
+/** The key of the deployment's table list (`_tables/documents.jsonl`) in `ExportFiles`. */
+export const TABLE_LIST = "_tables";
+
+/**
+ * The user tables `_tables/documents.jsonl` lists (each row's `name`, or
+ * `tableName`; a row whose `state` is set and not `active` is skipped), or
+ * null when there is no list or no row names a table.
+ */
+function listedTables(text: string | undefined): Set<string> | null {
+  if (text === undefined) {
+    return null;
+  }
+  const names = new Set<string>();
+  for (const line of text.split("\n")) {
+    if (line.trim().length === 0) {
+      continue;
+    }
+    let row: unknown;
+    try {
+      row = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const record = (
+      typeof row === "object" && row !== null ? row : {}
+    ) as Record<string, unknown>;
+    const name = record.name ?? record.tableName;
+    const active = record.state === undefined || record.state === "active";
+    if (typeof name === "string" && active && !name.startsWith("_")) {
+      names.add(name);
+    }
+  }
+  return names.size > 0 ? names : null;
+}
+
 /** Parses and validates every table file of the export (see the module comment). */
 export function validateExport(files: ExportFiles): ValidatedExport {
   const data: Record<string, readonly unknown[]> = {};
@@ -365,8 +437,17 @@ export function validateExport(files: ExportFiles): ValidatedExport {
   const exportIssues: ReportIssue[] = [];
   const sections: ReportSection[] = [];
   const unknownTables = Object.keys(files)
-    .filter((name) => !isExportTable(name))
+    .filter((name) => name !== TABLE_LIST && !isExportTable(name))
     .sort();
+  const listed = listedTables(files[TABLE_LIST]);
+  if (listed === null) {
+    exportIssues.push({
+      code: "noTableList",
+      message:
+        "The export has no readable `_tables/documents.jsonl`, so a missing table file cannot be told from an empty table.",
+      severity: "warning",
+    });
+  }
   if (unknownTables.length > 0) {
     exportIssues.push({
       code: "unknownTable",
@@ -378,12 +459,21 @@ export function validateExport(files: ExportFiles): ValidatedExport {
   for (const table of EXPORT_TABLES) {
     const text = files[table];
     if (text === undefined) {
-      exportIssues.push({
-        code: "absentTable",
-        ids: [table],
-        message: `${table}: the export has no documents for it; it reads as empty.`,
-        severity: "warning",
-      });
+      exportIssues.push(
+        listed?.has(table)
+          ? {
+              code: "missingTable",
+              ids: [table],
+              message: `${table}: the deployment lists this table (\`_tables\`) but the export has no documents.jsonl for it (a truncated export?).`,
+              severity: "blocker",
+            }
+          : {
+              code: "absentTable",
+              ids: [table],
+              message: `${table}: the export has no documents for it; it reads as empty.`,
+              severity: "warning",
+            }
+      );
       data[table] = [];
       tables[table] = 0;
       continue;

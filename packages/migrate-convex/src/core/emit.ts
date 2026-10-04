@@ -27,6 +27,7 @@ import {
   SQLiteSyncDialect,
   type SQLiteTable,
 } from "drizzle-orm/sqlite-core";
+import { PlanBlocker, type ReportDomain } from "./report";
 import type { Target } from "./target";
 
 const dialect = new SQLiteSyncDialect();
@@ -79,9 +80,25 @@ function assertOneLine(text: string): void {
 
 const LINE_BREAKS = /(\r\n|\r|\n)/;
 
-function quote(text: string): string {
+/**
+ * Why `text` cannot be written to D1 as it is, or null: a NUL byte (SQLite
+ * would cut the string) or a lone surrogate (it would be written as
+ * U+FFFD, silently changing the text).
+ */
+export function unwritableText(text: string): string | null {
   if (text.includes("\0")) {
-    throw new Error("[migrate-convex] A SQL string cannot hold a NUL byte");
+    return "a NUL byte";
+  }
+  if (!text.isWellFormed()) {
+    return "a lone surrogate";
+  }
+  return null;
+}
+
+function quote(text: string): string {
+  const problem = unwritableText(text);
+  if (problem) {
+    throw new Error(`[migrate-convex] A SQL string cannot hold ${problem}`);
   }
   return `'${text.replaceAll("'", "''")}'`;
 }
@@ -95,13 +112,14 @@ export function sqlLiteral(value: SqlValue): string {
     return value ? "1" : "0";
   }
   if (typeof value === "bigint") {
-    return value.toString();
+    // In parentheses, so `3 -${-5}` can never become the comment `3 --5`.
+    return value < 0n ? `(${value})` : value.toString();
   }
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
       throw new Error(`[migrate-convex] Not a SQL number: ${value}`);
     }
-    return String(value);
+    return value < 0 ? `(${value})` : String(value);
   }
   if (!LINE_BREAKS.test(value)) {
     return quote(value);
@@ -223,6 +241,7 @@ export function insertRow<T extends SQLiteTable>(
       );
     }
   }
+  checkRowValues(name, columns, row as Record<string, unknown>);
   const names: SQL[] = [];
   const values: SQL[] = [];
   for (const [key, column] of Object.entries(columns)) {
@@ -250,6 +269,71 @@ export function insertRow<T extends SQLiteTable>(
   return renderSql(
     sql`INSERT INTO ${table} (${sql.join(names, sql`, `)}) VALUES (${sql.join(values, sql`, `)})${sql.join(conflicts, sql``)}`
   );
+}
+
+/** The report section of each D1 table the import writes. */
+const D1_TABLE_DOMAINS: Readonly<Record<string, ReportDomain>> = {
+  audit_log: "account",
+  category: "catalog",
+  consent_event: "account",
+  favorite: "learning",
+  gesture: "catalog",
+  gesture_category: "catalog",
+  gesture_keyword: "catalog",
+  invoice_request: "sponsorships",
+  list: "learning",
+  list_item: "learning",
+  list_share: "learning",
+  payment: "sponsorships",
+  payment_item: "sponsorships",
+  sponsor: "sponsorships",
+  sponsorship: "sponsorships",
+  sponsorship_event: "sponsorships",
+  sponsorship_token: "sponsorships",
+  user: "users",
+};
+
+function rowIds(row: Readonly<Record<string, unknown>>): string[] {
+  return [row.legacyId, row.id].filter(
+    (value): value is string => typeof value === "string"
+  );
+}
+
+/**
+ * Refuses at plan time a row that D1 would refuse at apply time (task 5
+ * review I3): a NOT NULL column with no SQL default left out or set to
+ * NULL, or a string that cannot be written (`unwritableText`). Drizzle's
+ * `$defaultFn`s (`created_at`, `updated_at`: `new Date()`) are never run,
+ * since the plan must not depend on the clock: the transform sets them.
+ * Each refusal is a `PlanBlocker` naming the table and the column.
+ */
+function checkRowValues(
+  table: string,
+  columns: Readonly<Record<string, SQLiteColumn>>,
+  row: Readonly<Record<string, unknown>>
+): void {
+  const domain = D1_TABLE_DOMAINS[table] ?? "export";
+  for (const [key, column] of Object.entries(columns)) {
+    const value = row[key];
+    const required = column.notNull && column.default === undefined;
+    if (required && (value === undefined || value === null)) {
+      throw new PlanBlocker(
+        domain,
+        "missingColumn",
+        `${table}.${column.name} is NOT NULL with no SQL default, and the row ${value === null ? "sets it to NULL" : "leaves it out"}.`,
+        rowIds(row)
+      );
+    }
+    const problem = typeof value === "string" ? unwritableText(value) : null;
+    if (problem) {
+      throw new PlanBlocker(
+        domain,
+        "unwritableValue",
+        `${table}.${column.name} holds ${problem}.`,
+        rowIds(row)
+      );
+    }
+  }
 }
 
 /** The tables whose rows carry a `legacy_id` (ruling 7). */

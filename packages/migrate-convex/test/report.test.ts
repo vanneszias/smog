@@ -12,8 +12,12 @@ import {
   pseudoEmail,
   pseudoName,
   pseudonymiser,
+  pseudoShareToken,
   STAGING_EMAIL_DOMAIN,
+  STAGING_TEXT,
 } from "../src/core/target";
+
+const BASE64URL_43 = /^[A-Za-z0-9_-]{43}$/;
 
 const NOW = new Date("2026-10-04T12:00:00.000Z");
 const EXPORT = {
@@ -157,6 +161,50 @@ describe("the target and the pseudonymiser (B2)", () => {
     expect(pseudo.company(undefined)).toBeNull();
     expect(pseudo.assetId("asset-1")).toBe("asset-1");
     expect(pseudo.tokens([1, 2])).toEqual([1, 2]);
+  });
+
+  test("staging replaces share tokens deterministically, in newToken's shape, without dropping them (I1)", async () => {
+    const staging = pseudonymiser("staging");
+    const key = JSON.stringify(["kl7lst1", "view"]);
+    const token = await staging.shareToken(key, "fixture-view-token-0001");
+    expect(token).toMatch(BASE64URL_43);
+    expect(token).toBe(await pseudoShareToken(key));
+    expect(token).not.toBe(
+      await pseudoShareToken(JSON.stringify(["kl7lst1", "edit"]))
+    );
+    expect(token).not.toContain("fixture");
+    expect(
+      await pseudonymiser("production").shareToken(key, "real-token")
+    ).toBe("real-token");
+    await expect(pseudoShareToken("")).rejects.toThrow("needs a key");
+  });
+
+  test("staging replaces list names, descriptions, legacy free text and admin log metadata (I1)", () => {
+    const staging = pseudonymiser("staging");
+    const production = pseudonymiser("production");
+    expect(staging.listName(4, "Lijst voor Jan")).toBe("Lijst 4");
+    expect(staging.listDescription("Thuis")).toBeNull();
+    expect(staging.freeText("Uw logo is onleesbaar, Bea")).toBe(STAGING_TEXT);
+    expect(staging.freeText(undefined)).toBeUndefined();
+    expect(staging.freeText(null)).toBeNull();
+    // The invoice name and the display name go through name("sponsor", n).
+    expect(staging.name("sponsor", 2, "Fixture Bakkerij BV")).toBe("Sponsor 2");
+    const metadata = {
+      count: 2,
+      reason: "Bea's logo is wrong",
+      updates: [{ id: "kg1", info: "public text", sponsorName: "Bea" }],
+    };
+    expect(staging.legacyMetadata(metadata)).toEqual({
+      count: 2,
+      reason: STAGING_TEXT,
+      updates: [{ id: "kg1", info: "public text", sponsorName: STAGING_TEXT }],
+    });
+    expect(staging.legacyMetadata("plain")).toBe("plain");
+    expect(staging.legacyMetadata({ reason: null })).toEqual({ reason: null });
+    expect(production.listName(4, "Lijst voor Jan")).toBe("Lijst voor Jan");
+    expect(production.listDescription(undefined)).toBeNull();
+    expect(production.freeText("text")).toBe("text");
+    expect(production.legacyMetadata(metadata)).toBe(metadata);
   });
 
   test("pseudoName and pseudoEmail refuse bad input", () => {

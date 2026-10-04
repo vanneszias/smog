@@ -40,15 +40,18 @@ describe("the export readers", () => {
     expect(exportTableOf("users/documents.jsonl")).toBe("users");
     expect(exportTableOf("users/generated_schema.jsonl")).toBeNull();
     expect(exportTableOf("_storage/documents.jsonl")).toBeNull();
-    expect(exportTableOf("_tables/documents.jsonl")).toBeNull();
+    // The deployment's table list is kept: the core checks no table is missing.
+    expect(exportTableOf("_tables/documents.jsonl")).toBe("_tables");
+    expect(exportTableOf("_components/documents.jsonl")).toBeNull();
     expect(exportTableOf("_storage/kz7sto")).toBeNull();
     expect(exportTableOf("README.md")).toBeNull();
     expect(exportTableOf("wrap/users/documents.jsonl")).toBeNull();
   });
 
-  test("the directory reader returns the nine tables of the fixture", async () => {
+  test("the directory reader returns the nine tables of the fixture and its table list", async () => {
     const tables = await readExportDirectory(FIXTURE_DIR);
     expect(Object.keys(tables)).toEqual([
+      "_tables",
       "adminLogs",
       "categories",
       "gesture_list_items",
@@ -79,7 +82,7 @@ describe("the export readers", () => {
     });
     const tables = readExportZipBytes(zip);
     expect(Object.keys(tables)).not.toContain("_storage");
-    expect(Object.keys(tables)).toHaveLength(9);
+    expect(Object.keys(tables)).toHaveLength(10);
     // Without the filter the same blob as a table fails loudly.
     expect(() =>
       readExportZipBytes(zipSync({ "users/documents.jsonl": blob }))

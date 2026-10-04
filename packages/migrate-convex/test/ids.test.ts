@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { legacyUuid, legacyUuids } from "../src/core/ids";
+import { legacyKey, legacyUuid, legacyUuids } from "../src/core/ids";
 
 const V8 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -54,6 +54,15 @@ describe("legacyUuid", () => {
     await expect(legacyUuid("a:b", "k")).rejects.toThrow(
       "Invalid legacyUuid table"
     );
+  });
+
+  test("legacyKey encodes a composite key as JSON, so a colon in a part stays apart (M5)", async () => {
+    expect(legacyKey("kl7a", "2")).toBe('["kl7a","2"]');
+    expect(legacyKey("a:b", "c")).not.toBe(legacyKey("a", "b:c"));
+    expect(await legacyUuid("list", legacyKey("a:b", "c"))).not.toBe(
+      await legacyUuid("list", legacyKey("a", "b:c"))
+    );
+    expect(() => legacyKey("only")).toThrow("use the _id itself");
   });
 
   test("legacyUuids maps each distinct key", async () => {
