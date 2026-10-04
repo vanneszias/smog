@@ -4,19 +4,38 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./contract": "./src/contract.ts"
+    "./contract": "./src/contract.ts",
+    "./composition": "./src/compositions/index.ts",
+    "./metadata": "./src/metadata/index.ts",
+    "./remotion": "./src/remotion/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
-    "check-types": "tsc -b",
-    "test": "bun test"
+    "bundle": "bun src/server/bundle.ts",
+    "check-types": "tsc -b && tsc -p tsconfig.server.json",
+    "fixture": "bun src/server/fixture.ts",
+    "serve": "PORT=3002 RENDER_ENVIRONMENT=dev RENDER_ALLOW_HTTP=1 bun src/server/main.ts",
+    "test": "bun test --path-ignore-patterns='test/render/**'",
+    "test:render": "bun test ./test/render"
   },
   "dependencies": {
+    "@fontsource/inter": "catalog:",
+    "@remotion/fonts": "catalog:",
+    "@remotion/layout-utils": "catalog:",
+    "@remotion/renderer": "catalog:",
     "@smog/config": "workspace:*",
     "@smog/styles": "workspace:*",
+    "mediabunny": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "remotion": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@remotion/bundler": "catalog:",
     "@types/bun": "catalog:",
-    "typescript": "catalog:"
+    "@types/react": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
   }
 }

@@ -15,6 +15,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@cloudflare/containers": "catalog:",
     "@dnd-kit/core": "6.3.1",
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
@@ -22,6 +23,7 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "@remotion/player": "catalog:",
     "@smog/account": "workspace:*",
     "@smog/admin": "workspace:*",
     "@smog/analytics": "workspace:*",
@@ -58,7 +60,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
-    "@cloudflare/vite-plugin": "1.62.0",
+    "@cloudflare/vite-plugin": "catalog:",
     "@cloudflare/vitest-plugin": "catalog:",
     "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",
