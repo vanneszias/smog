@@ -29,11 +29,24 @@ const UNPAID_TITLE_KEYS = {
 /**
  * A failed initial payment frees its gestures; a renewal frees nothing
  * (ruling 6), and its way back is the email's link (phase review M-2).
+ * A renewal with `endsAt` names that date instead (`renewalDescription`,
+ * phase 6 close-out); this undated copy is the fallback.
  */
 const UNPAID_DESCRIPTION_KEYS = {
   initial: "sponsor.success.failed.description",
-  renewal: "sponsor.success.failed.renewalDescription",
+  renewal: "sponsor.success.failed.renewalDescriptionUndated",
 } as const satisfies Record<PaymentStatusView["kind"], string>;
+
+function UnpaidDescription({ view }: { view: PaymentStatusView }): ReactNode {
+  const { t } = useTranslation();
+  const locale = usePageLocale();
+  if (view.kind === "renewal" && view.endsAt !== undefined) {
+    return t("sponsor.success.failed.renewalDescription", {
+      date: formatDate(view.endsAt, locale),
+    });
+  }
+  return t(UNPAID_DESCRIPTION_KEYS[view.kind]);
+}
 
 function Summary({ view }: { view: PaymentStatusView }): ReactNode {
   const { t } = useTranslation();
@@ -264,7 +277,7 @@ export function PaymentResult({
   } else {
     const slugs = view.items.map((item) => item.gestureSlug).join(",");
     headline = {
-      description: t(UNPAID_DESCRIPTION_KEYS[view.kind]),
+      description: <UnpaidDescription view={view} />,
       final: true,
       icon: <CircleX className="text-danger-strong" />,
       title: t(UNPAID_TITLE_KEYS[view.status]),

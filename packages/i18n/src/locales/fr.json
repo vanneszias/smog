@@ -2014,7 +2014,8 @@
       "failed": {
         "title": "Le paiement n'a pas abouti",
         "description": "Rien n'a été débité et les gestes sont à nouveau libres. Vous pouvez réessayer.",
-        "renewalDescription": "Rien n'a été débité et votre parrainage continue jusqu'à sa date de fin actuelle. Utilisez le lien de votre e-mail pour réessayer."
+        "renewalDescription": "Rien n'a été débité et votre parrainage continue jusqu'au {{date}}. Utilisez le lien de votre e-mail pour réessayer.",
+        "renewalDescriptionUndated": "Rien n'a été débité et votre parrainage continue jusqu'à sa date de fin actuelle. Utilisez le lien de votre e-mail pour réessayer."
       },
       "canceled": {
         "title": "Le paiement a été annulé"

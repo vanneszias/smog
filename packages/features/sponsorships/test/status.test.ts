@@ -37,6 +37,7 @@ function recordingQueue() {
 
 interface StatusAnswer {
   displayName: string;
+  endsAt?: number;
   items: { gestureName: string; gestureSlug: string; includesLogo: boolean }[];
   kind: string;
   renewedUntil?: number;
@@ -179,6 +180,48 @@ describe("sponsorships.paymentStatus (S-14, ruling 2)", () => {
       status: "paid",
       totalCents: 5000,
     });
+  });
+
+  it("answers the current end for a renewal that did not go through", async () => {
+    const endsAt = new Date("2026-11-03T10:00:00.000Z");
+    for (const status of ["failed", "canceled", "expired"] as const) {
+      // biome-ignore lint/performance/noAwaitInLoops: one fixture at a time.
+      const seeded = await seedCheckout(db, {
+        count: 1,
+        endsAt,
+        status: "expiring",
+      });
+      const renewalId = await seedRenewalPayment(
+        db,
+        seeded.sponsorshipIds[0] as string,
+        { status }
+      );
+      const answer = await paymentStatus(renewalId);
+      expect(answer).toMatchObject({
+        endsAt: endsAt.getTime(),
+        kind: "renewal",
+        status,
+      });
+      expect(answer.renewedUntil).toBeUndefined();
+    }
+  });
+
+  it("sends no end for an initial payment, nor renewedUntil for a failed renewal", async () => {
+    const endsAt = new Date("2027-10-03T10:00:00.000Z");
+    const initial = await seedCheckout(db, {
+      endsAt,
+      paymentStatus: "failed",
+    });
+    const answer = await paymentStatus(initial.paymentId);
+    expect(answer.endsAt).toBeUndefined();
+    expect(answer.renewedUntil).toBeUndefined();
+    const live = await seedCheckout(db, { count: 1, endsAt, status: "live" });
+    const paid = await seedRenewalPayment(
+      db,
+      live.sponsorshipIds[0] as string,
+      { status: "paid" }
+    );
+    expect((await paymentStatus(paid)).endsAt).toBeUndefined();
   });
 
   it("answers NOT_FOUND for an unknown payment", async () => {

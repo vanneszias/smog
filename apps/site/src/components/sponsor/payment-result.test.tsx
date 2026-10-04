@@ -206,6 +206,7 @@ describe("the payment's return page (S-14)", () => {
     await renderSite(() => <Result />, {
       api: {
         "sponsorships/paymentStatus": view({
+          endsAt: Date.UTC(2026, 10, 3, 10),
           kind: "renewal",
           status: "failed",
           totalCents: 6000,
@@ -219,11 +220,28 @@ describe("the payment's return page (S-14)", () => {
     ).toBeDefined();
     expect(
       screen.getByText(
-        "Nothing was charged and your sponsorship keeps running until its current end date. Use the link in your email to try again."
+        "Nothing was charged and your sponsorship keeps running until 3 November 2026. Use the link in your email to try again."
       )
     ).toBeDefined();
     expect(screen.queryByText(GESTURES_FREED)).toBeNull();
     expect(screen.queryByRole("link", { name: "Try again" })).toBeNull();
+  });
+
+  test("a failed renewal without an end date keeps the undated copy", async () => {
+    await renderSite(() => <Result />, {
+      api: {
+        "sponsorships/paymentStatus": view({
+          kind: "renewal",
+          status: "canceled",
+          totalCents: 6000,
+        }),
+      },
+    });
+    expect(
+      await screen.findByText(
+        "Nothing was charged and your sponsorship keeps running until its current end date. Use the link in your email to try again."
+      )
+    ).toBeDefined();
   });
 
   test("no or an unknown payment: a calm notice", async () => {

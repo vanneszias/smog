@@ -137,6 +137,11 @@ export const paymentStatusInputSchema = z.object({
  */
 export const paymentStatusSchema = z.object({
   displayName: z.string(),
+  /**
+   * For a renewal that did not go through (`failed`, `canceled`,
+   * `expired`): the sponsorship's current end, epoch ms (nothing changed).
+   */
+  endsAt: z.number().int().optional(),
   items: z.array(
     z.object({
       gestureName: z.string(),

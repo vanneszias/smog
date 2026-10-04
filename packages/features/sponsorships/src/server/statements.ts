@@ -82,6 +82,26 @@ export function revokeTokensStatement(
     );
 }
 
+/**
+ * Marks every open token of the sponsorship used, whatever its purpose:
+ * an admin ending it (force expire, reject, cancel) leaves no link that
+ * still opens (phase 6 close-out). The link then reads as `invalid`.
+ */
+export function revokeAllTokensStatement(
+  db: Db,
+  input: { now: Date; sponsorshipId: string }
+): Statement {
+  return db
+    .update(sponsorshipToken)
+    .set({ usedAt: input.now })
+    .where(
+      and(
+        eq(sponsorshipToken.sponsorshipId, input.sponsorshipId),
+        isNull(sponsorshipToken.usedAt)
+      )
+    );
+}
+
 export interface IssuedToken {
   expiresAt: Date;
   /** The `token_issued` event and the token row, after the revocation. */

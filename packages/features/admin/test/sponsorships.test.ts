@@ -597,9 +597,10 @@ describe("approve", () => {
 });
 
 describe("reject", () => {
-  it("rejects with the reason in the trail and the entry", async () => {
+  it("rejects with the reason in the trail and the entry, revoking the open link", async () => {
     const seeded = await seedCheckout({ status: "changes_requested" });
     const id = seeded.sponsorshipIds[0] as string;
+    await seedToken(id, "reedit");
     const mark = await auditMark();
     await expect(
       callAs(admin, "sponsorships.reject", { id, reason: "  Onleesbaar  " })
@@ -612,6 +613,10 @@ describe("reject", () => {
       targetType: "sponsorship",
     });
     expect(await eventTypes(id)).toEqual(["rejected"]);
+    // The emailed re-edit link no longer opens (phase 6 close-out).
+    expect((await tokenRows(id)).map((token) => token.usedAt)).not.toContain(
+      null
+    );
   });
 
   it("needs a reason", async () => {
@@ -981,7 +986,7 @@ describe("forceExpire", () => {
     expect(deletedAssets).toContain("sponsored-asset");
   });
 
-  it("leaves the gesture's own asset alone", async () => {
+  it("leaves the gesture's own asset alone and revokes the open renewal link", async () => {
     const gesture = await makeGesture(testDb(), { muxAssetId: "own-asset" });
     const seeded = await seedCheckout({
       gestures: [gesture],
@@ -989,11 +994,25 @@ describe("forceExpire", () => {
       status: "expiring",
       videoAssetId: "own-asset",
     });
+    const id = seeded.sponsorshipIds[0] as string;
+    await seedToken(id, "renewal");
+    const mark = await auditMark();
     await callAs(admin, "sponsorships.forceExpire", {
       confirmName: gesture.name,
-      id: seeded.sponsorshipIds[0],
+      id,
     });
     expect(deletedAssets).not.toContain("own-asset");
+    // One entry, in the batch that revoked the link (the guard counts it).
+    await expectAudit("sponsorships.forceExpire", {
+      actorId: admin.user.id,
+      data: { deletesAsset: false, from: "expiring" },
+      mark,
+      targetId: id,
+      targetType: "sponsorship",
+    });
+    const tokens = await tokenRows(id);
+    expect(tokens).toHaveLength(1);
+    expect(tokens[0]?.usedAt).not.toBeNull();
   });
 });
 
