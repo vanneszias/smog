@@ -1778,6 +1778,7 @@
           "failed": "Échoué"
         }
       },
+      "retryRender": {},
       "tokens": {
         "title": "Liens",
         "empty": "Pas encore de liens.",
@@ -2092,6 +2093,7 @@
       "amount": "Montant",
       "pay": "Prolonger et payer",
       "failed": "Le paiement n'a pas pu démarrer. Veuillez réessayer."
-    }
+    },
+    "preview": {}
   }
 }

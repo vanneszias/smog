@@ -66,3 +66,20 @@ OPENPANEL_CLIENT_SECRET=
 # too. Production needs them before launch (phase 8).
 # R2_ACCESS_KEY_ID=
 # R2_SECRET_ACCESS_KEY=
+
+# The sponsored-video render (phase 7). Dev renders with RENDER_MODE=fake
+# (wrangler.jsonc) and needs nothing here. Local mode renders for real with
+# the render server on this machine (`bun -F @smog/render serve`, port
+# 3002): start the site with `SMOG_DEV_RENDER_MODE=local bun dev`, which
+# also adds the RENDER_WORKFLOW binding at build time. Setting
+# RENDER_MODE=local here instead reaches a Worker without that binding, and
+# every job fails with `workflowUnavailable`. Local mode also needs the Mux
+# token above (the source and the upload are on Mux).
+# RENDER_LOCAL_URL is a dev-only var (default http://127.0.0.1:3002); the
+# Worker refuses it in staging and production.
+# RENDER_LOCAL_URL=http://127.0.0.1:3002
+
+# Optional everywhere. Remotion's company licence key: the renderer passes
+# it to renderMedia when set. SMOG & Co vzw, a non-profit, needs none
+# (docs/DECISIONS.md, phase 7). Staging/production: `wrangler secret put`.
+REMOTION_LICENSE_KEY=

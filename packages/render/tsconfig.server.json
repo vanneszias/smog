@@ -1,0 +1,11 @@
+{
+  // The render server (`src/server`, Bun only, not exported) and the
+  // package's tests under `test/`: Bun types, no DOM.
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "types": ["bun"]
+  },
+  "include": ["src/server", "src/assets.d.ts", "test"]
+}
