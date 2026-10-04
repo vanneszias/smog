@@ -321,7 +321,7 @@ All handlers are idempotent, process records one at a time, and can safely be re
 1. **Composition** `SponsoredVideo` in `packages/render/src/compositions` is a port of the old visuals:
    - 30 fps; the size comes from the source video's dimensions and the duration is derived from the source.
    - In the last 5 s the overlay fades in (1 s spring) and slides up 30 px.
-   - The logo box is 22 % × 22 % at (50 %, 76 %). The text is `#00805F`, 3.8 % of the video height, at y = 87 %, on two lines: the fixed line "Met de warme steun van:" and the display name (≤ 35 chars).
+   - The logo box is 15 % × 15 % at (50 %, 78 %). The text is `#00805F`, 4 % of the video height, with the first line's top at y = 85 %, on two lines: the fixed line "Met de warme steun van:" and the display name (≤ 35 chars). (Amended in phase 7 task 3: these are the old production preset `SPONSOR_OVERLAY_CONFIG`; the earlier 22 / 76 / 3.8 / 87 were the unused fallback. See DECISIONS.)
    - Props are validated by `renderInputSchema` (Zod, `./contract`).
 2. **Wizard preview:** `@remotion/player` renders the same composition live in the browser over the gesture's Mux MP4 rendition (`https://stream.mux.com/{playbackId}/highest.mp4`, static renditions enabled on upload). The logo comes from a local object URL until upload. There is no server work.
 3. **Final render:**

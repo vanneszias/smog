@@ -130,7 +130,7 @@ Each entry: date · decision · alternatives · why. Newest entries go at the bo
 - **2026-09-29 · [improvement][rule change] Renewal flow.** The reminder email links to `/sponsor/renew?token=…`. Paying renews for another year at the same price (€50 per gesture, +€10 if the sponsorship has a logo); `ends_at += 365 days`, with no re-render and no re-approval. The old system had no renewal (the link went to the homepage).
 - **2026-09-29 · Late paid webhook for a cancelled sponsorship:** revive it if the gesture is still free, otherwise mark the payment `refund_needed` and email admins; always return 200. The old system returned 500 forever.
 - **2026-09-29 · Stale-payment cancellation measures from payment creation** (the old code used `updatedAt`, which reset the clock) and also cancels the Mollie payment when it can.
-- **2026-09-29 · Overlay layout stays fixed** (the brand-approved layout: logo 22 % box at y 76 %, green text at y 87 %, "Met de warme steun van:"). "Overlay configuration" in the wizard means the display name and optional logo with a live preview. Why: sponsors should not be able to break the brand layout.
+- **2026-09-29 · Overlay layout stays fixed** (the brand-approved layout: logo 22 % box at y 76 %, green text at y 87 %, "Met de warme steun van:"; **the numbers are superseded** by the old production preset, logo 15 % at y 78 %, text 4 % at y 85 %: phase 7 task 3). "Overlay configuration" in the wizard means the display name and optional logo with a live preview. Why: sponsors should not be able to break the brand layout.
 
 ## Auth
 
@@ -923,6 +923,87 @@ Each entry: date · decision · alternatives · why. Newest entries go at the bo
 ## The render gate, the worker classes, provisioning checks and the CI lane (phase 7 task 2)
 
 ## The composition, the metadata reader and the font (phase 7 task 3)
+
+- **2026-10-04 · [parity] The overlay layout is the one production rendered: the old `SPONSOR_OVERLAY_CONFIG` preset (task 3 review, I-3).** The old API sent `overlayConfig: getSponsorOverlayConfig()` with every render (`apps/server/src/services/sponsorship.ts`, then `compose.ts` → `inputProps.overlayConfig`). Since commit 42dd4f4 (2026-03-01), that preset (`packages/types/src/presets.ts`) has been:
+  - the logo box at 15 % × 15 %, centred on (50 %, 78 %);
+  - the text at 4 % of the height, with line 1's top at 85 % and x at 50 %, in `#00805f`;
+  - a 1 s fade over the last 5 s.
+
+  `RENDER_OVERLAY_LAYOUT` now holds exactly those values: `logo: { centerX: 0.5, centerY: 0.78, size: 0.15 }` and `text: { fontSize: 0.04, y: 0.85 }`. At 1080 × 1920 the logo box is 162 × 288, centred on (540, 1497.6); line 1's top is at 1632, and the base font size is 76.8 px.
+
+  The spec's 22 % / 76 % / 3.8 % / 87 % were `DEFAULT_OVERLAY_CONFIG`, the composition's fallback for when no config was passed. The old server never left it out after March 2026. The same numbers appear in the 2026-09-29 "Overlay layout stays fixed" entry, the phase 6 CSS preview and ruling 7.7.
+
+  The owner can override this with a one-line change to the constants, plus the figures in the geometry, fit and DOM tests.
+- **2026-10-04 · `SponsoredVideo` is the old composition, ported (ruling 5).** `SponsoredVideo({ background, logoUrl, displayName, durationInFrames, width, height })` is an `AbsoluteFill` on black, with the background `cover`-fitted and `SponsorOverlay` on top.
+  - **Background.** While rendering (`useRemotionEnvironment().isRendering`) the video is an `OffthreadVideo`: it is frame accurate and fetched server side, so Mux's CORS headers do not matter. In the Player it is an `Html5Video`. `{ kind: "image" }`, the Player's fallback, is an `Img`.
+  - **Why not `@remotion/media`.** The old code used its `Video`. It works, but it adds a WebCodecs path in both places for no gain here. It is not claimed to fail.
+  - **The overlay's math** is pure and tested against the old formulas:
+    - `overlayStartFrame` is `durationInFrames − 5 × fps`. It is negative for clips under 5 s, so the overlay is there from frame 0.
+    - `overlayTiming` uses `spring({ damping: 200, durationInFrames: 1 s })` for the opacity and a 30 → 0 px `translateY` on the whole overlay. It returns `null` before the start.
+    - `overlayGeometry`:
+      - the logo box is `size × width` by `size × height`, centred on `(centerX × width, centerY × height)`, with `objectFit: contain`;
+      - line 1's **top** is at `y × height`;
+      - line 2's top is line 1's `+ 1.2 × fontSize + 0.3 × fontSize`.
+  - **Dropped:** the old outer flex column with `paddingBottom`. It positioned nothing, because every child is absolute with its own `top` and `left`.
+- **2026-10-04 · [parity change] The line height is pinned to 1.2.** The old divs had `line-height: normal`, which is the font's own metric: about 1.16 for DejaVu, which the old image picked for `system-ui`. Pinning it keeps the glyph tops stable across fonts, and the same in the render and the Player. It does not reproduce the old offset exactly: the difference is a few px at 1920. Both lines are `nowrap`, weight 600, in `text.color`, and horizontally centred with `left: 50%` + `translateX(-50%)`, as before.
+- **2026-10-04 · [improvement] Long names fit (`overlayFontSize`).** The size is `min(text.fontSize × height, the size at which the wider line fills 90 % of the width)`, one size for both lines.
+  - Text width scales with the size, so each line is measured once at the base size, through a `measure(text, fontSize, line)` port.
+  - A short name keeps the old size exactly.
+  - Line 2's offset uses the fitted size, so the two lines stay together when they shrink.
+  - The review still of a 35-character "W…" name at 1080 × 1920 shows both lines inside the frame. The old overlay clipped such a name off both edges.
+- **2026-10-04 · Names in any script render without crashing (task 3 review, I-1).**
+  - **The problem.** `displayNameSchema` allows any script. Measuring a name that is drawn in a fallback font with `validateFontIsLoaded: true` throws "font is not loaded". That failed the render and blanked the Player.
+  - **Measuring.** The composition measures with `@remotion/layout-utils` `measureText`, in the overlay stack, only after the font has loaded. Only the fixed Latin intro is measured with `validateFontIsLoaded: true`: it is Latin with more than 4 distinct characters, so it proves the load. The name is measured without validation, as it is drawn.
+  - **The font stack** is `"SMOG Overlay", "Noto Sans", sans-serif`:
+    - Inter 600 in the latin, latin-ext, cyrillic, cyrillic-ext, greek, greek-ext and vietnamese subsets. Each is scoped by `unicode-range`, so only the files a text uses are fetched.
+    - then Noto Sans;
+    - then the generic family.
+  - **Ruling on other scripts.** Task 4's image installs Debian's `fonts-noto-core` (Arabic, Hebrew, Devanagari, Thai and more), so those scripts draw in Noto in the render. CJK (`fonts-noto-cjk`, about 100 MB) is not installed. It draws in whatever fallback exists, possibly as tofu. In the Player, the viewer's own fonts apply.
+  - **The family name** is "SMOG Overlay", not "Inter", so the overlay's `FontFace`s never mix with the site's UI Inter.
+  - **The test.** A DOM test renders a Cyrillic name and an Arabic name. Its fake `measureText` throws on a validated measure of text the font does not cover.
+- **2026-10-04 · The overlay font loads once, under `delayRender` (ruling 6).**
+  - **The files.** `OVERLAY_FONT_FILES` are the seven Inter 600 `.woff2` files, each with `@fontsource/inter`'s own `unicodeRange`. The ranges overlap on a few combining marks, which both files draw. They are loaded with `@remotion/fonts` `loadFont({ family: "SMOG Overlay", weight: "600", format: "woff2", unicodeRange, url })`.
+  - **The loader.** `createOverlayFontLoader(loadFont)` loads once per document and forgets a failure, so the next call retries.
+    - `loadOverlayFont()` is exported for the wizard, which calls it before mounting the Player.
+    - `isOverlayFontLoaded()` lets an overlay mounted afterwards skip the wait.
+  - **In the composition.** `SponsorOverlay` holds the frame with `useDelayRender().delayRender` until the font has loaded. It continues the handle in the effect cleanup that follows the commit showing the text, or on unmount. Until the font has loaded, the overlay renders nothing.
+- **2026-10-04 · A failure cancels a render and shows the Player's fallback (task 3 review, M-2 and M-7).** `useFailure(message)` gives a stable handler.
+  - While rendering (`useRemotionEnvironment().isRendering`), it calls `cancelRender(new Error(message, { cause }))`.
+  - In the Player, it stores the error and throws it during the next render, so the Player's `errorFallback` shows it. Before, the result was a blank overlay and an unhandled rejection.
+  - It covers the font load, the logo `Img`, the background image `Img` and the Player's `Html5Video`.
+  - The messages are fixed, because Remotion's own media errors name their `src`: "the overlay font could not be loaded", "the logo could not be loaded", "the background image could not be loaded" and "the background video could not be played".
+- **2026-10-04 · `sponsoredVideoPropsSchema` (Zod 4).**
+  - `background` is `{ kind: "video" | "image", src: non-empty }`.
+  - `logoUrl` is non-empty or `null`. It is the server's `http://127.0.0.1` URL or the wizard's object URL, so it is not `z.url()`.
+  - `displayName` is 1..`DISPLAY_NAME_MAX`.
+  - `durationInFrames` is an integer ≥ 1.
+  - `width` and `height` are even integers ≥ 2.
+
+  `<Composition>` has no `schema` prop. The Root's exported `calculateMetadata` only hands back the props' size and duration.
+- **2026-10-04 · `readSourceMetadata(url, { openInput? })` (`./metadata`, `src/metadata/index.ts`).**
+  - **How it reads.** A `mediabunny` `Input` over `UrlSource`, with no retries of its own (the Workflow step and the Player's fallback decide). It calls `computeDuration()` and the primary video track's `getDisplayWidth/Height()` (after rotation and aspect ratio), and disposes the input in `finally`.
+  - **What it answers.** `{ durationInFrames: max(1, ceil(duration × 30 − 1e-6)), durationInSeconds, width, height }`.
+    - Both sizes are **rounded down to even**: H.264 needs even sizes, and the old code did not round.
+    - The epsilon stops a frame-exact duration from counting one frame too many through float error: 62 / 30 × 30 = 62.00000000000001 (review M-1).
+  - **`SourceUnreadableError`** is final (the server's `sourceUnreadable`). It covers a source with no video track, an `UnsupportedInputFormatError`, a non-finite duration and a size under 2 px.
+  - **`SourceFetchError`** covers everything else: mediabunny's `Error fetching <url>: <status> <text>` for any non-2xx answer (such as an expired signed master URL's 403), or a network fault.
+    - It has `retryable: true`, and `status` is parsed from mediabunny's message or is `null`.
+    - Its message is fixed: "the source could not be read (HTTP <status>)".
+  - **No URLs in messages.** Both error messages are URL-free, and the tests check this with mediabunny's real message shape and a `?token=` URL. The `cause` is the original error, which does contain the URL, so the server must never log or answer `cause` unscrubbed (a task 4 carry; review I-2).
+  - **Deviations from the brief:**
+    - the injection point is `openInput`, a factory for the `Input`-shaped `MetadataInput`, rather than a `source`, because the error paths need a fake input, not fake bytes;
+    - the file is `src/metadata/index.ts`, where task 1's `./metadata` export already pointed.
+- **2026-10-04 · The composition's DOM tests run in `@remotion/player`'s `Thumbnail` under happy-dom.**
+  - **Separate pass.** `*.dom.test.tsx` files run in a second `bun test` with `--preload @smog/config/testing/happy-dom`, so the bundling smoke and the pure tests keep a clean global scope.
+  - **Mocked modules.** happy-dom loads no font and lays nothing out, so `@remotion/fonts` and `@remotion/layout-utils` are module mocks. The fake `measureText` throws when it is called before the fake load has resolved, or on a validated measure of text outside the font's subsets. `remotion`'s `useDelayRender` and `useRemotionEnvironment` (and `OffthreadVideo`/`Html5Video`) are module mocks too, for the composition's own calls only.
+  - **What the tests assert:**
+    - the positions: line 1 at 1632 px, line 2 at line 1 + 1.5 × fontSize, and the logo box;
+    - every `delayRender` handle is continued once;
+    - a font failure cancels a render and shows the Player's fallback;
+    - a failed background image shows the fallback;
+    - both background branches.
+  - **Dependencies.** `@smog/render` gains the devDependencies `@remotion/player` (catalog), `@testing-library/react` 16.3.3 and `@testing-library/dom` 10.4.2, the versions the other packages use. knip's `ignoreDependencies` keeps only `@remotion/renderer` (task 4).
+  - **No browser.** The real render with Chrome is task 4's `test:render`. No test in `bun run test` starts a browser.
 
 ## The render server and the container image (phase 7 task 4)
 

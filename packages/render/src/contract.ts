@@ -37,18 +37,24 @@ export const RENDER_FPS = 30;
  * two horizontally centred lines: `intro`, whose **top** is at `y`, then
  * the display name (phase 7 ruling 5: the old overlay put the first line's
  * top there, it never centred the text at `y`).
+ *
+ * The values are the old production layout, `SPONSOR_OVERLAY_CONFIG`
+ * (`getSponsorOverlayConfig()`, sent with every old render since March
+ * 2026): the logo 15 % × 15 % at (50 %, 78 %), the text 4 % of the height
+ * at 85 %. The spec's 22 / 76 / 3.8 / 87 were the composition's unused
+ * fallback (phase 7 task 3 review, I-3; the owner may override).
  */
 export const RENDER_OVERLAY_LAYOUT = {
   fadeInSeconds: 1,
-  logo: { centerX: 0.5, centerY: 0.76, size: 0.22 },
+  logo: { centerX: 0.5, centerY: 0.78, size: 0.15 },
   overlaySeconds: 5,
   slideUpPx: 30,
   text: {
     color: tokens.color.brand.green,
-    fontSize: 0.038,
+    fontSize: 0.04,
     // The old video's fixed line, in Dutch whatever the viewer's language.
     intro: "Met de warme steun van:",
-    y: 0.87,
+    y: 0.85,
   },
 } as const;
 

@@ -19,12 +19,7 @@
         "test/**/*.test.ts"
       ],
       "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"],
-      "ignoreDependencies": [
-        "@remotion/fonts",
-        "@remotion/layout-utils",
-        "@remotion/renderer",
-        "mediabunny"
-      ]
+      "ignoreDependencies": ["@remotion/renderer"]
     },
     "packages/ui-web": {
       "project": ["src/**/*.{ts,tsx,css}"],

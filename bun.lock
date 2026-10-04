@@ -618,6 +618,9 @@
       },
       "devDependencies": {
         "@remotion/bundler": "catalog:",
+        "@remotion/player": "catalog:",
+        "@testing-library/dom": "10.4.2",
+        "@testing-library/react": "16.3.3",
         "@types/bun": "catalog:",
         "@types/react": "catalog:",
         "typescript": "catalog:",
