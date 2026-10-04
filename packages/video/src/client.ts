@@ -78,7 +78,7 @@ export function createMux(
 
 interface RequestOptions<T> {
   body?: unknown;
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PUT";
   /** Answers 404 with `null` instead of throwing. */
   nullOn404?: boolean;
   schema: ZodType<T>;

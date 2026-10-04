@@ -3,9 +3,10 @@ import { muxSignature } from "../webhooks";
 
 /**
  * An in-memory Mux Video API: a `fetch` that answers the endpoints
- * `@smog/video` calls (create/get upload, get/list/delete assets) plus the
- * browser's `PUT` to the upload URL, so the real client code runs against
- * it. No network. The Bun fake server (`./fake-server`) serves the same
+ * `@smog/video` calls (create/get/cancel upload, get/list/delete assets,
+ * master access, the playback-id lookup) plus the `PUT` of the file to
+ * the upload URL (the browser's for a gesture, the renderer's for a
+ * render), so the real client code runs against it. No network. The Bun fake server (`./fake-server`) serves the same
  * handler over HTTP for e2e.
  */
 
@@ -17,6 +18,7 @@ interface FakeRequest {
 
 export interface FakeUpload {
   assetId: string | null;
+  /** Required, as in Mux's create-upload schema (the fake refuses a body without it). */
   corsOrigin: string;
   error: { message: string; type: string } | null;
   id: string;
@@ -32,7 +34,15 @@ export interface FakeAsset {
   createdAt: number;
   duration: number | null;
   errors: { messages: string[]; type: string } | null;
+  /** The bytes PUT to its upload (the fake server serves them as the master). */
+  file: Uint8Array | null;
   id: string;
+  /**
+   * Mux's `master` object: absent (`null`) while master access is off. The
+   * status is a string so a test can send one Mux may add later.
+   */
+  master: { status: string; url?: string } | null;
+  masterAccess: "temporary" | "none";
   passthrough: string | null;
   playbackId: string | null;
   /** The playback id's policy; `null` for no playback id at all. */
@@ -44,6 +54,8 @@ export interface FakeAsset {
 export interface FakeMuxOptions {
   /** Where the client points (`MUX_API_URL`). */
   apiUrl?: string;
+  /** The origin of the (signed-looking) master URLs; a `*.mux.com` host by default. */
+  masterOrigin?: string;
   /** The playback id ready assets get (a real public sample in e2e); random otherwise. */
   playbackId?: string;
   /** The origin of the upload URLs; a `*.mux.com` host by default. */
@@ -55,8 +67,10 @@ export interface FakeMux {
   readonly apiUrl: string;
   readonly assets: Map<string, FakeAsset>;
   /** The upload received its file: `asset_created`, with a preparing asset. */
-  completeUpload: (uploadId: string) => FakeAsset;
+  completeUpload: (uploadId: string, file?: Uint8Array) => FakeAsset;
   errorAsset: (assetId: string, message?: string) => FakeAsset;
+  /** The master could not be prepared (`master.status: "errored"`). */
+  errorMaster: (assetId: string) => FakeAsset;
   errorUpload: (uploadId: string, message?: string) => FakeUpload;
   /** The next API request answers `status` (a Mux outage or rate limit). */
   failNext: (status: number) => void;
@@ -65,6 +79,12 @@ export interface FakeMux {
   /** A client wired to this fake. */
   readonly mux: Mux;
   readyAsset: (assetId: string) => FakeAsset;
+  /**
+   * The master is ready: master access on, with a temporary URL on
+   * `masterOrigin` (`/master/<assetId>/master.mp4?signature=…`, which the
+   * fake server answers with the asset's file or its fixture).
+   */
+  readyMaster: (assetId: string) => FakeAsset;
   /** Every API request (not the upload PUTs), in order, with its JSON body. */
   readonly requests: FakeRequest[];
   readonly uploads: Map<string, FakeUpload>;
@@ -84,6 +104,9 @@ const AUTHORIZATION = `Basic ${btoa(`${TOKEN.id}:${TOKEN.secret}`)}`;
 const UPLOAD_PATH = /^\/video\/v1\/uploads\/([^/]+)$/;
 const ASSET_PATH = /^\/video\/v1\/assets\/([^/]+)$/;
 const PUT_PATH = /^\/upload\/([^/]+)$/;
+const UPLOAD_CANCEL_PATH = /^\/video\/v1\/uploads\/([^/]+)\/cancel$/;
+const MASTER_ACCESS_PATH = /^\/video\/v1\/assets\/([^/]+)\/master-access$/;
+const PLAYBACK_ID_PATH = /^\/video\/v1\/playback-ids\/([^/]+)$/;
 
 /** The decoded id a path pattern captures, or `null`. */
 function idIn(pattern: RegExp, pathname: string): string | null {
@@ -129,6 +152,8 @@ function assetJson(asset: FakeAsset) {
     duration: asset.duration ?? undefined,
     errors: asset.errors ?? undefined,
     id: asset.id,
+    master: asset.master ?? undefined,
+    master_access: asset.masterAccess,
     passthrough: asset.passthrough ?? undefined,
     playback_ids:
       asset.playbackId && asset.policy
@@ -159,6 +184,7 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
   const apiUrl = options.apiUrl ?? "https://api.mux.test";
   const uploadOrigin =
     options.uploadOrigin ?? "https://direct-uploads.fake.production.mux.com";
+  const masterOrigin = options.masterOrigin ?? "https://master.fake.mux.com";
   const uploads = new Map<string, FakeUpload>();
   const assets = new Map<string, FakeAsset>();
   const requests: FakeRequest[] = [];
@@ -172,7 +198,10 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
       createdAt: Date.now(),
       duration: 4.5,
       errors: null,
+      file: null,
       id: randomId(),
+      master: null,
+      masterAccess: "none",
       passthrough: null,
       playbackId: policy ? (options.playbackId ?? randomId(32)) : null,
       policy,
@@ -200,12 +229,13 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     return asset;
   }
 
-  function completeUpload(uploadId: string): FakeAsset {
+  function completeUpload(uploadId: string, file?: Uint8Array): FakeAsset {
     const upload = mustUpload(uploadId);
     const asset = addAsset({
       aspectRatio: null,
       createdAt: Date.now(),
       duration: null,
+      file: file ?? null,
       passthrough: upload.passthrough,
       playbackId: null,
       policy: null,
@@ -221,7 +251,11 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     const asset = mustAsset(assetId);
     asset.status = "ready";
     asset.policy = "public";
-    asset.playbackId ??= options.playbackId ?? randomId(32);
+    // A render's asset gets its own id: only gesture and picker assets share
+    // the fixed sample id, so a render never resolves as its own source.
+    asset.playbackId ??= asset.passthrough?.startsWith("render-job:")
+      ? randomId(32)
+      : (options.playbackId ?? randomId(32));
     asset.aspectRatio ??= "3:4";
     asset.duration ??= 4.5;
     return asset;
@@ -237,6 +271,23 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     return asset;
   }
 
+  function readyMaster(assetId: string): FakeAsset {
+    const asset = mustAsset(assetId);
+    asset.masterAccess = "temporary";
+    asset.master = {
+      status: "ready",
+      url: `${masterOrigin}/master/${encodeURIComponent(assetId)}/master.mp4?signature=fake-${randomId(16)}`,
+    };
+    return asset;
+  }
+
+  function errorMaster(assetId: string): FakeAsset {
+    const asset = mustAsset(assetId);
+    asset.masterAccess = "temporary";
+    asset.master = { status: "errored" };
+    return asset;
+  }
+
   function errorUpload(
     uploadId: string,
     message = "Upload failed"
@@ -249,10 +300,25 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
 
   function createUploadRoute(body: unknown): Response {
     const settings = body as {
-      cors_origin: string;
+      cors_origin?: unknown;
       new_asset_settings?: { passthrough?: string };
       test?: boolean;
     };
+    // Mux's create-upload schema requires cors_origin (@mux/mux-node 15.5.0).
+    if (
+      typeof settings.cors_origin !== "string" ||
+      settings.cors_origin === ""
+    ) {
+      return json(
+        {
+          error: {
+            messages: ["cors_origin is required"],
+            type: "invalid_parameters",
+          },
+        },
+        400
+      );
+    }
     const id = randomId();
     const upload: FakeUpload = {
       assetId: null,
@@ -301,11 +367,103 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     return notFound();
   }
 
+  /**
+   * `GET /video/v1/playback-ids/:id`: the asset behind a playback id. With
+   * a fixed `playbackId` option (e2e) every gesture and picker asset shares
+   * it, so the first one inserted answers; render assets get their own.
+   */
+  function playbackIdRoute(playbackId: string): Response {
+    const asset = [...assets.values()].find(
+      (candidate) => candidate.playbackId === playbackId && candidate.policy
+    );
+    if (!asset) {
+      return notFound();
+    }
+    return json({
+      data: {
+        id: playbackId,
+        object: { id: asset.id, type: "asset" },
+        policy: asset.policy,
+      },
+    });
+  }
+
+  /**
+   * `PUT /video/v1/assets/:id/master-access`: `temporary` starts preparing
+   * the master (a test or the fake server readies it), `none` drops it.
+   */
+  function masterAccessRoute(assetId: string, body: unknown): Response {
+    const asset = assets.get(assetId);
+    if (!asset) {
+      return notFound();
+    }
+    const access = (body as { master_access?: unknown } | undefined)
+      ?.master_access;
+    if (access === "none") {
+      asset.masterAccess = "none";
+      asset.master = null;
+    } else if (access === "temporary") {
+      asset.masterAccess = "temporary";
+      if (!asset.master || asset.master.status === "errored") {
+        asset.master = { status: "preparing" };
+      }
+    } else {
+      return json(
+        {
+          error: {
+            messages: ["master_access must be temporary or none"],
+            type: "invalid_parameters",
+          },
+        },
+        400
+      );
+    }
+    return json({ data: assetJson(asset) });
+  }
+
+  /**
+   * `PUT /video/v1/uploads/:id/cancel`: only a `waiting` upload cancels;
+   * any other is refused with a 400 (Mux: "only succeeds if the upload is
+   * still in the waiting state"; the client does not rely on the code).
+   */
+  function cancelUploadRoute(uploadId: string): Response {
+    const upload = uploads.get(uploadId);
+    if (!upload) {
+      return notFound();
+    }
+    if (upload.status !== "waiting") {
+      return json(
+        {
+          error: {
+            messages: [`Upload is ${upload.status} and cannot be cancelled`],
+            type: "invalid_parameters",
+          },
+        },
+        400
+      );
+    }
+    upload.status = "cancelled";
+    return json({ data: uploadJson(upload) });
+  }
+
+  function putRoute(pathname: string, body: unknown): Response {
+    const cancelId = idIn(UPLOAD_CANCEL_PATH, pathname);
+    if (cancelId !== null) {
+      return cancelUploadRoute(cancelId);
+    }
+    const masterId = idIn(MASTER_ACCESS_PATH, pathname);
+    if (masterId !== null) {
+      return masterAccessRoute(masterId, body);
+    }
+    return notFound();
+  }
+
   async function api(request: Request, path: string): Promise<Response> {
-    const body =
-      request.method === "POST"
-        ? ((await request.json()) as unknown)
-        : undefined;
+    const text =
+      request.method === "POST" || request.method === "PUT"
+        ? await request.text()
+        : "";
+    const body = text === "" ? undefined : (JSON.parse(text) as unknown);
     requests.push({
       method: request.method,
       path,
@@ -325,22 +483,35 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
         401
       );
     }
-    const url = new URL(request.url);
-    if (request.method === "POST" && url.pathname === "/video/v1/uploads") {
+    return route(request.method, new URL(request.url), body);
+  }
+
+  function route(method: string, url: URL, body: unknown): Response {
+    if (method === "POST" && url.pathname === "/video/v1/uploads") {
       return createUploadRoute(body);
     }
-    if (request.method === "DELETE") {
+    if (method === "DELETE") {
       return deleteAssetRoute(url.pathname);
     }
-    if (request.method !== "GET") {
+    if (method === "PUT") {
+      return putRoute(url.pathname, body);
+    }
+    if (method !== "GET") {
       return notFound();
+    }
+    const playbackId = idIn(PLAYBACK_ID_PATH, url.pathname);
+    if (playbackId !== null) {
+      return playbackIdRoute(playbackId);
     }
     return url.pathname === "/video/v1/assets"
       ? listAssetsRoute(url)
       : getRoute(url.pathname);
   }
 
-  /** The browser's PUT of the file to the signed upload URL. */
+  /**
+   * The PUT of the file to the signed upload URL: the browser's (a gesture,
+   * with CORS) or the renderer's (a render, server side, no `Origin`).
+   */
   async function put(request: Request, uploadId: string): Promise<Response> {
     const upload = uploads.get(uploadId);
     const cors = corsHeaders(upload, request.headers.get("origin"));
@@ -350,11 +521,11 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     if (!upload || request.method !== "PUT") {
       return new Response("Not found", { headers: cors, status: 404 });
     }
-    await request.arrayBuffer();
+    const file = new Uint8Array(await request.arrayBuffer());
     if (upload.status !== "waiting") {
       return new Response("Upload is closed", { headers: cors, status: 410 });
     }
-    completeUpload(uploadId);
+    completeUpload(uploadId, file);
     return new Response(null, { headers: cors, status: 200 });
   }
 
@@ -389,6 +560,7 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     assets,
     completeUpload,
     errorAsset,
+    errorMaster,
     errorUpload,
     failNext: (status) => {
       nextFailure = status;
@@ -396,6 +568,7 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     fetch: handle,
     mux,
     readyAsset,
+    readyMaster,
     requests,
     uploads,
   };
