@@ -16,7 +16,8 @@
 import type { Db } from "@smog/db/client";
 import { enqueueOutputs } from "@smog/jobs";
 import type { RpcEnv } from "@smog/rpc";
-import { claimLogo, deleteLogo, isLogoInUse } from "./logo";
+import type { LogoContentType } from "../schema/wizard";
+import { claimLogo, deleteLogo, isLogoInUse, sniffLogoType } from "./logo";
 import type { SponsorshipsImplementer } from "./procedure";
 import { invalidState, requireOpen, tokenInvalid } from "./refusals";
 import { createRenderJobStatements } from "./render";
@@ -146,6 +147,48 @@ async function submitReedit(
     { events: env.EVENTS_QUEUE },
     { events: job.after, notify: [] }
   );
+}
+
+/** The stored logo a re-edit keeps, as its link holder may see it. */
+export interface ReeditLogo {
+  bytes: Uint8Array<ArrayBuffer>;
+  /** Sniffed from the bytes, never the stored metadata. */
+  contentType: LogoContentType;
+}
+
+/**
+ * The logo the open re-edit link `token` keeps (phase 7 task 9, task 8
+ * review M-5): its own sponsorship's stored logo, so the re-edit preview
+ * shows what the render will. The token is the only input (no key), so no
+ * other sponsorship's logo is reachable. `null` for an unknown, used,
+ * expired or renewal link, a sponsorship no longer `changes_requested`,
+ * no logo, a missing object or bytes that are not a PNG, JPEG or WebP.
+ * The caller answers every `null` the same way (404).
+ */
+export async function readReeditLogo(
+  db: Db,
+  media: RpcEnv["MEDIA"],
+  input: { now: Date; token: string }
+): Promise<ReeditLogo | null> {
+  const link = await readTokenLink(db, {
+    now: input.now,
+    purpose: "reedit",
+    raw: input.token,
+  });
+  if (link.kind !== "open" || link.sponsorship.status !== "changes_requested") {
+    return null;
+  }
+  const { hasLogo, logoKey } = link.sponsorship;
+  if (!(hasLogo && logoKey && media)) {
+    return null;
+  }
+  const object = await media.get(logoKey);
+  if (!object) {
+    return null;
+  }
+  const bytes = new Uint8Array(await object.arrayBuffer());
+  const contentType = sniffLogoType(bytes);
+  return contentType ? { bytes, contentType } : null;
 }
 
 export function reeditProcedures(os: SponsorshipsImplementer) {

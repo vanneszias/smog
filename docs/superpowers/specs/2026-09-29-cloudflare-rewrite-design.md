@@ -69,7 +69,7 @@ packages/
   video/                Mux client helpers (uploads, assets, master access, webhooks, URLs) + player props
   render/               Remotion compositions, render contract (Zod), container image (Dockerfile + Bun entry)
   email/                React Email templates + EmailSender interface + Cloudflare/dev senders
-  jobs/                 typed queue messages, producers, consumers, cron schedule definitions, workflows
+  jobs/                 typed queue messages, producers, consumers, cron schedule definitions (the render Workflow is site wiring and its logic a `@smog/sponsorships` service: phase 7 ruling 1)
   analytics/            OpenPanel wrappers, event taxonomy, consent gate (./web, ./native, ./server)
   i18n/                 en / fr / nl catalogues, typed keys, i18next setup helpers
   styles/               design tokens, generated Tailwind v4 theme CSS + NativeWind Tailwind config
@@ -321,23 +321,24 @@ All handlers are idempotent, process records one at a time, and can safely be re
 1. **Composition** `SponsoredVideo` in `packages/render/src/compositions` is a port of the old visuals:
    - 30 fps; the size comes from the source video's dimensions and the duration is derived from the source.
    - In the last 5 s the overlay fades in (1 s spring) and slides up 30 px.
-   - The logo box is 15 % × 15 % at (50 %, 78 %). The text is `#00805F`, 4 % of the video height, with the first line's top at y = 85 %, on two lines: the fixed line "Met de warme steun van:" and the display name (≤ 35 chars). (Amended in phase 7 task 3: these are the old production preset `SPONSOR_OVERLAY_CONFIG`; the earlier 22 / 76 / 3.8 / 87 were the unused fallback. See DECISIONS.)
+   - The logo box is 22 % × 22 % at (50 %, 76 %). The text is `#00805F`, 3.8 % of the video height, with the first line's top at y = 87 %, on two lines: the fixed line "Met de warme steun van:" and the display name (≤ 35 chars). (Phase 7 task 9 parity walk: these are the old API router's `SPONSOR_OVERLAY_CONFIG`, which rendered every wizard preview, and a paid sponsorship's video was that preview. Task 3's 15 / 78 / 4 / 85 preset only rendered sponsorships without a preview. See DECISIONS.)
    - Props are validated by `renderInputSchema` (Zod, `./contract`).
 2. **Wizard preview:** `@remotion/player` renders the same composition live in the browser over the gesture's Mux MP4 rendition (`https://stream.mux.com/{playbackId}/highest.mp4`, static renditions enabled on upload). The logo comes from a local object URL until upload. There is no server work.
-3. **Final render:**
-   1. After payment, `render_job` rows are created and a Workflow instance is started per job.
-   2. Step `source` enables Mux temporary master access on the original asset and waits for the `video.asset.master.ready` webhook (via `step.waitForEvent`), falling back to polling with `step.sleep`.
-   3. Step `upload` creates a Mux direct upload with `passthrough = render_job.id`.
-   4. Step `render` calls the **Cloudflare Container** `SmogRenderer` (a Bun + Remotion + Chromium image built from `packages/render/container/Dockerfile`). Its `POST /render { input, sourceUrl, logoDataUrl?, uploadUrl }` renders H.264 to a temp file and PUTs it to Mux, with a 20 min timeout and 2 retries.
-   5. Step `ready` waits for the `video.asset.ready` webhook with that passthrough (1 h timeout, then polling).
-   6. Step `commit` stores the playback id on the job and on the sponsorship and transitions `rendering → in_review`.
-   7. Any failure after the retries leads to `render_failed` plus an admin email.
-4. **Mux webhooks** arrive at `POST /api/webhooks/mux`, verified with the Mux signing secret (Web Crypto HMAC in `@smog/video`, a thin `fetch` client with no `@mux/mux-node`; DECISIONS, phase 5 task 3). They are routed to Workflow events and to admin upload status.
+3. **Final render** (amended in phase 7 by rulings 4, 9 and 10; DECISIONS, phase 7 tasks 5–6 and 9):
+   1. After payment, `render_job` rows are created and a `RenderSponsorshipVideo` Workflow instance is started per job, its id the job id. The Workflow class is site wiring (`apps/site/src/worker/render-workflow.ts`); its logic is `runRenderJob` in `@smog/sponsorships/server`, which sees Mux, the logo, the renderer, the queues and the clock only through ports.
+   2. Step `start` marks the job `running` (a replay that finds it running continues) and reads the job's input and the sponsorship's current video. Step `source-lookup` finds the source asset from its playback id (`GET /video/v1/playback-ids/{id}`) and turns on temporary master access. Steps `source-poll-1` … `source-poll-30` poll the master every 10 s (`video.asset.master.ready` is not routed: it carries the source asset's passthrough, which several jobs share). Step `source-resolve` takes the master, or else the public static rendition (`highest.mp4`, then `high.mp4`); neither is `sourceUnavailable`. No signed URL is ever a step output.
+   3. Step `logo` reads `logos/<uuid>` from `MEDIA` itself (the Workflow runs in the site Worker; no logo header) and checks its size and type.
+   4. Step `render` cancels the job's previous upload, creates a fresh Mux direct upload (`passthrough = render-job:<id>`), re-reads the source URL and calls the **Cloudflare Container** `SmogRenderer` (Bun + Remotion + Chrome Headless Shell, `packages/render/container/Dockerfile`), one instance per job. Its `POST /render { v, renderJobId, input, sourceUrl, logoDataUrl, uploadUrl }` renders H.264 and PUTs it to Mux, with a 20 min timeout and 2 retries. The separate `upload` step of the first draft is folded in: a retry must never PUT to an upload an earlier attempt may have filled.
+   5. Step `ready-<uploadId>` waits for the event `mux-asset-<uploadId>`, which the webhook sends for that upload's `video.asset.ready` (1 h timeout, then 15 polls of 2 min).
+   6. Step `commit` stores the playback id on the job and on the sponsorship, transitions `rendering → in_review` and deletes the previous sponsored asset (never the gesture's own); a commit that finds the job no longer active deletes the new asset instead.
+   7. Any failure after the retries runs step `fail`: `render_failed` plus the admin email, and the upload is cancelled. The hourly watchdog recovers lost messages and dead instances.
+   8. Until the owner turns the pipeline on, no env deploys the Workflow or the Container: `apps/site/render-config.ts` adds them at build time only for `RENDER_MODE=local` (dev) or `container` with `SMOG_RENDER_PIPELINE=1` (phase 7 ruling 2).
+4. **Mux webhooks** arrive at `POST /api/webhooks/mux`, verified with the Mux signing secret (Web Crypto HMAC in `@smog/video`, a thin `fetch` client with no `@mux/mux-node`; DECISIONS, phase 5 task 3). `render-job:` passthroughs go to the Workflow (`sendEvent`), and a superseded upload's asset is deleted; `gesture-upload:` passthroughs update the admin upload status.
 5. **Mux asset lifecycle:**
    - On expiry, the sponsored asset is deleted (old behaviour; failures are logged and swallowed).
    - Admin gesture uploads use direct uploads with `cors_origin` = the `SITE_URL` origin and `new_asset_settings: { playback_policies: ["public"], static_renditions: [{ resolution: "highest" }], passthrough: "gesture-upload:<uuid>" }`; `test: true` is sent in dev only (DECISIONS, phase 5 task 3, "Ruling 4 as implemented").
 
-Local dev: the Container needs Docker. When Docker is missing, `RENDER_MODE=local` makes the Workflow call a local Bun render server (`bun -F @smog/render serve`) instead, and `RENDER_MODE=fake` (tests) returns the source playback id immediately.
+Local dev: the Container needs Docker. Without it, `SMOG_DEV_RENDER_MODE=local bun dev` makes the Workflow call a local Bun render server (`bun -F @smog/render serve`) instead, and `RENDER_MODE=fake` (tests, e2e, dev by default) returns the source playback id immediately. `bun -F @smog/site render:local-loop` runs the whole local loop once (phase 7 task 9).
 
 ### 8.3 Email (`@smog/email`)
 

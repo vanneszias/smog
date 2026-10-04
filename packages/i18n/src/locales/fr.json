@@ -2106,8 +2106,7 @@
       "showEnding": "Voir la fin",
       "loading": "Chargement de l’aperçu…",
       "fallbackNote": "La vidéo ne peut pas être lue ici, l’aperçu montre donc une image fixe du geste. La vidéo finale utilise le clip complet, avec cette fin.",
-      "unavailable": "L’aperçu ne peut pas être affiché pour le moment. La vidéo finale est réalisée avec votre nom et votre logo tels que saisis.",
-      "currentLogo": "Votre logo actuel reste dans la vidéo. Cet aperçu ne l’affiche pas\u00a0; choisissez un nouveau fichier pour le remplacer."
+      "unavailable": "L’aperçu ne peut pas être affiché pour le moment. La vidéo finale est réalisée avec votre nom et votre logo tels que saisis."
     }
   }
 }

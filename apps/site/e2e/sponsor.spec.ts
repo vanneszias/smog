@@ -61,6 +61,12 @@ const PENDING = "boos";
 const FREE = "blij";
 const REEDIT = "dankjewel";
 const PRESELECT = "goedemorgen";
+/**
+ * The review screenshots' gesture: never sponsored by any test (the R-11
+ * test only preselects it), so a full run, where the paid flow has taken
+ * Broer and Zus, still finds it free.
+ */
+const SHOTS_GESTURE = "Goedemorgen";
 const ALL = [
   ...FLOW_PAID,
   ...FLOW_FAILED,
@@ -787,7 +793,8 @@ test("review screenshots", async () => {
       async (page, name) => {
         await openWizard(page, `/sponsor?gesture=${FREE}`);
         await shoot(page, name("01-select"));
-        await choose(page, ["Broer"]);
+        // Its own gesture: the paid flow has taken Broer by now (task 8).
+        await choose(page, [SHOTS_GESTURE]);
         await page
           .getByRole("button", { exact: true, name: "Doorgaan" })
           .click();

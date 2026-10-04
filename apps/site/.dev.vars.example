@@ -74,7 +74,11 @@ OPENPANEL_CLIENT_SECRET=
 # also adds the RENDER_WORKFLOW binding at build time. Setting
 # RENDER_MODE=local here instead reaches a Worker without that binding, and
 # every job fails with `workflowUnavailable`. Local mode also needs the Mux
-# token above (the source and the upload are on Mux).
+# token above (the source and the upload are on Mux), or the Mux fake:
+# `bun -F @smog/site render:local-loop` starts the fake, the render server
+# and the dev server itself and renders one paid sponsorship end to end
+# (set RENDER_BROWSER_EXECUTABLE to a Chrome Headless Shell, or Remotion
+# downloads one). It needs the Mux values above left commented out.
 # RENDER_LOCAL_URL is a dev-only var (default http://127.0.0.1:3002); the
 # Worker refuses it in staging and production.
 # RENDER_LOCAL_URL=http://127.0.0.1:3002

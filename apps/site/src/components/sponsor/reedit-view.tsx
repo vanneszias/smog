@@ -33,6 +33,7 @@ import { detailsErrorMessage, mutationErrorMessage } from "./errors";
 import { LinkState } from "./link-state";
 import { LogoDropzone, LogoGuidelines } from "./logo-dropzone";
 import { SponsorPreviewSlot } from "./preview-slot";
+import { useKeptLogo } from "./use-kept-logo";
 
 export interface ReeditViewProps {
   token: string | null;
@@ -92,12 +93,17 @@ function ReeditForm({
   const submit = useReeditSubmit();
   const [displayName, setDisplayName] = useState(link.displayName);
   const [logo, setLogo] = useState<Blob | null>(null);
+  // The stored logo, shown until a new file replaces it (review M-5).
+  const keptLogo = useKeptLogo(link.hasLogo ? token : null);
   const [submitted, setSubmitted] = useState(false);
   const [captcha, setCaptcha] = useState<string | null>(null);
   const [captchaKey, setCaptchaKey] = useState(0);
   // The name is checked as the wizard checks it; the logo only when chosen.
   const nameError = displayNameError(displayName);
   const logoError = logo ? logoFileError(logo) : null;
+  // A new file replaces the kept logo (none while the new file is invalid).
+  const newLogo = logoError ? null : logo;
+  const previewLogo = logo ? newLogo : keptLogo;
   const days = Math.max(1, Math.ceil((link.expiresAt - Date.now()) / DAY_MS));
   const verified = turnstileSiteKey === null || captcha !== null;
 
@@ -150,17 +156,10 @@ function ReeditForm({
           <div className="flex min-w-0 flex-col gap-2">
             <SponsorPreviewSlot
               displayName={displayName.trim()}
-              logo={logoError ? null : logo}
+              logo={previewLogo}
               name={link.gesture.name}
               playbackId={gesture.data.playbackId}
             />
-            {/* The stored logo has no browser-readable URL (it is served
-                to admins only), so the preview says it stays (review M-5). */}
-            {link.hasLogo && !logo ? (
-              <Text className="max-w-[20rem]" size="body-sm" tone="muted">
-                {t("sponsor.preview.currentLogo")}
-              </Text>
-            ) : null}
           </div>
         ) : (
           <div />

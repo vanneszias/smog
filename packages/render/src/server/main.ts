@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { parseRenderServerEnv } from "@smog/config/env/render";
 import { VERSION } from "remotion/version";
 import { readSourceMetadata } from "../metadata";
+import { bundleAction, bundlerInstalled } from "./bundle-policy";
 import { scrubConsole } from "./console-scrub";
 import { describeBrowser, ensureRenderBrowser } from "./ensure-browser";
 import { describeError } from "./errors";
@@ -43,10 +44,23 @@ const log: RenderLog = {
 async function main(): Promise<void> {
   const env = parseRenderServerEnv(process.env);
 
-  // `serve` builds the bundle once; the image has it from its build stage
-  // (and no `@remotion/bundler`, so it is imported only when needed).
-  if (!existsSync(join(env.RENDER_BUNDLE_DIR, "index.html"))) {
-    log.info("no bundle yet: building it", { dir: env.RENDER_BUNDLE_DIR });
+  // The image has its bundle from its build stage (and no
+  // `@remotion/bundler`, so it is imported only when needed); dev rebuilds
+  // it on every start, so a kept one is never stale (`bundleAction`).
+  const hasBundle = existsSync(join(env.RENDER_BUNDLE_DIR, "index.html"));
+  if (
+    bundleAction({
+      canBundle: bundlerInstalled(),
+      environment: env.RENDER_ENVIRONMENT,
+      hasBundle,
+    }) === "build"
+  ) {
+    log.info(
+      hasBundle ? "rebuilding the bundle" : "no bundle yet: building it",
+      {
+        dir: env.RENDER_BUNDLE_DIR,
+      }
+    );
     const { buildBundle } = await import("./bundle");
     await buildBundle(env.RENDER_BUNDLE_DIR);
   }
