@@ -39,6 +39,7 @@ import {
   issueTokenStatements,
   paymentGuard,
   refundStatement,
+  revokeAllTokensStatement,
 } from "./statements";
 import { STALE_GUARD, transitionStatements } from "./transition";
 
@@ -189,7 +190,11 @@ export async function approveStatements(
   };
 }
 
-/** Reject (A-06): from `in_review` or `changes_requested`, with a reason. */
+/**
+ * Reject (A-06): from `in_review` or `changes_requested`, with a reason.
+ * The open links are revoked in the batch (an emailed re-edit link then
+ * reads as `invalid`).
+ */
 export async function rejectStatements(
   db: Db,
   input: ActorInput & { reason: string }
@@ -198,14 +203,17 @@ export async function rejectStatements(
   requireStatus(view, ["in_review", "changes_requested"], "reject");
   return {
     after: [],
-    statements: transitionStatements(db, {
-      actorId: input.actorId,
-      data: { reason: input.reason },
-      event: "rejected",
-      from: view.status,
-      now: input.now,
-      sponsorshipId: input.sponsorshipId,
-    }),
+    statements: [
+      ...transitionStatements(db, {
+        actorId: input.actorId,
+        data: { reason: input.reason },
+        event: "rejected",
+        from: view.status,
+        now: input.now,
+        sponsorshipId: input.sponsorshipId,
+      }),
+      revokeAllTokensStatement(db, input),
+    ],
   };
 }
 
@@ -477,7 +485,8 @@ export async function markPaidStatements(
  * Cancel (A-11): only an `open` payment, the whole payment. The admin
  * re-fetched Mollie first (`paid` is refused there) and cancelled it at
  * Mollie when it could. An initial payment's items are `cancelled`
- * (`{ reason: "admin" }`); a renewal only marks the payment.
+ * (`{ reason: "admin" }`) and their open links revoked; a renewal only
+ * marks the payment (its renewal link stays open for another try).
  */
 export async function cancelPaymentStatements(
   db: Db,
@@ -498,16 +507,20 @@ export async function cancelPaymentStatements(
       ...(view.kind === "initial"
         ? view.items
             .filter((item) => item.status === "awaiting_payment")
-            .flatMap((item) =>
-              transitionStatements(db, {
+            .flatMap((item) => [
+              ...transitionStatements(db, {
                 actorId,
                 data: { paymentId, reason: "admin" },
                 event: "cancelled",
                 from: item.status,
                 now,
                 sponsorshipId: item.sponsorshipId,
-              })
-            )
+              }),
+              revokeAllTokensStatement(db, {
+                now,
+                sponsorshipId: item.sponsorshipId,
+              }),
+            ])
         : []),
     ],
   };
@@ -516,7 +529,8 @@ export async function cancelPaymentStatements(
 /**
  * Force expire (A-12): from `live` or `expiring`. `muxAssetId` is the
  * sponsored video's asset to delete after the batch (as the expiry sweep
- * does), or `null` when there is none or it is the gesture's own.
+ * does), or `null` when there is none or it is the gesture's own. The
+ * open renewal and re-edit links are revoked in the batch.
  */
 export async function forceExpireStatements(
   db: Db,
@@ -528,14 +542,17 @@ export async function forceExpireStatements(
   return {
     after: [],
     muxAssetId: view.videoAssetId && !own ? view.videoAssetId : null,
-    statements: transitionStatements(db, {
-      actorId: input.actorId,
-      data: {},
-      event: "force_expired",
-      from: view.status,
-      now: input.now,
-      sponsorshipId: input.sponsorshipId,
-    }),
+    statements: [
+      ...transitionStatements(db, {
+        actorId: input.actorId,
+        data: {},
+        event: "force_expired",
+        from: view.status,
+        now: input.now,
+        sponsorshipId: input.sponsorshipId,
+      }),
+      revokeAllTokensStatement(db, input),
+    ],
   };
 }
 

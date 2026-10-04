@@ -17,6 +17,7 @@ import {
   SponsorshipActionError,
 } from "../src/server/lifecycle";
 import { adminRecipients } from "../src/server/recipients";
+import { readTokenLink } from "../src/server/token-link";
 import { isStaleTransition } from "../src/server/transition";
 import {
   eventsOf,
@@ -462,6 +463,135 @@ describe("force expire and refunds", () => {
     const row = await paymentRow(db, seeded.paymentId);
     expect(row.refundedCents).toBe(5000);
     expect(row.refundedAt?.getTime()).toBe(NOW.getTime());
+  });
+});
+
+describe("ending a sponsorship revokes its open links (phase 6 close-out)", () => {
+  interface Raws {
+    reedit: string;
+    renewal: string;
+  }
+
+  /** An open re-edit and an open renewal link, as raw tokens. */
+  async function openLinks(sponsorshipId: string): Promise<Raws> {
+    const raws: Raws = {
+      reedit: `reedit-${newId()}`,
+      renewal: `renewal-${newId()}`,
+    };
+    for (const purpose of ["reedit", "renewal"] as const) {
+      // biome-ignore lint/performance/noAwaitInLoops: two rows.
+      await db.insert(sponsorshipToken).values({
+        createdAt: NOW,
+        expiresAt: new Date(NOW.getTime() + 7 * DAY_MS),
+        id: newId(),
+        purpose,
+        sponsorshipId,
+        tokenHash: await hashSponsorshipToken(raws[purpose]),
+      });
+    }
+    return raws;
+  }
+
+  async function linkKinds(raws: Raws): Promise<string[]> {
+    const kinds: string[] = [];
+    for (const purpose of ["reedit", "renewal"] as const) {
+      // biome-ignore lint/performance/noAwaitInLoops: two reads.
+      const link = await readTokenLink(db, {
+        now: NOW,
+        purpose,
+        raw: raws[purpose],
+      });
+      kinds.push(link.kind);
+    }
+    return kinds;
+  }
+
+  async function expectRevoked(sponsorshipId: string, raws: Raws) {
+    const tokens = await tokensOf(sponsorshipId);
+    expect(tokens).toHaveLength(2);
+    for (const token of tokens) {
+      expect(token.usedAt?.getTime()).toBe(NOW.getTime());
+    }
+    expect(await linkKinds(raws)).toEqual(["invalid", "invalid"]);
+  }
+
+  it("force expire revokes the open renewal and re-edit links in its batch", async () => {
+    const seeded = await seedCheckout(db, {
+      endsAt: new Date(NOW.getTime() + 10 * DAY_MS),
+      status: "expiring",
+      videoPlaybackId: "p",
+    });
+    const id = seeded.sponsorshipIds[0] as string;
+    const raws = await openLinks(id);
+    const plan = await forceExpireStatements(db, {
+      actorId,
+      now: NOW,
+      sponsorshipId: id,
+    });
+    await db.batch(plan.statements as never);
+    expect(await statusOf(db, id)).toBe("expired");
+    await expectRevoked(id, raws);
+  });
+
+  it("reject revokes the open links in its batch", async () => {
+    const { id } = await one({ status: "changes_requested" });
+    const raws = await openLinks(id);
+    const plan = await rejectStatements(db, {
+      actorId,
+      now: NOW,
+      reason: "No",
+      sponsorshipId: id,
+    });
+    await db.batch(plan.statements as never);
+    expect(await statusOf(db, id)).toBe("rejected");
+    await expectRevoked(id, raws);
+  });
+
+  it("cancel revokes the open links of every cancelled sponsorship", async () => {
+    const seeded = await seedCheckout(db, { count: 2 });
+    const links: Raws[] = [];
+    for (const id of seeded.sponsorshipIds) {
+      // biome-ignore lint/performance/noAwaitInLoops: one fixture at a time.
+      links.push(await openLinks(id));
+    }
+    const plan = await cancelPaymentStatements(db, {
+      actorId,
+      now: NOW,
+      paymentId: seeded.paymentId,
+    });
+    await db.batch(plan.statements as never);
+    for (const [index, id] of seeded.sponsorshipIds.entries()) {
+      // biome-ignore lint/performance/noAwaitInLoops: one fixture at a time.
+      await expectRevoked(id, links[index] as Raws);
+    }
+  });
+
+  it("a lost race revokes nothing", async () => {
+    const { id } = await one({ status: "in_review" });
+    const raws = await openLinks(id);
+    const late = await rejectStatements(db, {
+      actorId,
+      now: NOW,
+      reason: "Late",
+      sponsorshipId: id,
+    });
+    const first = await rejectStatements(db, {
+      actorId,
+      now: NOW,
+      reason: "First",
+      sponsorshipId: id,
+    });
+    await db.batch(first.statements as never);
+    // Reopen the links the winner revoked; the loser must not touch them.
+    await db
+      .update(sponsorshipToken)
+      .set({ usedAt: null })
+      .where(eq(sponsorshipToken.sponsorshipId, id));
+    const error = await db
+      .batch(late.statements as never)
+      .catch((e: unknown) => e);
+    expect(isStaleTransition(error)).toBe(true);
+    expect(await linkKinds(raws)).toEqual(["open", "open"]);
   });
 });
 
