@@ -18,7 +18,7 @@ export interface EmptyStateProps extends Omit<ViewProps, "children"> {
   /** Show one of the brand hands (index into `handSvgs`, `true` = the first). */
   illustration?: boolean | 0 | 1 | 2;
   /** Web's heading level; native has one `header` role. */
-  level?: 2 | 3 | 4;
+  level?: 1 | 2 | 3 | 4;
   ref?: Ref<View>;
   title?: ReactNode;
 }

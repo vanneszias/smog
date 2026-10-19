@@ -1,4 +1,5 @@
 import { type Environment, MUX_DEFAULT_API_URL } from "@smog/config/env/worker";
+import { r2Origin } from "@smog/sponsorships/server";
 
 /**
  * The site's security headers (spec §9, the old Caddy set), added to every
@@ -9,7 +10,9 @@ import { type Environment, MUX_DEFAULT_API_URL } from "@smog/config/env/worker";
  * - Every response: `X-Content-Type-Options`, `Referrer-Policy` and, outside
  *   dev, `Strict-Transport-Security`.
  * - HTML and redirects also get the CSP, `X-Frame-Options`,
- *   `Permissions-Policy` and `Cross-Origin-Opener-Policy`.
+ *   `Permissions-Policy`, `Cross-Origin-Opener-Policy` and
+ *   `Reporting-Endpoints` (the CSP's `report-to csp` group, on the
+ *   request's own origin).
  * - A header the route already set wins: this never overwrites one. A route
  *   that sends its own `Content-Security-Policy` (or `-Report-Only`), like
  *   `/turnstile-bridge`, gets neither CSP header from here, so its policy is
@@ -20,6 +23,12 @@ import { type Environment, MUX_DEFAULT_API_URL } from "@smog/config/env/worker";
 export const THEME_SCRIPT_HASH: string = __SMOG_THEME_SCRIPT_HASH__;
 
 const HSTS = "max-age=31536000; includeSubDomains";
+
+/** The CSP report endpoint (`routes/api/csp-report.ts`, phase 8 ruling 11). */
+const CSP_REPORT_PATH = "/api/csp-report";
+/** The `report-to` group `Reporting-Endpoints` names. */
+const CSP_REPORT_GROUP = "csp";
+const REPORTING_ENDPOINTS = "reporting-endpoints";
 const CSP = "content-security-policy";
 const CSP_REPORT_ONLY = "content-security-policy-report-only";
 
@@ -48,6 +57,9 @@ const DOCUMENT_HEADERS: Readonly<Record<string, string>> = {
  * The OpenPanel relay is same-origin (`/api/analytics`). The site loads no
  * web fonts, so `font-src` is the brief's minus fonts.gstatic.com.
  * `connectSrc` adds sources to `connect-src` (dev: the Mux fake).
+ * Violations are reported same-origin: `report-uri` for browsers without
+ * the Reporting API, `report-to` for the rest (whose endpoint comes from
+ * the `Reporting-Endpoints` header, `reportingEndpoints`).
  */
 export function buildCsp(
   nonce: string,
@@ -70,12 +82,41 @@ export function buildCsp(
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
+    `report-uri ${CSP_REPORT_PATH}`,
+    `report-to ${CSP_REPORT_GROUP}`,
   ].join("; ");
+}
+
+/**
+ * The `Reporting-Endpoints` value for the CSP's `report-to` group:
+ * `csp="<origin>/api/csp-report"` on the **request's own origin**, so the
+ * endpoint is always same-origin with the document (never `SITE_URL`: a
+ * placeholder or another host there would send unredacted reports
+ * elsewhere, or cross-origin where the route grants no CORS). Null when the
+ * URL is not http(s); the CSP's `report-uri` still reports then.
+ */
+export function reportingEndpoints(requestUrl: unknown): string | null {
+  if (typeof requestUrl !== "string") {
+    return null;
+  }
+  try {
+    const { origin, protocol } = new URL(requestUrl);
+    return protocol === "https:" || protocol === "http:"
+      ? `${CSP_REPORT_GROUP}="${origin}${CSP_REPORT_PATH}"`
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface CspOptions {
   /** Extra `connect-src` sources (`devConnectSources`). */
   connectSrc?: readonly string[];
+}
+
+export interface RespondOptions extends CspOptions {
+  /** The request's URL, for `Reporting-Endpoints` (its origin). */
+  requestUrl?: unknown;
 }
 
 /**
@@ -98,6 +139,20 @@ export function devConnectSources(
   }
 }
 
+/** A Cloudflare account id: 32 lowercase hex characters. */
+const R2_ACCOUNT_ID = /^[0-9a-f]{32}$/;
+
+/**
+ * The extra `connect-src` for the sponsor logo's presigned PUT (phase 6
+ * ruling 10): the account's R2 S3 host, when `R2_ACCOUNT_ID` is set. Without
+ * it the logo uses the same-origin fallback, which `'self'` covers.
+ */
+export function r2ConnectSources(accountId: unknown): string[] {
+  return typeof accountId === "string" && R2_ACCOUNT_ID.test(accountId)
+    ? [r2Origin(accountId)]
+    : [];
+}
+
 /** A fresh CSP nonce: 128 random bits, base64. */
 export function createNonce(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -109,6 +164,8 @@ export interface SecurityHeaderOptions {
   connectSrc?: readonly string[];
   environment: Environment;
   nonce: string;
+  /** The request's URL, for `Reporting-Endpoints` (`reportingEndpoints`). */
+  requestUrl?: unknown;
 }
 
 function isDocument(response: Response): boolean {
@@ -153,6 +210,10 @@ export function withSecurityHeaders(
     return secured;
   }
   setMissing(headers, DOCUMENT_HEADERS);
+  const endpoints = reportingEndpoints(options.requestUrl);
+  if (endpoints) {
+    setMissing(headers, { [REPORTING_ENDPOINTS]: endpoints });
+  }
   if (headers.get("content-type")?.startsWith("text/html")) {
     // The page carries this response's nonce: never let a shared cache
     // (a later Cache Rule, a proxy) serve it to someone else.
@@ -177,7 +238,7 @@ export function withSecurityHeaders(
 export async function respondSecurely(
   environment: Environment,
   handle: (nonce: string) => Promise<Response> | Response,
-  { connectSrc = [] }: CspOptions = {}
+  { connectSrc = [], requestUrl }: RespondOptions = {}
 ): Promise<Response> {
   const nonce = createNonce();
   let response: Response;
@@ -193,5 +254,10 @@ export async function respondSecurely(
       status: 500,
     });
   }
-  return withSecurityHeaders(response, { connectSrc, environment, nonce });
+  return withSecurityHeaders(response, {
+    connectSrc,
+    environment,
+    nonce,
+    requestUrl,
+  });
 }

@@ -31,6 +31,17 @@ const PUBLIC_PROCEDURES = [
   "gestures.search",
   "gestures.sitemap",
   "lists.shared.get",
+  // Sponsoring needs no account; the mutations run Turnstile and
+  // RL_SPONSOR (ruling 5, tested in @smog/sponsorships).
+  "sponsorships.availability",
+  "sponsorships.checkout",
+  "sponsorships.paymentStatus",
+  "sponsorships.quote",
+  "sponsorships.reedit.get",
+  "sponsorships.reedit.submit",
+  "sponsorships.renewal.checkout",
+  "sponsorships.renewal.get",
+  "sponsorships.uploadLogo",
   "system.authConfig",
   "system.health",
   "system.whoami",

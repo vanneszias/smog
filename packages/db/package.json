@@ -16,7 +16,7 @@
     "migrate:dev": "cd ../../apps/site && wrangler d1 migrations apply DB --env dev --local",
     "seed:build": "bun scripts/seed.ts",
     "seed:dev": "bun scripts/seed.ts && cd ../../apps/site && wrangler d1 execute DB --env dev --local --file ../../packages/db/seed/dev.sql && wrangler kv key put catalog:version seed-$(date +%s) --binding KV --env dev --local",
-    "test": "vitest run && bun test scripts"
+    "test": "bun ../../scripts/test-deadline.ts -- vitest run && bun ../../scripts/test-deadline.ts -- bun test scripts"
   },
   "dependencies": {
     "@smog/config": "workspace:*",

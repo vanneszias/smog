@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderKit } from "../test/render";
+import { classesOf, renderKit } from "../test/render";
 import { ErrorState } from "./error-state";
 
 describe("ErrorState", () => {
@@ -19,5 +19,11 @@ describe("ErrorState", () => {
     renderKit(<ErrorState title="Oops" />);
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.getByRole("heading", { name: "Oops" })).toBeDefined();
+  });
+
+  test("is the page's h1 at level 1, sized as a screen title", () => {
+    renderKit(<ErrorState level={1} title="Oops" />);
+    const heading = screen.getByRole("heading", { level: 1, name: "Oops" });
+    expect(classesOf(heading)).toContain("text-title-1");
   });
 });

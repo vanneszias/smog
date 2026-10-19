@@ -48,6 +48,9 @@ export const sponsor = sqliteTable(
     check("sponsor_company_length_check", lengthBetween(t.company, 0, 120)),
     check("sponsor_locale_check", inValues(t.locale, LOCALES)),
     index("sponsor_email_idx").on(t.email),
+    // The admin user panel and the account export match sponsors to an
+    // account by `lower(email)`: migration 0010, phase 6 task 6.
+    index("sponsor_email_lower_idx").on(sql`lower(${t.email})`),
   ]
 );
 
@@ -105,6 +108,9 @@ export const sponsorship = sqliteTable(
     index("sponsorship_gesture_status_idx").on(t.gestureId, t.status),
     index("sponsorship_status_ends_at_idx").on(t.status, t.endsAt),
     index("sponsorship_sponsor_id_idx").on(t.sponsorId),
+    // The admin list and the CSV export (`created_at, id` keyset, newest
+    // first and oldest first): migration 0010, phase 6 task 6.
+    index("sponsorship_created_id_idx").on(t.createdAt, t.id),
   ]
 );
 
@@ -124,6 +130,21 @@ export const payment = sqliteTable(
     paidAt: timestamp("paid_at"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
+    /**
+     * Mollie's `amountRefunded`, stored on every re-fetch (migration 0008,
+     * phase 6 ruling 4). Refunds are made by hand in the Mollie dashboard.
+     */
+    refundedCents: integer("refunded_cents").notNull().default(0),
+    /** When a refund was first recorded (`admin.sponsorships.recordRefund` or a webhook). */
+    refundedAt: timestamp("refunded_at"),
+    /**
+     * Mollie's `amountChargedBack` (migration 0009): the money the payer's
+     * bank took back. The status stays `paid`; an admin decides what
+     * happens to the sponsorship (phase 6 task 3 fix round 1, I-3).
+     */
+    chargedBackCents: integer("charged_back_cents").notNull().default(0),
+    /** When a chargeback was first seen. */
+    chargedBackAt: timestamp("charged_back_at"),
   },
   (t) => [
     check("payment_kind_check", inValues(t.kind, PAYMENT_KINDS)),
@@ -187,6 +208,9 @@ export const renderJob = sqliteTable(
     ),
     index("render_job_mux_upload_id_idx").on(t.muxUploadId),
     index("render_job_mux_asset_id_idx").on(t.muxAssetId),
+    // The render watchdog's seek (phase 7 ruling 12): active jobs of one
+    // status, oldest first.
+    index("render_job_status_updated_idx").on(t.status, t.updatedAt),
   ]
 );
 

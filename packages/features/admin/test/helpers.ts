@@ -11,7 +11,7 @@ import { type Auth, createAuth } from "@smog/auth";
 import type { Category, Gesture, Role, User } from "@smog/db";
 import { createDb, type Db } from "@smog/db/client";
 import { makeCategory, makeGesture, makeUser } from "@smog/db/testing";
-import { MemoryEmailSender } from "@smog/email";
+import { DirectEmailOutbox, MemoryEmailSender } from "@smog/email";
 import { makeRpcContext } from "@smog/rpc/testing";
 import { expect } from "vitest";
 import { ADMIN_PROCEDURE_KINDS, adminContract } from "../src/contract";
@@ -19,8 +19,15 @@ import { auditDataSchema, type WritableAuditAction } from "../src/schema";
 import { createAdminRouter } from "../src/server";
 import { adminDeps } from "./deps";
 import { TEST_MUX_ENV } from "./mux-fake";
+import { RECORDING_QUEUES, TEST_MOLLIE_ENV } from "./sponsorship-fakes";
 
-const SITE_URL = "http://localhost:5173";
+export const SITE_URL = "http://localhost:5173";
+
+/**
+ * The rpc env: the Mux and Mollie fakes' URLs and credentials, and queues
+ * that record what was enqueued.
+ */
+const TEST_ENV = { ...TEST_MUX_ENV, ...TEST_MOLLIE_ENV, ...RECORDING_QUEUES };
 const PASSWORD = "correct horse battery";
 
 export function testDb(): Db {
@@ -32,14 +39,16 @@ function testAuth(): Auth {
   return createAuth({
     baseURL: SITE_URL,
     db: testDb(),
-    email: new MemoryEmailSender(),
     env: {
       BETTER_AUTH_SECRET: "admin-test-secret-at-least-32-characters",
-      EMAIL_FROM: "SMOG & Co <noreply@smog.vlaanderen>",
-      EMAIL_REPLY_TO: "info@smog.vlaanderen",
       ENVIRONMENT: "dev",
       SITE_URL,
     },
+    outbox: new DirectEmailOutbox(new MemoryEmailSender(), {
+      EMAIL_FROM: "SMOG & Co <noreply@smog.vlaanderen>",
+      EMAIL_REPLY_TO: "info@smog.vlaanderen",
+      SITE_URL,
+    }),
   });
 }
 
@@ -91,14 +100,15 @@ export async function signedUp(
  */
 export async function contextAs(as: Authed | null) {
   if (!as) {
-    return makeRpcContext({ db: testDb(), env: TEST_MUX_ENV, kv: env.KV });
+    return makeRpcContext({ db: testDb(), env: TEST_ENV, kv: env.KV });
   }
   const headers = new Headers({ cookie: as.cookie, origin: SITE_URL });
   return makeRpcContext({
     auth: as.auth,
     db: testDb(),
-    // The Mux fake (`test/mux-fake.ts`); `test/deps.ts` injects its fetch.
-    env: TEST_MUX_ENV,
+    // The Mux and Mollie fakes (`test/mux-fake.ts`,
+    // `test/sponsorship-fakes.ts`); `test/deps.ts` injects their fetches.
+    env: TEST_ENV,
     kv: env.KV,
     request: new Request(`${SITE_URL}/api/rpc/admin`, {
       headers,

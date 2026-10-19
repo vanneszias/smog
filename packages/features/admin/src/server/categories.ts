@@ -1,10 +1,13 @@
 import {
   category,
+  failWhen,
+  GuardFailedError,
   gesture,
   gestureCategory,
   jsonList,
   rebuildCategoryGesturesFtsSql,
   ref,
+  type Statement,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { newId, normalizeText } from "@smog/utils";
@@ -13,11 +16,8 @@ import { ADMIN_CATEGORIES_MAX, type AdminCategory } from "../schema";
 import { auditStatement } from "./audit-writer";
 import {
   bumpCatalog,
-  failWhen,
-  GuardFailedError,
   nextUpdatedAt,
   runCatalogBatch,
-  type Statement,
   withFreeSlug,
 } from "./catalog-writes";
 import { type AdminDeps, adminProcedure } from "./procedure";

@@ -31,6 +31,7 @@ import { Route as AdminEmailsRouteImport } from './routes/admin/emails'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
+import { Route as ApiCspReportRouteImport } from './routes/api/csp-report'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DevE2eSeedRouteImport } from './routes/dev/e2e-seed'
 import { Route as DevMailRouteImport } from './routes/dev/mail'
@@ -41,13 +42,24 @@ import { Route as GesturesSlugRouteImport } from './routes/gestures/$slug'
 import { Route as ListsIndexRouteImport } from './routes/lists/index'
 import { Route as ListsShareTokenRouteImport } from './routes/lists/$shareToken'
 import { Route as MagicLinkAppRouteImport } from './routes/magic-link_.app'
+import { Route as SponsorIndexRouteImport } from './routes/sponsor/index'
+import { Route as SponsorEditRouteImport } from './routes/sponsor/edit'
+import { Route as SponsorRenewRouteImport } from './routes/sponsor/renew'
+import { Route as SponsorSuccessRouteImport } from './routes/sponsor/success'
+import { Route as WebhooksMollieRouteImport } from './routes/webhooks/mollie'
 import { Route as AdminGesturesIndexRouteImport } from './routes/admin/gestures/index'
 import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id'
 import { Route as AdminGesturesNewRouteImport } from './routes/admin/gestures/new'
+import { Route as AdminSponsorshipsIndexRouteImport } from './routes/admin/sponsorships/index'
+import { Route as AdminSponsorshipsIdRouteImport } from './routes/admin/sponsorships/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiLogosKeyRouteImport } from './routes/api/logos/$key'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
+import { Route as ApiSponsorReeditLogoRouteImport } from './routes/api/sponsor/reedit-logo'
+import { Route as ApiWebhooksMollieRouteImport } from './routes/api/webhooks/mollie'
 import { Route as ApiWebhooksMuxRouteImport } from './routes/api/webhooks/mux'
+import { Route as ApiLogosUploadKeyRouteImport } from './routes/api/logos/upload.$key'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -159,6 +171,11 @@ const ApiAnalyticsRoute = ApiAnalyticsRouteImport.update({
   path: '/api/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCspReportRoute = ApiCspReportRouteImport.update({
+  id: '/api/csp-report',
+  path: '/api/csp-report',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
@@ -209,6 +226,31 @@ const MagicLinkAppRoute = MagicLinkAppRouteImport.update({
   path: '/magic-link/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SponsorIndexRoute = SponsorIndexRouteImport.update({
+  id: '/sponsor/',
+  path: '/sponsor/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SponsorEditRoute = SponsorEditRouteImport.update({
+  id: '/sponsor/edit',
+  path: '/sponsor/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SponsorRenewRoute = SponsorRenewRouteImport.update({
+  id: '/sponsor/renew',
+  path: '/sponsor/renew',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SponsorSuccessRoute = SponsorSuccessRouteImport.update({
+  id: '/sponsor/success',
+  path: '/sponsor/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WebhooksMollieRoute = WebhooksMollieRouteImport.update({
+  id: '/webhooks/mollie',
+  path: '/webhooks/mollie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminGesturesIndexRoute = AdminGesturesIndexRouteImport.update({
   id: '/gestures/',
   path: '/gestures/',
@@ -224,9 +266,24 @@ const AdminGesturesNewRoute = AdminGesturesNewRouteImport.update({
   path: '/gestures/new',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSponsorshipsIndexRoute = AdminSponsorshipsIndexRouteImport.update({
+  id: '/sponsorships/',
+  path: '/sponsorships/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSponsorshipsIdRoute = AdminSponsorshipsIdRouteImport.update({
+  id: '/sponsorships/$id',
+  path: '/sponsorships/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLogosKeyRoute = ApiLogosKeyRouteImport.update({
+  id: '/api/logos/$key',
+  path: '/api/logos/$key',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOpenapiSplatRoute = ApiOpenapiSplatRouteImport.update({
@@ -239,9 +296,24 @@ const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   path: '/api/rpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSponsorReeditLogoRoute = ApiSponsorReeditLogoRouteImport.update({
+  id: '/api/sponsor/reedit-logo',
+  path: '/api/sponsor/reedit-logo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhooksMollieRoute = ApiWebhooksMollieRouteImport.update({
+  id: '/api/webhooks/mollie',
+  path: '/api/webhooks/mollie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWebhooksMuxRoute = ApiWebhooksMuxRouteImport.update({
   id: '/api/webhooks/mux',
   path: '/api/webhooks/mux',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLogosUploadKeyRoute = ApiLogosUploadKeyRouteImport.update({
+  id: '/api/logos/upload/$key',
+  path: '/api/logos/upload/$key',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -267,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
@@ -275,16 +348,27 @@ export interface FileRoutesByFullPath {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link/app': typeof MagicLinkAppRoute
+  '/sponsor/edit': typeof SponsorEditRoute
+  '/sponsor/renew': typeof SponsorRenewRoute
+  '/sponsor/success': typeof SponsorSuccessRoute
+  '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
+  '/sponsor/': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
+  '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
+  '/admin/sponsorships/': typeof AdminSponsorshipsIndexRoute
+  '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -307,6 +391,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
@@ -315,16 +400,27 @@ export interface FileRoutesByTo {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link/app': typeof MagicLinkAppRoute
+  '/sponsor/edit': typeof SponsorEditRoute
+  '/sponsor/renew': typeof SponsorRenewRoute
+  '/sponsor/success': typeof SponsorSuccessRoute
+  '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin': typeof AdminIndexRoute
   '/gestures': typeof GesturesIndexRoute
   '/lists': typeof ListsIndexRoute
+  '/sponsor': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
+  '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures': typeof AdminGesturesIndexRoute
+  '/admin/sponsorships': typeof AdminSponsorshipsIndexRoute
+  '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -349,6 +445,7 @@ export interface FileRoutesById {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
@@ -357,16 +454,27 @@ export interface FileRoutesById {
   '/gestures/$slug': typeof GesturesSlugRoute
   '/lists/$shareToken': typeof ListsShareTokenRoute
   '/magic-link_/app': typeof MagicLinkAppRoute
+  '/sponsor/edit': typeof SponsorEditRoute
+  '/sponsor/renew': typeof SponsorRenewRoute
+  '/sponsor/success': typeof SponsorSuccessRoute
+  '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
   '/lists/': typeof ListsIndexRoute
+  '/sponsor/': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
+  '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
+  '/admin/sponsorships/': typeof AdminSponsorshipsIndexRoute
+  '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -392,6 +500,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/users'
     | '/api/analytics'
+    | '/api/csp-report'
     | '/api/health'
     | '/dev/e2e-seed'
     | '/dev/mail'
@@ -400,16 +509,27 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link/app'
+    | '/sponsor/edit'
+    | '/sponsor/renew'
+    | '/sponsor/success'
+    | '/webhooks/mollie'
     | '/admin/'
     | '/gestures/'
     | '/lists/'
+    | '/sponsor/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/sponsorships/$id'
     | '/api/auth/$'
+    | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor/reedit-logo'
+    | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
+    | '/admin/sponsorships/'
+    | '/api/logos/upload/$key'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -432,6 +552,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/users'
     | '/api/analytics'
+    | '/api/csp-report'
     | '/api/health'
     | '/dev/e2e-seed'
     | '/dev/mail'
@@ -440,16 +561,27 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link/app'
+    | '/sponsor/edit'
+    | '/sponsor/renew'
+    | '/sponsor/success'
+    | '/webhooks/mollie'
     | '/admin'
     | '/gestures'
     | '/lists'
+    | '/sponsor'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/sponsorships/$id'
     | '/api/auth/$'
+    | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor/reedit-logo'
+    | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures'
+    | '/admin/sponsorships'
+    | '/api/logos/upload/$key'
   id:
     | '__root__'
     | '/'
@@ -473,6 +605,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/users'
     | '/api/analytics'
+    | '/api/csp-report'
     | '/api/health'
     | '/dev/e2e-seed'
     | '/dev/mail'
@@ -481,16 +614,27 @@ export interface FileRouteTypes {
     | '/gestures/$slug'
     | '/lists/$shareToken'
     | '/magic-link_/app'
+    | '/sponsor/edit'
+    | '/sponsor/renew'
+    | '/sponsor/success'
+    | '/webhooks/mollie'
     | '/admin/'
     | '/gestures/'
     | '/lists/'
+    | '/sponsor/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/sponsorships/$id'
     | '/api/auth/$'
+    | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor/reedit-logo'
+    | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
+    | '/admin/sponsorships/'
+    | '/api/logos/upload/$key'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -510,6 +654,7 @@ export interface RootRouteChildren {
   TurnstileBridgeRoute: typeof TurnstileBridgeRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
+  ApiCspReportRoute: typeof ApiCspReportRoute
   ApiHealthRoute: typeof ApiHealthRoute
   DevE2eSeedRoute: typeof DevE2eSeedRoute
   DevMailRoute: typeof DevMailRoute
@@ -518,12 +663,21 @@ export interface RootRouteChildren {
   GesturesSlugRoute: typeof GesturesSlugRoute
   ListsShareTokenRoute: typeof ListsShareTokenRoute
   MagicLinkAppRoute: typeof MagicLinkAppRoute
+  SponsorEditRoute: typeof SponsorEditRoute
+  SponsorRenewRoute: typeof SponsorRenewRoute
+  SponsorSuccessRoute: typeof SponsorSuccessRoute
+  WebhooksMollieRoute: typeof WebhooksMollieRoute
   GesturesIndexRoute: typeof GesturesIndexRoute
   ListsIndexRoute: typeof ListsIndexRoute
+  SponsorIndexRoute: typeof SponsorIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiLogosKeyRoute: typeof ApiLogosKeyRoute
   ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
+  ApiSponsorReeditLogoRoute: typeof ApiSponsorReeditLogoRoute
+  ApiWebhooksMollieRoute: typeof ApiWebhooksMollieRoute
   ApiWebhooksMuxRoute: typeof ApiWebhooksMuxRoute
+  ApiLogosUploadKeyRoute: typeof ApiLogosUploadKeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -682,6 +836,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/csp-report': {
+      id: '/api/csp-report'
+      path: '/api/csp-report'
+      fullPath: '/api/csp-report'
+      preLoaderRoute: typeof ApiCspReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -752,6 +913,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MagicLinkAppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sponsor/': {
+      id: '/sponsor/'
+      path: '/sponsor'
+      fullPath: '/sponsor/'
+      preLoaderRoute: typeof SponsorIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sponsor/edit': {
+      id: '/sponsor/edit'
+      path: '/sponsor/edit'
+      fullPath: '/sponsor/edit'
+      preLoaderRoute: typeof SponsorEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sponsor/renew': {
+      id: '/sponsor/renew'
+      path: '/sponsor/renew'
+      fullPath: '/sponsor/renew'
+      preLoaderRoute: typeof SponsorRenewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sponsor/success': {
+      id: '/sponsor/success'
+      path: '/sponsor/success'
+      fullPath: '/sponsor/success'
+      preLoaderRoute: typeof SponsorSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/webhooks/mollie': {
+      id: '/webhooks/mollie'
+      path: '/webhooks/mollie'
+      fullPath: '/webhooks/mollie'
+      preLoaderRoute: typeof WebhooksMollieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/gestures/': {
       id: '/admin/gestures/'
       path: '/gestures'
@@ -773,11 +969,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGesturesNewRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/sponsorships/': {
+      id: '/admin/sponsorships/'
+      path: '/sponsorships'
+      fullPath: '/admin/sponsorships/'
+      preLoaderRoute: typeof AdminSponsorshipsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/sponsorships/$id': {
+      id: '/admin/sponsorships/$id'
+      path: '/sponsorships/$id'
+      fullPath: '/admin/sponsorships/$id'
+      preLoaderRoute: typeof AdminSponsorshipsIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/logos/$key': {
+      id: '/api/logos/$key'
+      path: '/api/logos/$key'
+      fullPath: '/api/logos/$key'
+      preLoaderRoute: typeof ApiLogosKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/openapi/$': {
@@ -794,11 +1011,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sponsor/reedit-logo': {
+      id: '/api/sponsor/reedit-logo'
+      path: '/api/sponsor/reedit-logo'
+      fullPath: '/api/sponsor/reedit-logo'
+      preLoaderRoute: typeof ApiSponsorReeditLogoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/mollie': {
+      id: '/api/webhooks/mollie'
+      path: '/api/webhooks/mollie'
+      fullPath: '/api/webhooks/mollie'
+      preLoaderRoute: typeof ApiWebhooksMollieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/webhooks/mux': {
       id: '/api/webhooks/mux'
       path: '/api/webhooks/mux'
       fullPath: '/api/webhooks/mux'
       preLoaderRoute: typeof ApiWebhooksMuxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/logos/upload/$key': {
+      id: '/api/logos/upload/$key'
+      path: '/api/logos/upload/$key'
+      fullPath: '/api/logos/upload/$key'
+      preLoaderRoute: typeof ApiLogosUploadKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -813,7 +1051,9 @@ interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminGesturesIdRoute: typeof AdminGesturesIdRoute
   AdminGesturesNewRoute: typeof AdminGesturesNewRoute
+  AdminSponsorshipsIdRoute: typeof AdminSponsorshipsIdRoute
   AdminGesturesIndexRoute: typeof AdminGesturesIndexRoute
+  AdminSponsorshipsIndexRoute: typeof AdminSponsorshipsIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -825,7 +1065,9 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminGesturesIdRoute: AdminGesturesIdRoute,
   AdminGesturesNewRoute: AdminGesturesNewRoute,
+  AdminSponsorshipsIdRoute: AdminSponsorshipsIdRoute,
   AdminGesturesIndexRoute: AdminGesturesIndexRoute,
+  AdminSponsorshipsIndexRoute: AdminSponsorshipsIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -847,6 +1089,7 @@ const rootRouteChildren: RootRouteChildren = {
   TurnstileBridgeRoute: TurnstileBridgeRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
+  ApiCspReportRoute: ApiCspReportRoute,
   ApiHealthRoute: ApiHealthRoute,
   DevE2eSeedRoute: DevE2eSeedRoute,
   DevMailRoute: DevMailRoute,
@@ -855,12 +1098,21 @@ const rootRouteChildren: RootRouteChildren = {
   GesturesSlugRoute: GesturesSlugRoute,
   ListsShareTokenRoute: ListsShareTokenRoute,
   MagicLinkAppRoute: MagicLinkAppRoute,
+  SponsorEditRoute: SponsorEditRoute,
+  SponsorRenewRoute: SponsorRenewRoute,
+  SponsorSuccessRoute: SponsorSuccessRoute,
+  WebhooksMollieRoute: WebhooksMollieRoute,
   GesturesIndexRoute: GesturesIndexRoute,
   ListsIndexRoute: ListsIndexRoute,
+  SponsorIndexRoute: SponsorIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiLogosKeyRoute: ApiLogosKeyRoute,
   ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
+  ApiSponsorReeditLogoRoute: ApiSponsorReeditLogoRoute,
+  ApiWebhooksMollieRoute: ApiWebhooksMollieRoute,
   ApiWebhooksMuxRoute: ApiWebhooksMuxRoute,
+  ApiLogosUploadKeyRoute: ApiLogosUploadKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

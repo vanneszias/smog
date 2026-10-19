@@ -2,12 +2,20 @@
 export { APP_NAME } from "./app-name";
 export { emailLocale } from "./locale";
 export {
+  DirectEmailOutbox,
+  deliverEmail,
+  type EmailDeliveryEnv,
+  type EmailOutbox,
+  type OutboxEmail,
+} from "./outbox";
+export {
+  EmailRenderError,
   type EmailTemplateId,
   type EmailTemplateProps,
   type RenderedEmail,
+  type RenderOptions,
   renderEmail,
 } from "./render";
-export { type SendEmailInput, sendEmail } from "./send";
 export {
   CloudflareEmailSender,
   createEmailSender,
@@ -17,7 +25,13 @@ export {
   type EmailMessage,
   type EmailSender,
   type EmailSenderOptions,
+  isPermanentSendError,
   MemoryEmailSender,
   readDevMail,
   type StoredEmail,
+  sendErrorCode,
 } from "./sender";
+export {
+  WE_MOVED_OLD_ORIGIN,
+  type WeMovedProvider,
+} from "./templates/transactional/we-moved";

@@ -272,6 +272,9 @@ describe("sitemap.xml and robots.txt", () => {
     expect(body).toContain(`<loc>${ORIGIN}/gestures</loc>`);
     expect(body).toContain(`<loc>${ORIGIN}/privacy</loc>`);
     expect(body).toContain(`<loc>${ORIGIN}/terms</loc>`);
+    // P-16: the wizard; its success, edit and renew pages are links only.
+    expect(body).toContain(`<loc>${ORIGIN}/sponsor</loc>`);
+    expect(body).not.toContain("/sponsor/");
     expect(body).toContain(`<loc>${ORIGIN}/gestures/hond</loc>`);
     expect(body).toContain(`<loc>${ORIGIN}/gestures/koffie</loc>`);
     expect(body).not.toContain("geheim");

@@ -11,7 +11,7 @@
   },
   "scripts": {
     "check-types": "tsc -b",
-    "test": "bun test"
+    "test": "bun ../../scripts/test-deadline.ts -- bun test"
   },
   "dependencies": {
     "@smog/config": "workspace:*",

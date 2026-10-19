@@ -12,8 +12,10 @@
   // default, see vite.config.ts), and `wrangler deploy --env <env>` refuses a
   // build made for a different env. Deploy builds: CLOUDFLARE_ENV=<env> vite build.
   // Secrets for `env.dev` go in `.dev.vars` (see `.dev.vars.example`).
-  // SITE_URL for staging/production is a placeholder until the workers.dev
-  // subdomain (or a custom domain) is known. KV and D1 ids are placeholders too.
+  // SITE_URL for staging/production is the env's workers.dev origin
+  // (<script>.<subdomain>.workers.dev). Production's KV and D1 ids are
+  // placeholders until the owner creates them (the deploy config check
+  // refuses them).
   // Secrets (BETTER_AUTH_SECRET, optional OAuth/Turnstile/OpenPanel keys, and
   // MUX_TOKEN_ID / MUX_TOKEN_SECRET / MUX_WEBHOOK_SECRET for admin video
   // uploads) are set with `wrangler secret put --env <env>`; see
@@ -26,6 +28,39 @@
   // staging/production (docs/DECISIONS.md). Miniflare enforces them locally,
   // where every request shares the `unknown` IP, so `dev` allows 1000/60 s
   // on each (the site tests override RL_AUTH in vitest.config.ts).
+  // Phase 6: the R2 bucket `MEDIA` (sponsor logos), the queues
+  // `EMAIL_QUEUE` (smog-<env>-email) and `EVENTS_QUEUE`
+  // (smog-<env>-sponsorship-events), each consumed by this Worker with a
+  // DLQ (smog-<env>-…-dlq, no consumer: checked by hand, kept 4 days), and
+  // the four Cron Triggers. Every email (auth codes and links too) goes
+  // through EMAIL_QUEUE; its consumer does not wait to fill a batch
+  // (`max_batch_timeout` 0), so a sign-in code still arrives in seconds, and
+  // sends with this env's EMAIL binding and EMAIL_FROM / EMAIL_REPLY_TO
+  // (dev: the KV mailbox at /dev/mail). `scripts/ensure-cloudflare-resources.ts` creates
+  // the queues and the bucket (and its CORS) in the deploy job before the
+  // deploy; `release-config-check` holds the names to this pattern. Vite
+  // dev and the tests emulate all of them locally. New secrets
+  // (MOLLIE_API_KEY, R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY) are optional
+  // and degrade cleanly; see `.dev.vars.example`.
+  // Phase 7, the render gate: RENDER_MODE `fake` completes renders with the
+  // gesture's own video (dev and staging); `container` renders in the
+  // SmogRenderer Container through the RenderSponsorshipVideo Workflow
+  // (production); `local` (dev only) uses the render server on this machine.
+  // This file declares no `workflows`, `containers`, Durable Object binding
+  // or DO migration, here or in an env (release-config-check refuses them):
+  // `render-config.ts` adds them at build time (the Vite plugin's `config`
+  // hook), the Workflow for `local`/`container` and the container block for
+  // `container`, which also needs SMOG_RENDER_PIPELINE=1 (a GitHub
+  // environment variable the owner sets once the env's token can deploy
+  // Workflows and Containers; without it a `container` build fails). The
+  // deploy guard checks the built config. Dev's local mode:
+  // `SMOG_DEV_RENDER_MODE=local bun dev` (and `bun -F @smog/site
+  // render:local-loop` runs one real render end to end). Production's mode
+  // is already `container`, so a production build fails until the
+  // `production` environment has SMOG_RENDER_PIPELINE=1. The owner's flip
+  // for staging, in order: the token permissions, the flag, then
+  // `RENDER_MODE: "container"` below, with the env's own Mux secrets
+  // (docs/PROGRESS.md, owner actions).
   // D1 migrations live in packages/db/migrations (drizzle-kit + hand-written
   // FTS5); `bun -F @smog/db migrate:dev` applies them to the local dev D1.
   "env": {
@@ -33,8 +68,41 @@
       "vars": {
         "SITE_URL": "http://localhost:5173",
         "ENVIRONMENT": "dev",
+        "MEDIA_BUCKET": "smog-dev-media",
+        "RENDER_MODE": "fake",
         "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
         "EMAIL_REPLY_TO": "info@smog.vlaanderen"
+      },
+      "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "smog-dev-media" }],
+      "queues": {
+        "producers": [
+          { "binding": "EMAIL_QUEUE", "queue": "smog-dev-email" },
+          {
+            "binding": "EVENTS_QUEUE",
+            "queue": "smog-dev-sponsorship-events"
+          }
+        ],
+        "consumers": [
+          {
+            "queue": "smog-dev-email",
+            "max_batch_size": 10,
+            "max_batch_timeout": 0,
+            "max_retries": 5,
+            "retry_delay": 30,
+            "dead_letter_queue": "smog-dev-email-dlq"
+          },
+          {
+            "queue": "smog-dev-sponsorship-events",
+            "max_batch_size": 10,
+            "max_retries": 10,
+            "retry_delay": 30,
+            "dead_letter_queue": "smog-dev-sponsorship-events-dlq"
+          }
+        ]
+      },
+      // UTC; the same four as CRON in @smog/jobs (release-config-check).
+      "triggers": {
+        "crons": ["0 0 * * *", "0 8 * * *", "0 * * * *", "15 3 * * *"]
       },
       "kv_namespaces": [
         { "binding": "KV", "id": "00000000000000000000000000000000" }
@@ -74,12 +142,49 @@
       "vars": {
         "SITE_URL": "https://smog-site-staging.zias.workers.dev",
         "ENVIRONMENT": "staging",
+        "MEDIA_BUCKET": "smog-staging-media",
+        "RENDER_MODE": "fake",
+        // Empty until staging gets R2 tokens: logos use the signed fallback.
+        "R2_ACCOUNT_ID": "",
         "EMAIL_FROM": "SMOG & Co <info@smog.zias.be>",
         "EMAIL_REPLY_TO": "info@smog.zias.be",
         // Cloudflare's always-pass test site key, the pair of the test secret
         // staging may use (DECISIONS). Production sets the real widget's key
         // before launch; without one the sign-in pages show no widget.
         "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+      },
+      "r2_buckets": [
+        { "binding": "MEDIA", "bucket_name": "smog-staging-media" }
+      ],
+      "queues": {
+        "producers": [
+          { "binding": "EMAIL_QUEUE", "queue": "smog-staging-email" },
+          {
+            "binding": "EVENTS_QUEUE",
+            "queue": "smog-staging-sponsorship-events"
+          }
+        ],
+        "consumers": [
+          {
+            "queue": "smog-staging-email",
+            "max_batch_size": 10,
+            "max_batch_timeout": 0,
+            "max_retries": 5,
+            "retry_delay": 30,
+            "dead_letter_queue": "smog-staging-email-dlq"
+          },
+          {
+            "queue": "smog-staging-sponsorship-events",
+            "max_batch_size": 10,
+            "max_retries": 10,
+            "retry_delay": 30,
+            "dead_letter_queue": "smog-staging-sponsorship-events-dlq"
+          }
+        ]
+      },
+      // UTC; the same four as CRON in @smog/jobs (release-config-check).
+      "triggers": {
+        "crons": ["0 0 * * *", "0 8 * * *", "0 * * * *", "15 3 * * *"]
       },
       "kv_namespaces": [
         { "binding": "KV", "id": "e9e96b50c93342e992a9da54621bad2a" }
@@ -125,10 +230,55 @@
     },
     "production": {
       "vars": {
-        "SITE_URL": "https://smog-site-production.workers.dev",
+        // The default launch origin (phase 8 ruling 2): the account's
+        // workers.dev subdomain, as staging's host shows. Moving to
+        // app.smog.vlaanderen is the owner's choice (the cutover runbook).
+        "SITE_URL": "https://smog-site-production.zias.workers.dev",
         "ENVIRONMENT": "production",
+        "MEDIA_BUCKET": "smog-production-media",
+        "RENDER_MODE": "container",
+        // Empty until launch, and required by then: the R2 account id of
+        // the presigned logo upload, and the real Turnstile widget's site
+        // key. `scripts/check-deploy-config.ts` refuses a production deploy
+        // while either is empty, or while the KV and D1 ids below are
+        // still the placeholders.
+        "R2_ACCOUNT_ID": "",
+        "TURNSTILE_SITE_KEY": "",
         "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
         "EMAIL_REPLY_TO": "info@smog.vlaanderen"
+      },
+      "r2_buckets": [
+        { "binding": "MEDIA", "bucket_name": "smog-production-media" }
+      ],
+      "queues": {
+        "producers": [
+          { "binding": "EMAIL_QUEUE", "queue": "smog-production-email" },
+          {
+            "binding": "EVENTS_QUEUE",
+            "queue": "smog-production-sponsorship-events"
+          }
+        ],
+        "consumers": [
+          {
+            "queue": "smog-production-email",
+            "max_batch_size": 10,
+            "max_batch_timeout": 0,
+            "max_retries": 5,
+            "retry_delay": 30,
+            "dead_letter_queue": "smog-production-email-dlq"
+          },
+          {
+            "queue": "smog-production-sponsorship-events",
+            "max_batch_size": 10,
+            "max_retries": 10,
+            "retry_delay": 30,
+            "dead_letter_queue": "smog-production-sponsorship-events-dlq"
+          }
+        ]
+      },
+      // UTC; the same four as CRON in @smog/jobs (release-config-check).
+      "triggers": {
+        "crons": ["0 0 * * *", "0 8 * * *", "0 * * * *", "15 3 * * *"]
       },
       "kv_namespaces": [
         { "binding": "KV", "id": "00000000000000000000000000000000" }

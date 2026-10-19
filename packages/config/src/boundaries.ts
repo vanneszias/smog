@@ -33,8 +33,13 @@ export const FEATURE_PACKAGES = [
 
 export const BOUNDARIES: Record<string, readonly string[]> = {
   // Scripts read the env schemas and the client-safe feature schemas
-  // (`admin:grant`, `maintenance`); they never import feature servers.
-  [ROOT_PACKAGE]: ["@smog/config", `${FEATURE_PATTERN}/schema`],
+  // (`admin:grant`, `maintenance`) and the cron table (`bun run cron`,
+  // release-config-check); they never import feature servers.
+  [ROOT_PACKAGE]: [
+    "@smog/config",
+    "@smog/jobs/cron",
+    `${FEATURE_PATTERN}/schema`,
+  ],
   "@smog/api": ["@smog/rpc", FEATURE_PATTERN, "@smog/config"],
   "@smog/mobile": [
     "@smog/api/client",
@@ -84,6 +89,8 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/email",
     "@smog/jobs",
     "@smog/render/contract",
+    // The fake renderer, for the sponsorships tests (phase 7 ruling 1).
+    "@smog/render/testing",
     "@smog/analytics/server",
     // Client hooks track through `useAnalytics()` (a no-op without a provider).
     "@smog/analytics/react",
@@ -119,6 +126,27 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/utils",
   ],
   "@smog/local-store": ["@smog/config", "@smog/utils"],
+  // The Convex → D1 importer (phase 8 ruling 6), a Bun tool nothing depends
+  // on (a test asserts no entry lists it). Its runtime needs the data
+  // packages and the feature schemas. The rest is for its integration
+  // tests only, which drive the real services: the feature servers,
+  // `@smog/auth`, `@smog/rpc`, and the Mollie and render fakes the
+  // sponsorship services take. `src/core` is held tighter by its own test
+  // (`packages/migrate-convex/test/core-rules.test.ts`).
+  "@smog/migrate-convex": [
+    "@smog/config",
+    "@smog/utils",
+    "@smog/db",
+    "@smog/video",
+    "@smog/jobs",
+    "@smog/email",
+    FEATURE_PATTERN,
+    "@smog/auth",
+    "@smog/rpc",
+    "@smog/payments",
+    "@smog/render/contract",
+    "@smog/render/testing",
+  ],
   "@smog/payments": ["@smog/config", "@smog/utils"],
   "@smog/render": [
     "@smog/config",

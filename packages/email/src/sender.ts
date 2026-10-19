@@ -37,21 +37,57 @@ export class CloudflareEmailSender implements EmailSender {
     this.#binding = binding;
   }
 
+  /**
+   * Rethrows the binding's error untouched (an `Error` with a `code`) for
+   * the caller to log once: the email consumer logs its name and code
+   * only, since the message may name the recipient.
+   */
   async send(message: EmailMessage): Promise<void> {
-    try {
-      await this.#binding.send({
-        from: toAddress(message.from),
-        html: message.html,
-        ...(message.replyTo ? { replyTo: toAddress(message.replyTo) } : {}),
-        subject: message.subject,
-        text: message.text,
-        to: message.to,
-      });
-    } catch (error) {
-      console.error("[email] Failed to send through the EMAIL binding:", error);
-      throw error;
-    }
+    await this.#binding.send({
+      from: toAddress(message.from),
+      html: message.html,
+      ...(message.replyTo ? { replyTo: toAddress(message.replyTo) } : {}),
+      subject: message.subject,
+      text: message.text,
+      to: message.to,
+    });
   }
+}
+
+/**
+ * Email Service error codes that no retry can fix for this message: the
+ * payload or the recipient (suppressed, not allowed). A sender or domain
+ * error (`E_SENDER_NOT_VERIFIED`, `E_SENDER_DOMAIN_NOT_AVAILABLE`) is a
+ * configuration problem: it is retried, so the email reaches the DLQ and
+ * can be replayed once the configuration is fixed. Rate, daily-limit,
+ * delivery and internal errors are transient.
+ */
+const PERMANENT_SEND_ERRORS = new Set([
+  "E_CONTENT_TOO_LARGE",
+  "E_FIELD_MISSING",
+  "E_RECIPIENT_NOT_ALLOWED",
+  "E_RECIPIENT_SUPPRESSED",
+  "E_TOO_MANY_ATTACHMENTS",
+  "E_TOO_MANY_RECIPIENTS",
+  "E_VALIDATION_ERROR",
+]);
+
+/** The `code` of a send error (the Email Service sets one), or `null`. */
+export function sendErrorCode(error: unknown): string | null {
+  return error instanceof Error &&
+    "code" in error &&
+    typeof error.code === "string"
+    ? error.code
+    : null;
+}
+
+/** Whether retrying this send error can never succeed. */
+export function isPermanentSendError(error: unknown): boolean {
+  const code = sendErrorCode(error);
+  return (
+    code !== null &&
+    (PERMANENT_SEND_ERRORS.has(code) || code.startsWith("E_HEADER_"))
+  );
 }
 
 /** Keeps every message in memory (tests). */
@@ -95,17 +131,12 @@ export class DevEmailSender implements EmailSender {
 
   async send(message: EmailMessage): Promise<void> {
     console.log(`[email] ${message.to}: ${message.subject}\n${message.text}`);
-    try {
-      const mail = await readDevMail(this.#kv);
-      const next = [{ ...message, sentAt: Date.now() }, ...mail].slice(
-        0,
-        DEV_MAIL_LIMIT
-      );
-      await this.#kv.put(DEV_MAIL_KEY, JSON.stringify(next));
-    } catch (error) {
-      console.error("[email] Failed to store dev mail:", error);
-      throw error;
-    }
+    const mail = await readDevMail(this.#kv);
+    const next = [{ ...message, sentAt: Date.now() }, ...mail].slice(
+      0,
+      DEV_MAIL_LIMIT
+    );
+    await this.#kv.put(DEV_MAIL_KEY, JSON.stringify(next));
   }
 }
 

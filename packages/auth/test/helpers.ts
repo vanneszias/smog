@@ -2,7 +2,13 @@ import { env } from "cloudflare:workers";
 import { user } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { createTestDb } from "@smog/db/testing";
-import { MemoryEmailSender } from "@smog/email";
+import {
+  DirectEmailOutbox,
+  type EmailOutbox,
+  type EmailTemplateId,
+  MemoryEmailSender,
+  type OutboxEmail,
+} from "@smog/email";
 import { newId } from "@smog/utils";
 import { eq } from "drizzle-orm";
 import { type AuthEnv, createAuth } from "../src/server";
@@ -15,11 +21,41 @@ export const PASSWORD = "correct horse battery";
 
 const DEV_ENV: AuthEnv = {
   BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters",
-  EMAIL_FROM: "SMOG & Co <noreply@smog.vlaanderen>",
-  EMAIL_REPLY_TO: "info@smog.vlaanderen",
   ENVIRONMENT: "dev",
   SITE_URL,
 };
+
+/**
+ * The tests' outbox: it records every email as handed over (template,
+ * props, locale, key) and delivers it at once through `DirectEmailOutbox`
+ * to a `MemoryEmailSender`, so a test reads the rendered text as the user
+ * would. `failTemplate` makes one template's sends throw.
+ */
+class RecordingOutbox implements EmailOutbox {
+  readonly sent: OutboxEmail[] = [];
+  readonly #direct: DirectEmailOutbox;
+  readonly #failing = new Set<EmailTemplateId>();
+
+  constructor(sender: MemoryEmailSender) {
+    this.#direct = new DirectEmailOutbox(sender, {
+      EMAIL_FROM: "SMOG & Co <noreply@smog.vlaanderen>",
+      EMAIL_REPLY_TO: "info@smog.vlaanderen",
+      SITE_URL,
+    });
+  }
+
+  failTemplate(template: EmailTemplateId): void {
+    this.#failing.add(template);
+  }
+
+  async send(email: OutboxEmail): Promise<void> {
+    if (this.#failing.has(email.template)) {
+      throw new Error(`queue down for ${email.template}`);
+    }
+    this.sent.push(email);
+    await this.#direct.send(email);
+  }
+}
 
 export function uniqueEmail(): string {
   return `${newId()}@smog.test`;
@@ -31,12 +67,13 @@ export function setup(
 ) {
   const authEnv = { ...DEV_ENV, ...overrides };
   const email = new MemoryEmailSender();
+  const outbox = new RecordingOutbox(email);
   const db: Db = createTestDb(env);
   const auth = createAuth({
     baseURL: authEnv.SITE_URL,
     db,
-    email,
     env: authEnv,
+    outbox,
     ...options,
   });
 
@@ -73,7 +110,7 @@ export function setup(
     );
   }
 
-  return { auth, authEnv, call, db, email };
+  return { auth, authEnv, call, db, email, outbox };
 }
 
 /** `name=value; …` for a follow-up request, from a response's Set-Cookie. */

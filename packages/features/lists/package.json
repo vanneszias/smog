@@ -11,7 +11,7 @@
   },
   "scripts": {
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json",
-    "test": "vitest run && bun test --timeout=20000 --preload @smog/config/testing/happy-dom src"
+    "test": "bun ../../../scripts/test-deadline.ts -- vitest run && bun ../../../scripts/test-deadline.ts -- bun test --timeout=20000 --preload @smog/config/testing/happy-dom src"
   },
   "dependencies": {
     "@orpc/client": "catalog:",

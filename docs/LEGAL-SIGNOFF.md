@@ -10,17 +10,26 @@ The privacy policy (`/privacy`) and the terms (`/terms`) were rewritten for the 
 2. **Consent history on account deletion.** Deleting an account also deletes its consent history (the log of analytics yes/no decisions), so nothing proves a past consent afterwards. Confirm that this is intended, or keep the log after deletion (a data-model change).
 3. **Renewal price wording (terms, sponsoring).** The text says a renewal costs "the price then shown". DECISIONS (D-RENEW) says renewals cost the same price (€50 per gesture, +€10 with a logo). Choose which of the two the text should say.
 4. **Google profile photos (P29).** The website shows a Google user's photo straight from `lh3.googleusercontent.com`, so Google receives that user's IP address and browser details on every page that shows it. The text now says so. The alternative is to copy the photo to R2 at sign-in and drop `lh3` from the CSP `img-src`; then nothing goes to Google after sign-in, and the sentence can go. Choose one.
+5. **How long a rejected sponsorship's video is kept (phase 8).** Proposed: **30 days** after the rejection (`REJECTED_VIDEO_RETENTION_DAYS`). Until then an admin may still ask the sponsor for changes; after that the request is refused and the daily purge deletes the rendered video from Mux (at most 20 a night). The sponsorship, its payment and its review trail stay, as for every other sponsorship. Sponsorships imported from the old system that have no new rejection record are never deleted automatically: their old videos stay in Mux until the owner decides (the cutover runbook lists them). The privacy text does not name this period yet ("voorbeeld- en eindvideo's" are listed as sponsoring data, without a term). Confirm the 30 days, or choose another period, and decide whether the text should state it.
+6. **The one-time `we_moved` email to every migrated account (phase 8, ruling 15; `we-moved --apply`, cutover step 13).** Every non-banned migrated user gets one transactional email ("SMOG is verhuisd") that says the service moved, the app needs an update and, where production has them, which sign-in methods exist. Many of these users have never used the new site. Decide and record: (a) the **legal basis** (proposed: performance of the contract / legitimate interest to inform existing users of the change of service provider and address, not marketing; it carries no promotion, and it is sent once), (b) whether it needs an **opt-out line** or a link to the privacy text (the copy does not have one today), (c) that the nl/en/fr copy was reviewed, and (d) the `locale` fallback (a user without a stored locale gets the default). The recipient list is read from production's D1 at send time and the address is never logged.
+7. **Privacy text for migrated users (phase 8).** The import moves the old system's data (accounts and emails from Convex/WorkOS, favorites, lists, sponsorships, payments, sponsor texts and videos) into Cloudflare D1, R2 and Mux, so the **new processors** (Cloudflare, Mux, Mollie as before) now hold users' data that was collected under the old policy, and the old processors (Convex, WorkOS) are closed afterwards (the cutover runbook §9 gives the deletion dates). Decide whether the privacy text needs a sentence for migrated users (who the old processors were, that the data was moved on `<date>`, that old exports are deleted by T+30 days) and whether users must be told in the `we_moved` email (item 6), and confirm the migrated users' consent state: the importer carries each old `user_consents` row over as `consent_event` rows (`analytics`, and `marketing` when set) with the old `consentVersion` as `policy_version` and `source = "import"`, so decide whether that old consent is still valid under the new policy version (`CONSENT_POLICY_VERSION`) or users must be asked again.
 
 Also for the owner:
 - **Consent version:** `CONSENT_POLICY_VERSION` was **not** bumped, so existing "yes" answers stay valid. What analytics measures did not widen, and less is sent (user id only, no name or email). Confirm this, or bump it (everyone who said yes is asked again).
 - **Store links:** the app banner uses text and icons, not the official App Store / Google Play badges. The badges are a design choice.
 - **Complaint links:** the English and French pages link to the home page of the Belgian Data Protection Authority, not to its complaint page. Verify these deep links online before swapping them in: `https://www.dataprotectionauthority.be/citizen/actions/lodge-a-complaint` and `https://www.autoriteprotectiondonnees.be/citoyen/agir/introduire-une-plainte`.
 
-## Promises that need work before cutover
+## Retention promises: implemented (phase 6 task 5)
 
-The text states retention periods that must be true on day one (PROGRESS carries them into phase 6):
-- admin logs are kept for at most 3 years: needs a scheduled purge of `audit_log`;
-- expired sessions, codes and links are erased within 30 days: needs a scheduled purge of expired `session` and `verification` rows.
+The text states retention periods that must be true on day one. A daily purge (Cron Trigger `15 3 * * *` UTC, `runRetentionPurge`) now keeps them, and deletes nothing else:
+- admin logs (`audit_log`) older than 3 × 365 days are deleted;
+- expired sessions, sign-in codes and links (`session`, `verification`) are deleted at the first daily run after they expire, so well within 30 days;
+- sponsor re-edit and renewal links (`sponsorship_token`) are deleted 29 days after they were used or expired, so within 30 days;
+- sponsor logos: an uploaded logo that no sponsorship uses is deleted after 24 hours (an abandoned checkout or a replaced logo); the logo of a sponsorship that ended more than 30 days ago is deleted only when no sponsorship that paid for it can still use it (an expired sponsorship, or a rejected or cancelled one whose payment took no money). The fact that a logo was paid for stays in the payment data.
+- No sponsor, sponsorship, payment, invoice or review-trail row is deleted (kept as long as needed for the contract and up to 10 years).
+- Unpaid sponsorship requests: a checkout payment still open after 24 hours is cancelled at Mollie (or, if it never reached Mollie, locally). If Mollie cannot be asked (no key, or it does not know the payment), it is left open and logged rather than cancelled, because money may still arrive; the operator resolves it.
+
+An operator can preview the counts in a deployed environment without deleting anything: `bun run retention --env <staging|production> --dry-run`. Before the first production run, check that the expired sessions' `expires_at` values it prints are epoch milliseconds (about 1.7e12).
 
 ## Privacy policy
 
@@ -72,7 +81,7 @@ The text states retention periods that must be true on day one (PROGRESS carries
 **Section 9: Bewaartermijnen**
 - **P19.** Removed: "Gastaccounts … na 12 maanden inactiviteit verwijderd".
 - **P20.** Kept:
-  - admin logs for at most 3 years (needs the purge, see above);
+  - admin logs for at most 3 years (the daily purge, see above);
   - unpaid requests cancelled after 24 hours;
   - payment, sponsor and invoice data for up to 10 years;
   - analytics data for the retention period set in OpenPanel.
@@ -81,7 +90,7 @@ The text states retention periods that must be true on day one (PROGRESS carries
   - a **session** expires 7 days after the Service was last used, or at sign-out;
   - **sign-in codes and links** are single-use and valid for 5 minutes;
   - **verification and reset links** are valid for 1 hour;
-  - expired sessions, codes and links are **erased within 30 days** (needs the purge, see above).
+  - expired sessions, codes and links are **erased within 30 days** (the daily purge, see above).
 
 **Section 10: Accountverwijdering (rewritten)**
 - **P22.** Old:

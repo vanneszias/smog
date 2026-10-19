@@ -1,0 +1,71 @@
+/**
+ * The sponsorship operations the admin runs (phase 6 ruling 1), from
+ * `@smog/sponsorships/server`: the admin never imports another feature's
+ * server, so the composition root hands them over. The admin's own tests
+ * import this file by relative path, so they run the exact wiring.
+ */
+import type { AdminSponsorshipServices } from "@smog/admin/server";
+import {
+  approveStatements,
+  cancelPaymentStatements,
+  forceExpireStatements,
+  isGestureTaken,
+  isRejectedTooLongAgo,
+  isStalePayment,
+  isStaleTransition,
+  markPaidStatements,
+  recordRefundStatements,
+  regenerateTokenStatements,
+  rejectStatements,
+  requestChangesStatements,
+  retryRenderStatements,
+  SponsorshipActionError,
+  settlePayment,
+} from "@smog/sponsorships/server";
+
+/**
+ * A refusal the admin answers with a typed error: the builders' own
+ * (`notFound`, `stale`, `noVideo`, …), a guard that fired in the batch (a
+ * lost race: `stale`), the partial unique index refusing a gesture that
+ * was taken in between (`gestureTaken`), or the request for changes'
+ * retention bound (`rejectedTooLongAgo`, phase 8 ruling 13).
+ */
+function sponsorshipRefusal(
+  error: unknown
+): ReturnType<AdminSponsorshipServices["refusalOf"]> {
+  if (error instanceof SponsorshipActionError) {
+    return error.reason;
+  }
+  if (isStaleTransition(error) || isStalePayment(error)) {
+    return "stale";
+  }
+  if (isGestureTaken(error)) {
+    return "gestureTaken";
+  }
+  if (isRejectedTooLongAgo(error)) {
+    return "rejectedTooLongAgo";
+  }
+  return null;
+}
+
+export const adminSponsorshipServices: AdminSponsorshipServices = {
+  approve: approveStatements,
+  cancelPayment: cancelPaymentStatements,
+  forceExpire: forceExpireStatements,
+  markPaid: markPaidStatements,
+  recordRefund: recordRefundStatements,
+  refusalOf: sponsorshipRefusal,
+  regenerateToken: regenerateTokenStatements,
+  reject: rejectStatements,
+  requestChanges: requestChangesStatements,
+  retryRender: async (db, input) => {
+    const plan = await retryRenderStatements(db, input);
+    return {
+      after: plan.after.map((event) => ({ event, kind: "event" as const })),
+      attempt: plan.attempt,
+      renderJobId: plan.renderJobId,
+      statements: plan.statements,
+    };
+  },
+  settle: settlePayment,
+};

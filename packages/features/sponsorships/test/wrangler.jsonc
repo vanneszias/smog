@@ -1,0 +1,23 @@
+{
+  // Test-only Worker config: a local D1 as `DB` (migrations applied by
+  // `@smog/db/testing/apply-migrations`), a KV namespace as `KV` (the
+  // rpc context's; the payment status throttle) and an R2 bucket as
+  // `MEDIA` (the sponsor logos the checkout verifies).
+  "$schema": "../../../../node_modules/wrangler/config-schema.json",
+  "name": "smog-sponsorships-test",
+  "compatibility_date": "2026-09-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "smog-test",
+      "database_id": "00000000-0000-4000-8000-000000000000"
+    }
+  ],
+  "kv_namespaces": [
+    { "binding": "KV", "id": "00000000000000000000000000000000" }
+  ],
+  // The logo bucket (task 4: the checkout and the upload route; task 5:
+  // the re-edit and the retention purge's logo sweep).
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "smog-test-media" }]
+}

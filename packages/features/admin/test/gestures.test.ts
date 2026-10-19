@@ -1,17 +1,13 @@
 import { env } from "cloudflare:workers";
 import { call } from "@orpc/server";
-import { gesture, gestureSortName } from "@smog/db";
+import { failWhen, GuardFailedError, gesture, gestureSortName } from "@smog/db";
 import { SAMPLE_PLAYBACK_ID } from "@smog/db/testing";
 import { sql } from "drizzle-orm";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { searchGestures } from "../../gestures/src/server/search";
 import type { AdminGestureDetail, AdminGesturePage } from "../src/schema";
 import { createAdminRouter } from "../src/server";
-import {
-  failWhen,
-  GuardFailedError,
-  runCatalogBatch,
-} from "../src/server/catalog-writes";
+import { runCatalogBatch } from "../src/server/catalog-writes";
 import { adminGesturesQuery } from "../src/server/gestures";
 import {
   addCategory,
@@ -23,6 +19,7 @@ import {
   ftsRows,
   storedGesture,
 } from "./catalog-helpers";
+import { adminDeps } from "./deps";
 import {
   type Authed,
   auditMark,
@@ -188,6 +185,7 @@ describe("admin.gestures.create", () => {
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
     const router = createAdminRouter({
+      ...adminDeps,
       bumpCatalogVersion: () => Promise.reject(new Error("KV is down")),
     });
     const category = await addCategory();

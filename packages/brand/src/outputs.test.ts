@@ -51,6 +51,8 @@ const PNG_OUTPUTS: PngExpectation[] = [
   png("apps/site/public/icon-512.png", 512, 512, true),
   png("apps/site/public/icon-maskable-512.png", 512, 512, true),
   png("apps/site/public/og.png", 1200, 630, true),
+  // The email header logo (`@smog/email`), at 2x for a 40 px tall image.
+  png("apps/site/public/brand/email-logo.png", 369, 80, true),
   png("apps/mobile/assets/android-icon-foreground.png", 1024, 1024, false),
   png("apps/mobile/assets/android-icon-monochrome.png", 1024, 1024, false),
   png("apps/mobile/assets/splash-icon.png", 1024, 1024, false),

@@ -1,14 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { PRODUCTION_LAUNCH_ORIGIN } from "@smog/config/constants";
 import {
   type AppLinkIdentity,
   appLinkIdentity,
   checkAppLinks,
   checkCiWorkflow,
+  checkDeployConfigStep,
   checkDeployWorkflow,
+  checkEasProfiles,
+  checkEasUpdateScripts,
   checkReleaseConfig,
+  checkReleaseScripts,
+  checkRequiredConfig,
   checkWranglerConfig,
+  checkWranglerResources,
   migrationsDirFromWrangler,
 } from "./release-config-check";
 
@@ -22,6 +29,28 @@ const DEPLOY = readFileSync(
   join(ROOT, ".github", "workflows", "deploy.yml"),
   "utf8"
 );
+const WRANGLER = readFileSync(
+  join(ROOT, "apps", "site", "wrangler.jsonc"),
+  "utf8"
+);
+const DEV_VARS_EXAMPLE = readFileSync(
+  join(ROOT, "apps", "site", ".dev.vars.example"),
+  "utf8"
+);
+const ENSURE_SCRIPT = "scripts/ensure-cloudflare-resources.ts";
+const PACKAGE = readFileSync(join(ROOT, "package.json"), "utf8");
+/** Spelled apart so a GitHub expression is not read as a template slot. */
+const DOLLAR = "$";
+const CONFIG_CHECK_STEP = DEPLOY.slice(
+  DEPLOY.indexOf("      # The deploy config check"),
+  DEPLOY.indexOf("      # The queues,")
+);
+const PRODUCTION_FAIL_BLOCK =
+  /^ {12}if \[ "\$CLOUDFLARE_ENV" = "production" \]; then\n {14}echo "::error[^\n]*\n {14}exit 1\n {12}fi\n/m;
+const WARN_ONLY_LINE =
+  "bun scripts/check-deploy-config.ts --env staging --warn-only || echo";
+const ENFORCING_LINE =
+  'bun scripts/check-deploy-config.ts --env "$CLOUDFLARE_ENV"\n';
 
 describe("checkReleaseConfig", () => {
   test("passes on the real repository", () => {
@@ -157,11 +186,209 @@ describe("checkDeployWorkflow", () => {
     expect(errors.join("\n")).toContain("master");
   });
 
+  test("fails without the resources step, or when it runs after the migrations", () => {
+    const without = DEPLOY.replaceAll(ENSURE_SCRIPT, "scripts/other.ts");
+    expect(checkDeployWorkflow(without).join("\n")).toContain(ENSURE_SCRIPT);
+    const ensureStep = DEPLOY.slice(
+      DEPLOY.indexOf("      - name: Ensure Cloudflare resources"),
+      DEPLOY.indexOf("      # Migrations live")
+    );
+    const after = DEPLOY.replace(ensureStep, "").replace(
+      "      # The guarded site script",
+      `${ensureStep}      # The guarded site script`
+    );
+    expect(checkDeployWorkflow(after).join("\n")).toContain(
+      "before the D1 migrations"
+    );
+  });
+
+  test("fails when production would create without SMOG_PROVISION_PRODUCTION", () => {
+    const errors = checkDeployWorkflow(
+      DEPLOY.replaceAll("SMOG_PROVISION_PRODUCTION", "SOMETHING_ELSE")
+    );
+    expect(errors.join("\n")).toContain("SMOG_PROVISION_PRODUCTION");
+    const noCheck = checkDeployWorkflow(DEPLOY.replace("--check", "--create"));
+    expect(noCheck.join("\n")).toContain("--check");
+  });
+
   test("fails without the Cloudflare secrets", () => {
     const errors = checkDeployWorkflow(
       DEPLOY.replaceAll("secrets.CLOUDFLARE_ACCOUNT_ID", "vars.ACCOUNT")
     );
     expect(errors.join("\n")).toContain("CLOUDFLARE_ACCOUNT_ID");
+  });
+});
+
+describe("the Cloudflare secrets step (phase 8 fix wave, I-4)", () => {
+  test("the real deploy.yml fails production without the secrets", () => {
+    expect(DEPLOY).toContain('"$CLOUDFLARE_ENV" = "production"');
+    expect(checkDeployWorkflow(DEPLOY)).toEqual([]);
+  });
+
+  test("fails when a missing production token only skips", () => {
+    const skipping = DEPLOY.replace(PRODUCTION_FAIL_BLOCK, "");
+    expect(skipping).not.toBe(DEPLOY);
+    expect(checkDeployWorkflow(skipping).join("\n")).toContain(
+      "must fail for production"
+    );
+  });
+});
+
+describe("checkDeployConfigStep (phase 8 ruling 1)", () => {
+  const errorsOf = (source: string): string =>
+    checkDeployConfigStep(source).join("\n");
+
+  test("the real deploy.yml passes", () => {
+    expect(CONFIG_CHECK_STEP).toContain("name: Check deploy config");
+    expect(checkDeployConfigStep(DEPLOY)).toEqual([]);
+    expect(checkDeployWorkflow(DEPLOY)).toEqual([]);
+  });
+
+  test("fails without the step", () => {
+    expect(errorsOf(DEPLOY.replace(CONFIG_CHECK_STEP, ""))).toContain(
+      "scripts/check-deploy-config.ts"
+    );
+  });
+
+  test("fails when it runs after the resources step or the migrations", () => {
+    const afterEnsure = DEPLOY.replace(CONFIG_CHECK_STEP, "").replace(
+      "      # Migrations live",
+      `${CONFIG_CHECK_STEP}      # Migrations live`
+    );
+    expect(errorsOf(afterEnsure)).toContain(
+      "before `scripts/ensure-cloudflare-resources.ts`"
+    );
+    const afterMigrations = DEPLOY.replace(CONFIG_CHECK_STEP, "").replace(
+      "      # The render image cache",
+      `${CONFIG_CHECK_STEP}      # The render image cache`
+    );
+    expect(errorsOf(afterMigrations)).toContain("before the D1 migrations");
+  });
+
+  test("production never gets --warn-only", () => {
+    const toAll = DEPLOY.replace(
+      "--env staging --warn-only",
+      '--env "$CLOUDFLARE_ENV" --warn-only'
+    );
+    expect(errorsOf(toAll)).toContain("--env staging");
+    const unconditional = DEPLOY.replace(
+      ENFORCING_LINE,
+      'bun scripts/check-deploy-config.ts --env "$CLOUDFLARE_ENV" --warn-only\n'
+    );
+    expect(errorsOf(unconditional)).toContain("--warn-only");
+  });
+
+  test("staging honours SMOG_REQUIRE_SECRETS", () => {
+    expect(
+      errorsOf(DEPLOY.replace(' && [ "$SMOG_REQUIRE_SECRETS" != "1" ]', ""))
+    ).toContain("SMOG_REQUIRE_SECRETS");
+    expect(
+      errorsOf(
+        DEPLOY.replace(
+          `SMOG_REQUIRE_SECRETS: ${DOLLAR}{{ vars.SMOG_REQUIRE_SECRETS }}`,
+          'SMOG_REQUIRE_SECRETS: ""'
+        )
+      )
+    ).toContain("vars.SMOG_REQUIRE_SECRETS");
+  });
+
+  test("the staging test and the opt-in are joined by && (m-3)", () => {
+    expect(
+      errorsOf(
+        DEPLOY.replace(
+          '[ "$CLOUDFLARE_ENV" = "staging" ] && [ "$SMOG_REQUIRE_SECRETS" != "1" ]',
+          '[ "$CLOUDFLARE_ENV" = "staging" ] || [ "$SMOG_REQUIRE_SECRETS" != "1" ]'
+        )
+      )
+    ).toContain("&&");
+  });
+
+  test("the step is bounded, and only warn-only staging may continue on error (I-1)", () => {
+    expect(
+      errorsOf(DEPLOY.replace("        timeout-minutes: 5\n", ""))
+    ).toContain("timeout-minutes");
+    expect(
+      errorsOf(DEPLOY.replace("timeout-minutes: 5\n", "timeout-minutes: 30\n"))
+    ).toContain("timeout-minutes");
+    expect(
+      errorsOf(
+        DEPLOY.replace(
+          "env.CLOUDFLARE_ENV == 'staging' && vars.SMOG_REQUIRE_SECRETS != '1'",
+          "true"
+        )
+      )
+    ).toContain("continue-on-error");
+  });
+
+  test("staging's warn-only run keeps even a crash green", () => {
+    expect(
+      errorsOf(
+        DEPLOY.replace(
+          WARN_ONLY_LINE,
+          "bun scripts/check-deploy-config.ts --env staging --warn-only; echo"
+        )
+      )
+    ).toContain("||");
+  });
+
+  test("an enforcing run must exist for production", () => {
+    expect(errorsOf(DEPLOY.replace(ENFORCING_LINE, "true\n"))).toContain(
+      "enforcing"
+    );
+  });
+
+  test("the step is skipped with the others when the secrets are absent", () => {
+    const step = CONFIG_CHECK_STEP.replace(
+      "        if: steps.secrets.outputs.enabled == 'true'\n",
+      ""
+    );
+    expect(errorsOf(DEPLOY.replace(CONFIG_CHECK_STEP, step))).toContain(
+      "steps.secrets.outputs.enabled"
+    );
+  });
+});
+
+describe("checkReleaseScripts: the offline deploy config check", () => {
+  const core = (change: (script: string) => string): string => {
+    const parsed = JSON.parse(PACKAGE) as { scripts: Record<string, string> };
+    parsed.scripts["release:check:core"] = change(
+      String(parsed.scripts["release:check:core"])
+    );
+    return JSON.stringify(parsed);
+  };
+  const CHECK = "bun scripts/check-deploy-config.ts --env staging --offline";
+
+  test("release:check:core runs it after the staging dry run", () => {
+    expect(checkReleaseScripts(PACKAGE)).toEqual([]);
+    expect(PACKAGE).toContain(`bun -F @smog/site deploy:dry && ${CHECK}`);
+  });
+
+  test("fails without it", () => {
+    expect(
+      checkReleaseScripts(core((script) => script.replace(` && ${CHECK}`, "")))
+    ).toEqual([`package.json: release:check:core must run \`${CHECK}\``]);
+  });
+
+  test("fails when it runs before the staging dry run", () => {
+    const moved = core((script) =>
+      script
+        .replace(` && ${CHECK}`, "")
+        .replace("bun run check:ci", `${CHECK} && bun run check:ci`)
+    );
+    expect(checkReleaseScripts(moved)).toEqual([
+      `package.json: release:check:core must run \`${CHECK}\` after \`bun -F @smog/site deploy:dry\``,
+    ]);
+  });
+
+  test("never with --warn-only or for production", () => {
+    for (const wrong of [
+      `${CHECK} --warn-only`,
+      CHECK.replace("staging", "production"),
+    ]) {
+      expect(
+        checkReleaseScripts(core((script) => script.replace(CHECK, wrong)))
+      ).not.toEqual([]);
+    }
   });
 });
 
@@ -225,6 +452,143 @@ describe("checkWranglerConfig", () => {
       'apps/site/wrangler.jsonc: env.production.vars.ENVIRONMENT must be "production"',
       'apps/site/wrangler.jsonc: env.staging.vars.ENVIRONMENT must be "staging"',
     ]);
+  });
+});
+
+describe("checkWranglerResources (phase 6)", () => {
+  const config = () =>
+    Bun.JSONC.parse(WRANGLER) as {
+      env: { staging: Record<string, unknown> };
+    };
+  const check = (mutate: (env: Record<string, unknown>) => void) => {
+    const parsed = config();
+    mutate(parsed.env.staging);
+    return checkWranglerResources(JSON.stringify(parsed)).join("\n");
+  };
+
+  test("passes on the real config", () => {
+    expect(checkWranglerResources(WRANGLER)).toEqual([]);
+  });
+
+  test("fails when a consumer has no DLQ", () => {
+    expect(
+      check((env) => {
+        const queues = env.queues as { consumers: Record<string, unknown>[] };
+        if (queues.consumers[0]) {
+          queues.consumers[0].dead_letter_queue = undefined;
+        }
+      })
+    ).toContain(
+      "env.staging: the consumer of smog-staging-email needs dead_letter_queue smog-staging-email-dlq"
+    );
+  });
+
+  test("fails on a queue or bucket named off the pattern", () => {
+    expect(
+      check((env) => {
+        const queues = env.queues as { producers: Record<string, unknown>[] };
+        if (queues.producers[0]) {
+          queues.producers[0].queue = "email-staging";
+        }
+      })
+    ).toContain("EMAIL_QUEUE must be smog-staging-email");
+    expect(
+      check((env) => {
+        env.r2_buckets = [{ binding: "MEDIA", bucket_name: "smog-media" }];
+      })
+    ).toContain("MEDIA must be the bucket smog-staging-media");
+  });
+
+  test("fails when a consumer, the bucket var or a cron is missing", () => {
+    expect(
+      check((env) => {
+        const queues = env.queues as { consumers: unknown[] };
+        queues.consumers.pop();
+      })
+    ).toContain("no consumer for smog-staging-sponsorship-events");
+    expect(
+      check((env) => {
+        (env.vars as Record<string, unknown>).MEDIA_BUCKET = "other";
+      })
+    ).toContain("vars.MEDIA_BUCKET must be smog-staging-media");
+    expect(
+      check((env) => {
+        env.triggers = { crons: ["0 0 * * *"] };
+      })
+    ).toContain("triggers.crons must be the CRON schedules");
+  });
+
+  test("checks the consumer settings of ruling 8", () => {
+    expect(
+      check((env) => {
+        const queues = env.queues as { consumers: Record<string, unknown>[] };
+        if (queues.consumers[1]) {
+          queues.consumers[1].max_retries = 3;
+        }
+      })
+    ).toContain("smog-staging-sponsorship-events needs max_retries 10");
+  });
+
+  test("the email consumer does not wait to fill a batch (codes arrive fast)", () => {
+    expect(
+      check((env) => {
+        const queues = env.queues as { consumers: Record<string, unknown>[] };
+        if (queues.consumers[0]) {
+          queues.consumers[0].max_batch_timeout = undefined;
+        }
+      })
+    ).toContain(
+      "env.staging: the consumer of smog-staging-email needs max_batch_timeout 0"
+    );
+  });
+});
+
+describe("checkRequiredConfig (ruling 12)", () => {
+  test("passes on the real files", () => {
+    expect(
+      checkRequiredConfig({
+        devVarsExample: DEV_VARS_EXAMPLE,
+        wrangler: WRANGLER,
+      })
+    ).toEqual([]);
+  });
+
+  test("fails when a required secret is not documented in .dev.vars.example", () => {
+    const errors = checkRequiredConfig({
+      devVarsExample: DEV_VARS_EXAMPLE.replace("# MOLLIE_API_KEY=", ""),
+      wrangler: WRANGLER,
+    });
+    expect(errors.join("\n")).toContain("MOLLIE_API_KEY");
+  });
+
+  test("fails when a required var is not in env.<env>.vars", () => {
+    const parsed = Bun.JSONC.parse(WRANGLER) as {
+      env: { production: { vars: Record<string, unknown> } };
+    };
+    parsed.env.production.vars.R2_ACCOUNT_ID = undefined;
+    const errors = checkRequiredConfig({
+      devVarsExample: DEV_VARS_EXAMPLE,
+      wrangler: JSON.stringify(parsed),
+    });
+    expect(errors).toEqual([
+      "apps/site/wrangler.jsonc: env.production.vars must name R2_ACCOUNT_ID (REQUIRED_WORKER_CONFIG)",
+    ]);
+  });
+
+  test("fails when a required key is absent from the env schema", () => {
+    const errors = checkRequiredConfig({
+      devVarsExample: `${DEV_VARS_EXAMPLE}\nNOT_IN_SCHEMA=\n`,
+      required: {
+        dev: { secrets: [], vars: [] },
+        production: { secrets: ["NOT_IN_SCHEMA"], vars: ["NOT_A_VAR"] },
+        staging: { secrets: [], vars: [] },
+      },
+      wrangler: WRANGLER,
+    });
+    expect(errors.join("\n")).toContain(
+      "NOT_IN_SCHEMA is not in workerSecretsSchema"
+    );
+    expect(errors.join("\n")).toContain("NOT_A_VAR is not in workerVarsSchema");
   });
 });
 
@@ -395,6 +759,203 @@ describe("checkAppLinks", () => {
     );
     expect(errors).toEqual([
       "apps/site/public/_headers: /.well-known/apple-app-site-association needs Content-Type: application/json",
+    ]);
+  });
+});
+
+describe("checkEasUpdateScripts (OTA updates carry the profile's origin)", () => {
+  const MOBILE = readFileSync(
+    join(ROOT, "apps", "mobile", "package.json"),
+    "utf8"
+  );
+  const withScript = (source: string, name: string, run: string): string => {
+    const parsed = JSON.parse(source) as { scripts: Record<string, string> };
+    return JSON.stringify({
+      ...parsed,
+      scripts: { ...parsed.scripts, [name]: run },
+    });
+  };
+
+  test("passes on the real package scripts", () => {
+    expect(checkEasUpdateScripts({ mobile: MOBILE, root: PACKAGE })).toEqual(
+      []
+    );
+  });
+
+  test("refuses a root or mobile script that calls eas update directly", () => {
+    expect(
+      checkEasUpdateScripts({
+        mobile: withScript(MOBILE, "ota", "eas update --channel production"),
+        root: PACKAGE,
+      })
+    ).toEqual([
+      'apps/mobile/package.json: script "ota" calls eas update directly; use scripts/eas-update.ts (bun -F @smog/mobile update -- --profile <profile>)',
+    ]);
+    expect(
+      checkEasUpdateScripts({
+        mobile: MOBILE,
+        root: withScript(PACKAGE, "ota", "cd apps/mobile && bunx eas update"),
+      })
+    ).toEqual([
+      'package.json: script "ota" calls eas update directly; use scripts/eas-update.ts (bun -F @smog/mobile update -- --profile <profile>)',
+    ]);
+  });
+
+  test("requires the mobile update script to be the wrapper", () => {
+    expect(
+      checkEasUpdateScripts({
+        mobile: withScript(MOBILE, "update", "expo export"),
+        root: PACKAGE,
+      })
+    ).toEqual([
+      'apps/mobile/package.json: script "update" must run ../../scripts/eas-update.ts',
+    ]);
+  });
+});
+
+describe("checkEasProfiles (phase 8 ruling 3)", () => {
+  const EAS = readFileSync(join(ROOT, "apps", "mobile", "eas.json"), "utf8");
+  const STAGING = "https://smog-site-staging.zias.workers.dev";
+  // The committed launch origin, whichever path the owner chose (workers.dev
+  // or the domain, `docs/cutover-runbook.md`): no test assumes either.
+  const PRODUCTION = PRODUCTION_LAUNCH_ORIGIN;
+  // Another origin than the committed one, for the tests that change it.
+  const ELSEWHERE = "https://elsewhere.zias.workers.dev";
+  const base = {
+    eas: EAS,
+    fallbackHost: "smog-site-staging.zias.workers.dev",
+    launchOrigin: PRODUCTION,
+    wrangler: WRANGLER,
+  };
+  const errorsOf = (input: Partial<typeof base>): string[] =>
+    checkEasProfiles({ ...base, ...input }).errors;
+
+  test("passes on the real eas.json, wrangler.jsonc and launch origin", () => {
+    expect(checkEasProfiles(base)).toEqual({ errors: [], warnings: [] });
+  });
+
+  test("fails when the staging profile's URL is not staging's SITE_URL", () => {
+    const eas = EAS.replace(
+      `"EXPO_PUBLIC_API_URL": "${STAGING}"`,
+      '"EXPO_PUBLIC_API_URL": "https://smog-site-staging.workers.dev"'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      `apps/mobile/eas.json: build.staging.env.EXPO_PUBLIC_API_URL must be ${STAGING} (staging's SITE_URL)`,
+    ]);
+  });
+
+  test("fails when the staging profile's host is not staging's host", () => {
+    const eas = EAS.replace(
+      '"EXPO_PUBLIC_SITE_HOST": "smog-site-staging.zias.workers.dev"',
+      '"EXPO_PUBLIC_SITE_HOST": "smog-site-staging.workers.dev"'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      "apps/mobile/eas.json: build.staging.env.EXPO_PUBLIC_SITE_HOST must be smog-site-staging.zias.workers.dev",
+    ]);
+  });
+
+  test("fails when the development profile leaves dev's SITE_URL", () => {
+    const eas = EAS.replace(
+      '"EXPO_PUBLIC_API_URL": "http://localhost:5173"',
+      '"EXPO_PUBLIC_API_URL": "http://localhost:3000"'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      "apps/mobile/eas.json: build.development.env.EXPO_PUBLIC_API_URL must be http://localhost:5173 (dev's SITE_URL)",
+    ]);
+  });
+
+  test("fails when the production profile is not PRODUCTION_LAUNCH_ORIGIN", () => {
+    const result = checkEasProfiles({ ...base, launchOrigin: ELSEWHERE });
+    expect(result.errors).toEqual([
+      `apps/mobile/eas.json: build.production.env.EXPO_PUBLIC_API_URL must be ${ELSEWHERE} (PRODUCTION_LAUNCH_ORIGIN)`,
+      `apps/mobile/eas.json: build.production.env.EXPO_PUBLIC_SITE_HOST must be ${new URL(ELSEWHERE).host}`,
+    ]);
+  });
+
+  test("warns, not fails, when PRODUCTION_LAUNCH_ORIGIN is not production's SITE_URL", () => {
+    const wrangler = Bun.JSONC.parse(WRANGLER) as {
+      env: { production: { vars: { SITE_URL: string } } };
+    };
+    const siteUrl = wrangler.env.production.vars.SITE_URL;
+    const result = checkEasProfiles({
+      ...base,
+      eas: EAS.replace(
+        `"EXPO_PUBLIC_API_URL": "${PRODUCTION}"`,
+        `"EXPO_PUBLIC_API_URL": "${ELSEWHERE}"`
+      ).replace(
+        `"EXPO_PUBLIC_SITE_HOST": "${new URL(PRODUCTION).host}"`,
+        `"EXPO_PUBLIC_SITE_HOST": "${new URL(ELSEWHERE).host}"`
+      ),
+      launchOrigin: ELSEWHERE,
+    });
+    expect(result).toEqual({
+      errors: [],
+      warnings: [
+        `PRODUCTION_LAUNCH_ORIGIN (${ELSEWHERE}) differs from production's SITE_URL (${siteUrl}): the production app is built for another origin than the site deploys to`,
+      ],
+    });
+  });
+
+  test("fails when a profile has autoIncrement and versions are local", () => {
+    const eas = EAS.replace(
+      '"appVersionSource": "remote"',
+      '"appVersionSource": "local"'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      'apps/mobile/eas.json: cli.appVersionSource must be "remote" while build.production has autoIncrement (app.config.ts is dynamic)',
+    ]);
+  });
+
+  test("fails when app.config.ts falls back to another host", () => {
+    expect(errorsOf({ fallbackHost: "smog-site-staging.workers.dev" })).toEqual(
+      [
+        "apps/mobile/app.config.ts: the fallback host must be staging's host smog-site-staging.zias.workers.dev, not smog-site-staging.workers.dev",
+      ]
+    );
+  });
+
+  test("fails when a profile is missing or names the wrong environment", () => {
+    const parsed = JSON.parse(EAS) as { build: Record<string, unknown> };
+    const { staging: _staging, ...rest } = parsed.build;
+    expect(
+      errorsOf({ eas: JSON.stringify({ ...parsed, build: rest }) })
+    ).toEqual(["apps/mobile/eas.json: build.staging is missing"]);
+    expect(
+      errorsOf({
+        eas: EAS.replace(
+          '"EXPO_PUBLIC_ENVIRONMENT": "staging"',
+          '"EXPO_PUBLIC_ENVIRONMENT": "production"'
+        ),
+      })
+    ).toEqual([
+      "apps/mobile/eas.json: build.staging.env.EXPO_PUBLIC_ENVIRONMENT must be staging",
+    ]);
+  });
+
+  test("fails when a profile's env holds more than the public origin keys", () => {
+    const eas = EAS.replace(
+      '"EXPO_PUBLIC_ENVIRONMENT": "production",',
+      '"EXPO_PUBLIC_ENVIRONMENT": "production", "EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET": "sec",'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      "apps/mobile/eas.json: build.production.env.EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET belongs in the EAS environment variables, not in git",
+    ]);
+  });
+
+  test("keeps the production profile a store build without a dev client", () => {
+    const eas = EAS.replace(
+      '"distribution": "store",',
+      '"distribution": "internal", "developmentClient": true,'
+    );
+    expect(errorsOf({ eas })).toEqual([
+      'apps/mobile/eas.json: build.production.distribution must be "store"',
+      "apps/mobile/eas.json: build.production must not be a developmentClient build",
+    ]);
+  });
+
+  test("fails on invalid JSON", () => {
+    expect(errorsOf({ eas: "{" })).toEqual([
+      "apps/mobile/eas.json: invalid JSON",
     ]);
   });
 });

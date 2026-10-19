@@ -18,6 +18,7 @@ import {
 } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useCallback } from "react";
+import { SponsorCta } from "@/components/sponsor/sponsor-cta";
 import { GestureActions } from "./gesture-actions";
 import { GestureGridSkeleton, LinkedGestureGrid } from "./gesture-cards";
 import type { Hearts } from "./use-hearts";
@@ -80,8 +81,9 @@ function Related({
 /**
  * A gesture: the video on top (3:4, the course banner under it when due),
  * then the name, its categories (links to the filtered browse), the
- * actions, the sponsor credit, description, related concepts and related
- * gestures (spec §16 flow 1). `page` puts the video beside the text from
+ * actions, description, related concepts, the sponsor card (L-17: the
+ * credit, or "Sponsor this gesture") and related gestures (spec §16
+ * flow 1). `page` puts the video beside the text from
  * `lg`; `panel` stacks everything (the browse page's detail column).
  * `viewSource` is where it was opened from (`gesture_viewed`, once per
  * gesture shown). `appLink` goes under the actions (the page's "Open in
@@ -165,11 +167,6 @@ export function GestureDetailView({
           </div>
           <GestureActions gesture={gesture} hearts={hearts} />
           {appLink}
-          {gesture.sponsor ? (
-            <Text size="body-sm" tone="muted">
-              {t("gesture.sponsoredBy", { name: gesture.sponsor.name })}
-            </Text>
-          ) : null}
           {gesture.description ? (
             <section className="flex max-w-reading flex-col gap-2">
               <Heading level={sectionLevel} size="title-3">
@@ -192,6 +189,8 @@ export function GestureDetailView({
               </ul>
             </section>
           ) : null}
+          {/* Last in the column: it mounts after its read, so nothing moves. */}
+          <SponsorCta gesture={gesture} level={sectionLevel} />
         </div>
       </article>
       <Related hearts={hearts} level={sectionLevel} related={related} />

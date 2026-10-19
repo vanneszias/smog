@@ -31,7 +31,13 @@ export function createRpcContext(
   return {
     auth: getAuth(),
     db: createDb(env.db),
-    env: { ...env.worker, ...env.rateLimits },
+    env: {
+      ...env.worker,
+      ...env.rateLimits,
+      EMAIL_QUEUE: env.bindings.EMAIL_QUEUE,
+      EVENTS_QUEUE: env.bindings.EVENTS_QUEUE,
+      MEDIA: env.bindings.MEDIA,
+    },
     ip: clientIp(request),
     kv: env.kv,
     locale: requestLocale(request),

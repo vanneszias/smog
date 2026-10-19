@@ -121,6 +121,10 @@ describe("authErrorKey", () => {
     expect(authErrorKey({ code: "INVALID_OTP", status: 400 })).toBe(
       "codeInvalid"
     );
+    // The outbox did not take the email (phase 6 jobs M-2).
+    expect(authErrorKey({ code: "EMAIL_NOT_SENT", status: 503 })).toBe(
+      "emailNotSent"
+    );
     expect(authErrorKey({ code: "OTP_EXPIRED", status: 400 })).toBe(
       "codeInvalid"
     );

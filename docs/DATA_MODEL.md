@@ -60,6 +60,7 @@ erDiagram
     integer ban_expires
     text locale
     text legacy_id UK
+    integer welcomed_at
   }
   session {
     text id PK
@@ -227,6 +228,10 @@ erDiagram
     integer paid_at
     integer created_at
     integer updated_at
+    integer refunded_cents
+    integer refunded_at
+    integer charged_back_cents
+    integer charged_back_at
   }
   payment_item {
     text payment_id PK,FK
@@ -344,10 +349,13 @@ Statuses (`SPONSORSHIP_STATUSES`): `awaiting_payment → rendering → in_review
 | `ban_expires` | `banExpires` | integer (ms) → Date | yes |  |
 | `locale` | `locale` | text | yes | enum: `nl`, `en`, `fr` |
 | `legacy_id` | `legacyId` | text | yes | unique |
+| `welcomed_at` | `welcomedAt` | integer (ms) → Date | yes | server-only (migration 0012): when the welcome email was claimed |
 
 Indexes: `user_created_at_idx` (created_at).
 
 CHECK: `user_role_check`, `user_locale_check`.
+
+`welcomed_at` (migration 0012, phase 8 ruling 16): the welcome email is claimed once in D1. `welcome()` runs `UPDATE user SET welcomed_at = ? WHERE id = ? AND welcomed_at IS NULL RETURNING id` and enqueues only when a row comes back, so two concurrent verifications send one welcome; the claim keeps `updated_at`. It is not a Better Auth additional field (no client reads or sets it). The migration is `ADD COLUMN` plus the backfill `UPDATE user SET welcomed_at = updated_at WHERE email_verified = 1`: no table rebuild, so `user_keep_one_admin` survives, and it never writes `role`. Unverified accounts stay NULL. On rows from before 0012 the value is an approximation (`updated_at`, between sign-up and the latest change), not a send time: only `IS NULL` is meaningful there. The Convex import sets it to the plan's `--now`, so a migrated user is never welcomed.
 
 Trigger: `user_keep_one_admin` (migration 0007, hand-written): `BEFORE UPDATE OF role` aborts with `last_admin` when an admin is demoted and no other admin without a ban in force remains (ruling 7, atomic). Deleting the last admin is refused by `account.delete` in code; admins cannot delete admins.
 #### `session`
@@ -364,7 +372,7 @@ Trigger: `user_keep_one_admin` (migration 0007, hand-written): `BEFORE UPDATE OF
 | `user_id` | `userId` | text |  | → user.id ON DELETE CASCADE |
 | `impersonated_by` | `impersonatedBy` | text | yes |  |
 
-Indexes: `session_user_id_idx` (user_id).
+Indexes: `session_user_id_idx` (user_id); `session_expires_at_idx` (expires_at, migration 0008: the daily retention purge deletes expired sessions).
 #### `account`
 
 | Column | TS | Type | Null | Notes |
@@ -395,7 +403,7 @@ Indexes: `account_user_id_idx` (user_id); `account_provider_account_idx` (provid
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
 
-Indexes: `verification_identifier_idx` (identifier).
+Indexes: `verification_identifier_idx` (identifier); `verification_expires_at_idx` (expires_at, migration 0008: the daily retention purge).
 #### `passkey`
 
 | Column | TS | Type | Null | Notes |
@@ -570,7 +578,7 @@ CHECK: `audit_log_action_check`, `audit_log_target_type_check`.
 | `locale` | `locale` | text |  | enum: `nl`, `en`, `fr` |
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 
-Indexes: `sponsor_email_idx` (email).
+Indexes: `sponsor_email_idx` (email); `sponsor_email_lower_idx` (lower(email)), migration 0010: the admin user panel finds an account's sponsors by it.
 
 CHECK: `sponsor_name_length_check`, `sponsor_email_length_check`, `sponsor_company_length_check`, `sponsor_locale_check`.
 #### `invoice_request`
@@ -579,10 +587,10 @@ CHECK: `sponsor_name_length_check`, `sponsor_email_length_check`, `sponsor_compa
 |---|---|---|---|---|
 | `sponsor_id` | `sponsorId` | text |  | PK; → sponsor.id ON DELETE CASCADE |
 | `name` | `name` | text |  |  |
-| `vat_number` | `vatNumber` | text |  |  |
+| `vat_number` | `vatNumber` | text |  | The service validates the number (mod-97) before it writes a row. **A migrated row may hold `""`** (the old form let an invoice be requested with no VAT number) **or a number that fails mod-97** (kept as typed): the column has no CHECK, and the import's report warns about both. Nothing reads the number as a key. |
 | `email` | `email` | text |  |  |
 
-CHECK: `invoice_request_name_length_check`, `invoice_request_email_length_check`.
+CHECK: `invoice_request_name_length_check`, `invoice_request_email_length_check`. Every NOT NULL column is filled for a migrated row (`name` = `invoiceName ?? contactCompany ?? contactFullName`, `email` = `invoiceEmail ?? sponsorEmail`).
 #### `sponsorship`
 
 | Column | TS | Type | Null | Notes |
@@ -602,7 +610,7 @@ CHECK: `invoice_request_name_length_check`, `invoice_request_email_length_check`
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
 | `legacy_id` | `legacyId` | text | yes | unique |
 
-Indexes: unique `sponsorship_gesture_blocking_uq` (gesture_id) WHERE …; `sponsorship_gesture_status_idx` (gesture_id, status); `sponsorship_status_ends_at_idx` (status, ends_at); `sponsorship_sponsor_id_idx` (sponsor_id).
+Indexes: unique `sponsorship_gesture_blocking_uq` (gesture_id) WHERE …; `sponsorship_gesture_status_idx` (gesture_id, status); `sponsorship_status_ends_at_idx` (status, ends_at); `sponsorship_sponsor_id_idx` (sponsor_id); `sponsorship_created_id_idx` (created_at, id), migration 0010: the admin list (newest first) and the CSV export (oldest first) seek it.
 
 CHECK: `sponsorship_status_check`, `sponsorship_display_name_length_check`.
 #### `payment`
@@ -619,8 +627,14 @@ CHECK: `sponsorship_status_check`, `sponsorship_display_name_length_check`.
 | `paid_at` | `paidAt` | integer (ms) → Date | yes |  |
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
+| `refunded_cents` | `refundedCents` | integer |  | default 0; Mollie's `amountRefunded`, stored on every re-fetch (migration 0008) |
+| `refunded_at` | `refundedAt` | integer (ms) → Date | yes | when a refund was first recorded (migration 0008) |
+| `charged_back_cents` | `chargedBackCents` | integer |  | default 0; Mollie's `amountChargedBack`, stored on every re-fetch, a reversal (a lower amount) included (migration 0009; phase 6 fix wave) |
+| `charged_back_at` | `chargedBackAt` | integer (ms) → Date | yes | when the stored chargeback amount last rose (migration 0009; the window of its admin email, phase 6 fix wave); a reversal leaves it |
 
 Indexes: `payment_status_created_idx` (status, created_at).
+
+Refunds are made by hand in the Mollie dashboard (phase 6 ruling 4); a `refund_needed` payment with `refunded_cents >= amount_cents` reads as "Refunded" in the admin. Migration 0008 added both columns with `ALTER TABLE … ADD COLUMN` (no rebuild: `payment` has RESTRICT and CASCADE children). Migration 0009 added the two chargeback columns the same way: a chargeback keeps the payment `paid`, writes a `refund_needed` event (`reason: "chargeback"`) on each item and emails the admins (within 6 days of the rise); the sponsorship is not cancelled automatically. A reversed chargeback (Mollie lowers `amountChargedBack`) lowers `charged_back_cents` with no event, logged `[sponsorships] Chargeback on payment … reversed`. A payment Mollie reports `paid` while ours is still `open` (or cancelled), but whose `amountRefunded + amountChargedBack` already covers the amount, is not applied: it becomes `refund_needed` (`reason: "mismatch"`) and its items are released.
 
 CHECK: `payment_kind_check`, `payment_status_check`, `payment_currency_check`, `payment_amount_check`.
 #### `payment_item`
@@ -653,7 +667,7 @@ CHECK: `payment_item_amount_check`.
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
 | `finished_at` | `finishedAt` | integer (ms) → Date | yes |  |
 
-Indexes: `render_job_sponsorship_created_idx` (sponsorship_id, created_at); `render_job_mux_upload_id_idx` (mux_upload_id); `render_job_mux_asset_id_idx` (mux_asset_id).
+Indexes: `render_job_sponsorship_created_idx` (sponsorship_id, created_at); `render_job_mux_upload_id_idx` (mux_upload_id); `render_job_mux_asset_id_idx` (mux_asset_id); `render_job_status_updated_idx` (status, updated_at), migration 0011: the render watchdog (phase 7 ruling 12) reads the `queued` and the `running` jobs oldest first, each status a seek with no sort.
 
 CHECK: `render_job_status_check`, `render_job_attempt_check`.
 #### `sponsorship_event`
@@ -686,14 +700,28 @@ Indexes: `sponsorship_token_expires_at_idx` (expires_at, for the monthly clean-u
 
 CHECK: `sponsorship_token_purpose_check`.
 
+## Migrated data (the Convex import, phase 8)
+
+`@smog/migrate-convex` (`packages/migrate-convex`) writes the old Convex data into these tables; the rules below hold for every migrated row, and `docs/cutover-runbook.md` runs it. The importer emits SQL (it is not a service), so it writes final states as data and never goes through `transition()`.
+
+- **Deterministic ids and insert-only SQL.** A migrated row's id is `legacyUuid(table, key)`, a UUID v8 from the SHA-256 of `smog-convex:<table>:<key>` (composite keys as JSON). Every insert is `INSERT … ON CONFLICT(<key>) DO NOTHING` with the conflict target always named (`legacy_id` on `user` / `category` / `gesture` / `sponsorship`, also `email` on `user`, the primary key elsewhere), so any other violation fails loudly. No statement updates a column the new system owns, so a re-run changes nothing; a changed export needs the earlier plan's own `reset-imported-*.sql` run first (`docs/cutover-runbook.md` §4: `apply --reset` runs the preflight first and re-applies the old plan, so another export's plan is refused), then `apply`. `legacy_id` is the Convex `_id`.
+- **Users.** A Convex user with no `workosId` is a guest: skipped with every row it owns (its favorites, lists, list items and consents), and counted; a guest's item on a real user's shared list is kept with `added_by` NULL. The email is trimmed and lower-cased; with a WorkOS export the WorkOS email wins. A user with no email is dropped and reported. Duplicate emails merge into the oldest account (favorites united, lists moved, admin if either was). The row: `email_verified = 1`, no `account` row (no credential), `role` = Convex `role ?? "user"` **set at insert**, `locale` and `image` NULL, `banned` 0, `welcomed_at = --now` (a migrated user is never welcomed). An existing account with the same email is **claimed** (`UPDATE user SET legacy_id = ? WHERE email = ? AND legacy_id IS NULL`), which never touches `role` (so `user_keep_one_admin` does not fire); a differing role is reported, never changed. Nothing demotes or promotes anyone, and the reset never deletes the last admin. Apple private-relay addresses (`@privaterelay.appleid.com`) are counted: mail reaches them only after the sending domain is registered with Apple.
+- **Catalogue.** Categories and gestures get slugs from their names (deduplicated `-2`, `-3` … in `_creationTime, _id` order); `sort_name = gestureSortName(name)`; `published_at` = `isActive` ? a time : NULL; keywords come from `concept` (trimmed, empties and duplicates dropped, positions in order); `gesture_category` from `categoryIds` (unknown ids dropped and counted). **A sponsored gesture gets its own video back:** the old `approve` wrote the sponsor's video into `gestures.playbackId` and the expiry restored `originalVideoPlaybackId`, whereas here `gesture.playback_id` is always the original; the importer restores `originalVideoPlaybackId` (following chains) and warns when it cannot. `mux_asset_id` comes from the Mux map for the resolved playback id (NULL and a warning without one). After the import `gesture_fts` is rebuilt for every migrated gesture and `catalog:version` is bumped.
+- **Learning data.** `favorite` is the union of `user_favorites` and each user's default-list items, at the earliest time (an account over `FAVORITE_IDS_MAX`, 5000, is warned about). Every non-default list becomes `list` + `list_item`: positions are **renumbered `0..n-1`** in the old `position, createdAt, _id` order and never used as an index; names and descriptions are cut to 80 and 280. A list over `LIST_ITEMS_MAX` (500) is split into consecutive lists `Name`, `Name (2)` … (the next free suffix, at most 80 characters); an account that then has more than `LISTS_MAX` (100) lists is a **blocker**. `list_share` rows exist only for `visibility = "shared"` lists: `viewShareToken` as `view`, `editShareToken` as `edit` only with `allowSharedEditing`; tokens keep their values; a split list's shares stay on part 1; an edit token on a list without shared editing and the default list's tokens are not migrated and are listed. Old `/lists/<convexListId>` bookmarks (an owner's own list, not a token) answer not found.
+- **Consents and audit.** Each `user_consents` row becomes an `analytics` event (`granted = analyticsConsent`) and, when set, a `marketing` event, with `policy_version = consentVersion`, `source = "import"`, `created_at = consentDate`; the IP address and user agent are dropped. Admin logs become `audit_log` rows with `action = "legacy"` and `data = { legacy: { action, targetType, targetId, metadata } }`; `target_type` is one of `AUDIT_TARGET_TYPES` (anything else `system` with `target_id` NULL), `actor_id` is the mapped user or NULL, and rows older than 3 years are dropped and counted.
+- **Sponsorships.** Rows are grouped into checkouts by `molliePaymentId` (a row without one is its own checkout): one `sponsor` (`locale = "nl"`), one `invoice_request` when `invoiceRequested` (see the empty VAT above), one `payment` when there is a Mollie id (`kind = "initial"`, the Mollie id kept in `mollie_id`, the summed amount), one `payment_item` per row (`includes_logo = hasLogo ?? paymentAmount === 6000`; an amount other than 5000 or 6000 is warned about). Statuses: `pending` → `cancelled` (no payment); `pending_payment` → `awaiting_payment` with an `open` payment whatever its age when it has a Mollie id (the first stale sweep asks Mollie), without one `awaiting_payment` (under 24 h) or `cancelled` (older); `pending_approval` → `in_review` (video = `sponsoredVideoPlaybackId ?? previewVideoPlaybackId`, with neither `render_failed`); `pending_resubmission` → `changes_requested`; `active` → `live`, or `expiring` when `renewalReminderSentAt` is set; `expired`, `rejected` the same; `cancelled` → `cancelled`. `starts_at`/`ends_at` only for `live`, `expiring`, `expired`; `reminder_sent_at = renewalReminderSentAt` (a migrated `expiring` row has no renewal link: an admin regenerates it). **`display_name` is the old `overlayText`** (the text in the video), never `sponsorName`; over 35 characters is a blocker unless an overlay override gives a new text. Logos are not migrated (`logo_key` NULL, `includes_logo` keeps the fact; a re-render runs without the logo and the admin detail says so). One `legacy` `sponsorship_event` per sponsorship holds the old status, `reviewedAt` (epoch ms, which the rejected-video bound reads), the rejection reason, the preview and original playback ids, `sponsorName`, the untruncated overlay text, `hasLogo`, `durationYears` and a marker of the overlay image (never the image). An unexpired `reEditToken` becomes a `sponsorship_token` (`reedit`, `hashSponsorshipToken`, the same expiry). No `render_job` rows are made. `refunded_cents` and `charged_back_cents` start at 0: the old webhook ignored every Mollie status but `paid`, so refunds and chargebacks are not in the export (the runbook records them by hand).
+- **The rejected video.** A migrated `rejected` row has only the `legacy` event: the daily purge never deletes its Mux asset (the purge reads `rejected` events), and `requestChanges` reads `data.legacy.reviewedAt` for the 30-day bound.
+- **Staging** always gets a pseudonymised plan: every `user.email`, `sponsor.email` and `invoice_request.email` becomes `<legacyUuid>@staging.invalid`, names become placeholders, VAT numbers `""`, `video_asset_id` and `gesture.mux_asset_id` NULL, tokens are dropped (share tokens are replaced by deterministic ones); all counts stay identical.
+
 ## Relations
 
 `src/schema/relations.ts` declares Drizzle `relations()` for every foreign key (both directions), so `db.query.<table>.findMany({ with: … })` works, and so does Better Auth's adapter when its joins are enabled. They add no SQL.
 
 ## Migrations, seed and tests
 
-**Migrations are append-only.** `0000`–`0003` are merged; never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
+**Migrations are append-only.** `0000`–`0012` are merged (the next free number is `0013`); never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
 
+- **Retention** (phase 6 ruling 9, `packages/db/src/retention.ts`): the daily `15 3 * * *` cron deletes `audit_log` rows older than 3 × 365 days, expired `session` and `verification` rows, and `sponsorship_token` rows used or expired more than 29 days ago (so a daily run removes them within 30 days), in chunks of 500 (`rowid IN (SELECT rowid … LIMIT 500)`, at most 20 per purge per run). Each chunk read seeks an index except the used-token one (`used_at` has no index; the table is small). The same run (`runRetentionPurge`, `@smog/sponsorships/server`) clears `sponsorship.logo_key` on sponsorships that ended (`rejected`, `cancelled`, `expired`) more than 30 days ago and can no longer use the logo (`payment_item.includes_logo` keeps the fact), and deletes R2 `logos/*` objects that no sponsorship references and that were uploaded more than 24 h ago (a KV cursor resumes the listing across runs). `bun run retention --env <env> --dry-run` counts what it would delete.
 - `bun -F @smog/db db:generate` runs `drizzle-kit generate` (generate only; wrangler applies migrations). Hand-written SQL (such as the FTS table) goes in a file made with `drizzle-kit generate --custom --name <name>`, so the drizzle journal stays in step.
 - `bun -F @smog/db migrate:dev` applies them to the local dev D1 (`wrangler d1 migrations apply DB --env dev --local`, from `apps/site`; `migrations_dir` is `../../packages/db/migrations` in every env). `deploy.yml` applies them remotely before each deploy.
 - `bun -F @smog/db seed:dev` regenerates `seed/dev.sql` (`scripts/seed.ts`), applies it locally and bumps the local `catalog:version` KV key (so a running dev server drops its typo-tier projection): 5 categories, 20 published gestures (sample Mux playback id, keywords, FTS rows rebuilt by `rebuildGestureFtsSql`, the statements `reindexGesture` runs) and the admin user `admin@smog.test` with the **dev-only** password `smog-dev-admin` (a Better Auth scrypt credential with a fixed salt; the seed replaces any other credential of that user). The admin row upserts on `email`, so an account that already signed up with that address keeps its id and is promoted to `admin`. Ids and timestamps are fixed and every statement is an upsert, so it can be re-run.

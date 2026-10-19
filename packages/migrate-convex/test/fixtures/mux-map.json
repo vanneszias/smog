@@ -1,0 +1,11 @@
+{
+  "fixtureOriginalPlayback0001": {
+    "assetId": "asset-fixture-original-0001",
+    "renditions": "absent"
+  },
+  "fixturePreviewPlayback0001": { "assetId": "asset-fixture-preview-0001" },
+  "fixtureSponsoredPlayback0001": {
+    "assetId": "asset-fixture-sponsored-0001",
+    "renditions": "ready"
+  }
+}

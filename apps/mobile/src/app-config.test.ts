@@ -2,11 +2,46 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import { APP_MAGIC_LINK_PATH } from "@smog/auth/react";
+import { PRODUCTION_LAUNCH_ORIGIN } from "@smog/config/constants";
+import { parseMobileEnv } from "@smog/config/env/mobile";
 import { tokens } from "@smog/styles/tokens";
 import type { ConfigContext, ExpoConfig } from "expo/config";
 import createConfig from "../app.config";
+import easJson from "../eas.json";
+import { devToolsAvailable } from "./lib/dev-tools";
 
 const PROJECT_ID = "9fa68b63-dfa5-498a-9196-5eba93ecac29";
+
+interface EasProfile {
+  autoIncrement?: boolean;
+  channel?: string;
+  developmentClient?: boolean;
+  distribution?: string;
+  env: Record<string, string>;
+  environment?: string;
+}
+
+const eas = easJson as {
+  build: Record<string, EasProfile | undefined>;
+  cli: { appVersionSource?: string; version?: string };
+  submit: Record<string, unknown>;
+};
+
+function profile(name: string): EasProfile {
+  const found = eas.build[name];
+  if (!found) {
+    throw new Error(`eas.json has no build.${name}`);
+  }
+  return found;
+}
+
+/** The https hosts of the verified (autoVerify) Android intent filter. */
+function verifiedHosts(config: ExpoConfig): string[] {
+  const https = config.android?.intentFilters?.find(
+    (filter) => filter.autoVerify === true
+  );
+  return [https?.data ?? []].flat().map((data) => data.host ?? "");
+}
 
 function load(): ExpoConfig {
   const context: ConfigContext = {
@@ -42,11 +77,16 @@ describe("app.config", () => {
     expect(config.updates?.url).toBe(`https://u.expo.dev/${PROJECT_ID}`);
   });
 
-  it("bumps the store versions above the old app", () => {
+  it("leaves the build numbers to EAS (remote app versions)", () => {
     const config = load();
     expect(config.version).toBe("3.0.0");
-    expect(config.ios?.buildNumber).toBe("52");
-    expect(config.android?.versionCode).toBe(81);
+    // EAS cannot write an autoIncrement into a dynamic app.config.ts; the
+    // owner seeds the remote counters at the stores' last values, iOS 51 /
+    // Android 80, so the first build is 52 / 81 (ruling 3).
+    expect(config.ios?.buildNumber).toBeUndefined();
+    expect(config.android?.versionCode).toBeUndefined();
+    expect(eas.cli.appVersionSource).toBe("remote");
+    expect(eas.build.production?.autoIncrement).toBe(true);
   });
 
   it("derives the app links from EXPO_PUBLIC_SITE_HOST", () => {
@@ -70,7 +110,7 @@ describe("app.config", () => {
     delete process.env.EXPO_PUBLIC_SITE_HOST;
     const config = load();
     expect(config.ios?.associatedDomains).toEqual([
-      "applinks:smog-site-staging.workers.dev",
+      "applinks:smog-site-staging.zias.workers.dev",
     ]);
   });
 
@@ -112,5 +152,109 @@ describe("app.config", () => {
     const config = load();
     expect(config.plugins).toContain("expo-apple-authentication");
     expect(config.ios?.usesAppleSignIn).toBe(true);
+  });
+});
+
+/** Each EAS profile, resolved the way its build resolves it (ruling 3). */
+describe("eas.json profiles", () => {
+  const KEYS = [
+    "EXPO_PUBLIC_API_URL",
+    "EXPO_PUBLIC_ENVIRONMENT",
+    "EXPO_PUBLIC_SITE_HOST",
+  ] as const;
+  const saved = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
+
+  afterEach(() => {
+    for (const key of KEYS) {
+      if (saved[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = saved[key];
+      }
+    }
+  });
+
+  const MATRIX = [
+    {
+      api: "http://localhost:5173",
+      channel: "development",
+      devTools: true,
+      environment: "development",
+      host: "localhost",
+      name: "development",
+      runtime: "dev",
+    },
+    {
+      api: "https://smog-site-staging.zias.workers.dev",
+      channel: "staging",
+      devTools: true,
+      environment: "preview",
+      host: "smog-site-staging.zias.workers.dev",
+      name: "staging",
+      runtime: "staging",
+    },
+    {
+      api: PRODUCTION_LAUNCH_ORIGIN,
+      channel: "production",
+      devTools: false,
+      environment: "production",
+      host: new URL(PRODUCTION_LAUNCH_ORIGIN).hostname,
+      name: "production",
+      runtime: "production",
+    },
+  ] as const;
+
+  it("has exactly the development, staging and production profiles", () => {
+    expect(Object.keys(eas.build).sort()).toEqual([
+      "development",
+      "production",
+      "staging",
+    ]);
+  });
+
+  it.each(MATRIX)("$name builds for its origin", (row) => {
+    const { env, ...rest } = profile(row.name);
+    expect(rest.channel).toBe(row.channel);
+    expect(rest.environment).toBe(row.environment);
+    // Only the reviewed public origin keys; the OpenPanel pair lives in the
+    // EAS environment variables, never in git.
+    expect(Object.keys(env).sort()).toEqual([...KEYS]);
+    expect(env).toEqual({
+      EXPO_PUBLIC_API_URL: row.api,
+      EXPO_PUBLIC_ENVIRONMENT: row.runtime,
+      EXPO_PUBLIC_SITE_HOST: row.host,
+    });
+
+    const parsed = parseMobileEnv(env);
+    expect(parsed.EXPO_PUBLIC_API_URL).toBe(row.api);
+    expect(parsed.EXPO_PUBLIC_SITE_HOST).toBe(row.host);
+
+    Object.assign(process.env, env);
+    const config = load();
+    expect(config.ios?.associatedDomains).toEqual([`applinks:${row.host}`]);
+    const hosts = verifiedHosts(config);
+    expect(hosts.length).toBeGreaterThan(0);
+    expect(new Set(hosts)).toEqual(new Set([row.host]));
+    expect(devToolsAvailable()).toBe(row.devTools);
+  });
+
+  it("builds the store app with remote, auto-incremented versions", () => {
+    const production = profile("production");
+    expect(production.distribution).toBe("store");
+    expect(production.autoIncrement).toBe(true);
+    // A dev client never reaches the store.
+    expect(production.developmentClient).not.toBe(true);
+    expect(profile("staging").developmentClient).not.toBe(true);
+    expect(profile("development").developmentClient).toBe(true);
+    expect(profile("development").distribution).toBe("internal");
+    expect(profile("staging").distribution).toBe("internal");
+  });
+
+  it("fills the production submit profile without a key file", () => {
+    expect(eas.submit.production).toEqual({
+      android: { releaseStatus: "draft", track: "internal" },
+      ios: { appleTeamId: "96XKP6MU2A", ascAppId: "6758547774" },
+    });
+    expect(eas.cli.version).toBe(">= 24.10.0");
   });
 });

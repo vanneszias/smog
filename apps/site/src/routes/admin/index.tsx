@@ -13,10 +13,11 @@ import {
   TextLink,
 } from "@smog/ui-web";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FolderTree, Hand, Plus, Users } from "lucide-react";
+import { FolderTree, Hand, HandCoins, Plus, Users } from "lucide-react";
 import { type ReactNode, useCallback } from "react";
 import { AdminPage } from "@/components/admin/admin-page";
 import { AuditEntries } from "@/components/admin/audit-table";
+import { SponsorshipStats } from "@/components/admin/sponsorships/dashboard-stats";
 import { pageMeta } from "@/lib/head";
 
 export const Route = createFileRoute("/admin/")({
@@ -65,7 +66,8 @@ function Stats({ data }: { data: Dashboard }): ReactNode {
   const { t } = useTranslation();
   const { categories, gestures, users } = data;
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <SponsorshipStats stats={data.sponsorships} />
       <StatCard
         details={[
           t("admin.dashboard.published", { count: gestures.published }),
@@ -147,7 +149,8 @@ function AdminDashboard(): ReactNode {
   } else {
     body = (
       <>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
@@ -163,7 +166,12 @@ function AdminDashboard(): ReactNode {
           aria-label={t("admin.dashboard.quickLinks")}
           className="flex flex-wrap gap-2"
         >
-          <Button asChild icon={<Plus />}>
+          <Button asChild icon={<HandCoins />}>
+            <Link to="/admin/sponsorships">
+              {t("admin.dashboard.sponsorships.review")}
+            </Link>
+          </Button>
+          <Button asChild icon={<Plus />} variant="secondary">
             <Link to="/admin/gestures/new">
               {t("admin.dashboard.newGesture")}
             </Link>

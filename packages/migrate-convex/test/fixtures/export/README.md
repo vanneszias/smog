@@ -1,0 +1,1 @@
+The minimal Convex export fixture of `@smog/migrate-convex` (phase 8 task 5): the layout of a snapshot export and one row per table. Tasks 7 and 8 extend the tables they own. Every address is `@example.test`, and every name, token and playback id is invented.

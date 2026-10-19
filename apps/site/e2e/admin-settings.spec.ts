@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
 import {
   type Browser,
   type BrowserContext,
@@ -11,7 +13,13 @@ import {
   openAdmin,
   shotsDir,
 } from "./admin";
-import { blockingViolations, ORIGIN, waitForApp, watchErrors } from "./helpers";
+import {
+  blockingViolations,
+  ORIGIN,
+  otpFor,
+  waitForApp,
+  watchErrors,
+} from "./helpers";
 import {
   getBypass,
   maintenanceOff,
@@ -33,6 +41,10 @@ import {
 const ACTIVE_UNTIL = /^Actief tot /;
 const PROPAGATION_NOTE = /binnen ongeveer 2 minuten/;
 const MESSAGE_LABEL = /^Bericht/;
+const REPO_ROOT = join(import.meta.dirname, "..", "..", "..");
+/** The real script, by path (run with `bun` from the repository root). */
+const ADMIN_GRANT = join(REPO_ROOT, "scripts", "admin-grant.ts");
+const SAME_ORIGIN = { origin: ORIGIN };
 
 test.describe.configure({ mode: "serial" });
 
@@ -158,6 +170,67 @@ test.describe("admin settings: maintenance", () => {
     );
     expect(cookie?.httpOnly).toBe(true);
     expect(await blockingViolations(page)).toEqual([]);
+  });
+});
+
+/*
+ * The first production admin (phase 8 ruling 18): `bun run admin:grant
+ * --create` makes a verified admin with no password on the dev server's
+ * local D1 (the real script and wrangler), and that admin signs in with an
+ * email code while maintenance is on, then gets the bypass cookie.
+ */
+test.describe("the first admin (admin:grant --create)", () => {
+  test("signs in with an email code during maintenance and bypasses it", async ({
+    browser,
+  }) => {
+    test.setTimeout(6 * PROPAGATION_MS);
+    const email = `e2e-first-admin-${crypto.randomUUID()}@example.test`;
+    const opened: BrowserContext[] = [];
+    const context = async (): Promise<BrowserContext> => {
+      const created = await browser.newContext();
+      opened.push(created);
+      return created;
+    };
+    try {
+      const output = execFileSync(
+        "bun",
+        [ADMIN_GRANT, "--env", "dev", "--create", email],
+        { cwd: REPO_ROOT, encoding: "utf8" }
+      );
+      expect(output).toContain("created_id");
+
+      // The seeded admin opens a window (and keeps a bypass to read mail).
+      const admin = (await context()).request;
+      await signInAsAdmin(admin);
+      await getBypass(admin);
+      const on = await admin.post("/api/rpc/admin/maintenance/set", {
+        data: { json: { enabled: true } },
+        headers: SAME_ORIGIN,
+      });
+      expect(on.ok()).toBe(true);
+
+      const first = (await context()).request;
+      await waitForStatus(first, "/", 503);
+      const sent = await first.post(
+        "/api/auth/email-otp/send-verification-otp",
+        { data: { email, type: "sign-in" }, headers: SAME_ORIGIN }
+      );
+      expect(sent.status()).toBe(200);
+      // /dev/mail.json is closed too: read it through the bypass.
+      const otp = await otpFor(admin, email);
+      const signedIn = await first.post("/api/auth/sign-in/email-otp", {
+        data: { email, otp },
+        headers: SAME_ORIGIN,
+      });
+      expect(signedIn.status()).toBe(200);
+      expect(await statusOf(first, "/admin")).toBe(503);
+      await getBypass(first);
+      expect(await statusOf(first, "/admin")).toBe(200);
+      expect(await statusOf(first, "/account")).toBe(200);
+    } finally {
+      await Promise.all(opened.map((created) => created.close()));
+      await reopen(browser);
+    }
   });
 });
 

@@ -11,7 +11,7 @@
   },
   "scripts": {
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json && tsc -p tsconfig.test.json",
-    "test": "vitest run"
+    "test": "bun ../../../scripts/test-deadline.ts -- vitest run"
   },
   "dependencies": {
     "@orpc/contract": "catalog:",
@@ -21,7 +21,10 @@
     "@smog/db": "workspace:*",
     "@smog/email": "workspace:*",
     "@smog/gestures": "workspace:*",
+    "@smog/jobs": "workspace:*",
+    "@smog/payments": "workspace:*",
     "@smog/rpc": "workspace:*",
+    "@smog/sponsorships": "workspace:*",
     "@smog/utils": "workspace:*",
     "@smog/video": "workspace:*",
     "drizzle-orm": "catalog:",

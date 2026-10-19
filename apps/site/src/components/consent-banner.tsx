@@ -5,7 +5,8 @@ import {
 } from "@smog/account/client";
 import { useTranslation } from "@smog/i18n/react";
 import { ConsentBanner, Switch, useToast } from "@smog/ui-web";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback } from "react";
+import { useReservedSpace } from "@/lib/use-reserved-space";
 
 const PRIVACY_HREF = "/privacy";
 
@@ -16,38 +17,6 @@ function useSaveFailed(): () => void {
   return useCallback(() => {
     toast({ title: t("consent.saveFailed"), variant: "danger" });
   }, [t, toast]);
-}
-
-/**
- * While the banner shows, the page keeps room for it at the bottom (WCAG
- * 2.4.11): an in-flow spacer of its height, so the footer can be scrolled
- * into view, and `scroll-padding-bottom`, so focus is never scrolled under it.
- */
-function useReservedSpace(): {
-  height: number;
-  ref: (element: HTMLElement | null) => void;
-} {
-  const [element, setElement] = useState<HTMLElement | null>(null);
-  const [height, setHeight] = useState(0);
-  useEffect(() => {
-    if (!element) {
-      setHeight(0);
-      return;
-    }
-    const measure = (): void => setHeight(element.offsetHeight);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [element]);
-  useEffect(() => {
-    const root = document.documentElement;
-    root.style.scrollPaddingBottom = height > 0 ? `${height}px` : "";
-    return () => {
-      root.style.scrollPaddingBottom = "";
-    };
-  }, [height]);
-  return { height, ref: setElement };
 }
 
 /**

@@ -79,6 +79,8 @@ export function targetTypeLabel(t: Translate, type: AuditTargetType): string {
 /** A typed link to the target's admin page. */
 export type AuditTargetLink =
   | { params: { id: string }; to: "/admin/gestures/$id" }
+  | { params: { id: string }; to: "/admin/sponsorships/$id" }
+  | { search: { payment: string; tab: "all" }; to: "/admin/sponsorships" }
   | { search: { user: string }; to: "/admin/users" }
   | { to: "/admin/categories" | "/admin/settings" };
 
@@ -101,6 +103,11 @@ export function auditTargetLink(entry: AuditEntry): AuditTargetLink | null {
       return { search: { user: id }, to: "/admin/users" };
     case "setting":
       return { to: "/admin/settings" };
+    case "sponsorship":
+      return { params: { id }, to: "/admin/sponsorships/$id" };
+    case "payment":
+      // The payment's sponsorships (its own page is each sponsorship's).
+      return { search: { payment: id, tab: "all" }, to: "/admin/sponsorships" };
     default:
       return null;
   }

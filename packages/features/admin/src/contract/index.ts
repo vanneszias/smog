@@ -6,8 +6,8 @@
  * (ruling 5).
  *
  * One slice file per area (every phase 5 area exists already), so the
- * tasks that fill them never edit this file. Phase 6 adds `sponsorships`
- * and `export` here: one import, one spread and one `ADMIN_SLICES` entry.
+ * tasks that fill them never edit this file. Phase 6 added `sponsorships`
+ * and `export`: one import, one spread and one `ADMIN_SLICES` entry each.
  */
 
 import { ADMIN_PROCEDURES as AUDIT_PROCEDURES, auditSlice } from "./audit";
@@ -21,6 +21,7 @@ import {
   dashboardSlice,
 } from "./dashboard";
 import { ADMIN_PROCEDURES as EMAILS_PROCEDURES, emailsSlice } from "./emails";
+import { ADMIN_PROCEDURES as EXPORT_PROCEDURES, exportSlice } from "./export";
 import {
   ADMIN_PROCEDURES as GESTURES_PROCEDURES,
   gesturesSlice,
@@ -30,6 +31,10 @@ import {
   maintenanceSlice,
 } from "./maintenance";
 import { ADMIN_PROCEDURES as MUX_PROCEDURES, muxSlice } from "./mux";
+import {
+  ADMIN_PROCEDURES as SPONSORSHIPS_PROCEDURES,
+  sponsorshipsSlice,
+} from "./sponsorships";
 import { ADMIN_PROCEDURES as USERS_PROCEDURES, usersSlice } from "./users";
 
 export type {
@@ -49,6 +54,8 @@ export const adminContract = {
   ...usersSlice,
   ...maintenanceSlice,
   ...emailsSlice,
+  ...sponsorshipsSlice,
+  ...exportSlice,
 };
 
 export type AdminContract = typeof adminContract;
@@ -67,12 +74,17 @@ export const ADMIN_SLICES = {
   categories: { contract: categoriesSlice, procedures: CATEGORIES_PROCEDURES },
   dashboard: { contract: dashboardSlice, procedures: DASHBOARD_PROCEDURES },
   emails: { contract: emailsSlice, procedures: EMAILS_PROCEDURES },
+  export: { contract: exportSlice, procedures: EXPORT_PROCEDURES },
   gestures: { contract: gesturesSlice, procedures: GESTURES_PROCEDURES },
   maintenance: {
     contract: maintenanceSlice,
     procedures: MAINTENANCE_PROCEDURES,
   },
   mux: { contract: muxSlice, procedures: MUX_PROCEDURES },
+  sponsorships: {
+    contract: sponsorshipsSlice,
+    procedures: SPONSORSHIPS_PROCEDURES,
+  },
   users: { contract: usersSlice, procedures: USERS_PROCEDURES },
 } satisfies Record<string, AdminSlice>;
 

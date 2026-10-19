@@ -10,6 +10,13 @@
       "binding": "DB",
       "database_name": "smog-test",
       "database_id": "00000000-0000-4000-8000-000000000000"
+    },
+    {
+      // An empty D1 the migration tests apply migrations to step by step
+      // (test/migrations.test.ts), with rows written in between.
+      "binding": "MIGRATION_DB",
+      "database_name": "smog-migration-test",
+      "database_id": "00000000-0000-4000-8000-000000000001"
     }
   ]
 }

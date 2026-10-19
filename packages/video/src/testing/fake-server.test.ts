@@ -1,6 +1,10 @@
 import { afterAll, describe, expect, it } from "bun:test";
 import { getAsset } from "../assets";
 import { createMux } from "../client";
+import {
+  enableStaticRendition,
+  staticRenditionState,
+} from "../static-renditions";
 import { createDirectUpload, getUpload } from "../uploads";
 import { verifyMuxWebhook } from "../webhooks";
 import { FAKE_MUX_TOKEN } from "./fake-mux";
@@ -90,5 +94,24 @@ describe("the fake Mux server", () => {
       "video.upload.asset_created",
       "video.asset.ready",
     ]);
+  });
+
+  it("serves the static-renditions POST and readies the rendition (phase 8)", async () => {
+    const mux = createMux({
+      MUX_API_URL: server.url,
+      MUX_TOKEN_ID: FAKE_MUX_TOKEN.id,
+      MUX_TOKEN_SECRET: FAKE_MUX_TOKEN.secret,
+    });
+    if (!mux) {
+      throw new Error("expected a client");
+    }
+    const asset = server.fake.addAsset();
+    expect(await enableStaticRendition(mux, asset.id, "highest")).toMatchObject(
+      { status: "preparing" }
+    );
+    await until(async () => {
+      const read = await getAsset(mux, asset.id);
+      return read !== null && staticRenditionState(read) === "ready";
+    });
   });
 });

@@ -1,3 +1,4 @@
+import { defineRequestState } from "@better-auth/core/context";
 import { expo } from "@better-auth/expo";
 import { passkey } from "@better-auth/passkey";
 import {
@@ -10,17 +11,21 @@ import {
 import type { Db } from "@smog/db/client";
 import {
   APP_NAME,
-  type EmailSender,
+  type EmailOutbox,
   type EmailTemplateId,
   type EmailTemplateProps,
   emailLocale,
-  sendEmail,
+  type OutboxEmail,
 } from "@smog/email";
-import { betterAuth } from "better-auth";
+import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import {
+  APIError,
+  createAuthMiddleware,
+  sendVerificationEmailFn,
+} from "better-auth/api";
 import { admin, captcha, emailOTP, magicLink } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { COOKIE_PREFIX } from "./cookie";
 import type { AuthEnv } from "./env";
 import {
@@ -92,8 +97,13 @@ export interface CreateAuthOptions {
   /** The site origin, e.g. `http://localhost:5173` (`SITE_URL`). */
   baseURL: string;
   db: Db;
-  email: EmailSender;
   env: AuthEnv;
+  /**
+   * Where the auth emails and the welcome email go (phase 6 ruling 8): the
+   * site's `QueueEmailOutbox` on `EMAIL_QUEUE`, so they are rendered and
+   * sent by the email consumer; tests use `DirectEmailOutbox`.
+   */
+  outbox: EmailOutbox;
   /**
    * Existing users only (the site during maintenance): every sign-up is
    * off, no user is ever created (the create hook refuses), a code or a
@@ -101,8 +111,6 @@ export interface CreateAuthOptions {
    * code endpoint sends sign-in codes only.
    */
   signInOnly?: boolean | undefined;
-  /** Runs email sends after the response (`waitUntil`); awaited when unset. */
-  waitUntil?: ((promise: Promise<unknown>) => void) | undefined;
 }
 
 const minutes = (seconds: number): number => Math.round(seconds / 60);
@@ -269,23 +277,137 @@ export function createAuth(options: CreateAuthOptions) {
     return (await findAccount(email))?.locale ?? null;
   }
 
+  /**
+   * Hands an auth email to the outbox. No idempotency key: every code and
+   * link is new. `From`/`Reply-To` are the consumer's, from env.
+   */
   async function send<Id extends EmailTemplateId>(
     template: Id,
     to: string,
     props: EmailTemplateProps[Id],
     context: { locale: string | null; request?: Request | undefined }
   ): Promise<void> {
-    await sendEmail(options.email, {
-      from: env.EMAIL_FROM,
-      locale: emailLocale({
-        request: context.request,
-        userLocale: context.locale,
-      }),
-      props,
-      replyTo: env.EMAIL_REPLY_TO,
-      template,
-      to,
+    try {
+      await options.outbox.send({
+        locale: emailLocale({
+          request: context.request,
+          userLocale: context.locale,
+        }),
+        props,
+        template,
+        to,
+      } as OutboxEmail);
+    } catch (error) {
+      // Better Auth catches and logs a failed send on most endpoints
+      // (`runInBackgroundOrAwait`) and answers 200; the `after` hook turns
+      // this mark into an error, so the user asks again (review I1).
+      (await emailFailure.get()).failed = true;
+      throw error;
+    }
+  }
+
+  /**
+   * Claims the welcome email for an account (phase 8 ruling 16, migration
+   * 0012): sets `welcomed_at` only while it is NULL, and answers whether
+   * this call set it. D1 runs one write at a time, so of two concurrent
+   * verifications exactly one wins. `updated_at` keeps its value (Drizzle
+   * would bump it): the claim is not a profile change. Drizzle directly,
+   * not Better Auth's adapter: the column is server-only.
+   */
+  async function claimWelcome(id: string): Promise<boolean> {
+    const claimed = await db
+      .update(user)
+      .set({ updatedAt: sql`${user.updatedAt}`, welcomedAt: new Date() })
+      .where(and(eq(user.id, id), isNull(user.welcomedAt)))
+      .returning({ id: user.id });
+    return claimed.length > 0;
+  }
+
+  /**
+   * The welcome email (E-01, ruling 8): once per account, when its address
+   * becomes verified. The D1 claim decides first (`welcomed_at`, so an
+   * account marked by the 0012 backfill or the Convex import is never
+   * welcomed); the outbox key `welcome:<userId>` stays as a second filter
+   * in the consumer. A failure is logged and never fails the sign-up or the
+   * verification: the account is fine without it. A claim that throws
+   * skips the enqueue (a missed welcome is harmless, a duplicate is what
+   * the claim prevents), and a claimed welcome whose enqueue fails is not
+   * retried. The sign-in-only server never claims or sends it.
+   */
+  async function welcome(
+    target: { email: string; id: string; locale?: unknown; name: string },
+    request: Request | undefined
+  ): Promise<void> {
+    if (signInOnly) {
+      return;
+    }
+    try {
+      if (!(await claimWelcome(target.id))) {
+        return;
+      }
+    } catch (error) {
+      console.error("[auth] Failed to claim the welcome email:", error);
+      return;
+    }
+    try {
+      await options.outbox.send({
+        idempotencyKey: `welcome:${target.id}`,
+        locale: emailLocale({ request, userLocale: localeOf(target) }),
+        props: { name: target.name || null, url: env.SITE_URL },
+        template: "transactional/welcome",
+        to: target.email,
+      });
+    } catch (error) {
+      console.error("[auth] Failed to queue the welcome email:", error);
+    }
+  }
+
+  /**
+   * Better Auth's update hooks see the change (`before`) and the updated
+   * row (`after`), never the row before. `before` decides whether this
+   * update verifies an unverified address and leaves the answer for
+   * `after` under the endpoint context both share; an update outside an
+   * endpoint (our own server code) never verifies an address.
+   */
+  const verifying = new WeakMap<object, number>();
+
+  /**
+   * Whether this request failed to hand an auth email to the outbox. Better
+   * Auth runs the hooks and the endpoint inside one request state, so the
+   * `after` hook sees what `send` marked.
+   */
+  const emailFailure = defineRequestState(() => ({ failed: false }));
+
+  /**
+   * The unverified account a repeated email sign-up asked for (Better
+   * Auth's `onExistingUserSignUp`), so the `after` hook mails it a fresh
+   * verification link with the endpoint's context (phase 6 jobs M-2).
+   */
+  const repeatedSignUp = defineRequestState((): { user: User | null } => ({
+    user: null,
+  }));
+
+  /** Whether `data` turns an unverified address into a verified one. */
+  async function becomesVerified(data: {
+    email?: unknown;
+    emailVerified?: unknown;
+  }): Promise<boolean> {
+    if (data.emailVerified !== true) {
+      return false;
+    }
+    if (typeof data.email !== "string") {
+      // Every Better Auth path that sets only `emailVerified` checks first
+      // that the address is unverified (link, magic link, code reset,
+      // social sign-in over an unproven account, account linking).
+      return true;
+    }
+    // A code verification writes the address too: a verified one is a
+    // repeat, and an address no user has yet is an email change.
+    const current = await db.query.user.findFirst({
+      columns: { emailVerified: true },
+      where: eq(user.email, data.email.toLowerCase()),
     });
+    return current?.emailVerified === false;
   }
 
   return betterAuth({
@@ -299,9 +421,6 @@ export function createAuth(options: CreateAuthOptions) {
       },
     },
     advanced: {
-      ...(options.waitUntil
-        ? { backgroundTasks: { handler: options.waitUntil } }
-        : {}),
       cookiePrefix: COOKIE_PREFIX,
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
       useSecureCookies: env.ENVIRONMENT !== "dev",
@@ -316,6 +435,13 @@ export function createAuth(options: CreateAuthOptions) {
     databaseHooks: {
       user: {
         create: {
+          // A code, magic-link or social sign-up arrives verified. Rows
+          // inserted by SQL (the seed, the phase 8 import) run no hook.
+          after: async (created, context) => {
+            if (created.emailVerified) {
+              await welcome(created, context?.request);
+            }
+          },
           // biome-ignore lint/suspicious/useAwait: Better Auth's hook signature is async.
           before: async (data, context) => {
             if (signInOnly) {
@@ -325,6 +451,21 @@ export function createAuth(options: CreateAuthOptions) {
               });
             }
             return { data: newUserProfile(data, context?.path) };
+          },
+        },
+        update: {
+          after: async (updated, context) => {
+            const pending = context ? (verifying.get(context) ?? 0) : 0;
+            if (!(context && pending > 0 && updated?.emailVerified)) {
+              return;
+            }
+            verifying.set(context, pending - 1);
+            await welcome(updated, context.request);
+          },
+          before: async (data, context) => {
+            if (context && (await becomesVerified(data))) {
+              verifying.set(context, (verifying.get(context) ?? 0) + 1);
+            }
           },
         },
       },
@@ -346,6 +487,15 @@ export function createAuth(options: CreateAuthOptions) {
       enabled: true,
       maxPasswordLength: PASSWORD_MAX_LENGTH,
       minPasswordLength: PASSWORD_MIN_LENGTH,
+      // A sign-up with the address of an account that never confirmed it
+      // (its first verification email may never have left: EMAIL_NOT_SENT)
+      // mails a fresh link from the `after` hook. A verified account gets
+      // nothing, and the answer is Better Auth's generic one either way.
+      onExistingUserSignUp: async ({ user: existing }) => {
+        if (!existing.emailVerified) {
+          (await repeatedSignUp.get()).user = existing;
+        }
+      },
       requireEmailVerification: true,
       resetPasswordTokenExpiresIn: RESET_PASSWORD_TTL,
       revokeSessionsOnPasswordReset: true,
@@ -372,6 +522,27 @@ export function createAuth(options: CreateAuthOptions) {
       },
     },
     hooks: {
+      after: createAuthMiddleware(async (ctx) => {
+        const repeated = (await repeatedSignUp.get()).user;
+        if (repeated && ctx.path === "/sign-up/email") {
+          try {
+            // Better Auth's own token and URL (the body's callbackURL).
+            await sendVerificationEmailFn(ctx, repeated);
+          } catch (error) {
+            // `send` marked the failure: answered as EMAIL_NOT_SENT below.
+            console.error(
+              "[auth] Failed to resend the verification email:",
+              error
+            );
+          }
+        }
+        if ((await emailFailure.get()).failed) {
+          throw new APIError("SERVICE_UNAVAILABLE", {
+            code: "EMAIL_NOT_SENT",
+            message: "The email could not be sent; try again",
+          });
+        }
+      }),
       // biome-ignore lint/suspicious/useAwait: Better Auth's middleware signature is async.
       before: createAuthMiddleware(async (ctx) => {
         const type = (ctx.body as { type?: unknown } | undefined)?.type;

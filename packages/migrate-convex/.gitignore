@@ -1,0 +1,4 @@
+# Plan output: the report and the SQL hold personal data (phase 8 global
+# constraints). The ledgers record real sends and API calls.
+out/
+*-ledger.json

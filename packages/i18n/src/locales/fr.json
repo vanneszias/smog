@@ -220,6 +220,7 @@
       "passwordMismatch": "Les mots de passe ne sont pas identiques.",
       "invalidCredentials": "Cette adresse e-mail ou ce mot de passe est incorrect.",
       "emailNotVerified": "Votre adresse e-mail n'est pas encore confirmée. Consultez votre boîte mail ou demandez un nouvel e-mail de confirmation.",
+      "emailNotSent": "L'e-mail n'a pas pu être envoyé. Réessayez dans un instant.",
       "userExists": "Un compte existe déjà avec cette adresse e-mail. Connectez-vous.",
       "codeRequired": "Saisissez le code.",
       "codeInvalid": "Ce code est incorrect ou a expiré.",
@@ -382,7 +383,6 @@
     "about": "À propos de ce geste",
     "keywords": "Concepts liés",
     "related": "Gestes liés",
-    "sponsoredBy": "Sponsorisé par {{name}}",
     "share": "Partager le geste",
     "shareMessage": "{{name}} en SMOG\u00a0: {{url}}",
     "notFound": {
@@ -405,6 +405,22 @@
       "title": "Code QR pour {{name}}",
       "description": "Scannez le code pour ouvrir ce geste.",
       "download": "Télécharger le code QR"
+    },
+    "sponsorCta": {
+      "available": {
+        "title": "Parrainez ce geste",
+        "description": "Devenez le parrain ou la marraine de ce geste.",
+        "action": "Parrainer maintenant"
+      },
+      "pending": {
+        "title": "Actuellement parrainé",
+        "description": "Ce geste est en cours de parrainage."
+      },
+      "sponsored": {
+        "title": "Actuellement parrainé",
+        "description": "Ce geste est parrainé par {{name}}.",
+        "availableFrom": "Il sera de nouveau disponible au parrainage à partir du {{date}}."
+      }
     }
   },
   "search": {
@@ -505,6 +521,139 @@
         "button": "Choisir un nouveau mot de passe",
         "expiry": "Le lien est valable {{minutes}} minutes.",
         "footer": "Vous n'avez rien demandé\u202f? Vous pouvez ignorer cet e-mail. Votre mot de passe reste inchangé."
+      }
+    },
+    "common": {
+      "yourGesture": "votre geste",
+      "gestureNamed": "le geste «\u00a0{{name}}\u00a0»",
+      "logoAlt": "SMOG & Co",
+      "copyright": "© {{year}} SMOG & CO asbl · Belgique",
+      "tagline": "SMOG — Spreken Met Ondersteuning van Gebaren (parler avec le soutien des signes)",
+      "questions": "Des questions\u00a0? Répondez simplement à cet e-mail.",
+      "adminFooter": "Vous recevez cet e-mail parce que vous êtes administrateur de SMOG & Co.",
+      "contactWithCompany": "{{name}} ({{company}})",
+      "oneYear": "1 an",
+      "yes": "Oui",
+      "no": "Non",
+      "fields": {
+        "gesture": "Geste",
+        "gestures": "Gestes",
+        "displayName": "Nom dans la vidéo",
+        "paidAmount": "Montant payé",
+        "amount": "Montant",
+        "total": "Total",
+        "activeFrom": "En ligne depuis le",
+        "activeUntil": "En ligne jusqu'au",
+        "renewedUntil": "Prolongé jusqu'au",
+        "payment": "Paiement",
+        "email": "E-mail",
+        "contact": "Personne de contact",
+        "duration": "Durée",
+        "invoiceRequested": "Facture demandée",
+        "invoiceName": "Nom de facturation",
+        "vatNumber": "Numéro de TVA",
+        "invoiceEmail": "E-mail de facturation",
+        "error": "Erreur",
+        "reason": "Raison"
+      }
+    },
+    "transactional": {
+      "welcome": {
+        "subject": "Bienvenue chez SMOG & Co",
+        "preheader": "Découvrez des gestes et soutenez SMOG en parrainant un geste.",
+        "heading": "Bienvenue chez SMOG & Co",
+        "body": "Votre compte est prêt. Voici ce que vous pouvez faire\u00a0:",
+        "explore": "Découvrir des gestes et voir comment les faire",
+        "favorites": "Enregistrer vos gestes favoris et créer vos propres listes",
+        "sponsor": "Soutenir SMOG en parrainant un geste",
+        "button": "Découvrir les gestes",
+        "footer": "Vous n'avez pas créé ce compte\u00a0? Vous pouvez ignorer cet e-mail."
+      },
+      "sponsorshipReceived": {
+        "subject": "Nous avons bien reçu votre parrainage",
+        "preheader": "Merci\u00a0! Voici la suite.",
+        "heading": "Parrainage reçu",
+        "body": "Merci de parrainer {{gesture}}. La vidéo affichera le nom {{displayName}}.",
+        "nextTitle": "Et maintenant\u00a0?",
+        "stepRender": "Nous réalisons votre vidéo parrainée.",
+        "stepReview": "Nous vérifions la vidéo avant sa mise en ligne.",
+        "stepLive": "Vous recevez un e-mail dès que votre parrainage est en ligne.",
+        "footer": "Vous recevez cet e-mail parce que vous avez récemment soumis un parrainage via SMOG & Co."
+      },
+      "paymentConfirmed": {
+        "subject": "Paiement confirmé — merci\u00a0!",
+        "preheader": "Nous avons bien reçu votre paiement de {{amount}}.",
+        "heading": "Paiement confirmé",
+        "body": "Nous avons bien reçu votre paiement. Merci\u00a0!",
+        "initialNext": "Votre parrainage est normalement en ligne dans un délai de 1 à 2 jours ouvrables. Nous vous enverrons un e-mail à ce moment-là.",
+        "renewalNext": "Votre parrainage a été prolongé et court désormais jusqu'au {{date}}.",
+        "footer": "Conservez cet e-mail comme preuve de paiement. Besoin d'une facture\u00a0? Contactez-nous."
+      },
+      "sponsorshipLive": {
+        "subject": "Votre parrainage est en ligne\u00a0!",
+        "preheader": "Votre vidéo parrainée est en ligne.",
+        "heading": "Votre parrainage est en ligne\u00a0!",
+        "body": "Votre vidéo parrainée pour {{gesture}} est maintenant en ligne avec le nom {{displayName}}.",
+        "button": "Voir sur SMOG",
+        "thanks": "Merci de soutenir SMOG\u00a0!",
+        "footer": "Nous vous enverrons un rappel 30 jours avant la fin, pour que vous puissiez prolonger."
+      },
+      "renewalReminder": {
+        "subject": "Votre parrainage SMOG se termine bientôt",
+        "preheader": "Votre parrainage se termine le {{date}}.",
+        "heading": "Votre parrainage se termine bientôt",
+        "body": "Votre parrainage pour {{gesture}} se termine le {{date}}, dans moins de 30 jours. Ensuite, le geste affichera de nouveau sa vidéo d'origine.",
+        "renew": "Vous souhaitez parrainer une année de plus\u00a0? Prolongez avec le bouton ci-dessous. Un renouvellement est un nouveau paiement pour une année supplémentaire, au prix alors indiqué.",
+        "button": "Prolonger le parrainage",
+        "footer": "Le lien fonctionne jusqu'à la fin de votre parrainage. Vous ne souhaitez pas prolonger\u00a0? Vous n'avez rien à faire."
+      },
+      "adminNewSponsorship": {
+        "subject": "Nouveau parrainage\u00a0: {{name}}",
+        "subjectRenewal": "Parrainage prolongé par {{name}}",
+        "preheader": "Payé\u00a0: {{total}}.",
+        "heading": "Nouveau parrainage payé",
+        "headingRenewal": "Parrainage prolongé",
+        "body": "Un parrainage a été payé. Il attend maintenant sa vidéo, puis une approbation.",
+        "bodyRenewal": "Un parrainage a été prolongé d'un an. Aucune nouvelle vidéo ni approbation n'est nécessaire.",
+        "detailsTitle": "Parrainage",
+        "invoiceTitle": "Facturation",
+        "button": "Voir dans l'administration"
+      },
+      "adminRenderFailed": {
+        "subject": "Échec de la vidéo pour {{gesture}}",
+        "preheader": "La vidéo pour {{displayName}} n'a pas pu être réalisée.",
+        "heading": "Échec de la vidéo",
+        "body": "La vidéo parrainée n'a pas pu être réalisée, même après de nouvelles tentatives. Vérifiez le parrainage dans l'administration.",
+        "button": "Voir le parrainage"
+      },
+      "adminRefundNeeded": {
+        "subject": "Remboursement nécessaire pour le paiement {{paymentId}}",
+        "preheader": "Remboursez {{amount}} dans le tableau de bord Mollie.",
+        "heading": "Remboursement nécessaire",
+        "body": "Ce paiement doit être remboursé manuellement.",
+        "reasonLate": "Payé trop tard\u00a0: quelqu'un d'autre a parrainé le geste entre-temps.",
+        "reasonMismatch": "Le montant ou la devise du paiement ne correspond pas à la commande.",
+        "reasonDouble": "Payé deux fois\u00a0: le paiement avait déjà été marqué comme payé manuellement.",
+        "reasonChargeback": "Rétrofacturé\u00a0: la banque a annulé le paiement. Vérifiez le parrainage et contactez le parrain si nécessaire.",
+        "steps": "Remboursez le montant dans le tableau de bord Mollie. Si le remboursement n'apparaît pas ensuite dans l'administration, enregistrez-le sur le paiement.",
+        "button": "Ouvrir dans Mollie"
+      },
+      "weMoved": {
+        "subject": "SMOG a déménagé",
+        "preheader": "Votre compte, vos favoris et vos listes ont déménagé avec nous. Voici comment vous connecter.",
+        "heading": "SMOG a déménagé",
+        "body": "SMOG & Co fonctionne désormais sur un nouveau système. Votre compte a déménagé avec nous, avec vos gestes favoris et vos listes.",
+        "newAddress": "SMOG & Co a une nouvelle adresse\u00a0:",
+        "signInTitle": "Votre ancien mot de passe ne fonctionne plus. Connectez-vous avec\u00a0:",
+        "signInCode": "un code que nous vous envoyons par e-mail",
+        "signInLink": "un lien de connexion par e-mail",
+        "signInGoogleApple": "Google ou Apple, si vous y utilisez la même adresse e-mail",
+        "signInGoogle": "Google, si vous y utilisez la même adresse e-mail",
+        "signInApple": "Apple, si vous y utilisez la même adresse e-mail",
+        "signInReset": "ou choisissez « Mot de passe oublié » et définissez un nouveau mot de passe",
+        "app": "Vous utilisez l'application\u00a0? Alors mettez l'application à jour vers la dernière version\u00a0: l'ancienne version ne fonctionne plus.",
+        "button": "Se connecter",
+        "footer": "Vous recevez cet e-mail une seule fois, parce que vous avez un compte chez SMOG & Co."
       }
     }
   },
@@ -706,6 +855,7 @@
       "label": "Administration",
       "open": "Ouvrir le menu d’administration",
       "dashboard": "Tableau de bord",
+      "sponsorships": "Parrainages",
       "gestures": "Gestes",
       "categories": "Catégories",
       "users": "Utilisateurs",
@@ -743,7 +893,32 @@
       "noAudit": "Aucune action enregistrée pour l’instant.",
       "quickLinks": "Accès rapide",
       "newGesture": "Nouveau geste",
-      "manageCategories": "Gérer les catégories"
+      "manageCategories": "Gérer les catégories",
+      "sponsorships": {
+        "title": "Parrainages",
+        "review": "Examiner les parrainages",
+        "inReview_one": "à examiner",
+        "inReview_other": "à examiner",
+        "inReview_many": "à examiner",
+        "awaitingPayment_one": "{{count}} en attente de paiement",
+        "awaitingPayment_other": "{{count}} en attente de paiement",
+        "awaitingPayment_many": "{{count}} en attente de paiement",
+        "rendering_one": "{{count}} vidéo en préparation",
+        "rendering_other": "{{count}} vidéos en préparation",
+        "rendering_many": "{{count}} vidéos en préparation",
+        "renderFailed_one": "{{count}} vidéo en échec",
+        "renderFailed_other": "{{count}} vidéos en échec",
+        "renderFailed_many": "{{count}} vidéos en échec",
+        "live_one": "{{count}} en ligne",
+        "live_other": "{{count}} en ligne",
+        "live_many": "{{count}} en ligne",
+        "expiring_one": "{{count}} se termine bientôt",
+        "expiring_other": "{{count}} se terminent bientôt",
+        "expiring_many": "{{count}} se terminent bientôt",
+        "refundNeeded_one": "{{count}} paiement à rembourser",
+        "refundNeeded_other": "{{count}} paiements à rembourser",
+        "refundNeeded_many": "{{count}} paiements à rembourser"
+      }
     },
     "audit": {
       "title": "Journal",
@@ -1224,7 +1399,9 @@
         "self": "C’est votre propre compte. Un autre administrateur doit en changer le rôle, le bloquer ou le supprimer.",
         "adminTarget": "Retirez d’abord le rôle d’administrateur avant de bloquer ou de supprimer ce compte.",
         "bannedTarget": "Levez le blocage avant de nommer ce compte administrateur.",
-        "notFound": "Ce compte n’existe plus."
+        "notFound": "Ce compte n’existe plus.",
+        "sponsorships": "Parrainages",
+        "noSponsorships": "Aucun parrainage avec cette adresse e-mail."
       },
       "methods": {
         "credential": "Mot de passe",
@@ -1331,7 +1508,16 @@
         "magicLink": "Lien de connexion",
         "otp": "Code de connexion",
         "resetPassword": "Réinitialisation du mot de passe",
-        "verifyEmail": "Confirmation de l’adresse e-mail"
+        "verifyEmail": "Confirmation de l’adresse e-mail",
+        "welcome": "Bienvenue",
+        "sponsorshipReceived": "Parrainage reçu",
+        "paymentConfirmed": "Paiement confirmé",
+        "sponsorshipLive": "Parrainage en ligne",
+        "renewalReminder": "Rappel de renouvellement",
+        "adminNewSponsorship": "Nouveau parrainage (admin)",
+        "adminRenderFailed": "Échec de la vidéo (admin)",
+        "adminRefundNeeded": "Remboursement nécessaire (admin)",
+        "weMoved": "Nous avons déménagé"
       },
       "locale": "Langue",
       "width": "Largeur",
@@ -1346,6 +1532,605 @@
       "previewError": "Cet aperçu n’a pas pu être affiché.",
       "empty": "Pas encore de modèles d’e-mail.",
       "sandboxed": "Affiché dans un bac à sable\u00a0: pas de scripts, les liens ne s’ouvrent pas."
+    },
+    "sponsorships": {
+      "title": "Parrainages",
+      "description": "Examiner, suivre les paiements et exporter. Chaque action est journalisée.",
+      "tabs": {
+        "label": "Parrainages par étape",
+        "review": "À examiner",
+        "all": "Tous",
+        "awaiting": "En attente de paiement",
+        "refund": "À rembourser",
+        "closed": "Clôturés",
+        "rendering": "En cours/en échec",
+        "live": "En ligne/bientôt fini"
+      },
+      "filters": {
+        "label": "Filtres",
+        "search": "Rechercher par geste, nom ou e-mail",
+        "status": "Statut",
+        "all": "Tous les statuts",
+        "from": "Du",
+        "to": "Au",
+        "clear": "Effacer les filtres",
+        "payment": "Paiement {{id}}",
+        "remove": "Retirer le filtre {{label}}"
+      },
+      "columns": {
+        "gesture": "Geste et nom",
+        "status": "Statut",
+        "sponsor": "Contact",
+        "payment": "Paiement",
+        "invoice": "Facture",
+        "created": "Créé le"
+      },
+      "empty": "Aucun parrainage trouvé.",
+      "nextPage": "Parrainages plus anciens",
+      "firstPage": "Parrainages les plus récents",
+      "refundNeededBadge": "À rembourser",
+      "amountUnknown": "un montant inconnu",
+      "queue": {
+        "label": "À examiner",
+        "empty": "Tout est à jour",
+        "emptyDescription": "Aucun parrainage n’attend d’examen. Un parrainage payé apparaît ici dès que sa vidéo est prête."
+      },
+      "invoice": {
+        "requested": "Facture demandée",
+        "none": "Pas de facture",
+        "short": "Facture",
+        "name": "Nom",
+        "vat": "N° d’entreprise",
+        "email": "E-mail"
+      },
+      "logo": {
+        "title": "Logo",
+        "has": "Logo",
+        "alt": "Logo de {{name}}",
+        "none": "Sans logo.",
+        "removed": "Le logo a été supprimé (30 jours après la fin). Il reste payé."
+      },
+      "errors": {
+        "notFound": "Ce parrainage ou ce paiement n’existe plus.",
+        "validation": "Cela ne correspond pas. Vérifiez votre saisie.",
+        "forbidden": "Vous n’êtes plus administrateur. Rechargez la page.",
+        "generic": "L’action a échoué. Réessayez."
+      },
+      "paymentStatus": {
+        "open": "Ouvert",
+        "paid": "Payé",
+        "failed": "Échoué",
+        "canceled": "Annulé",
+        "expired": "Expiré",
+        "refund_needed": "À rembourser"
+      },
+      "detail": {
+        "back": "Tous les parrainages",
+        "subtitle": "Parrainage de {{gesture}}, créé le {{date}}",
+        "publicPage": "Voir sur le site",
+        "notFound": "Ce parrainage n’existe pas",
+        "notFoundDescription": "Le lien est peut-être erroné. Cherchez le parrainage dans la liste.",
+        "videos": "Vidéos",
+        "original": "Original",
+        "originalOf": "Vidéo originale de {{name}}",
+        "sponsored": "Vidéo parrainée",
+        "sponsoredOf": "Vidéo parrainée de {{name}}",
+        "fakeRender": "Rendu factice (sans incrustation)",
+        "noVideo": "Pas encore de vidéo.",
+        "facts": "Détails",
+        "gesture": "Geste",
+        "amount": "Montant",
+        "displayName": "Nom dans la vidéo",
+        "contact": "Contact",
+        "company": "Entreprise",
+        "email": "E-mail",
+        "language": "Langue",
+        "created": "Créé le",
+        "startsAt": "En ligne du",
+        "endsAt": "En ligne jusqu’au",
+        "reminderSent": "Rappel envoyé"
+      },
+      "actions": {
+        "title": "Actions",
+        "notes": {
+          "awaitingPayment": "En attente de paiement. Marquez-le payé ou annulez-le sur le paiement ci-dessous.",
+          "rendering": "La vidéo est en préparation. Ensuite, le parrainage passe à l’examen.",
+          "renderFailed": "La vidéo a échoué. L’erreur figure sous Tâches de rendu\u00a0; relancez le rendu une fois la cause corrigée ou si elle était passagère.",
+          "closed": "Ce parrainage est clôturé."
+        }
+      },
+      "approve": {
+        "action": "Approuver",
+        "title": "Approuver {{name}} sur {{gesture}}\u00a0?",
+        "description": "Payé\u00a0: {{amount}}. Il est mis en ligne maintenant pour un an, jusqu’au {{date}}, et le parrain reçoit un e-mail.",
+        "done": "{{name}} est approuvé et en ligne.",
+        "noVideo": "Il n’y a pas encore de vidéo\u00a0: approuvez dès qu’elle est prête."
+      },
+      "requestChanges": {
+        "action": "Demander des modifications",
+        "title": "Demander des modifications à {{name}}\u00a0?",
+        "description": "Vous recevez un lien à envoyer vous-même au parrain\u00a0; aucun e-mail n’est envoyé. Le lien fonctionne une fois, pendant 7 jours.",
+        "done": "Modifications demandées. Envoyez le lien au parrain."
+      },
+      "regenerate": {
+        "reeditAction": "Nouveau lien de modification",
+        "renewalAction": "Nouveau lien de renouvellement",
+        "confirm": "Créer un nouveau lien",
+        "reeditTitle": "Un nouveau lien de modification pour {{name}}\u00a0?",
+        "renewalTitle": "Un nouveau lien de renouvellement pour {{name}}\u00a0?",
+        "reeditDescription": "Le lien précédent cesse aussitôt de fonctionner. Le nouveau fonctionne une fois, pendant 7 jours.",
+        "renewalDescription": "Le lien précédent cesse aussitôt de fonctionner. Le nouveau fonctionne jusqu’à la fin du parrainage.",
+        "done": "Nouveau lien créé. Le précédent ne fonctionne plus."
+      },
+      "reject": {
+        "action": "Refuser",
+        "title": "Refuser {{name}} sur {{gesture}}\u00a0?",
+        "description": "Payé\u00a0: {{amount}}. Le geste redevient libre. Aucun e-mail n’est envoyé et rien n’est remboursé automatiquement\u00a0: remboursez dans le tableau de bord Mollie si c’est convenu.",
+        "reason": "Motif",
+        "reasonHint": "Figure dans l’historique et le journal. Le parrain ne le voit pas.",
+        "done": "{{name}} est refusé."
+      },
+      "forceExpire": {
+        "action": "Terminer maintenant",
+        "title": "Terminer {{name}} sur {{gesture}} maintenant\u00a0?",
+        "description": "Il est retiré aussitôt et sa vidéo parrainée est supprimée. Payé\u00a0: {{amount}}\u00a0; rien n’est remboursé automatiquement et aucun e-mail n’est envoyé.",
+        "confirmLabel": "Tapez {{gesture}} pour confirmer",
+        "done": "{{name}} est terminé."
+      },
+      "markPaid": {
+        "action": "Marquer comme payé",
+        "note": "Référence bancaire",
+        "noteHint": "Figure dans l’historique, p. ex. la communication du virement.",
+        "done": "Marqué comme payé. Les vidéos sont en préparation.",
+        "settled": "Mollie avait déjà ce paiement\u00a0: il est traité comme payé.",
+        "refundNeeded": "Mollie avait déjà ce paiement, mais il doit être remboursé. Consultez le paiement ci-dessous.",
+        "lateFailure": "Le paiement est marqué comme payé, mais les vidéos n’ont peut-être pas démarré. La vérification horaire lance celles qui manquent\u00a0; revenez dans une heure.",
+        "title": "Marquer {{amount}} de {{name}} comme payé\u00a0?",
+        "description_one": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: sa vidéo est préparée.",
+        "description_other": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: la vidéo de chacun est préparée.",
+        "description_many": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: la vidéo de chacun est préparée."
+      },
+      "cancel": {
+        "action": "Annuler le paiement",
+        "keep": "Conserver",
+        "description": "Il couvre {{gestures}}\u00a0: tous sont annulés et redeviennent libres, et le paiement est aussi annulé chez Mollie. Aucun e-mail n’est envoyé.",
+        "done": "Paiement annulé. {{gestures}}\u00a0: de nouveau libre.",
+        "title": "Annuler le paiement de {{amount}} de {{name}}\u00a0?"
+      },
+      "recordRefund": {
+        "action": "Enregistrer le remboursement",
+        "description": "Remboursez d’abord dans le tableau de bord Mollie. Ceci lit ce que Mollie a remboursé pour {{gestures}}.",
+        "done": "Remboursement de {{amount}} enregistré.",
+        "title": "Enregistrer le remboursement de ce paiement de {{amount}}\u00a0?"
+      },
+      "link": {
+        "reeditTitle": "Lien de modification pour {{name}}",
+        "renewalTitle": "Lien de renouvellement pour {{name}}",
+        "description": "Copiez-le maintenant\u00a0: il n’est affiché qu’une fois. Il fonctionne jusqu’au {{date}}.",
+        "label": "Lien",
+        "reeditHint": "Envoyez-le vous-même au parrain. Il peut y modifier le nom et le logo.",
+        "renewalHint": "Envoyez-le vous-même au parrain. Il peut y renouveler pour un an.",
+        "copy": "Copier le lien",
+        "copied": "Lien copié.",
+        "copyByHand": "La copie a échoué. Le lien est sélectionné\u00a0: copiez-le vous-même.",
+        "done": "Terminé"
+      },
+      "payment": {
+        "section": "Paiements",
+        "empty": "Aucun paiement.",
+        "title": "Paiement {{kind}}",
+        "kind": {
+          "initial": "d’achat",
+          "renewal": "de renouvellement"
+        },
+        "created": "Créé le",
+        "paid": "Payé le",
+        "refund": "Remboursement",
+        "refunded": "Remboursé",
+        "partlyRefunded": "{{amount}} sur {{total}} remboursés",
+        "notRefunded": "Rien de remboursé",
+        "refundNeeded": "Ce paiement doit être remboursé. Remboursez-le dans le tableau de bord Mollie, puis enregistrez-le ici.",
+        "chargedBack": "Rétrofacturé\u00a0: {{amount}} ({{date}}).",
+        "chargebackHint": "L’annulation ne vaut que pour les paiements ouverts\u00a0: terminez un parrainage en ligne ou refusez-en un en examen.",
+        "mollieId": "Id Mollie",
+        "noMollie": "Aucun (local)",
+        "openInMollie": "Ouvrir dans Mollie",
+        "newTab": "(s’ouvre dans un nouvel onglet)",
+        "gestures_one": "Couvre {{count}} geste",
+        "gestures_other": "Couvre {{count}} gestes",
+        "gestures_many": "Couvre {{count}} gestes",
+        "refundNeededNoMollie": "Ce paiement doit être remboursé. Il n’a pas de paiement Mollie\u00a0: remboursez-le par virement. Il ne peut pas être enregistré ici et reste dans «\u00a0À rembourser\u00a0»."
+      },
+      "events": {
+        "title": "Historique",
+        "empty": "Rien ne s’est encore passé.",
+        "system": "Système",
+        "deletedActor": "Compte supprimé",
+        "legacyActor": "Ancien site",
+        "period": "Du {{start}} au {{end}}",
+        "until": "Jusqu’au {{date}}",
+        "linkUntil": "Lien valable jusqu’au {{date}}",
+        "created": "Créé au paiement",
+        "payment_paid": "Payé",
+        "payment_failed": "Paiement échoué",
+        "marked_paid_manually": "Marqué payé manuellement",
+        "render_started": "Vidéo lancée",
+        "render_succeeded": "Vidéo prête",
+        "render_failed": "Vidéo en échec",
+        "render_retried": "Vidéo relancée",
+        "approved": "Approuvé",
+        "rejected": "Refusé",
+        "changes_requested": "Modifications demandées",
+        "resubmitted": "Modifié par le parrain",
+        "reminder_sent": "Rappel envoyé",
+        "renewed": "Renouvelé",
+        "expired": "Terminé",
+        "force_expired": "Terminé plus tôt",
+        "cancelled": "Annulé",
+        "revived": "Rétabli par un paiement tardif",
+        "refund_needed": "Remboursement nécessaire",
+        "token_issued": "Lien créé",
+        "legacy": "Ancienne entrée",
+        "cancelReason": {
+          "provider": "Mollie a échoué au paiement",
+          "admin": "Par un administrateur",
+          "stale": "Non payé dans les 24 heures",
+          "mismatch": "Le montant ne correspondait pas"
+        },
+        "refundReason": {
+          "late": "Payé en retard\u00a0: le geste était pris entre-temps",
+          "mismatch": "Le montant ne correspondait pas",
+          "double": "Payé deux fois",
+          "chargeback": "Rétrofacturé par la banque"
+        }
+      },
+      "renderJobs": {
+        "title": "Tâches de rendu",
+        "empty": "Pas encore de tâche de rendu.",
+        "attempt": "Essai {{attempt}}",
+        "status": {
+          "queued": "En file",
+          "running": "En cours",
+          "succeeded": "Réussi",
+          "failed": "Échoué"
+        },
+        "hint": {
+          "sourceTooLong": "La vidéo du geste dure plus de 2 minutes, le maximum pour une vidéo sponsorisée. Raccourcissez ou remplacez la vidéo du geste, puis relancez.",
+          "workflowNeverStarted": "Le rendu n'a pas démarré dans les 6 heures. Vérifiez le dernier déploiement et le tableau de bord Workflows, puis relancez.",
+          "rendererBusy": "Aucun moteur de rendu n'a été libre pendant une heure. Relancez quand moins de vidéos sont en cours."
+        }
+      },
+      "retryRender": {
+        "action": "Relancer le rendu",
+        "title": "Refaire la vidéo de {{name}} sur {{gesture}}\u00a0?",
+        "description": "Un nouveau rendu démarre avec le nom et le logo actuels. Le parrainage repasse à Vidéo en préparation, puis à l’examen quand la vidéo est prête. Aucun e-mail n’est envoyé.",
+        "done": "La vidéo est refaite (essai {{attempt}}).",
+        "announce": "Rendu relancé\u00a0: essai {{attempt}} démarré pour {{name}}."
+      },
+      "tokens": {
+        "title": "Liens",
+        "empty": "Pas encore de liens.",
+        "purpose": {
+          "reedit": "Lien de modification",
+          "renewal": "Lien de renouvellement"
+        },
+        "active": "Actif",
+        "used": "Utilisé ou remplacé",
+        "expired": "Expiré",
+        "dates": "Créé le {{created}} · valable jusqu’au {{expires}}"
+      },
+      "emptyDescription": "Choisissez un autre onglet ou effacez les filtres."
+    },
+    "export": {
+      "action": "Exporter en CSV",
+      "title": "Exporter en CSV",
+      "description": "Une ligne par parrainage, avec les 18 colonnes d’avant. Laissez vide pour tout exporter\u00a0; l’export est journalisé.",
+      "status": "Statut",
+      "allStatuses": "Tous les statuts",
+      "from": "Créé à partir du",
+      "to": "Créé jusqu’au",
+      "download": "Télécharger",
+      "done_one": "{{count}} ligne exportée.",
+      "done_other": "{{count}} lignes exportées.",
+      "done_many": "{{count}} lignes exportées."
+    }
+  },
+  "sponsorship": {
+    "status": {
+      "awaiting_payment": "En attente de paiement",
+      "rendering": "Vidéo en préparation",
+      "render_failed": "Échec de la vidéo",
+      "in_review": "En cours d’examen",
+      "changes_requested": "Modifications demandées",
+      "live": "En ligne",
+      "expiring": "Expire bientôt",
+      "rejected": "Refusé",
+      "cancelled": "Annulé",
+      "expired": "Expiré"
+    },
+    "errors": {
+      "stale": "Ce parrainage a changé entre-temps. Actualisez la page et réessayez.",
+      "paymentsUnavailable": "Le parrainage est momentanément suspendu. Réessayez plus tard.",
+      "paymentProvider": "Le paiement n’a pas pu démarrer. Rien n’a été débité. Réessayez.",
+      "alreadySettled": "Ce paiement est déjà finalisé.",
+      "logoExpired": "Votre logo téléversé a expiré. Téléversez-le à nouveau, puis envoyez.",
+      "logoInvalid": "Le logo n’a pas pu être lu. Choisissez un fichier PNG, JPEG ou WebP de 2\u00a0Mo maximum.",
+      "noLogo": "Ce parrainage n’a pas de logo, vous ne pouvez donc pas en ajouter.",
+      "notRenewable": "Ce parrainage ne peut plus être prolongé.",
+      "gestureTaken": "Quelqu’un d’autre parraine ce geste entre-temps.",
+      "rejectedTooLongAgo": "Ce parrainage a été refusé il y a 30 jours ou plus. Vous ne pouvez plus demander de modification : la vidéo est supprimée.",
+      "noVideo": "La vidéo n’est pas encore prête.",
+      "paid": "Ce paiement a été réglé et ne peut pas être annulé.",
+      "notRefunded": "Mollie n’indique encore aucun remboursement. Remboursez d’abord dans le tableau de bord Mollie.",
+      "tooMany": "Trop de lignes à exporter. Choisissez une période plus courte."
+    },
+    "mollie": {
+      "description_one": "Parrainage de {{count}} geste chez SMOG & Co",
+      "description_many": "Parrainage de {{count}} gestes chez SMOG & Co",
+      "description_other": "Parrainage de {{count}} gestes chez SMOG & Co",
+      "renewal": "Prolongation de votre parrainage chez SMOG & Co"
+    }
+  },
+  "sponsor": {
+    "meta": {
+      "title": "Parrainer un geste",
+      "description": "Soutenez un geste pendant un an. Votre nom apparaît dans la vidéo et aide le projet SMOG."
+    },
+    "steps": {
+      "select": "Choisir des gestes",
+      "details": "Vos coordonnées",
+      "review": "Aperçu et paiement"
+    },
+    "paused": {
+      "title": "Le parrainage est suspendu pour le moment",
+      "description": "Vous ne pouvez pas parrainer de geste pour le moment. Réessayez plus tard."
+    },
+    "select": {
+      "title": "Soutenez un geste",
+      "description": "Soutenez un geste pendant un an. Votre nom apparaît dans la vidéo et aide le projet SMOG.",
+      "value": {
+        "perGesture": "Par geste, par an",
+        "seconds": "{{seconds}} s",
+        "nameInVideo": "Votre nom dans chaque vidéo",
+        "logoPrice": "+{{price}}",
+        "optionalLogo": "Ajoutez votre logo (facultatif)"
+      },
+      "search": "Rechercher des gestes",
+      "searchPlaceholder": "Rechercher par nom, notion ou catégorie...",
+      "showMore": "+{{count}} de plus",
+      "showLess": "Afficher moins",
+      "clearFilters": "Effacer les filtres",
+      "available_one": "{{count}} geste disponible affiché",
+      "available_many": "{{count}} gestes disponibles affichés",
+      "available_other": "{{count}} gestes disponibles affichés",
+      "loadMore": "Charger plus de gestes",
+      "partial": "{{shown}} résultats sur {{total}} affichés. Précisez votre recherche pour trouver les autres.",
+      "selected_one": "{{count}} sélectionné",
+      "selected_many": "{{count}} sélectionnés",
+      "selected_other": "{{count}} sélectionnés",
+      "badge": {
+        "sponsored": "Parrainé",
+        "pending": "En cours",
+        "taken": "Déjà pris"
+      },
+      "limit": "Vous pouvez parrainer jusqu'à {{max}} gestes par paiement. Retirez-en un pour en choisir un autre.",
+      "taken": "Quelqu'un d'autre a été plus rapide. Ces gestes sont signalés\u00a0; choisissez-en d'autres si vous le souhaitez.",
+      "availabilityError": {
+        "title": "Disponibilité non vérifiée",
+        "description": "Nous n'avons pas pu vérifier quels gestes sont encore libres. Réessayez."
+      },
+      "empty": {
+        "title": "Aucun geste trouvé",
+        "description": "Essayez un autre mot ou effacez les filtres."
+      }
+    },
+    "bar": {
+      "selected_one": "{{count}} geste sélectionné",
+      "selected_many": "{{count}} gestes sélectionnés",
+      "selected_other": "{{count}} gestes sélectionnés",
+      "total": "Total\u00a0: {{price}}",
+      "continue": "Continuer"
+    },
+    "details": {
+      "title": "Configurez votre parrainage",
+      "videoSection": "Dans la vidéo",
+      "displayName": "Nom dans la vidéo",
+      "displayNamePlaceholder": "P. ex. Acme",
+      "displayNameHint": "Exemple\u00a0: «\u00a0{{intro}} {{name}}\u00a0»",
+      "logo": {
+        "include": "Ajouter un logo (+{{price}} par geste)",
+        "label": "Logo",
+        "drop": "Glissez votre logo ici ou",
+        "browse": "parcourez",
+        "formats": "PNG, JPEG ou WebP · 2 Mo max.",
+        "previewAlt": "Aperçu du logo",
+        "remove": "Supprimer le logo",
+        "replace": "Choisir un autre logo",
+        "guidelines": {
+          "title": "Conseils pour le logo",
+          "format": "Format\u00a0: PNG à fond transparent (recommandé), JPEG ou WebP",
+          "dimensions": "Dimensions\u00a0: au moins 800 × 800 px pour une qualité optimale",
+          "aspectRatio": "Proportions\u00a0: format carré recommandé",
+          "fileSize": "Taille\u00a0: 2 Mo maximum",
+          "style": "Style\u00a0: les logos simples et contrastés fonctionnent le mieux",
+          "avoid": "À éviter\u00a0: logos très détaillés ou traits fins"
+        }
+      },
+      "contact": {
+        "title": "Coordonnées",
+        "description": "Nous les utilisons pour vous contacter au sujet de votre parrainage.",
+        "name": "Nom complet",
+        "email": "E-mail",
+        "company": "Entreprise"
+      },
+      "invoice": {
+        "checkbox": "Je souhaite une facture",
+        "name": "Nom sur la facture",
+        "namePlaceholder": "Nom ou raison sociale",
+        "vat": "Numéro d'entreprise",
+        "vatHint": "10 chiffres, p. ex. 0123.456.749",
+        "email": "Adresse e-mail pour la facture"
+      },
+      "errors": {
+        "displayNameRequired": "Le nom dans la vidéo est obligatoire.",
+        "displayNameTooLong": "Utilisez {{max}} caractères au maximum.",
+        "displayNameInvalid": "Utilisez une seule ligne de texte, sans caractères spéciaux.",
+        "logoRequired": "Ajoutez un logo ou décochez l'option.",
+        "logoTooLarge": "Le logo doit faire moins de 2 Mo.",
+        "logoType": "Utilisez une image PNG, JPEG ou WebP.",
+        "required": "Ce champ est obligatoire.",
+        "tooLong": "Ce texte est trop long.",
+        "emailInvalid": "Adresse e-mail invalide.",
+        "vatInvalid": "Numéro d'entreprise invalide.",
+        "summary": "Vérifiez les champs signalés."
+      },
+      "back": "Retour à la sélection",
+      "continue": "Continuer vers l'aperçu"
+    },
+    "price": {
+      "title": "Récapitulatif du prix",
+      "base_one": "{{count}} geste × 1 an",
+      "base_many": "{{count}} gestes × 1 an",
+      "base_other": "{{count}} gestes × 1 an",
+      "logo": "Option logo",
+      "total": "Total"
+    },
+    "review": {
+      "title": "Vérifiez votre parrainage",
+      "description": "Voici comment votre nom apparaît sur les gestes choisis. La vraie vidéo est réalisée après le paiement et vérifiée avant sa mise en ligne.",
+      "summary": "Détails du parrainage",
+      "gestures": "Gestes",
+      "duration": "Durée",
+      "durationValue": "1 an",
+      "nameInVideo": "Nom dans la vidéo",
+      "logo": "Logo",
+      "yes": "Oui",
+      "no": "Non",
+      "contact": "Contact",
+      "invoice": "Facture",
+      "total": "Montant total",
+      "pay": "Continuer vers le paiement",
+      "redirectNote": "Vous serez redirigé vers Mollie pour un paiement sécurisé.",
+      "captchaHint": "Confirmez d'abord que vous n'êtes pas un robot.",
+      "back": "Retour aux coordonnées",
+      "failed": "Le passage au paiement a échoué. Veuillez réessayer."
+    },
+    "success": {
+      "title": "Votre parrainage",
+      "missing": {
+        "title": "Aucun paiement trouvé",
+        "description": "Ce lien ne correspond à aucun paiement. Consultez vos e-mails pour la confirmation."
+      },
+      "loading": "Vérification de votre paiement…",
+      "open": {
+        "title": "Votre paiement est en cours de traitement…",
+        "description": "Cette page se met à jour dès que Mollie confirme le paiement.",
+        "attempt": "Tentative {{current}} sur {{max}}"
+      },
+      "timeout": {
+        "title": "Cela prend plus de temps que prévu",
+        "description": "Mollie n'a pas encore confirmé le paiement. Un virement peut prendre plus de temps\u00a0; vous recevrez un e-mail dès sa réception.",
+        "checkAgain": "Vérifier à nouveau"
+      },
+      "paid": {
+        "title": "Paiement réussi\u00a0!",
+        "description": "Merci de soutenir SMOG."
+      },
+      "renewed": {
+        "title": "Votre parrainage est prolongé\u00a0!",
+        "description": "Votre nom reste dans la vidéo jusqu'au {{date}}."
+      },
+      "failed": {
+        "title": "Le paiement n'a pas abouti",
+        "description": "Rien n'a été débité et les gestes sont à nouveau libres. Vous pouvez réessayer.",
+        "renewalDescription": "Rien n'a été débité et votre parrainage continue jusqu'au {{date}}. Utilisez le lien de votre e-mail pour réessayer.",
+        "renewalDescriptionUndated": "Rien n'a été débité et votre parrainage continue jusqu'à sa date de fin actuelle. Utilisez le lien de votre e-mail pour réessayer."
+      },
+      "canceled": {
+        "title": "Le paiement a été annulé"
+      },
+      "expired": {
+        "title": "Le paiement a expiré"
+      },
+      "retry": "Réessayer",
+      "refund": {
+        "title": "Nous vous contacterons",
+        "description": "Votre paiement est arrivé, mais nous n'avons pas pu traiter votre parrainage tel quel (par exemple parce que le geste a été parrainé entre-temps). Nous vous contacterons et vous rembourserons si nécessaire."
+      },
+      "summary": {
+        "title": "Récapitulatif",
+        "gestures": "Gestes",
+        "sponsor": "Parrain",
+        "duration": "Durée",
+        "total": "Total payé",
+        "amount": "Montant"
+      },
+      "timeline": {
+        "title": "Et maintenant\u00a0?",
+        "paid": "Votre paiement est confirmé.",
+        "video": "Nous réalisons votre vidéo avec votre nom.",
+        "review": "Un administrateur examine votre parrainage dans les cinq jours ouvrables.",
+        "live": "Vous recevez un e-mail dès sa mise en ligne."
+      },
+      "home": "Retour à l'accueil"
+    },
+    "link": {
+      "invalid": {
+        "title": "Lien invalide",
+        "description": "Il manque un code obligatoire à ce lien. Utilisez le lien de votre e-mail."
+      },
+      "loading": "Vérification de votre lien…",
+      "notFound": {
+        "title": "Lien introuvable",
+        "description": "Ce lien est invalide ou a déjà été utilisé. Contactez SMOG si vous pensez qu'il s'agit d'une erreur."
+      },
+      "expired": {
+        "title": "Lien expiré",
+        "description": "Ce lien a expiré. Demandez un nouveau lien à SMOG.",
+        "since": "Expiré le {{date}}"
+      },
+      "unavailable": {
+        "title": "Lien plus utilisable"
+      },
+      "back": "Retour au site"
+    },
+    "edit": {
+      "eyebrow": "Modifier votre parrainage",
+      "title": "Mettez à jour votre vidéo",
+      "gesture": "Geste\u00a0: {{name}}",
+      "expires_one": "Le lien expire dans {{count}} jour",
+      "expires_many": "Le lien expire dans {{count}} jours",
+      "expires_other": "Le lien expire dans {{count}} jours",
+      "logoHint": "Laissez vide pour garder votre logo actuel.",
+      "noPayment": "Vous n'avez pas à payer à nouveau. Nous vérifions la modification avant sa mise en ligne.",
+      "submit": "Envoyer pour vérification",
+      "submitted": {
+        "title": "Envoyé\u00a0!",
+        "description": "Nous réalisons votre nouvelle vidéo et la vérifions avant sa mise en ligne. Vous n'avez pas à payer à nouveau."
+      },
+      "failed": "Nous n'avons pas pu envoyer votre modification. Veuillez réessayer."
+    },
+    "renew": {
+      "eyebrow": "Prolonger votre parrainage",
+      "title": "Une année de plus dans la vidéo",
+      "description": "Prolongez votre parrainage d'un an. Votre vidéo reste telle quelle.",
+      "gesture": "Geste",
+      "name": "Nom dans la vidéo",
+      "currentEnd": "En cours jusqu'au",
+      "newEnd": "Après prolongation jusqu'au",
+      "amount": "Montant",
+      "pay": "Prolonger et payer",
+      "failed": "Le paiement n'a pas pu démarrer. Veuillez réessayer."
+    },
+    "preview": {
+      "label": "Aperçu pour {{name}}",
+      "picker": "Choisissez le geste à prévisualiser",
+      "play": "Lire",
+      "pause": "Pause",
+      "showEnding": "Voir la fin",
+      "loading": "Chargement de l’aperçu…",
+      "fallbackNote": "La vidéo ne peut pas être lue ici, l’aperçu montre donc une image fixe du geste. La vidéo finale utilise le clip complet, avec cette fin.",
+      "unavailable": "L’aperçu ne peut pas être affiché pour le moment. La vidéo finale est réalisée avec votre nom et votre logo tels que saisis."
     }
   }
 }

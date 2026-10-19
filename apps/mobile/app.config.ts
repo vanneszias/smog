@@ -3,8 +3,12 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 
 const EAS_PROJECT_ID = "9fa68b63-dfa5-498a-9196-5eba93ecac29";
 const BRAND_GREEN = tokens.color.brand.green;
-/** Placeholder until the site gets its real host (see spec §14). */
-const DEFAULT_SITE_HOST = "smog-site-staging.workers.dev";
+/**
+ * A build without `EXPO_PUBLIC_SITE_HOST` (a local `expo` run) links to
+ * staging's host. `scripts/release-config-check.ts` keeps it equal to
+ * staging's `SITE_URL` host; every EAS profile sets its own (`eas.json`).
+ */
+const DEFAULT_SITE_HOST = "smog-site-staging.zias.workers.dev";
 /** Site paths the app opens itself instead of the browser. */
 const APP_LINK_PATH_PREFIXES = ["/gestures/", "/lists/"] as const;
 /** Exact site paths the app opens (the magic-link hand-off, phase 4 task 5). */
@@ -41,8 +45,9 @@ export default function createConfig({ config }: ConfigContext): ExpoConfig {
           ],
         },
       ],
+      // No versionCode / ios.buildNumber: EAS keeps them remotely
+      // (`appVersionSource: "remote"`, phase 8 ruling 3).
       package: "be.zias.smog",
-      versionCode: 81,
     },
     experiments: {
       typedRoutes: true,
@@ -54,7 +59,6 @@ export default function createConfig({ config }: ConfigContext): ExpoConfig {
     ios: {
       appleTeamId: "96XKP6MU2A",
       associatedDomains: [`applinks:${host}`],
-      buildNumber: "52",
       bundleIdentifier: "be.zias.smog",
       icon: "./assets/smog.icon",
       infoPlist: {

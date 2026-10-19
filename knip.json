@@ -7,12 +7,24 @@
       "project": ["scripts/**/*.ts"]
     },
     "packages/*": {
+      "entry": ["src/**/*.test.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx}"]
     },
     "packages/styles": {
+      "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts", "generated/*.{css,cjs}"]
     },
+    "packages/render": {
+      "entry": [
+        "src/server/{main,bundle,fixture,ensure-browser}.ts",
+        "src/server/fixture-card.tsx",
+        "src/**/*.test.{ts,tsx}",
+        "test/**/*.test.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"]
+    },
     "packages/ui-web": {
+      "entry": ["src/**/*.test.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx,css}"],
       "ignoreDependencies": ["tailwindcss"]
     },
@@ -26,8 +38,17 @@
       "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
       "ignoreDependencies": ["cloudflare"]
     },
+    "packages/jobs": {
+      "entry": ["test/**/*.test.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts"],
+      "ignoreDependencies": ["cloudflare", "@types/react"]
+    },
     "packages/auth": {
-      "entry": ["test/**/*.test.{ts,tsx}", "guard/*.ts"],
+      "entry": [
+        "test/**/*.test.{ts,tsx}",
+        "src/**/*.test.{ts,tsx}",
+        "guard/*.ts"
+      ],
       "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}", "guard/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },
@@ -47,6 +68,11 @@
     "packages/features/admin": {
       "entry": ["test/**/*.test.ts"],
       "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"],
+      "ignoreDependencies": ["cloudflare"]
+    },
+    "packages/migrate-convex": {
+      "entry": ["test/**/*.test.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },
     "packages/api": {

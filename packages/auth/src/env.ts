@@ -11,8 +11,6 @@ export const DEV_BETTER_AUTH_SECRET =
 /** The vars and secrets `createAuth` reads (defined in `@smog/config`). */
 export const authEnvSchema = workerVarsSchema
   .pick({
-    EMAIL_FROM: true,
-    EMAIL_REPLY_TO: true,
     ENVIRONMENT: true,
     SITE_URL: true,
   })

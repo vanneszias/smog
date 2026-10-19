@@ -1,3 +1,4 @@
+import { readCappedBody } from "@smog/utils";
 import { type RelayBody, relayBodySchema } from "../schema";
 
 /** The relay's part of the worker env (`@smog/config/env/worker`). */
@@ -31,8 +32,6 @@ function status(code: string, statusCode: number, headers = {}): Response {
 
 const accepted = (): Response => new Response(null, { status: 202 });
 
-const DIGITS = /^\d+$/;
-
 /** `cf-connecting-ip`; always set on Cloudflare, absent in local tools. */
 function clientIp(request: Request): string | null {
   return request.headers.get("cf-connecting-ip");
@@ -41,64 +40,19 @@ function clientIp(request: Request): string | null {
 type ReadResult = { body: RelayBody } | { status: 400 | 413 };
 
 /**
- * Reads at most `MAX_BODY_BYTES`: a declared `content-length` over the cap
- * is refused before any read, and a chunked body is read with a running
- * count and cancelled once past the cap, so a large upload is never
- * buffered.
+ * Reads at most `MAX_BODY_BYTES` (`readCappedBody`): a declared
+ * `content-length` over the cap is refused before any read, and a chunked
+ * body is counted and cancelled once past the cap, so a large upload is
+ * never buffered. A client that goes away mid-upload is a 400.
  */
-async function readCapped(request: Request): Promise<string | 400 | 413> {
-  const declared = request.headers.get("content-length");
-  if (declared !== null) {
-    if (!DIGITS.test(declared)) {
-      return 400;
-    }
-    if (Number(declared) > MAX_BODY_BYTES) {
-      return 413;
-    }
-  }
-  if (!request.body) {
-    return "";
-  }
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    let chunk: Awaited<ReturnType<typeof reader.read>>;
-    try {
-      // biome-ignore lint/performance/noAwaitInLoops: a stream is read chunk by chunk.
-      chunk = await reader.read();
-    } catch {
-      // The client went away mid-upload: a bad request, never a 500.
-      return 400;
-    }
-    const { done, value } = chunk;
-    if (done) {
-      break;
-    }
-    size += value.byteLength;
-    if (size > MAX_BODY_BYTES) {
-      await reader.cancel();
-      return 413;
-    }
-    chunks.push(value);
-  }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder().decode(bytes);
-}
-
 async function readBody(request: Request): Promise<ReadResult> {
-  const text = await readCapped(request);
-  if (typeof text === "number") {
-    return { status: text };
+  const read = await readCappedBody(request, MAX_BODY_BYTES);
+  if (!read.ok) {
+    return { status: read.status };
   }
   let json: unknown;
   try {
-    json = JSON.parse(text);
+    json = JSON.parse(new TextDecoder().decode(read.bytes));
   } catch {
     return { status: 400 };
   }

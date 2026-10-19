@@ -42,6 +42,13 @@ const OG_LOGO_WIDTH = 0.6;
 /** Height of the 1x horizontal logo in the app, in points. */
 const APP_LOGO_HEIGHT = 32;
 
+/**
+ * Height of the email header logo (`@smog/email`'s layout shows it 40 px
+ * tall), rendered at 2x. Email clients do not show SVG, so it is a PNG,
+ * flattened onto the header green.
+ */
+const EMAIL_LOGO_HEIGHT = 80;
+
 const ICO_SIZES = [16, 32, 48] as const;
 
 const OPEN_TAG = /^<svg\b[^>]*>/;
@@ -197,6 +204,11 @@ export function brandPlan(): BrandPlan {
     })
   );
 
+  const emailLogo = {
+    height: EMAIL_LOGO_HEIGHT,
+    width: Math.round((EMAIL_LOGO_HEIGHT * logo.width) / logo.height),
+  };
+
   const logoSource = readArt("logo.svg");
   return {
     favicon: {
@@ -220,6 +232,14 @@ export function brandPlan(): BrandPlan {
         opaque: true,
         path: `${SITE}/og.png`,
         svg: compose(og, logo, WHITE, og.width * OG_LOGO_WIDTH, {
+          colour: GREEN,
+          radius: 0,
+        }),
+      },
+      {
+        opaque: true,
+        path: `${SITE}/brand/email-logo.png`,
+        svg: compose(emailLogo, logo, WHITE, emailLogo.width, {
           colour: GREEN,
           radius: 0,
         }),

@@ -26,8 +26,10 @@ import {
   Skeleton,
   Text,
   Textarea,
+  TextLink,
   useToast,
 } from "@smog/ui-web";
+import { Link } from "@tanstack/react-router";
 import {
   Ban,
   ShieldCheck,
@@ -44,6 +46,7 @@ import {
   useState,
 } from "react";
 import { useAuditTime } from "../audit-data";
+import { StatusBadge as SponsorshipStatusBadge } from "../sponsorships/status-badge";
 import { RoleBadge, StatusBadge, useUserDate } from "./user-table";
 
 /** The ban lengths offered (days); `forever` has no end. */
@@ -157,6 +160,58 @@ function UserFacts({ user }: { user: AdminUserDetail }): ReactNode {
         <span className="tabular-nums">{user.lists}</span>
       </Row>
     </dl>
+  );
+}
+
+/**
+ * The sponsorships bought with this account's verified email (phase 6),
+ * newest first, each linking to its detail.
+ */
+function UserSponsorships({ user }: { user: AdminUserDetail }): ReactNode {
+  const { t } = useTranslation();
+  return (
+    <section
+      aria-labelledby="user-sponsorships-heading"
+      className="flex flex-col gap-2 border-border-subtle border-t pt-4"
+    >
+      <Heading id="user-sponsorships-heading" level={3}>
+        {t("admin.users.panel.sponsorships")}
+      </Heading>
+      {user.sponsorships.length === 0 ? (
+        <Text size="body-sm" tone="muted">
+          {t("admin.users.panel.noSponsorships")}
+        </Text>
+      ) : (
+        <ul className="flex flex-col divide-y divide-border-subtle">
+          {user.sponsorships.map((sponsorship) => (
+            <li
+              className="flex flex-wrap items-center justify-between gap-2 py-1.5"
+              key={sponsorship.id}
+            >
+              <span className="flex min-w-0 flex-col">
+                <TextLink asChild className="truncate text-body-sm">
+                  <Link
+                    params={{ id: sponsorship.id }}
+                    to="/admin/sponsorships/$id"
+                  >
+                    {sponsorship.gesture.name}
+                  </Link>
+                </TextLink>
+                <Text
+                  as="span"
+                  className="truncate"
+                  size="caption"
+                  tone="muted"
+                >
+                  {sponsorship.displayName}
+                </Text>
+              </span>
+              <SponsorshipStatusBadge status={sponsorship.status} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -493,6 +548,7 @@ function PanelBody({
     return (
       <div className="flex flex-col gap-5">
         <UserFacts user={detail.data} />
+        <UserSponsorships user={detail.data} />
         <UserActions
           isSelf={detail.data.id === actorId}
           onDeleted={onClose}

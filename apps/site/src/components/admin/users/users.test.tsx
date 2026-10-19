@@ -22,6 +22,7 @@ const MEMBER: AdminUserDetail = {
   name: "Mia Member",
   role: "user",
   sessions: 2,
+  sponsorships: [],
 };
 
 const ADMIN_ID = "u-admin";
@@ -139,6 +140,33 @@ describe("UserPanel", () => {
       // The reason is tied to the button, for screen readers (M-6).
       expect(describedBy(button)).toContain("This is your own account.");
     }
+  });
+
+  test("lists the account's sponsorships, each linking to its detail", async () => {
+    await renderSite(panelPage(MEMBER.id), {
+      api: {
+        "admin/users/get": {
+          ...MEMBER,
+          sponsorships: [
+            {
+              createdAt: Date.UTC(2026, 8, 2),
+              displayName: "Bakkerij Mia",
+              gesture: { id: "g-hond", name: "Hond", slug: "hond" },
+              id: "sp-mia",
+              status: "live",
+            },
+          ],
+        },
+      },
+    });
+    const section = await screen.findByRole("region", {
+      name: "Sponsorships",
+    });
+    const link = section.querySelector("a");
+    expect(link?.textContent).toBe("Hond");
+    expect(link?.getAttribute("href")).toBe("/admin/sponsorships/sp-mia");
+    expect(section.textContent).toContain("Bakkerij Mia");
+    expect(section.textContent).toContain("Live");
   });
 
   test("an admin target can be demoted, not banned or deleted", async () => {

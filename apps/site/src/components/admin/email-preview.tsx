@@ -27,13 +27,26 @@ import {
 
 /**
  * Each template's name. The key map makes `check-types` fail when a
- * registered template (phase 6) has no label.
+ * registered template has no label.
  */
 const TEMPLATE_LABELS = {
   "auth/magic-link": "admin.emails.template.magicLink",
   "auth/otp": "admin.emails.template.otp",
   "auth/reset-password": "admin.emails.template.resetPassword",
   "auth/verify-email": "admin.emails.template.verifyEmail",
+  "transactional/admin-new-sponsorship":
+    "admin.emails.template.adminNewSponsorship",
+  "transactional/admin-refund-needed":
+    "admin.emails.template.adminRefundNeeded",
+  "transactional/admin-render-failed":
+    "admin.emails.template.adminRenderFailed",
+  "transactional/payment-confirmed": "admin.emails.template.paymentConfirmed",
+  "transactional/renewal-reminder": "admin.emails.template.renewalReminder",
+  "transactional/sponsorship-live": "admin.emails.template.sponsorshipLive",
+  "transactional/sponsorship-received":
+    "admin.emails.template.sponsorshipReceived",
+  "transactional/we-moved": "admin.emails.template.weMoved",
+  "transactional/welcome": "admin.emails.template.welcome",
 } as const satisfies Record<EmailTemplateId, TranslationKey>;
 
 const LOCALE_LABELS = {
@@ -52,7 +65,9 @@ export function emailTemplateLabel(t: Translate, id: EmailTemplateId): string {
 
 /**
  * The preview document's own policy: nothing loads and nothing runs, only
- * the template's inline styles and inline images. The walls, in order:
+ * the template's inline styles, inline images and the header logo from
+ * this site's `/brand/` folder (`origin`; the logo shows its alt text
+ * without it). The walls, in order:
  * - the iframe's empty `sandbox` blocks scripts, forms, popups and top
  *   navigation (the frame could still navigate itself);
  * - `<base target="_blank">` turns every link click into a popup, which
@@ -60,17 +75,19 @@ export function emailTemplateLabel(t: Translate, id: EmailTemplateId): string {
  * - this policy, and the page's own CSP, which a `srcdoc` document
  *   inherits (its `frame-src` would also stop the frame loading a link).
  */
-export const EMAIL_PREVIEW_CSP =
-  "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'";
+export function emailPreviewCsp(origin?: string): string {
+  const images = origin ? `data: ${origin}/brand/` : "data:";
+  return `default-src 'none'; style-src 'unsafe-inline'; img-src ${images}; base-uri 'none'; form-action 'none'`;
+}
 
 const HEAD = /<head(\s[^>]*)?>/i;
 
 /**
- * The rendered email with `EMAIL_PREVIEW_CSP` and `<base target="_blank">`
- * first in its head.
+ * The rendered email with `emailPreviewCsp(origin)` and
+ * `<base target="_blank">` first in its head.
  */
-export function sandboxedEmailDocument(html: string): string {
-  const meta = `<meta http-equiv="Content-Security-Policy" content="${EMAIL_PREVIEW_CSP}"><base target="_blank">`;
+export function sandboxedEmailDocument(html: string, origin?: string): string {
+  const meta = `<meta http-equiv="Content-Security-Policy" content="${emailPreviewCsp(origin)}"><base target="_blank">`;
   return HEAD.test(html)
     ? html.replace(HEAD, (tag) => `${tag}${meta}`)
     : `${meta}${html}`;
@@ -214,7 +231,13 @@ function PreviewPane({ locale, template, width }: PreviewPaneProps): ReactNode {
   const { t } = useTranslation();
   const preview = useEmailPreview(template, locale);
   const document = useMemo(
-    () => (preview.data ? sandboxedEmailDocument(preview.data.html) : ""),
+    () =>
+      preview.data
+        ? sandboxedEmailDocument(
+            preview.data.html,
+            typeof window === "undefined" ? undefined : window.location.origin
+          )
+        : "",
     [preview.data]
   );
   const retry = useCallback(() => {

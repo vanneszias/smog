@@ -7,6 +7,7 @@ export {
   type FakeAsset,
   type FakeMux,
   type FakeMuxOptions,
+  type FakeStaticRendition,
   type FakeUpload,
   signMuxWebhook,
 } from "./fake-mux";

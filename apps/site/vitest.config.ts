@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { workerSecretsSchema } from "@smog/config/env/worker";
+import { WORKERS_POOL_TEST_OPTIONS } from "@smog/config/testing/vitest";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vitest/config";
 import { unstable_readConfig } from "wrangler";
@@ -52,7 +53,8 @@ export default defineConfig(async () => ({
           TEST_MIGRATIONS: await readD1Migrations(MIGRATIONS_DIR),
         },
         // `env.dev` allows 1000/60 s so local use never locks out; the tests
-        // run RL_AUTH at the staging/production limit, and RL_ANALYTICS at 5,
+        // run RL_AUTH and RL_SPONSOR at the staging/production limit, and
+        // RL_ANALYTICS at 5,
         // to exercise the 429s.
         ratelimits: {
           RL_ANALYTICS: {
@@ -60,6 +62,20 @@ export default defineConfig(async () => ({
             simple: { limit: 5, period: 60 },
           },
           RL_AUTH: { namespace_id: "9003", simple: { limit: 5, period: 60 } },
+          RL_SPONSOR: {
+            namespace_id: "9002",
+            simple: { limit: 5, period: 60 },
+          },
+        },
+        // A test-only `RENDER_WORKFLOW` (phase 7 task 6): `wrangler.jsonc`
+        // never declares it (the build's render gate adds it, ruling 2),
+        // and `introspectWorkflow` needs a binding. `RENDER_MODE` stays
+        // `fake`, so nothing but the render tests creates an instance.
+        workflows: {
+          RENDER_WORKFLOW: {
+            className: "RenderSponsorshipVideo",
+            name: "smog-dev-render",
+          },
         },
       },
       wrangler: { configPath: "./wrangler.jsonc", environment: "dev" },
@@ -68,6 +84,7 @@ export default defineConfig(async () => ({
   ],
   resolve: { alias: { "@": SRC } },
   test: {
+    ...WORKERS_POOL_TEST_OPTIONS,
     // test/warm-up.ts pays the first (slow) transform of the server entry
     // under `hookTimeout`, so a hung test still fails after 60 s.
     hookTimeout: 180_000,

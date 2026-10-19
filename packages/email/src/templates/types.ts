@@ -4,8 +4,10 @@ import type { ReactNode } from "react";
 /** A `t` bound to one locale (from `createI18n`): `@smog/i18n`'s `Translate`. */
 export type { Translate } from "@smog/i18n";
 
-interface TemplateContext {
+export interface TemplateContext {
   locale: Locale;
+  /** The site origin (`SITE_URL`) the header logo is loaded from; the wordmark without it. */
+  siteUrl?: string | undefined;
   t: Translate;
 }
 

@@ -4,7 +4,7 @@ import {
   type MaintenanceSetting,
   parseMaintenanceSetting,
 } from "@smog/config/maintenance";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   AUTH_SIGN_IN_ROUTES,
   BYPASS_COOKIE,
@@ -186,10 +186,12 @@ describe("maintenance mode", () => {
     await health.body?.cancel();
     for (const path of [
       "/api/webhooks/mollie",
+      "/webhooks/mollie",
       "/api/webhooks/mux",
       "/.well-known/nothing-here",
       "/api/maintenance/bypass",
       "/api/auth/sign-out",
+      "/api/csp-report",
     ]) {
       // biome-ignore lint/performance/noAwaitInLoops: one path at a time.
       const response = await fetchSite(path, {
@@ -237,6 +239,9 @@ describe("maintenance mode", () => {
     for (const path of [
       "/api/healthz",
       "/api/webhooksx",
+      "/webhooks/molliex",
+      "/webhooks/mollie/x",
+      "/webhooks",
       "/.well-knownx",
       "/api/authx",
       "/sign-in-x",
@@ -702,6 +707,34 @@ describe("/api/auth during maintenance", () => {
     });
     expect(response.status).toBe(200);
     await response.body?.cancel();
+  });
+
+  it("lets CSP reports through (the 503 page carries the CSP too)", async () => {
+    await setMaintenance({ bypassVersion: 1, enabled: true });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const response = await fetchSite("/api/csp-report", {
+      body: JSON.stringify({
+        "csp-report": {
+          "blocked-uri": "inline",
+          "document-uri": `${ORIGIN}/`,
+          "effective-directive": "script-src-elem",
+        },
+      }),
+      headers: {
+        "cf-connecting-ip": ip(),
+        "content-type": "application/csp-report",
+      },
+      method: "POST",
+    });
+    expect(response.status).toBe(204);
+    expect(
+      warn.mock.calls.filter(([message]) => message === "[csp] violation")
+    ).toHaveLength(1);
+    warn.mockRestore();
+    // The exemption is the exact path, not a prefix.
+    const lookAlike = await fetchSite("/api/csp-report-x", { method: "POST" });
+    expect(lookAlike.status).toBe(503);
+    await lookAlike.body?.cancel();
   });
 
   it("lets the analytics relay through (it only forwards)", async () => {

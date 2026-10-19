@@ -20,6 +20,8 @@ import {
 } from "@smog/lists/server";
 import { implementRpc } from "@smog/rpc";
 import { roleSchema } from "@smog/rpc/contract";
+import { createSponsorshipsRouter } from "@smog/sponsorships/server";
+import { adminSponsorshipServices } from "./admin-deps";
 import { appContract } from "./contract";
 
 const os = implementRpc(appContract);
@@ -61,13 +63,22 @@ export const appRouter = os.router({
     unplacedItems: unplacedItemsStmt,
   }),
   // Admin catalogue writes start a new catalogue version (the gestures
-  // cache); every admin procedure is `requireAdmin`.
-  admin: createAdminRouter({ bumpCatalogVersion }),
+  // cache); the sponsorship actions run the sponsorship batches and enqueue
+  // on the rpc env's queues after the commit. Every admin procedure is
+  // `requireAdmin`.
+  admin: createAdminRouter({
+    bumpCatalogVersion,
+    sponsorships: adminSponsorshipServices,
+  }),
   // Favorites and lists resolve summaries with the gestures query (a
   // feature never imports another feature's server; the api wires them).
   favorites: createFavoritesRouter({ findSummaries: findGesturesByIds }),
   gestures: gesturesRouter,
   lists: createListsRouter({ findSummaries: findGesturesByIds }),
+  // Public: every procedure runs its declared guards (Turnstile,
+  // RL_SPONSOR). Tasks 4 and 5 fill the checkout, logo, status, re-edit
+  // and renewal slices.
+  sponsorships: createSponsorshipsRouter(),
   system,
 });
 

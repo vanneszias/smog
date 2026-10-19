@@ -2,10 +2,12 @@ import { auditRoutes } from "./audit";
 import { categoriesRoutes } from "./categories";
 import { dashboardRoutes } from "./dashboard";
 import { emailsRoutes } from "./emails";
+import { exportRoutes } from "./export";
 import { gesturesRoutes } from "./gestures";
 import { maintenanceRoutes } from "./maintenance";
 import { muxRoutes } from "./mux";
 import { type AdminDeps, adminProcedure } from "./procedure";
+import { sponsorshipsRoutes } from "./sponsorships";
 import { usersRoutes } from "./users";
 
 /**
@@ -23,6 +25,8 @@ export function createAdminRouter(deps: AdminDeps) {
     ...usersRoutes(deps),
     ...maintenanceRoutes(deps),
     ...emailsRoutes(deps),
+    ...sponsorshipsRoutes(deps),
+    ...exportRoutes(),
   });
 }
 

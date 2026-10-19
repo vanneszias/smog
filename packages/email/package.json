@@ -9,12 +9,13 @@
   },
   "scripts": {
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",
-    "test": "vitest run"
+    "test": "bun ../../scripts/test-deadline.ts -- vitest run"
   },
   "dependencies": {
     "@smog/config": "workspace:*",
     "@smog/i18n": "workspace:*",
     "@smog/styles": "workspace:*",
+    "@smog/utils": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-email": "6.11.0"

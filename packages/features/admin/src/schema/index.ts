@@ -37,7 +37,9 @@ export {
   DASHBOARD_RECENT_AUDIT,
   type Dashboard,
   dashboardSchema,
+  dashboardSponsorshipsSchema,
 } from "./dashboard";
 export * from "./maintenance";
 export * from "./mux";
+export * from "./sponsorships";
 export * from "./users";

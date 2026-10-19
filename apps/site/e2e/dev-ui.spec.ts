@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
-import { stubMux, waitForHydration } from "./helpers";
+import { stubMux, waitForHydration, withoutAxeExcluded } from "./helpers";
 
 const SCREENSHOTS = "e2e/__screenshots__";
 const WIDTHS = [390, 1280] as const;
@@ -36,7 +36,7 @@ async function openGallery(page: Page, width: number): Promise<void> {
 }
 
 async function blockingViolations(page: Page, include?: string) {
-  const builder = new AxeBuilder({ page });
+  const builder = withoutAxeExcluded(new AxeBuilder({ page }));
   const results = await (include
     ? builder.include(include)
     : builder

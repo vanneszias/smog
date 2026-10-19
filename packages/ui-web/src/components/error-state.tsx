@@ -7,7 +7,7 @@ import { Button } from "./button";
 export interface ErrorStateProps
   extends Omit<ComponentProps<"section">, "title"> {
   description?: ReactNode;
-  level?: 2 | 3 | 4;
+  level?: 1 | 2 | 3 | 4;
   /** Shows a retry button (`states.retry`). */
   onRetry?: () => void;
   /** Busy state of the retry button while it reloads. */
@@ -42,7 +42,12 @@ export function ErrorState({
       >
         <CircleAlert className="size-6" />
       </span>
-      <Heading className="font-semibold text-foreground text-title-3">
+      <Heading
+        className={cn(
+          "font-semibold text-foreground",
+          level === 1 ? "text-title-1" : "text-title-3"
+        )}
+      >
         {title ?? t("states.error.title")}
       </Heading>
       <p className="text-body text-foreground-muted">

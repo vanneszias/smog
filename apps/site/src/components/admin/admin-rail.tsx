@@ -12,6 +12,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import {
   FolderTree,
   Hand,
+  HandCoins,
   LayoutDashboard,
   Mail,
   PanelLeft,
@@ -29,13 +30,18 @@ interface RailItem {
   label: TranslationKey;
 }
 
-/** The admin sections (spec §16). Sponsorships joins in phase 6. */
+/** The admin sections (spec §16), Sponsorships second (phase 6). */
 const RAIL_ITEMS: readonly RailItem[] = [
   {
     exact: true,
     href: "/admin",
     icon: <LayoutDashboard />,
     label: "admin.rail.dashboard",
+  },
+  {
+    href: "/admin/sponsorships",
+    icon: <HandCoins />,
+    label: "admin.rail.sponsorships",
   },
   { href: "/admin/gestures", icon: <Hand />, label: "admin.rail.gestures" },
   {

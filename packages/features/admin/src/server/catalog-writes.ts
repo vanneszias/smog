@@ -13,55 +13,16 @@
  *   and swallowed (D1 is written; only the typo tier and the public
  *   categories snapshot stay stale until the next bump).
  */
-import { type category, gesture } from "@smog/db";
+import {
+  type category,
+  gesture,
+  type Statement,
+  toGuardFailure,
+} from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { slugify } from "@smog/utils";
-import { or, type SQL, sql } from "drizzle-orm";
-import type { BatchItem } from "drizzle-orm/batch";
+import { or, sql } from "drizzle-orm";
 import type { AdminDeps } from "./procedure";
-
-export type Statement = BatchItem<"sqlite">;
-
-/** A `failWhen` guard that fired: the batch rolled back. */
-export class GuardFailedError extends Error {
-  readonly guard: string;
-
-  constructor(guard: string, options: { cause: unknown }) {
-    super(`[admin] The ${guard} guard stopped the write`, options);
-    this.guard = guard;
-    this.name = "GuardFailedError";
-  }
-}
-
-const GUARD_PREFIX = "smog-guard:";
-/** Where a guard's name ends in the error message. */
-const GUARD_NAME_END = /[^A-Za-z0-9-]|$/;
-
-/**
- * A batch statement that fails the whole batch when `condition` holds at
- * that point of the batch (it sees the earlier statements' writes). SQLite
- * has no `RAISE` outside triggers, so the guard evaluates an invalid JSON
- * path, whose error names the guard (`bad JSON path: 'smog-guard:<name>'`);
- * `runCatalogBatch` turns it into `GuardFailedError`.
- */
-export function failWhen(db: Db, guard: string, condition: SQL): Statement {
-  return db
-    .select({
-      guard: sql`CASE WHEN ${condition} THEN json_extract('{}', ${GUARD_PREFIX + guard}) END`,
-    })
-    .from(sql`(SELECT 1)`);
-}
-
-function guardName(error: unknown): string | null {
-  for (let e: unknown = error; e instanceof Error; e = e.cause) {
-    const at = e.message.indexOf(GUARD_PREFIX);
-    if (at !== -1) {
-      const rest = e.message.slice(at + GUARD_PREFIX.length);
-      return rest.slice(0, rest.search(GUARD_NAME_END));
-    }
-  }
-  return null;
-}
 
 /** Whether `error` is a unique-index violation on `<table>.slug`. */
 function isSlugConflict(error: unknown, table: string): boolean {
@@ -90,9 +51,9 @@ export async function runCatalogBatch(
   try {
     await db.batch([first, ...rest]);
   } catch (error) {
-    const guard = guardName(error);
-    if (guard !== null) {
-      throw new GuardFailedError(guard, { cause: error });
+    const failure = toGuardFailure(error);
+    if (failure !== null) {
+      throw failure;
     }
     if (
       !(isSlugConflict(error, "gesture") || isSlugConflict(error, "category"))

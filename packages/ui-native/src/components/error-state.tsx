@@ -12,7 +12,7 @@ import { Heading, Text } from "./text";
 export interface ErrorStateProps extends Omit<ViewProps, "children"> {
   description?: ReactNode;
   /** Web's heading level; native has one `header` role. */
-  level?: 2 | 3 | 4;
+  level?: 1 | 2 | 3 | 4;
   /** Shows a retry button (`states.retry`). */
   onRetry?: () => void;
   ref?: Ref<View>;

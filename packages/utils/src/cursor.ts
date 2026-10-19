@@ -21,7 +21,9 @@ function fromBase64Url(text: string): Uint8Array {
 export function decodeCursor(cursor: string): (string | number)[] | null {
   try {
     const value: unknown = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(fromBase64Url(cursor))
+      new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(
+        fromBase64Url(cursor)
+      )
     );
     if (
       Array.isArray(value) &&

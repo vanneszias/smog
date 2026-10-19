@@ -4,8 +4,14 @@ import { siteOrigin } from "@/lib/site-url";
 import { siteEnv } from "@/server/auth";
 import { createInProcessApiClient } from "@/server/in-process-api";
 
-/** The public pages that exist today (sponsor pages follow). */
-const STATIC_PATHS = ["/", "/gestures", "/privacy", "/terms"] as const;
+/** The public pages (P-16): the wizard, not its token and return pages. */
+const STATIC_PATHS = [
+  "/",
+  "/gestures",
+  "/sponsor",
+  "/privacy",
+  "/terms",
+] as const;
 
 function url(loc: string, lastmod?: number): string {
   const modified =

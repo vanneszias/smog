@@ -59,8 +59,8 @@ describe("email + password", () => {
     expect(ctx.email.sent).toHaveLength(1);
     const [message] = ctx.email.sent;
     expect(message?.to).toBe(email);
-    expect(message?.from).toBe(ctx.authEnv.EMAIL_FROM);
-    expect(message?.replyTo).toBe(ctx.authEnv.EMAIL_REPLY_TO);
+    expect(message?.from).toBe("SMOG & Co <noreply@smog.vlaanderen>");
+    expect(message?.replyTo).toBe("info@smog.vlaanderen");
     expect(message?.subject).toBe("Bevestig je e-mailadres");
     expect(linkIn(message?.text)).toContain("/api/auth/verify-email?token=");
 
@@ -465,7 +465,7 @@ describe("cookies and origins", () => {
   it("staging and production cookies are Secure", async () => {
     const ctx = setup({
       ENVIRONMENT: "staging",
-      SITE_URL: "https://smog-site-staging.workers.dev",
+      SITE_URL: "https://smog-site-staging.zias.workers.dev",
     });
     const email = uniqueEmail();
     await makeUser(ctx.db, { email, emailVerified: true });
@@ -480,7 +480,7 @@ describe("cookies and origins", () => {
     const dev = setup();
     const production = setup({
       ENVIRONMENT: "production",
-      SITE_URL: "https://smog-site-production.workers.dev",
+      SITE_URL: "https://smog-site-production.zias.workers.dev",
     });
     const devContext = await dev.auth.$context;
     const productionContext = await production.auth.$context;
@@ -490,7 +490,7 @@ describe("cookies and origins", () => {
     );
     expect(productionContext.trustedOrigins).toEqual(
       expect.arrayContaining([
-        "https://smog-site-production.workers.dev",
+        "https://smog-site-production.zias.workers.dev",
         "smog://",
       ])
     );
