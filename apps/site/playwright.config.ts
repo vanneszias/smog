@@ -164,7 +164,7 @@ export default defineConfig({
       url: `${MOLLIE_FAKE_URL}/__fake/health`,
     },
     {
-      command: `bunx vite dev --port ${PORT} --strictPort`,
+      command: `bunx vite dev --port ${PORT} --strictPort --host`,
       env: {
         SMOG_DEV_MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY,
         SMOG_DEV_MOLLIE_API_URL: MOLLIE_FAKE_URL,
