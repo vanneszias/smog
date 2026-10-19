@@ -3,6 +3,8 @@ import {
   doctorVerdict,
   formatBytes,
   galleryVerdict,
+  type ResolvedIdentity,
+  variantProblems,
 } from "./mobile-release-check";
 
 const SCHEMA = "Check Expo config (app.json/ app.config.js) schema";
@@ -92,5 +94,110 @@ describe("galleryVerdict", () => {
     expect(galleryVerdict({ hasMarker: false, production: false })).toContain(
       "marker"
     );
+  });
+});
+
+describe("variantProblems", () => {
+  const EAS = {
+    build: {
+      development: { env: { APP_VARIANT: "development" } },
+      production: { env: {} },
+      staging: { env: { APP_VARIANT: "staging" } },
+    },
+  };
+  const IDENTITIES: Record<string, ResolvedIdentity> = {
+    development: {
+      androidPackage: "be.zias.smog.dev",
+      associatedDomains: undefined,
+      bundleIdentifier: "be.zias.smog.dev",
+      name: "SMOG Dev",
+      scheme: "smog-dev",
+      verifiedLinks: false,
+    },
+    production: {
+      androidPackage: "be.zias.smog",
+      associatedDomains: ["applinks:smog.example"],
+      bundleIdentifier: "be.zias.smog",
+      name: "SMOG & Co",
+      scheme: "smog",
+      verifiedLinks: true,
+    },
+    staging: {
+      androidPackage: "be.zias.smog.staging",
+      associatedDomains: undefined,
+      bundleIdentifier: "be.zias.smog.staging",
+      name: "SMOG Staging",
+      scheme: "smog-staging",
+      verifiedLinks: false,
+    },
+  };
+  const resolveWith =
+    (patch: Record<string, Partial<ResolvedIdentity>> = {}) =>
+    (env: Record<string, string>): ResolvedIdentity => {
+      const key = (env.APP_VARIANT as string | undefined) ?? "production";
+      return { ...(IDENTITIES[key] as ResolvedIdentity), ...patch[key] };
+    };
+
+  test("passes the three distinct identities", () => {
+    expect(variantProblems(EAS, resolveWith())).toEqual([]);
+  });
+
+  test("fails a profile that sets the wrong or no variant", () => {
+    const wrong = {
+      build: { ...EAS.build, staging: { env: { APP_VARIANT: "development" } } },
+    };
+    expect(variantProblems(wrong, resolveWith()).join()).toContain(
+      'build.staging.env.APP_VARIANT must be "staging"'
+    );
+    const unset = { build: { ...EAS.build, development: { env: {} } } };
+    expect(variantProblems(unset, resolveWith()).join()).toContain(
+      "build.development.env.APP_VARIANT"
+    );
+    const store = {
+      build: { ...EAS.build, production: { env: { APP_VARIANT: "staging" } } },
+    };
+    expect(variantProblems(store, resolveWith()).join()).toContain(
+      "build.production.env.APP_VARIANT must be unset"
+    );
+  });
+
+  test("fails a shared name, id or scheme", () => {
+    const problems = variantProblems(
+      EAS,
+      resolveWith({ staging: { scheme: "smog-dev" } })
+    );
+    expect(problems.join()).toContain("shared scheme");
+  });
+
+  test("fails a variant that claims the site's universal links", () => {
+    expect(
+      variantProblems(
+        EAS,
+        resolveWith({ staging: { associatedDomains: ["applinks:x"] } })
+      ).join()
+    ).toContain("the staging variant claims");
+    expect(
+      variantProblems(
+        EAS,
+        resolveWith({ development: { verifiedLinks: true } })
+      ).join()
+    ).toContain("the development variant claims");
+  });
+
+  test("fails a store app that lost its links or its identity", () => {
+    expect(
+      variantProblems(
+        EAS,
+        resolveWith({
+          production: { associatedDomains: undefined, verifiedLinks: false },
+        })
+      ).join()
+    ).toContain("no longer claims");
+    expect(
+      variantProblems(
+        EAS,
+        resolveWith({ production: { bundleIdentifier: "be.zias.other" } })
+      ).join()
+    ).toContain("must stay be.zias.smog / smog");
   });
 });

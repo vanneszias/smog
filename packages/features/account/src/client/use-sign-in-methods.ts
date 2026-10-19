@@ -33,7 +33,7 @@ export interface SignInMethodsClient {
 }
 
 export interface LinkOptions {
-  /** Where the provider sends the user back (web: a redirect; Expo: `smog://`). */
+  /** Where the provider sends the user back (web: a redirect; Expo: the app's scheme, `smog://` or a variant's). */
   callbackURL: string;
   /** Where a failed link lands (`?error=` is appended). */
   errorCallbackURL?: string;

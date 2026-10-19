@@ -63,12 +63,17 @@ export function SearchResults<T extends GestureCardData>({
     status = t("search.searching");
   } else if (state === "results") {
     status = t("search.resultCount", { count: items.length });
+  } else if (state === "empty") {
+    status = t("search.noResults.title");
   }
+  // The count is a live region on Android (and so not announced there too);
+  // "searching" and "no results" have no text to put a live region on.
+  const announced = Platform.OS === "ios" || state !== "results";
   useEffect(() => {
-    if (status && Platform.OS === "ios") {
+    if (status && announced) {
       AccessibilityInfo.announceForAccessibility(status);
     }
-  }, [status]);
+  }, [announced, status]);
   return (
     <View
       accessibilityState={{ busy: state === "loading" }}

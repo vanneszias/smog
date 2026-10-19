@@ -21,6 +21,7 @@
  */
 
 import { MAGIC_LINK_TOKEN_PATTERN } from "@smog/auth/react";
+import { appScheme } from "@/lib/app-scheme";
 
 const HOME = "/";
 
@@ -73,8 +74,9 @@ function appPath(link: string): string | undefined {
   if (name === "https" || name === "http") {
     return afterAuthority(rest);
   }
-  if (name === "smog") {
-    // `smog://gestures/x`: the "host" is the first path segment.
+  if (name === appScheme().toLowerCase()) {
+    // `smog://gestures/x` (the build's own scheme: `smog-staging://` in a
+    // staging build): the "host" is the first path segment.
     return `/${rest.replace(LEADING_SLASHES, "")}`;
   }
   if (name === "exp" || name === "exps") {

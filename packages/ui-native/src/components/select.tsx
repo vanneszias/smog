@@ -6,6 +6,7 @@ import { Pressable, type PressableProps, Text, View } from "react-native";
 import { cn } from "../lib/cn";
 import { useControllableState } from "../lib/controllable";
 import { ICON_SIZE } from "../lib/icon";
+import { useLineLimit } from "../lib/line-limit";
 import { useColor } from "../lib/theme";
 import { useFieldControl } from "./field";
 import { fieldVariants } from "./input";
@@ -65,6 +66,7 @@ export function Select({
   // PressableProps allow `null`.
   const disabled = disabledProp === true;
   const { t } = useTranslation();
+  const oneLine = useLineLimit(1);
   const field = useFieldControl({
     accessibilityLabel: accessibilityLabel ?? ariaLabel,
     invalid,
@@ -117,7 +119,7 @@ export function Select({
             "flex-1 text-body",
             current ? "text-foreground" : "text-foreground-muted"
           )}
-          numberOfLines={1}
+          numberOfLines={oneLine}
         >
           {current?.label ?? placeholder ?? t("kit.selectPlaceholder")}
         </Text>

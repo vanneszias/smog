@@ -24,6 +24,7 @@ import {
   Input,
   Text,
   TextLink,
+  useLineLimit,
   useToast,
 } from "@smog/ui-native";
 import { useQuery } from "@tanstack/react-query";
@@ -414,6 +415,16 @@ function useTitle(flow: AuthFlow): string {
   }
 }
 
+/** The address the flow is for, on one line (it wraps in large text). */
+function EmailEcho({ email }: { email: string }): ReactElement {
+  const oneLine = useLineLimit(1);
+  return (
+    <Text className="flex-1" numberOfLines={oneLine} size="body-sm">
+      {email}
+    </Text>
+  );
+}
+
 /** Where the emailed links land: the site (the browser signs in there). */
 function siteURL(path: string): string {
   return new URL(path, mobileEnv().EXPO_PUBLIC_API_URL).toString();
@@ -527,9 +538,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
         </View>
         {flow.state.step === "email" || flow.state.step === "done" ? null : (
           <View className="flex-row items-center justify-between gap-2 rounded-md bg-surface-sunken px-3 py-2">
-            <Text className="flex-1" numberOfLines={1} size="body-sm">
-              {flow.state.email}
-            </Text>
+            <EmailEcho email={flow.state.email} />
             <Button onPress={flow.changeEmail} size="sm" variant="ghost">
               {t("auth.email.change")}
             </Button>

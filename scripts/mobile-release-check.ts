@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import createConfig from "../apps/mobile/app.config";
 
 /**
  * Mobile release gate: `expo-doctor`, then `expo export` (iOS + Android), then
@@ -109,6 +110,138 @@ export function galleryVerdict({
   return null;
 }
 
+/** What `app.config.ts` resolves to for one EAS profile (the fields a variant changes). */
+export interface ResolvedIdentity {
+  androidPackage: string | undefined;
+  associatedDomains: readonly string[] | undefined;
+  bundleIdentifier: string | undefined;
+  name: string | undefined;
+  scheme: string | undefined;
+  /** Whether an `autoVerify` https intent filter (a universal link) is claimed. */
+  verifiedLinks: boolean;
+}
+
+/** The variant each EAS profile must set; `undefined` is "unset" (the store app). */
+const PROFILE_VARIANTS: Record<string, string | undefined> = {
+  development: "development",
+  production: undefined,
+  staging: "staging",
+};
+const STORE_IDENTITY = { applicationId: "be.zias.smog", scheme: "smog" };
+
+function profileEnv(eas: unknown, profile: string): Record<string, string> {
+  const build =
+    typeof eas === "object" && eas !== null && "build" in eas
+      ? (eas as { build: Record<string, { env?: Record<string, string> }> })
+          .build
+      : {};
+  return build[profile]?.env ?? {};
+}
+
+const IDENTITY_FIELDS = [
+  "androidPackage",
+  "bundleIdentifier",
+  "name",
+  "scheme",
+] as const;
+
+function quoted(value: string | undefined): string {
+  return value === undefined ? "unset" : `"${value}"`;
+}
+
+/** Each profile sets the `APP_VARIANT` that names it (production none). */
+function profileVariantProblems(eas: unknown): string[] {
+  const problems: string[] = [];
+  for (const [profile, expected] of Object.entries(PROFILE_VARIANTS)) {
+    const actual = (
+      profileEnv(eas, profile) as Record<string, string | undefined>
+    ).APP_VARIANT;
+    if (actual !== expected) {
+      problems.push(
+        `eas.json build.${profile}.env.APP_VARIANT must be ${quoted(expected)}, got ${quoted(actual)}`
+      );
+    }
+  }
+  return problems;
+}
+
+/** The profiles resolve to distinct names, ids, packages and schemes. */
+function distinctProblems(
+  identities: readonly (readonly [string, ResolvedIdentity])[]
+): string[] {
+  const problems: string[] = [];
+  for (const field of IDENTITY_FIELDS) {
+    const values = identities.map(([, identity]) => identity[field]);
+    if (new Set(values).size !== values.length) {
+      const shown = identities
+        .map(([profile, identity]) => `${profile}=${identity[field]}`)
+        .join(", ");
+      problems.push(`the profiles resolve to a shared ${field}: ${shown}`);
+    }
+  }
+  return problems;
+}
+
+/** Only the store app is in the AASA and assetlinks files. */
+function linkProblems(
+  identities: readonly (readonly [string, ResolvedIdentity])[]
+): string[] {
+  const problems: string[] = [];
+  for (const [profile, identity] of identities) {
+    const store = profile === "production";
+    const claims =
+      identity.verifiedLinks || (identity.associatedDomains?.length ?? 0) > 0;
+    if (store && !claims) {
+      problems.push("the production profile no longer claims the site's links");
+    }
+    if (!store && claims) {
+      problems.push(
+        `the ${profile} variant claims the site's universal links (associated domains or a verified https filter); only the store app is in the AASA and assetlinks files`
+      );
+    }
+  }
+  return problems;
+}
+
+function storeIdentityProblems(
+  production: ResolvedIdentity | undefined
+): string[] {
+  if (
+    production &&
+    (production.bundleIdentifier !== STORE_IDENTITY.applicationId ||
+      production.androidPackage !== STORE_IDENTITY.applicationId ||
+      production.scheme !== STORE_IDENTITY.scheme)
+  ) {
+    return [
+      `the production identity must stay ${STORE_IDENTITY.applicationId} / ${STORE_IDENTITY.scheme}`,
+    ];
+  }
+  return [];
+}
+
+/**
+ * Phase 9 ruling 9, cross-checked: each EAS profile sets the `APP_VARIANT`
+ * that names it (production none), the three resolved identities differ in
+ * name, bundle id, package and scheme, only the store app claims the site's
+ * universal links, and the store identity is `be.zias.smog` / `smog`.
+ * `resolve` runs `app.config.ts` with the profile's env. Returns the problems.
+ */
+export function variantProblems(
+  eas: unknown,
+  resolve: (env: Record<string, string>) => ResolvedIdentity
+): string[] {
+  const identities = Object.keys(PROFILE_VARIANTS).map(
+    (profile) => [profile, resolve(profileEnv(eas, profile))] as const
+  );
+  const production = identities.find(([profile]) => profile === "production");
+  return [
+    ...profileVariantProblems(eas),
+    ...distinctProblems(identities),
+    ...linkProblems(identities),
+    ...storeIdentityProblems(production?.[1]),
+  ];
+}
+
 export function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
@@ -167,6 +300,52 @@ async function runExport(): Promise<void> {
   if (exitCode !== 0) {
     throw new Error(`expo export exited with ${exitCode}`);
   }
+}
+
+/** `app.config.ts` resolved with a profile's env, the way an EAS build does. */
+function resolveIdentity(env: Record<string, string>): ResolvedIdentity {
+  const saved = { ...process.env };
+  try {
+    delete process.env.APP_VARIANT;
+    Object.assign(process.env, env);
+    const config = createConfig({
+      config: {},
+      packageJsonPath: null,
+      projectRoot: MOBILE_DIR,
+      staticConfigPath: null,
+    });
+    return {
+      androidPackage: config.android?.package,
+      associatedDomains: config.ios?.associatedDomains,
+      bundleIdentifier: config.ios?.bundleIdentifier,
+      name: config.name,
+      scheme: Array.isArray(config.scheme) ? config.scheme[0] : config.scheme,
+      verifiedLinks:
+        config.android?.intentFilters?.some(
+          (filter) => filter.autoVerify === true
+        ) ?? false,
+    };
+  } finally {
+    for (const key of Object.keys(process.env)) {
+      if (!(key in saved)) {
+        delete process.env[key];
+      }
+    }
+    Object.assign(process.env, saved);
+  }
+}
+
+function checkVariants(): void {
+  const eas: unknown = JSON.parse(
+    readFileSync(join(MOBILE_DIR, "eas.json"), "utf8")
+  );
+  const problems = variantProblems(eas, resolveIdentity);
+  if (problems.length > 0) {
+    throw new Error(problems.join("\n"));
+  }
+  console.log(
+    `${PREFIX} app variants: development, staging and production resolve to distinct identities`
+  );
 }
 
 function bundlesContain(dir: string, marker: string): boolean {
@@ -239,6 +418,12 @@ async function main(): Promise<void> {
     await runDoctor(offline);
   } catch (error) {
     console.error(`${PREFIX} Failed to pass expo-doctor:`, error);
+    throw error;
+  }
+  try {
+    checkVariants();
+  } catch (error) {
+    console.error(`${PREFIX} Failed the app variant check:`, error);
     throw error;
   }
   try {

@@ -10,6 +10,7 @@
       "channel": "development",
       "environment": "development",
       "env": {
+        "APP_VARIANT": "development",
         "EXPO_PUBLIC_ENVIRONMENT": "dev",
         "EXPO_PUBLIC_API_URL": "http://localhost:5173",
         "EXPO_PUBLIC_SITE_HOST": "localhost"
@@ -20,6 +21,7 @@
       "channel": "staging",
       "environment": "preview",
       "env": {
+        "APP_VARIANT": "staging",
         "EXPO_PUBLIC_ENVIRONMENT": "staging",
         "EXPO_PUBLIC_API_URL": "https://smog-site-staging.zias.workers.dev",
         "EXPO_PUBLIC_SITE_HOST": "smog-site-staging.zias.workers.dev"
