@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from "@jest/globals";
+import { afterEach, describe, expect, it, jest } from "@jest/globals";
 import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
 import { router } from "expo-router";
 import {
@@ -270,6 +270,10 @@ describe("settings/account", () => {
   });
 
   describe("sign out (inventory U-11)", () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     /** Presses Sign out and returns the buttons the confirmation offers. */
     async function askToSignOut(
       alert: jest.SpiedFunction<typeof Alert.alert>
@@ -301,7 +305,6 @@ describe("settings/account", () => {
         ["Sign out", "destructive"],
       ]);
       expect(signOut).not.toHaveBeenCalled();
-      alert.mockRestore();
     });
 
     it("Cancel keeps the account signed in on the same screen", async () => {
@@ -321,7 +324,6 @@ describe("settings/account", () => {
       expect(signOut).not.toHaveBeenCalled();
       expect(result.getPathname()).toBe("/settings/account");
       expect(screen.queryByText("You're signed out.")).toBeNull();
-      alert.mockRestore();
     });
 
     it("Sign out signs out, says so and goes to the welcome screen", async () => {
@@ -341,7 +343,6 @@ describe("settings/account", () => {
       await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
       expect(await screen.findByText("You're signed out.")).toBeOnTheScreen();
       await waitFor(() => expect(result.getPathname()).toBe("/"));
-      alert.mockRestore();
     });
 
     it("a failed sign-out says so and stays on the account screen", async () => {
@@ -368,7 +369,6 @@ describe("settings/account", () => {
       ).toBeOnTheScreen();
       expect(result.getPathname()).toBe("/settings/account");
       logged.mockRestore();
-      alert.mockRestore();
     });
   });
 
