@@ -333,6 +333,8 @@ function checkDeployEnv(deployJob: Job, file: string): string[] {
   return errors;
 }
 
+const PRODUCTION_FAILS = /"\$CLOUDFLARE_ENV" = "production"[\s\S]*?exit 1/;
+
 /**
  * The Cloudflare secrets step may skip the deploy for staging, but a missing
  * token on production must fail the job: a green Deploy job with nothing
@@ -341,7 +343,7 @@ function checkDeployEnv(deployJob: Job, file: string): string[] {
 function checkSecretsStep(steps: Step[], file: string): string[] {
   const run = (steps.find((step) => step.name === "Check Cloudflare secrets")
     ?.run ?? "") as string;
-  if (/"\$CLOUDFLARE_ENV" = "production"[\s\S]*?exit 1/.test(run)) {
+  if (PRODUCTION_FAILS.test(run)) {
     return [];
   }
   return [
