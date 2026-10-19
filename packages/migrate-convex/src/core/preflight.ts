@@ -14,6 +14,11 @@
  *   (task 7 review M-2), or when the import would leave no admin. It
  *   lists the accounts that will be claimed and reports, never changes, a
  *   claimed account whose role differs from Convex's.
+ * - With `--reset` the foreign-row checks leave out the rows this plan's
+ *   own reset deletes (`ownRowsOf`, read from its `reset-imported-*.sql`);
+ *   a row of any other source still blocks. `--reset-only` runs
+ *   `runResetOnlyPreflight` instead: the migrations and, off dev,
+ *   maintenance, none of the foreign-row checks (phase 9 ruling 10).
  * - `verifyCounts` compares the report's counts with D1's after the
  *   files ran.
  *
@@ -127,6 +132,84 @@ export function renderPreflight(facts: PreflightFacts): string {
 /** Runs one read-only SQL statement and returns its rows. */
 export type D1Query = (sql: string) => Promise<Record<string, unknown>[]>;
 
+/**
+ * What `--reset` removes, read from the plan's own `reset-imported-*.sql`
+ * (phase 9 ruling 10). The reset deletes by the plan's own keys, so only
+ * these rows stop being foreign when it runs: a row of any other source,
+ * another export's import included, still blocks.
+ */
+export interface OwnRows {
+  /** The ids of the plan's own rows in the tables the foreign-row checks read. */
+  readonly ids: Readonly<
+    Record<
+      "category" | "gesture" | "list_share" | "payment",
+      ReadonlySet<string>
+    >
+  >;
+  /**
+   * The Convex ids of the migrated users: the reset deletes the users it
+   * created and sets `legacy_id` to NULL on every row that holds one of
+   * these (claimed accounts and the last admin stay).
+   */
+  readonly legacyIds: ReadonlySet<string>;
+}
+
+const OWN_TABLES = ["category", "gesture", "list_share", "payment"] as const;
+const RESET_LITERAL = /json_each\('((?:[^']|'')*)'\)/;
+const DELETE_FROM = /^DELETE FROM "([a-z_]+)" WHERE /;
+const UPDATE_LEGACY = /^UPDATE "user" SET "legacy_id" = NULL WHERE /;
+
+function resetList(statement: string): unknown[] {
+  const found = statement.match(RESET_LITERAL);
+  const literal = found ? found[1] : undefined;
+  if (literal === undefined) {
+    throw new Error(
+      `[migrate-convex] A reset statement has no plain json_each list: ${statement.slice(0, 60)}`
+    );
+  }
+  const parsed: unknown = JSON.parse(literal.replaceAll("''", "'"));
+  if (!Array.isArray(parsed)) {
+    throw new Error("[migrate-convex] A reset list is not a JSON array");
+  }
+  return parsed;
+}
+
+/**
+ * The rows the plan's reset files delete, read back from their statements
+ * (`resetStatements` in `emit.ts` writes them: `DELETE FROM "<table>" WHERE
+ * … IN (SELECT … json_each('<json>'))`). Only the tables the foreign-row
+ * checks read are parsed; the files are hash-checked against the manifest
+ * before this runs.
+ */
+export function ownRowsOf(resetSql: readonly string[]): OwnRows {
+  const ids = {
+    category: new Set<string>(),
+    gesture: new Set<string>(),
+    list_share: new Set<string>(),
+    payment: new Set<string>(),
+  };
+  const legacyIds = new Set<string>();
+  for (const line of resetSql.flatMap((file) => file.split("\n"))) {
+    if (UPDATE_LEGACY.test(line)) {
+      for (const value of resetList(line)) {
+        legacyIds.add(String(value));
+      }
+      continue;
+    }
+    const deleted = line.match(DELETE_FROM);
+    const table = deleted ? deleted[1] : undefined;
+    if (
+      table !== undefined &&
+      (OWN_TABLES as readonly string[]).includes(table)
+    ) {
+      for (const value of resetList(line)) {
+        ids[table as (typeof OWN_TABLES)[number]].add(String(value));
+      }
+    }
+  }
+  return { ids, legacyIds };
+}
+
 export interface PreflightInput {
   readonly env: ApplyEnv;
   readonly facts: PreflightFacts;
@@ -134,6 +217,8 @@ export interface PreflightInput {
   readonly maintenance: string | null;
   /** `--reset --native-catalog`: native rows whose slug collides are deleted, not refused. */
   readonly nativeCatalog: boolean;
+  /** With `--reset`: the rows this plan's reset deletes (`ownRowsOf`); null or absent otherwise. */
+  readonly ownRows?: OwnRows | null;
   readonly target: Target;
 }
 
@@ -263,7 +348,8 @@ interface Account {
 /** The D1 accounts holding the emitted addresses, and the emitted legacy ids D1 already has. */
 async function claimLookups(
   query: D1Query,
-  facts: PreflightFacts
+  facts: PreflightFacts,
+  own: OwnRows | null
 ): Promise<{ byEmail: Map<string, Account>; knownLegacy: Set<string> }> {
   const byEmail = new Map<string, Account>();
   for (const row of await lookup(
@@ -289,7 +375,10 @@ async function claimLookups(
       )
     )
       .map((row) => text(row.legacy_id))
-      .filter((value): value is string => value !== null)
+      // The reset sets these free before the files run.
+      .filter(
+        (value): value is string => value !== null && !own?.legacyIds.has(value)
+      )
   );
   return { byEmail, knownLegacy };
 }
@@ -315,11 +404,33 @@ function classifyClaim(
   return knownLegacy.has(claim.legacyId) ? "moved" : "claim";
 }
 
+/**
+ * The account as it is once the reset ran: an account holding another
+ * legacy id of this plan's own is set free by the reset, so it can be
+ * claimed. Another export's legacy id stays.
+ */
+function accountAfterReset(
+  existing: Account | undefined,
+  claim: Claim,
+  own: OwnRows | null
+): Account | undefined {
+  if (
+    existing?.legacyId !== undefined &&
+    existing.legacyId !== null &&
+    existing.legacyId !== claim.legacyId &&
+    own?.legacyIds.has(existing.legacyId)
+  ) {
+    return { legacyId: null, role: existing.role };
+  }
+  return existing;
+}
+
 async function checkClaims(
   query: D1Query,
-  facts: PreflightFacts
+  facts: PreflightFacts,
+  own: OwnRows | null
 ): Promise<ClaimCheck> {
-  const { byEmail, knownLegacy } = await claimLookups(query, facts);
+  const { byEmail, knownLegacy } = await claimLookups(query, facts, own);
   const result: ClaimCheck = {
     claims: [],
     inserted: 0,
@@ -330,7 +441,11 @@ async function checkClaims(
   const moved: string[] = [];
   for (const claim of facts.claims) {
     const existing = byEmail.get(claim.email);
-    const kind = classifyClaim(claim, existing, knownLegacy);
+    const kind = classifyClaim(
+      claim,
+      accountAfterReset(existing, claim, own),
+      knownLegacy
+    );
     if (kind === "insertAdmin") {
       result.inserted += 1;
     } else if (kind === "foreign") {
@@ -376,10 +491,38 @@ interface SlugCheck {
   refusals: PreflightRefusal[];
 }
 
+/**
+ * The rows holding an emitted slug that are not the plan's own: another
+ * import's (`foreign`) or one the new system made (`nativeIds`). A row
+ * with the planned legacy id, or one this plan's reset deletes (`own`),
+ * is the plan's own.
+ */
+function otherSlugHolders(
+  rows: readonly Record<string, unknown>[],
+  planned: ReadonlyMap<string, string>,
+  own: ReadonlySet<string> | undefined
+): { foreign: string[]; nativeIds: string[] } {
+  const foreign: string[] = [];
+  const nativeIds: string[] = [];
+  for (const row of rows) {
+    const legacyId = text(row.legacy_id);
+    const id = text(row.id) ?? "";
+    if (
+      (legacyId !== null && legacyId === planned.get(text(row.slug) ?? "")) ||
+      own?.has(id)
+    ) {
+      continue;
+    }
+    (legacyId === null ? nativeIds : foreign).push(id);
+  }
+  return { foreign, nativeIds };
+}
+
 async function checkSlugs(
   query: D1Query,
   facts: PreflightFacts,
-  nativeCatalog: boolean
+  nativeCatalog: boolean,
+  own: OwnRows | null
 ): Promise<SlugCheck> {
   const refusals: PreflightRefusal[] = [];
   const native: { categories: string[]; gestures: string[] } = {
@@ -399,21 +542,11 @@ async function checkSlugs(
       (list) =>
         `SELECT "id", "slug", "legacy_id" FROM "${table}" WHERE "slug" IN ${list}`
     );
-    const foreign: string[] = [];
-    const nativeIds: string[] = [];
-    for (const row of rows) {
-      const legacyId = text(row.legacy_id);
-      const slug = text(row.slug) ?? "";
-      if (legacyId !== null && legacyId === planned.get(slug)) {
-        continue;
-      }
-      const id = text(row.id) ?? "";
-      if (legacyId === null) {
-        nativeIds.push(id);
-      } else {
-        foreign.push(id);
-      }
-    }
+    const { foreign, nativeIds } = otherSlugHolders(
+      rows,
+      planned,
+      own?.ids[table]
+    );
     if (nativeIds.length > 0 && !nativeCatalog) {
       refusals.push({
         code: "slugTakenByNativeRow",
@@ -457,7 +590,8 @@ async function foreignHolders(
   query: D1Query,
   table: "list_share" | "payment",
   column: "mollie_id" | "token",
-  planned: readonly { id: string; value: string }[]
+  planned: readonly { id: string; value: string }[],
+  own: ReadonlySet<string> | undefined
 ): Promise<string[]> {
   const byValue = new Map(planned.map((entry) => [entry.value, entry.id]));
   const rows = await lookup(
@@ -468,8 +602,48 @@ async function foreignHolders(
   );
   return rows
     .filter((row) => byValue.get(text(row.value) ?? "") !== text(row.id))
+    .filter((row) => !own?.has(text(row.id) ?? ""))
     .map((row) => text(row.id) ?? "")
     .sort();
+}
+
+/**
+ * The preflight of `apply --reset-only` (phase 9 ruling 10): the database
+ * answers (a failed query throws) and the migrations are at 0012 or later,
+ * and, on staging, maintenance is on, as for every destructive run there.
+ * None of the foreign-row checks: they would fail on the very rows the
+ * reset removes. Only reads.
+ */
+export async function runResetOnlyPreflight(
+  query: D1Query,
+  input: Pick<PreflightInput, "env" | "maintenance">
+): Promise<{
+  migration: number | null;
+  refusals: PreflightRefusal[];
+}> {
+  const refusals: PreflightRefusal[] = [];
+  const migration = await lastMigration(query);
+  if (migration === null || migration < REQUIRED_MIGRATION) {
+    refusals.push(migrationsBehind(migration));
+  }
+  if (input.env !== "dev" && !maintenanceOn(input.maintenance)) {
+    refusals.push(maintenanceOff(input.env));
+  }
+  return { migration, refusals };
+}
+
+function migrationsBehind(migration: number | null): PreflightRefusal {
+  return {
+    code: "migrationsBehind",
+    message: `D1 is at migration ${migration ?? "none"}; apply needs ${String(REQUIRED_MIGRATION).padStart(4, "0")} or later (run the deploy's migrations first).`,
+  };
+}
+
+function maintenanceOff(env: ApplyEnv): PreflightRefusal {
+  return {
+    code: "maintenanceOff",
+    message: `Maintenance is not on for ${env}: turn it on first (bun run maintenance --env ${env} on).`,
+  };
 }
 
 /** The preflight (see the module comment). Only reads. */
@@ -480,16 +654,10 @@ export async function runPreflight(
   const refusals: PreflightRefusal[] = [];
   const migration = await lastMigration(query);
   if (migration === null || migration < REQUIRED_MIGRATION) {
-    refusals.push({
-      code: "migrationsBehind",
-      message: `D1 is at migration ${migration ?? "none"}; apply needs ${String(REQUIRED_MIGRATION).padStart(4, "0")} or later (run the deploy's migrations first).`,
-    });
+    refusals.push(migrationsBehind(migration));
   }
   if (input.env !== "dev" && !maintenanceOn(input.maintenance)) {
-    refusals.push({
-      code: "maintenanceOff",
-      message: `Maintenance is not on for ${input.env}: turn it on first (bun run maintenance --env ${input.env} on).`,
-    });
+    refusals.push(maintenanceOff(input.env));
   }
   if (input.env === "staging") {
     const real = input.facts.claims.filter(
@@ -503,7 +671,8 @@ export async function runPreflight(
       });
     }
   }
-  const slugs = await checkSlugs(query, input.facts, input.nativeCatalog);
+  const own = input.ownRows ?? null;
+  const slugs = await checkSlugs(query, input.facts, input.nativeCatalog, own);
   refusals.push(...slugs.refusals);
   const tokens = await foreignHolders(
     query,
@@ -512,7 +681,8 @@ export async function runPreflight(
     input.facts.shareTokens.map((entry) => ({
       id: entry.id,
       value: entry.token,
-    }))
+    })),
+    own?.ids.list_share
   );
   if (tokens.length > 0) {
     refusals.push({
@@ -528,7 +698,8 @@ export async function runPreflight(
     input.facts.mollieIds.map((entry) => ({
       id: entry.id,
       value: entry.mollieId,
-    }))
+    })),
+    own?.ids.payment
   );
   if (mollie.length > 0) {
     refusals.push({
@@ -537,7 +708,7 @@ export async function runPreflight(
       message: `${mollie.length} emitted Mollie id(s) already belong to other payments.`,
     });
   }
-  const claims = await checkClaims(query, input.facts);
+  const claims = await checkClaims(query, input.facts, own);
   refusals.push(...claims.refusals);
   const [adminRow] = await query(
     `SELECT count(*) AS "n" FROM "user" WHERE ${ACTIVE_ADMIN}`

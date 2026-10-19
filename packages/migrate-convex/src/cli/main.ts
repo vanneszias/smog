@@ -23,7 +23,7 @@ import {
 } from "./mux";
 import { readExport } from "./read-export";
 import { type ProcessEnv, realTimer, type Timer } from "./remote";
-import { runWeMoved } from "./we-moved";
+import { type ResendSelection, runWeMoved } from "./we-moved";
 import {
   type CommandRunner,
   createWrangler,
@@ -45,7 +45,7 @@ Commands:
       --now defaults to the current time (recorded in manifest.json); pass
       it to get byte-identical plans from the same inputs.
   apply --env <dev|staging|production> --out <dir> [--dry-run] [--yes]
-        [--reset [--native-catalog]]
+        [--reset [--native-catalog] | --reset-only]
       Check the plan folder against its manifest and the env (staging
       takes only a staging plan, production only a production plan), run
       the read-only preflight, then apply the SQL files in order with
@@ -57,7 +57,15 @@ Commands:
       apply-report.json, and reset-native-catalog.sql with
       --native-catalog). --reset first deletes what this plan imports
       (reset-imported-*.sql); --native-catalog (dev, staging) also deletes
-      the native catalogue rows whose slugs the plan uses.
+      the native catalogue rows whose slugs the plan uses. With --reset the
+      preflight leaves out the rows that plan's own reset deletes; a row of
+      any other source, another export's import included, still blocks.
+      --reset-only (dev, staging; production refuses it) runs the plan's
+      reset-imported-*.sql and nothing else: after the manifest and target
+      checks, with only the migrations (0012 or later) and, on staging,
+      maintenance checked, then it bumps catalog:version and prints the
+      imported rows it removed per table (a second run removes 0). To wipe
+      another export's rows, run --reset-only with THAT export's plan folder.
   mux scan --export <zip|dir> --out <dir> [--get-rate <n>]
       Look up every playback id of the export in Mux (read-only) and write
       mux-map.json (plan's --mux-map) and mux-scan.json to --out.
@@ -69,10 +77,21 @@ Commands:
       production's Mux environment. POSTs go at most 1 per second; GETs at
       --get-rate per second (default 2, at most 4).
   we-moved --out <dir> --env production [--apply]
+           [--resend <ids-file> | --resend --failed]
       Queue the one-time "we moved" email to every migrated account
       (production only, for a production plan; dry without --apply).
       Ledger: we-moved-ledger.json in --out. Needs CLOUDFLARE_API_TOKEN
       (Queues: Edit, D1) and CLOUDFLARE_ACCOUNT_ID.
+      The ledger records QUEUED, not delivered. --resend sends the given
+      ledger keys (user ids, one per line, absolute path) again, or with
+      --failed the keys a failed run recorded in we-moved-failed.json (their
+      Queues API call failed or was never made). A key whose consumer
+      marker (email:sent:we_moved:<id>) exists was delivered and is
+      skipped, and the output says which; a send replaces the key's ledger
+      entry. Dry without --apply; only ids are printed, never an address.
+      Emails that exhausted the consumer's retries and sit in the email
+      DLQ are NOT handled here: replay them from the admin dead-letter
+      screen (phase 9 task 4).
   help
       Print this text.
 `;
@@ -289,8 +308,55 @@ const muxCommand: Command = async (argv, out, context) => {
   throw new UsageError("mux needs scan or renditions");
 };
 
+/** One ledger key per line; blank lines and `#` comments are left out. Never echoes a line. */
+const LEDGER_KEY = /^[A-Za-z0-9._-]{1,128}$/;
+
+function readIdsFile(path: string): string[] {
+  const keys: string[] = [];
+  for (const [index, raw] of readFileSync(path, "utf8").split("\n").entries()) {
+    const line = raw.trim();
+    if (line.length === 0 || line.startsWith("#")) {
+      continue;
+    }
+    if (!LEDGER_KEY.test(line)) {
+      throw new UsageError(
+        `Line ${index + 1} of the ids file is not a ledger key (a user id: letters, digits, . _ -; an address is never a key).`
+      );
+    }
+    keys.push(line);
+  }
+  return keys;
+}
+
+/**
+ * `--resend <ids-file>` takes a value, `--resend --failed` none: the
+ * option is taken out of `argv` here, whichever form it has.
+ */
+function splitResend(argv: readonly string[]): {
+  readonly rest: readonly string[];
+  readonly resend: "absent" | "failed" | string;
+} {
+  const at = argv.indexOf("--resend");
+  if (at === -1) {
+    return { resend: "absent", rest: argv };
+  }
+  const next = argv[at + 1];
+  if (next === undefined || next.startsWith("--")) {
+    return { resend: "failed", rest: argv.filter((_, index) => index !== at) };
+  }
+  return {
+    resend: next,
+    rest: argv.filter((_, index) => index !== at && index !== at + 1),
+  };
+}
+
 const weMovedCommand: Command = async (argv, out, context) => {
-  const options = parseOptions(argv, ["--out", "--env"], ["--apply"]);
+  const { rest, resend } = splitResend(argv);
+  const options = parseOptions(
+    rest,
+    ["--out", "--env"],
+    ["--apply", "--failed"]
+  );
   const outDir = absolutePath(options, "--out", true);
   const env = options.values.get("--env");
   if (env === undefined) {
@@ -298,9 +364,36 @@ const weMovedCommand: Command = async (argv, out, context) => {
       "--env is required (we-moved runs on production only)"
     );
   }
+  const failedFlag = options.flags.has("--failed");
+  let selection: ResendSelection | undefined;
+  if (resend === "absent") {
+    if (failedFlag) {
+      throw new UsageError("--failed goes with --resend");
+    }
+  } else if (resend === "failed") {
+    if (!failedFlag) {
+      throw new UsageError("--resend needs an absolute ids file, or --failed");
+    }
+    selection = { failed: true };
+  } else {
+    if (failedFlag) {
+      throw new UsageError("--resend takes an ids file or --failed, not both");
+    }
+    if (!isAbsolute(resend)) {
+      throw new UsageError(
+        `--resend must be an absolute path: the command runs from packages/migrate-convex, so a relative path would not mean what you typed (try "$PWD/${resend}")`
+      );
+    }
+    selection = { keys: readIdsFile(resend) };
+  }
   // runWeMoved refuses every env but production before it reads anything.
   return await runWeMoved(
-    { apply: options.flags.has("--apply"), env, outDir },
+    {
+      apply: options.flags.has("--apply"),
+      env,
+      outDir,
+      ...(selection ? { resend: selection } : {}),
+    },
     {
       ...context,
       wrangler: createWrangler("production", context.runWrangler),
@@ -313,7 +406,7 @@ const applyCommand: Command = async (argv, out, context) => {
   const options = parseOptions(
     argv,
     ["--env", "--out"],
-    ["--dry-run", "--yes", "--reset", "--native-catalog"]
+    ["--dry-run", "--yes", "--reset", "--reset-only", "--native-catalog"]
   );
   const outDir = absolutePath(options, "--out", true);
   const env = options.values.get("--env");
@@ -328,6 +421,7 @@ const applyCommand: Command = async (argv, out, context) => {
         nativeCatalog: options.flags.has("--native-catalog"),
         outDir,
         reset: options.flags.has("--reset"),
+        resetOnly: options.flags.has("--reset-only"),
         yes: options.flags.has("--yes"),
       },
       {

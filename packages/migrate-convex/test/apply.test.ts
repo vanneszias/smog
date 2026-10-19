@@ -2,7 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
   cpSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -18,6 +20,7 @@ import {
   runPreflight,
 } from "../src/core/preflight";
 import { FIXTURE_DIR, FIXTURE_INPUTS, FIXTURE_SECRETS } from "./helpers";
+import { otherExportText } from "./other-export";
 import {
   migratedDatabase,
   type SqliteWrangler,
@@ -807,5 +810,377 @@ describe("apply's re-runs and reset", () => {
       filesApplied: [join(dir, "10-users-001.sql")],
       status: "failed",
     });
+  });
+});
+
+/*
+ * Phase 9 ruling 10: `--reset-only` and the preflight that accounts for
+ * `--reset`. B is "another export": the fixture with every Convex id
+ * changed, so it holds the same slugs, addresses and tokens under other
+ * legacy ids.
+ */
+describe("apply --reset-only and --reset's preflight", () => {
+  const other = join(scratch, "plan-other");
+  const otherExport = join(scratch, "export-other");
+  const adminId = "0b7d0a9e-6a8e-4f43-9d1e-6f0a2b9c1d00";
+  const IMPORTED_TABLES = [
+    "category",
+    "gesture",
+    "favorite",
+    "list",
+    "list_item",
+    "list_share",
+    "consent_event",
+    "audit_log",
+    "sponsor",
+    "payment",
+    "payment_item",
+    "sponsorship",
+    "sponsorship_event",
+  ];
+
+  function copyTransformed(from: string, to: string): void {
+    mkdirSync(to, { recursive: true });
+    for (const entry of readdirSync(from, { withFileTypes: true })) {
+      const source = join(from, entry.name);
+      const target = join(to, entry.name);
+      if (entry.isDirectory()) {
+        copyTransformed(source, target);
+      } else if (entry.name.endsWith(".jsonl")) {
+        writeFileSync(target, otherExportText(readFileSync(source, "utf8")));
+      } else {
+        cpSync(source, target);
+      }
+    }
+  }
+
+  beforeAll(async () => {
+    copyTransformed(FIXTURE_DIR, otherExport);
+    const overrides = join(scratch, "overrides-other.json");
+    writeFileSync(
+      overrides,
+      otherExportText(readFileSync(FIXTURE_INPUTS.overrides, "utf8"))
+    );
+    const { out } = capture();
+    const code = await main(
+      [
+        "plan",
+        "--export",
+        otherExport,
+        "--target",
+        "production",
+        "--out",
+        other,
+        "--now",
+        NOW,
+        "--workos-users",
+        FIXTURE_INPUTS.workosUsers,
+        "--mux-map",
+        FIXTURE_INPUTS.muxMap,
+        "--overrides",
+        overrides,
+      ],
+      out
+    );
+    expect(code).toBe(0);
+  });
+
+  function freshDev(): SqliteWrangler {
+    const wrangler = sqliteWrangler(migratedDatabase());
+    for (const statement of buildGrantStatements(PRE_EXISTING, {
+      create: true,
+      id: adminId,
+    })) {
+      wrangler.db.run(statement);
+    }
+    return wrangler;
+  }
+
+  function importedRows(wrangler: SqliteWrangler): number {
+    return IMPORTED_TABLES.reduce(
+      (sum, table) =>
+        sum + count(wrangler, `SELECT count(*) AS n FROM "${table}"`),
+      0
+    );
+  }
+
+  test("production refuses --reset-only, the two reset flags exclude each other, and a staging plan on production is still refused", async () => {
+    const wrangler = sqliteWrangler(migratedDatabase(), {
+      kv: { maintenance: MAINTENANCE_ON },
+    });
+    for (const [args, message] of [
+      [
+        [
+          "--env",
+          "production",
+          "--out",
+          plans.production,
+          "--yes",
+          "--reset-only",
+        ],
+        "--reset-only is refused on production",
+      ],
+      [
+        ["--env", "dev", "--out", plans.production, "--reset", "--reset-only"],
+        "--reset and --reset-only exclude each other",
+      ],
+      [
+        [
+          "--env",
+          "dev",
+          "--out",
+          plans.production,
+          "--reset-only",
+          "--native-catalog",
+        ],
+        "--native-catalog does not go with --reset-only",
+      ],
+      [
+        ["--env", "production", "--out", plans.staging, "--yes"],
+        "was made for staging; apply --env production refuses it",
+      ],
+      [
+        ["--env", "staging", "--out", plans.production, "--reset-only"],
+        "was made for production; apply --env staging refuses it",
+      ],
+    ] as const) {
+      // biome-ignore lint/performance/noAwaitInLoops: one case after another.
+      const result = await apply(wrangler, args);
+      expect(result.code).toBe(1);
+      expect(result.lines.error[0]).toContain(message);
+    }
+    expect(wrangler.calls).toEqual([]);
+  });
+
+  test("--reset-only removes what the plan imported, a second run removes 0, and another export then applies", async () => {
+    const dir = planCopy("production");
+    const wrangler = freshDev();
+    expect((await apply(wrangler, ["--env", "dev", "--out", dir])).code).toBe(
+      0
+    );
+    const applied = importedRows(wrangler);
+    expect(applied).toBeGreaterThan(0);
+    wrangler.files.length = 0;
+    wrangler.kv.delete("catalog:version");
+
+    const dry = await apply(wrangler, [
+      "--env",
+      "dev",
+      "--out",
+      dir,
+      "--reset-only",
+      "--dry-run",
+    ]);
+    expect(dry.code).toBe(0);
+    expect(importedRows(wrangler)).toBe(applied);
+    expect(wrangler.files).toEqual([]);
+    expect(record(dir)).toMatchObject({ resetOnly: true, status: "dry-run" });
+
+    const first = await apply(wrangler, [
+      "--env",
+      "dev",
+      "--out",
+      dir,
+      "--reset-only",
+    ]);
+    expect(first.lines.error).toEqual([]);
+    expect(first.code).toBe(0);
+    const manifest = JSON.parse(
+      readFileSync(join(dir, "manifest.json"), "utf8")
+    );
+    // Only the reset files ran, and then the catalogue version moved.
+    expect(wrangler.files).toEqual(
+      manifest.reset.map((file: { name: string }) => join(dir, file.name))
+    );
+    expect(wrangler.kv.get("catalog:version")).toBe("catalog-version-test");
+    expect(importedRows(wrangler)).toBe(0);
+    // The claimed admin keeps its row and loses its legacy id.
+    expect(
+      wrangler.db.query("SELECT id, role, legacy_id FROM user").all()
+    ).toEqual([{ id: adminId, legacy_id: null, role: "admin" }]);
+    const lines = first.lines.log.join("\n");
+    expect(lines).toContain("gesture: removed");
+    expect(lines).not.toContain("gesture: removed 0 ");
+    expect(record(dir)).toMatchObject({
+      resetOnly: true,
+      status: "reset_done",
+    });
+
+    const second = await apply(wrangler, [
+      "--env",
+      "dev",
+      "--out",
+      dir,
+      "--reset-only",
+    ]);
+    expect(second.code).toBe(0);
+    expect(second.lines.log.join("\n")).toContain("0 row(s) removed in all");
+    expect(importedRows(wrangler)).toBe(0);
+
+    // Another export applies onto the cleaned database.
+    const next = await apply(wrangler, ["--env", "dev", "--out", other]);
+    expect(next.lines.error).toEqual([]);
+    expect(next.code).toBe(0);
+    expect(importedRows(wrangler)).toBe(applied);
+  });
+
+  test("with another export still applied, B's preflight refuses, with or without --reset, and B's --reset-only touches none of A", async () => {
+    const dirA = planCopy("production");
+    const dirB = join(scratch, "copy-other");
+    cpSync(other, dirB, { recursive: true });
+    const wrangler = freshDev();
+    expect((await apply(wrangler, ["--env", "dev", "--out", dirA])).code).toBe(
+      0
+    );
+    const applied = importedRows(wrangler);
+    for (const extra of [[], ["--reset"]]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one case after the other.
+      const result = await apply(wrangler, [
+        "--env",
+        "dev",
+        "--out",
+        dirB,
+        ...extra,
+      ]);
+      expect(result.code).toBe(1);
+      const text = result.lines.error.join("\n");
+      expect(text).toContain("Refused (slugTakenByOtherImport)");
+      expect(text).toContain("Refused (shareTokenTaken)");
+      expect(text).toMatch(NOTHING_WRITTEN);
+    }
+    expect(importedRows(wrangler)).toBe(applied);
+
+    const resetB = await apply(wrangler, [
+      "--env",
+      "dev",
+      "--out",
+      dirB,
+      "--reset-only",
+    ]);
+    expect(resetB.lines.error).toEqual([]);
+    expect(resetB.code).toBe(0);
+    expect(resetB.lines.log.join("\n")).toContain("0 row(s) removed in all");
+    expect(importedRows(wrangler)).toBe(applied);
+
+    // A's own reset wipes A, and then B applies.
+    expect(
+      (await apply(wrangler, ["--env", "dev", "--out", dirA, "--reset-only"]))
+        .code
+    ).toBe(0);
+    expect(importedRows(wrangler)).toBe(0);
+    expect((await apply(wrangler, ["--env", "dev", "--out", dirB])).code).toBe(
+      0
+    );
+  });
+
+  test("--reset ignores the plan's own rows: a share token held by another of its own rows no longer blocks", async () => {
+    const dir = planCopy("production");
+    const wrangler = freshDev();
+    expect((await apply(wrangler, ["--env", "dev", "--out", dir])).code).toBe(
+      0
+    );
+    const facts = JSON.parse(
+      readFileSync(join(dir, "preflight.json"), "utf8")
+    ) as { shareTokens: { id: string; token: string }[] };
+    const [first, second] = facts.shareTokens;
+    if (!(first && second)) {
+      throw new Error("the fixture has two shares");
+    }
+    // The plan's second share holds the first share's token (a row its reset deletes).
+    wrangler.db
+      .query("UPDATE list_share SET token = ? WHERE id = ?")
+      .run("swapped-token-0001", first.id);
+    wrangler.db
+      .query("UPDATE list_share SET token = ? WHERE id = ?")
+      .run(first.token, second.id);
+    const refused = await apply(wrangler, ["--env", "dev", "--out", dir]);
+    expect(refused.lines.error.join("\n")).toContain(
+      "Refused (shareTokenTaken)"
+    );
+    const reset = await apply(wrangler, [
+      "--env",
+      "dev",
+      "--out",
+      dir,
+      "--reset",
+    ]);
+    expect(reset.lines.error).toEqual([]);
+    expect(reset.code).toBe(0);
+  });
+
+  test("--reset frees the plan's own legacy ids: one held by its own row under another address no longer blocks", async () => {
+    const dir = planCopy("production");
+    const wrangler = freshDev();
+    expect((await apply(wrangler, ["--env", "dev", "--out", dir])).code).toBe(
+      0
+    );
+    // The claimed admin's legacy id moves onto the plan's own user (Ada)
+    // under another address: another row of the plan holds it.
+    wrangler.db
+      .query("UPDATE user SET legacy_id = NULL WHERE email = ?")
+      .run(PRE_EXISTING);
+    wrangler.db
+      .query("UPDATE user SET legacy_id = ? WHERE id = ?")
+      .run(PRE_LEGACY, await legacyUuid("user", ADA));
+    const refused = await apply(wrangler, ["--env", "dev", "--out", dir]);
+    expect(refused.lines.error.join("\n")).toContain(
+      "Refused (legacyIdOnOtherAddress)"
+    );
+    const reset = await apply(wrangler, [
+      "--env",
+      "dev",
+      "--out",
+      dir,
+      "--reset",
+    ]);
+    expect(reset.lines.error).toEqual([]);
+    expect(reset.code).toBe(0);
+  });
+
+  test("--reset-only checks the migrations and, on staging, maintenance; not the foreign rows", async () => {
+    const behind = sqliteWrangler(migratedDatabase(11));
+    const old = await apply(behind, [
+      "--env",
+      "dev",
+      "--out",
+      plans.production,
+      "--reset-only",
+    ]);
+    expect(old.code).toBe(1);
+    expect(old.lines.error.join("\n")).toContain("Refused (migrationsBehind)");
+    expect(behind.files).toEqual([]);
+
+    const off = sqliteWrangler(migratedDatabase());
+    const staging = await apply(off, [
+      "--env",
+      "staging",
+      "--out",
+      plans.staging,
+      "--reset-only",
+    ]);
+    expect(staging.code).toBe(1);
+    expect(staging.lines.error.join("\n")).toContain(
+      "Refused (maintenanceOff)"
+    );
+    expect(off.files).toEqual([]);
+
+    // A native row on a plan slug would refuse apply; reset-only does not look.
+    const native = sqliteWrangler(migratedDatabase(), {
+      kv: { maintenance: MAINTENANCE_ON },
+    });
+    native.db.run(
+      "INSERT INTO gesture (id, slug, name, sort_name, playback_id, created_at, updated_at) VALUES ('native-1', 'mama', 'Mama', 'mama', 'p', 0, 0)"
+    );
+    const dir = planCopy("staging");
+    const result = await apply(native, [
+      "--env",
+      "staging",
+      "--out",
+      dir,
+      "--reset-only",
+    ]);
+    expect(result.lines.error).toEqual([]);
+    expect(result.code).toBe(0);
+    expect(count(native, "SELECT count(*) AS n FROM gesture")).toBe(1);
   });
 });
