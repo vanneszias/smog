@@ -14,22 +14,14 @@ import { Languages } from "lucide-react";
 import type { ReactNode } from "react";
 import { AnalyticsSwitch } from "@/components/consent-banner";
 import { Page } from "@/components/learning/page";
-import { seoHead, shellHead } from "@/lib/head";
+import type {
+  LegalMeta,
+  LegalMetaByLocale,
+  LegalSearch,
+} from "@/components/legal-head";
 import { useLocale } from "@/lib/locale";
 
 const EXTERNAL = /^https:\/\//;
-
-/** `/privacy?lang=nl`: the Dutch text in place, whatever the site language. */
-export interface LegalSearch {
-  lang?: "nl";
-}
-
-/** Keeps only `lang=nl` (review I2: reading Dutch changes no setting). */
-export function validateLegalSearch(
-  search: Record<string, unknown>
-): LegalSearch {
-  return search.lang === LEGAL_CANONICAL_LOCALE ? { lang: "nl" } : {};
-}
 
 function legalPath(kind: LegalKind): "/privacy" | "/terms" {
   return kind === "privacy" ? "/privacy" : "/terms";
@@ -224,20 +216,19 @@ export function LegalPage({
   );
 }
 
-/** The page head: title, the first paragraph as description, canonical. */
-export function legalHead(
-  matches: Parameters<typeof shellHead>[0],
-  kind: LegalKind
-) {
-  const { locale } = shellHead(matches);
-  const doc = legalDocument(locale, kind);
-  const first = doc.sections[0]?.blocks.find(
-    (block): block is string => typeof block === "string"
-  );
-  const description = first
-    ? parseLegalInline(first)
-        .map((part) => part.text)
-        .join("")
-    : doc.title;
-  return seoHead(matches, { description, path: `/${kind}`, title: doc.title });
+/** Title and first paragraph of the text in every language (the route loader). */
+export function legalMeta(kind: LegalKind): LegalMetaByLocale {
+  const meta = (locale: Locale): LegalMeta => {
+    const doc = legalDocument(locale, kind);
+    const first = doc.sections[0]?.blocks.find(
+      (block): block is string => typeof block === "string"
+    );
+    const description = first
+      ? parseLegalInline(first)
+          .map((part) => part.text)
+          .join("")
+      : doc.title;
+    return { description, title: doc.title };
+  };
+  return { en: meta("en"), fr: meta("fr"), nl: meta("nl") };
 }

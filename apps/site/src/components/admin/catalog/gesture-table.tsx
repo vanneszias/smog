@@ -21,7 +21,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Ellipsis, Eye, EyeOff, Pencil, QrCode } from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useAuditTime } from "@/components/admin/audit-data";
-import { GestureQrDialog } from "@/components/gesture-qr-dialog";
+import { LazyGestureQrDialog } from "@/components/lazy-gesture-qr-dialog";
 import { useListFormat } from "./labels";
 
 /** Chips shown per row before "+N". */
@@ -361,7 +361,7 @@ export function GestureTable({
         stickyHeader
       />
       {qrRow ? (
-        <GestureQrDialog
+        <LazyGestureQrDialog
           gesture={qrRow}
           note={
             qrRow.publishedAt === null

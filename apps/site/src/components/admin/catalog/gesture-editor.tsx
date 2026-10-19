@@ -46,7 +46,7 @@ import {
   VideoField,
   type VideoFieldValue,
 } from "@/components/admin/video/video-field";
-import { GestureQrDialog } from "@/components/gesture-qr-dialog";
+import { LazyGestureQrDialog } from "@/components/lazy-gesture-qr-dialog";
 import { gestureHref } from "@/components/learning/links";
 import { CategoryPicker, pickerCategories } from "./category-picker";
 import { ConflictDialog, type EditorConflict } from "./editor-conflict";
@@ -279,7 +279,7 @@ function StatusCard({
                 {t("admin.gestures.qr")}
               </Button>
             </div>
-            <GestureQrDialog
+            <LazyGestureQrDialog
               gesture={gesture}
               note={
                 gesture.publishedAt === null
