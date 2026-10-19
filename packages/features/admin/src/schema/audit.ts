@@ -7,6 +7,7 @@ import {
   AUDIT_ACTIONS,
   AUDIT_TARGET_TYPES,
   type AuditAction,
+  DEAD_LETTER_ORIGINS,
   ROLES,
   SPONSORSHIP_STATUSES,
   SPONSORSHIP_TOKEN_PURPOSES,
@@ -194,6 +195,23 @@ const SPONSORSHIP_AUDIT_SCHEMAS = {
 } satisfies AuditSchemaBlock;
 
 /**
+ * Phase 9 task 4: `dead_letter.*`, one entry per replayed or discarded
+ * message (`target_type` `dead_letter`, `target_id` the queue message id).
+ * The queue and the type only: the stored body (an address, an email's
+ * props) is never in an entry.
+ */
+const DEAD_LETTER_AUDIT_SCHEMAS = {
+  "dead_letter.discard": z.object({
+    queue: z.enum(DEAD_LETTER_ORIGINS),
+    type: z.string(),
+  }),
+  "dead_letter.replay": z.object({
+    queue: z.enum(DEAD_LETTER_ORIGINS),
+    type: z.string(),
+  }),
+} satisfies AuditSchemaBlock;
+
+/**
  * `audit_log.data` per action. The writer validates `data` with it before
  * any write, and `admin.audit.list` parses stored rows with it.
  */
@@ -203,6 +221,7 @@ export const AUDIT_DATA_SCHEMAS = {
   ...USER_AUDIT_SCHEMAS,
   ...MAINTENANCE_AUDIT_SCHEMAS,
   ...SPONSORSHIP_AUDIT_SCHEMAS,
+  ...DEAD_LETTER_AUDIT_SCHEMAS,
 } satisfies AuditSchemaBlock;
 
 /** Actions that are parsed on read but never written. */

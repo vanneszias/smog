@@ -12,6 +12,7 @@ import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { Db } from "./client";
 import { auditLog } from "./schema/account";
 import { session, verification } from "./schema/auth";
+import { deadLetter } from "./schema/dead-letter";
 import { sponsorshipToken } from "./schema/sponsorships";
 
 /** Audit entries are kept 3 × 365 days (spec §5.6). */
@@ -21,6 +22,12 @@ export const AUDIT_RETENTION_MS = 3 * 365 * DAY_MS;
  * daily run it is gone within 30 days (fix round 1, M-4).
  */
 export const SPONSORSHIP_TOKEN_GRACE_MS = 29 * DAY_MS;
+/**
+ * A stored dead letter is kept 14 days (phase 9 ruling 5c): long enough to
+ * notice, replay or discard it, short for what may hold an address and
+ * the props of an email (`docs/LEGAL-SIGNOFF.md`).
+ */
+export const DEAD_LETTER_RETENTION_MS = 14 * DAY_MS;
 /** Rows per chunk. */
 export const RETENTION_CHUNK_SIZE = 500;
 /** Chunks per purge per run. */
@@ -28,6 +35,7 @@ export const RETENTION_MAX_CHUNKS = 20;
 
 export type RetentionTable =
   | "audit_log"
+  | "dead_letter"
   | "session"
   | "verification"
   | "sponsorship_token";
@@ -68,7 +76,7 @@ function definePurge(input: Omit<RetentionPurge, "statement">): RetentionPurge {
 
 /**
  * Every D1 purge, in order. Each chunk read seeks an index
- * (`audit_log_created_at_idx`, migration 0008's `session_expires_at_idx`
+ * (`audit_log_created_at_idx`, `dead_letter_received_at_idx`, migration 0008's `session_expires_at_idx`
  * and `verification_expires_at_idx`, `sponsorship_token_expires_at_idx`),
  * except the used-token purge: `used_at` has no index, and the table holds
  * a few rows per sponsorship, so that scan stays small.
@@ -81,6 +89,14 @@ export const RETENTION_PURGES: readonly RetentionPurge[] = [
     what: "audit entries older than 3 × 365 days",
     where: (now) =>
       sql`${auditLog.createdAt} < ${before(now, AUDIT_RETENTION_MS)}`,
+  }),
+  definePurge({
+    from: deadLetter,
+    indexed: true,
+    table: "dead_letter",
+    what: "dead letters older than 14 days",
+    where: (now) =>
+      sql`${deadLetter.receivedAt} < ${before(now, DEAD_LETTER_RETENTION_MS)}`,
   }),
   definePurge({
     from: session,
@@ -115,7 +131,13 @@ export const RETENTION_PURGES: readonly RetentionPurge[] = [
 ];
 
 function emptyCounts(): Record<RetentionTable, number> {
-  return { audit_log: 0, session: 0, sponsorship_token: 0, verification: 0 };
+  return {
+    audit_log: 0,
+    dead_letter: 0,
+    session: 0,
+    sponsorship_token: 0,
+    verification: 0,
+  };
 }
 
 /**

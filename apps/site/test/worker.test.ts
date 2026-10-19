@@ -36,8 +36,10 @@ describe("the queue dispatch", () => {
     expect(queueKind("smog-dev-email")).toBe("email");
     expect(queueKind("smog-production-email")).toBe("email");
     expect(queueKind("smog-staging-sponsorship-events")).toBe("events");
-    expect(queueKind("smog-staging-email-dlq")).toBeNull();
-    expect(queueKind("smog-staging-sponsorship-events-dlq")).toBeNull();
+    // A DLQ is an ordinary queue and has its own consumer (phase 9).
+    expect(queueKind("smog-staging-email-dlq")).toBe("dlq");
+    expect(queueKind("smog-staging-sponsorship-events-dlq")).toBe("dlq");
+    expect(queueKind("smog-staging-dlq")).toBeNull();
     expect(queueKind("someone-else")).toBeNull();
   });
 
@@ -84,7 +86,9 @@ describe("the queue dispatch", () => {
 
   it("logs and acks a batch from a queue it does not know", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const batch = createMessageBatch("smog-dev-email-dlq", [message("x", {})]);
+    const batch = createMessageBatch("smog-dev-something-else", [
+      message("x", {}),
+    ]);
     const ctx = createExecutionContext();
 
     await worker.queue(batch, env, ctx);
@@ -92,7 +96,7 @@ describe("the queue dispatch", () => {
     const result = await getQueueResult(batch, ctx);
     expect(result.ackAll).toBe(true);
     expect(warn).toHaveBeenCalledWith(
-      "[worker] Acked 1 message(s) from an unknown queue smog-dev-email-dlq"
+      "[worker] Acked 1 message(s) from an unknown queue smog-dev-something-else"
     );
   });
 });

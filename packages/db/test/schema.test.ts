@@ -42,6 +42,7 @@ const TABLES = [
   "list_share",
   "consent_event",
   "audit_log",
+  "dead_letter",
   "sponsor",
   "invoice_request",
   "sponsorship",

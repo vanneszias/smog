@@ -648,6 +648,18 @@
         "app": "Using the app? Then update the app to the latest version: the old version no longer works.",
         "button": "Sign in",
         "footer": "You get this email once, because you have an account with SMOG & Co."
+      },
+      "adminDeadLetter": {
+        "subject": "Dead letters need attention",
+        "preheader": "Messages could not be delivered, or a video has been failed for over a day.",
+        "heading": "Dead letters need attention",
+        "body": "Some messages could not be delivered after every retry, or a video has been failed for more than 24 hours. Replay or discard them in the admin.",
+        "emailOpen": "Emails waiting",
+        "eventsOpen": "Sponsorship events waiting",
+        "lost": "Messages lost while the database was down",
+        "renderFailed": "Videos failed for over 24 hours",
+        "types": "Waiting by type",
+        "button": "Open dead letters"
       }
     }
   },
@@ -854,7 +866,8 @@
       "users": "Users",
       "audit": "Audit log",
       "emails": "Emails",
-      "settings": "Settings"
+      "settings": "Settings",
+      "deadLetters": "Dead letters"
     },
     "comingSoon": {
       "title": "Coming in this phase",
@@ -899,6 +912,18 @@
         "expiring_other": "{{count}} ending soon",
         "refundNeeded_one": "{{count}} payment to refund",
         "refundNeeded_other": "{{count}} payments to refund"
+      },
+      "deadLetters": {
+        "title": "Dead letters",
+        "review": "Open dead letters",
+        "email_one": "{{count}} email waiting",
+        "email_other": "{{count}} emails waiting",
+        "events_one": "{{count}} event waiting",
+        "events_other": "{{count}} events waiting",
+        "oldest": "Oldest from {{date}}",
+        "none": "Nothing waiting",
+        "renderFailed_one": "{{count}} video failed",
+        "renderFailed_other": "{{count}} videos failed"
       }
     },
     "audit": {
@@ -976,7 +1001,11 @@
         "export": {
           "sponsorships_csv": "Sponsorships exported (CSV)"
         },
-        "legacy": "Old log entry"
+        "legacy": "Old log entry",
+        "dead_letter": {
+          "replay": "Dead letter replayed",
+          "discard": "Dead letter discarded"
+        }
       },
       "targetTypes": {
         "gesture": "Gesture",
@@ -986,7 +1015,8 @@
         "payment": "Payment",
         "list": "List",
         "setting": "Setting",
-        "system": "System"
+        "system": "System",
+        "dead_letter": "Dead letter"
       }
     },
     "gestures": {
@@ -1486,7 +1516,8 @@
         "adminNewSponsorship": "New sponsorship (admin)",
         "adminRenderFailed": "Render failed (admin)",
         "adminRefundNeeded": "Refund needed (admin)",
-        "weMoved": "We moved"
+        "weMoved": "We moved",
+        "adminDeadLetter": "Dead letters (admin)"
       },
       "locale": "Language",
       "width": "Width",
@@ -1799,6 +1830,64 @@
       "download": "Download",
       "done_one": "Exported {{count}} row.",
       "done_other": "Exported {{count}} rows."
+    },
+    "deadLetters": {
+      "title": "Dead letters",
+      "description": "Messages that could not be delivered after every retry. Replay them once the cause is fixed, or discard them.",
+      "filters": {
+        "label": "Filters",
+        "queue": "Queue",
+        "status": "Status",
+        "all": "All"
+      },
+      "queues": {
+        "email": "Email",
+        "events": "Sponsorship events"
+      },
+      "statuses": {
+        "open": "Waiting",
+        "replayed": "Replayed",
+        "discarded": "Discarded"
+      },
+      "columns": {
+        "received": "Received",
+        "queue": "Queue",
+        "type": "Type",
+        "attempts": "Attempts",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "reasons": {
+        "secret_template": "Contents not stored: the email holds a code or a link with a secret",
+        "no_idempotency_key": "No idempotency key: it cannot be replayed safely",
+        "invalid_message": "Invalid message"
+      },
+      "notReplayable": "Cannot be replayed",
+      "replay": {
+        "action": "Replay",
+        "label": "Replay {{type}}",
+        "title": "Replay this message?",
+        "description": "‘{{type}}’ goes back on the {{queue}} queue and is processed again. An email that was in fact sent is skipped.",
+        "confirm": "Replay",
+        "done": "The message was put back on the queue."
+      },
+      "discard": {
+        "action": "Discard",
+        "label": "Discard {{type}}",
+        "title": "Discard this message?",
+        "description": "‘{{type}}’ is marked as discarded and is never processed. This cannot be undone.",
+        "confirm": "Discard",
+        "done": "The message was discarded."
+      },
+      "errors": {
+        "alreadyHandled": "Someone already replayed or discarded this message.",
+        "notReplayable": "This message cannot be replayed.",
+        "enqueueFailed": "The queue did not take the message. Nothing changed; try again.",
+        "generic": "That did not work. Try again."
+      },
+      "empty": "No dead letters.",
+      "nextPage": "Older messages",
+      "firstPage": "Newest messages"
     }
   },
   "sponsorship": {

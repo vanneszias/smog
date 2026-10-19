@@ -11,6 +11,10 @@ import {
   verifyEmail,
 } from "./templates/auth/verify-email";
 import {
+  type AdminDeadLetterProps,
+  adminDeadLetter,
+} from "./templates/transactional/admin-dead-letter";
+import {
   type AdminNewSponsorshipProps,
   adminNewSponsorship,
 } from "./templates/transactional/admin-new-sponsorship";
@@ -48,6 +52,7 @@ export interface EmailTemplateProps {
   "auth/otp": OtpProps;
   "auth/reset-password": ResetPasswordProps;
   "auth/verify-email": VerifyEmailProps;
+  "transactional/admin-dead-letter": AdminDeadLetterProps;
   "transactional/admin-new-sponsorship": AdminNewSponsorshipProps;
   "transactional/admin-refund-needed": AdminRefundNeededProps;
   "transactional/admin-render-failed": AdminRenderFailedProps;
@@ -68,6 +73,7 @@ const TEMPLATES: {
   "auth/otp": otp,
   "auth/reset-password": resetPassword,
   "auth/verify-email": verifyEmail,
+  "transactional/admin-dead-letter": adminDeadLetter,
   "transactional/admin-new-sponsorship": adminNewSponsorship,
   "transactional/admin-refund-needed": adminRefundNeeded,
   "transactional/admin-render-failed": adminRenderFailed,

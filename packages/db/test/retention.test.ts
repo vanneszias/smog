@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AUDIT_RETENTION_MS,
   auditLog,
+  DEAD_LETTER_RETENTION_MS,
+  deadLetter,
   RETENTION_CHUNK_SIZE,
   RETENTION_MAX_CHUNKS,
   RETENTION_PURGES,
@@ -28,6 +30,7 @@ const FULL_SCAN = /^SCAN \S+$/m;
 async function clear(): Promise<void> {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM audit_log"),
+    env.DB.prepare("DELETE FROM dead_letter"),
     env.DB.prepare("DELETE FROM session"),
     env.DB.prepare("DELETE FROM verification"),
     env.DB.prepare("DELETE FROM sponsorship_token"),
@@ -55,6 +58,19 @@ async function addAudit(createdAt: Date, n = 1): Promise<void> {
     // biome-ignore lint/performance/noAwaitInLoops: D1's parameter limit forces small inserts; order does not matter but they are few.
     await db.insert(auditLog).values(rows.slice(at, at + 14));
   }
+}
+
+async function addDeadLetter(id: string, receivedAt: number): Promise<void> {
+  await db.insert(deadLetter).values({
+    attempts: 6,
+    body: null,
+    id,
+    originQueue: "email",
+    queue: "smog-dev-email-dlq",
+    receivedAt: new Date(receivedAt),
+    replayable: false,
+    type: "auth/otp",
+  });
 }
 
 async function addToken(fields: {
@@ -110,6 +126,20 @@ describe("the retention purges (ruling 9)", () => {
       edge,
       edge + 1,
     ]);
+  });
+
+  it("deletes dead letters older than 14 days, at the boundary to the millisecond", async () => {
+    expect(DEAD_LETTER_RETENTION_MS).toBe(14 * DAY);
+    const edge = NOW.getTime() - DEAD_LETTER_RETENTION_MS;
+    await addDeadLetter("dl-new", edge + 1);
+    await addDeadLetter("dl-edge", edge);
+    await addDeadLetter("dl-old", edge - 1);
+
+    const counts = await runRetentionPurges(db, NOW);
+
+    expect(counts.dead_letter).toBe(1);
+    const left = await db.select({ id: deadLetter.id }).from(deadLetter);
+    expect(left.map((row) => row.id).sort()).toEqual(["dl-edge", "dl-new"]);
   });
 
   it("deletes expired sessions and verifications and keeps live ones", async () => {
@@ -234,6 +264,8 @@ describe("the retention purges (ruling 9)", () => {
     const old = new Date(NOW.getTime() - AUDIT_RETENTION_MS - 1);
     await addAudit(old, 3);
     await addAudit(new Date(NOW.getTime() - AUDIT_RETENTION_MS + 1));
+    await addDeadLetter("dl-old", NOW.getTime() - DEAD_LETTER_RETENTION_MS - 1);
+    await addDeadLetter("dl-new", NOW.getTime() - DEAD_LETTER_RETENTION_MS);
     const gone = new Date(NOW.getTime() - SPONSORSHIP_TOKEN_GRACE_MS - 1);
     // Used and expired more than 29 days ago: two purges match, one row.
     await addToken({ expiresAt: gone, usedAt: gone });
@@ -250,6 +282,7 @@ describe("the retention purges (ruling 9)", () => {
 
     expect(dry).toEqual({
       audit_log: 3,
+      dead_letter: 1,
       session: 1,
       sponsorship_token: 1,
       verification: 0,

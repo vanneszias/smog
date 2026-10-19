@@ -654,6 +654,18 @@
         "app": "Vous utilisez l'application\u00a0? Alors mettez l'application à jour vers la dernière version\u00a0: l'ancienne version ne fonctionne plus.",
         "button": "Se connecter",
         "footer": "Vous recevez cet e-mail une seule fois, parce que vous avez un compte chez SMOG & Co."
+      },
+      "adminDeadLetter": {
+        "subject": "Des dead letters demandent votre attention",
+        "preheader": "Des messages n’ont pas pu être distribués, ou une vidéo est en échec depuis plus d’un jour.",
+        "heading": "Des dead letters demandent votre attention",
+        "body": "Certains messages n’ont pas pu être distribués après toutes les tentatives, ou une vidéo est en échec depuis plus de 24\u00a0heures. Rejouez-les ou supprimez-les dans l’administration.",
+        "emailOpen": "E-mails en attente",
+        "eventsOpen": "Événements de parrainage en attente",
+        "lost": "Messages perdus pendant l’indisponibilité de la base de données",
+        "renderFailed": "Vidéos en échec depuis plus de 24\u00a0heures",
+        "types": "En attente par type",
+        "button": "Ouvrir les dead letters"
       }
     }
   },
@@ -861,7 +873,8 @@
       "users": "Utilisateurs",
       "audit": "Journal",
       "emails": "E-mails",
-      "settings": "Paramètres"
+      "settings": "Paramètres",
+      "deadLetters": "Dead letters"
     },
     "comingSoon": {
       "title": "Prévu dans cette phase",
@@ -918,6 +931,18 @@
         "refundNeeded_one": "{{count}} paiement à rembourser",
         "refundNeeded_other": "{{count}} paiements à rembourser",
         "refundNeeded_many": "{{count}} paiements à rembourser"
+      },
+      "deadLetters": {
+        "title": "Dead letters",
+        "review": "Ouvrir les dead letters",
+        "email_one": "{{count}} e-mail en attente",
+        "email_other": "{{count}} e-mails en attente",
+        "events_one": "{{count}} événement en attente",
+        "events_other": "{{count}} événements en attente",
+        "oldest": "Le plus ancien date du {{date}}",
+        "none": "Rien en attente",
+        "renderFailed_one": "{{count}} vidéo en échec",
+        "renderFailed_other": "{{count}} vidéos en échec"
       }
     },
     "audit": {
@@ -995,7 +1020,11 @@
         "export": {
           "sponsorships_csv": "Parrainages exportés (CSV)"
         },
-        "legacy": "Ancienne entrée du journal"
+        "legacy": "Ancienne entrée du journal",
+        "dead_letter": {
+          "replay": "Dead letter rejoué",
+          "discard": "Dead letter supprimé"
+        }
       },
       "targetTypes": {
         "gesture": "Geste",
@@ -1005,7 +1034,8 @@
         "payment": "Paiement",
         "list": "Liste",
         "setting": "Paramètre",
-        "system": "Système"
+        "system": "Système",
+        "dead_letter": "Dead letter"
       }
     },
     "gestures": {
@@ -1517,7 +1547,8 @@
         "adminNewSponsorship": "Nouveau parrainage (admin)",
         "adminRenderFailed": "Échec de la vidéo (admin)",
         "adminRefundNeeded": "Remboursement nécessaire (admin)",
-        "weMoved": "Nous avons déménagé"
+        "weMoved": "Nous avons déménagé",
+        "adminDeadLetter": "Dead letters (administration)"
       },
       "locale": "Langue",
       "width": "Largeur",
@@ -1833,6 +1864,64 @@
       "done_one": "{{count}} ligne exportée.",
       "done_other": "{{count}} lignes exportées.",
       "done_many": "{{count}} lignes exportées."
+    },
+    "deadLetters": {
+      "title": "Dead letters",
+      "description": "Messages qui n’ont pas pu être distribués après toutes les tentatives. Rejouez-les une fois la cause corrigée, ou supprimez-les.",
+      "filters": {
+        "label": "Filtres",
+        "queue": "File",
+        "status": "Statut",
+        "all": "Tous"
+      },
+      "queues": {
+        "email": "E-mail",
+        "events": "Événements de parrainage"
+      },
+      "statuses": {
+        "open": "En attente",
+        "replayed": "Rejoué",
+        "discarded": "Supprimé"
+      },
+      "columns": {
+        "received": "Reçu",
+        "queue": "File",
+        "type": "Type",
+        "attempts": "Tentatives",
+        "status": "Statut",
+        "actions": "Actions"
+      },
+      "reasons": {
+        "secret_template": "Contenu non conservé\u00a0: l’e-mail contient un code ou un lien secret",
+        "no_idempotency_key": "Pas de clé d’idempotence\u00a0: impossible de le rejouer sans risque",
+        "invalid_message": "Message invalide"
+      },
+      "notReplayable": "Ne peut pas être rejoué",
+      "replay": {
+        "action": "Rejouer",
+        "label": "Rejouer {{type}}",
+        "title": "Rejouer ce message\u202f?",
+        "description": "«\u00a0{{type}}\u00a0» retourne dans la file {{queue}} et est traité à nouveau. Un e-mail déjà envoyé est ignoré.",
+        "confirm": "Rejouer",
+        "done": "Le message est de nouveau dans la file."
+      },
+      "discard": {
+        "action": "Supprimer",
+        "label": "Supprimer {{type}}",
+        "title": "Supprimer ce message\u202f?",
+        "description": "«\u00a0{{type}}\u00a0» est marqué comme supprimé et n’est jamais traité. Cette action est irréversible.",
+        "confirm": "Supprimer",
+        "done": "Le message a été supprimé."
+      },
+      "errors": {
+        "alreadyHandled": "Quelqu’un a déjà rejoué ou supprimé ce message.",
+        "notReplayable": "Ce message ne peut pas être rejoué.",
+        "enqueueFailed": "La file n’a pas accepté le message. Rien n’a changé\u00a0; réessayez.",
+        "generic": "Ça n’a pas fonctionné. Réessayez."
+      },
+      "empty": "Aucune dead letter.",
+      "nextPage": "Messages plus anciens",
+      "firstPage": "Messages les plus récents"
     }
   },
   "sponsorship": {
@@ -1858,7 +1947,7 @@
       "noLogo": "Ce parrainage n’a pas de logo, vous ne pouvez donc pas en ajouter.",
       "notRenewable": "Ce parrainage ne peut plus être prolongé.",
       "gestureTaken": "Quelqu’un d’autre parraine ce geste entre-temps.",
-      "rejectedTooLongAgo": "Ce parrainage a été refusé il y a 30 jours ou plus. Vous ne pouvez plus demander de modification : la vidéo est supprimée.",
+      "rejectedTooLongAgo": "Ce parrainage a été refusé il y a 30 jours ou plus. Vous ne pouvez plus demander de modification\u00a0: la vidéo est supprimée.",
       "noVideo": "La vidéo n’est pas encore prête.",
       "paid": "Ce paiement a été réglé et ne peut pas être annulé.",
       "notRefunded": "Mollie n’indique encore aucun remboursement. Remboursez d’abord dans le tableau de bord Mollie.",

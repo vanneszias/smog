@@ -502,8 +502,10 @@ describe("checkWranglerResources (phase 6)", () => {
   test("fails when a consumer, the bucket var or a cron is missing", () => {
     expect(
       check((env) => {
-        const queues = env.queues as { consumers: unknown[] };
-        queues.consumers.pop();
+        const queues = env.queues as { consumers: Record<string, unknown>[] };
+        queues.consumers = queues.consumers.filter(
+          (consumer) => consumer.queue !== "smog-staging-sponsorship-events"
+        );
       })
     ).toContain("no consumer for smog-staging-sponsorship-events");
     expect(
@@ -527,6 +529,78 @@ describe("checkWranglerResources (phase 6)", () => {
         }
       })
     ).toContain("smog-staging-sponsorship-events needs max_retries 10");
+  });
+
+  describe("the DLQ consumers (phase 9 ruling 5)", () => {
+    const consumers = (env: Record<string, unknown>) =>
+      (env.queues as { consumers: Record<string, unknown>[] }).consumers;
+
+    test("passes on the real config: one push consumer per DLQ, 20 retries 300 s apart", () => {
+      const parsed = config();
+      const dlqs = consumers(parsed.env.staging).filter((consumer) =>
+        String(consumer.queue).endsWith("-dlq")
+      );
+      expect(dlqs.map((consumer) => consumer.queue)).toEqual([
+        "smog-staging-email-dlq",
+        "smog-staging-sponsorship-events-dlq",
+      ]);
+      for (const consumer of dlqs) {
+        expect(consumer).toMatchObject({ max_retries: 20, retry_delay: 300 });
+        expect(consumer.dead_letter_queue).toBeUndefined();
+      }
+    });
+
+    test("fails when a DLQ has no consumer", () => {
+      expect(
+        check((env) => {
+          const queues = env.queues as { consumers: Record<string, unknown>[] };
+          queues.consumers = queues.consumers.filter(
+            (consumer) => consumer.queue !== "smog-staging-email-dlq"
+          );
+        })
+      ).toContain("no consumer for smog-staging-email-dlq");
+    });
+
+    test("fails when a DLQ consumer retries less than 20 times 300 s apart", () => {
+      const errors = check((env) => {
+        const dlq = consumers(env).find(
+          (consumer) => consumer.queue === "smog-staging-sponsorship-events-dlq"
+        );
+        if (dlq) {
+          dlq.max_retries = 3;
+          dlq.retry_delay = 30;
+        }
+      });
+      expect(errors).toContain(
+        "the consumer of smog-staging-sponsorship-events-dlq needs max_retries 20"
+      );
+      expect(errors).toContain(
+        "the consumer of smog-staging-sponsorship-events-dlq needs retry_delay 300"
+      );
+    });
+
+    test("fails when a DLQ consumer has a DLQ of its own", () => {
+      expect(
+        check((env) => {
+          const dlq = consumers(env).find(
+            (consumer) => consumer.queue === "smog-staging-email-dlq"
+          );
+          if (dlq) {
+            dlq.dead_letter_queue = "smog-staging-email-dlq-dlq";
+          }
+        })
+      ).toContain(
+        "the consumer of smog-staging-email-dlq must not have a dead_letter_queue"
+      );
+    });
+
+    test("fails on a consumer for a queue it does not dispatch", () => {
+      expect(
+        check((env) => {
+          consumers(env).push({ queue: "smog-staging-other-dlq" });
+        })
+      ).toContain("unexpected consumer smog-staging-other-dlq");
+    });
   });
 
   test("the email consumer does not wait to fill a batch (codes arrive fast)", () => {

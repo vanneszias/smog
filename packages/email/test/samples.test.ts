@@ -20,6 +20,7 @@ describe("EMAIL_SAMPLES", () => {
       "auth/otp": true,
       "auth/reset-password": true,
       "auth/verify-email": true,
+      "transactional/admin-dead-letter": true,
       "transactional/admin-new-sponsorship": true,
       "transactional/admin-refund-needed": true,
       "transactional/admin-render-failed": true,

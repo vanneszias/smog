@@ -137,6 +137,8 @@ export const AUDIT_ACTIONS = [
   "maintenance.enable",
   "maintenance.disable",
   "export.sponsorships_csv",
+  "dead_letter.replay",
+  "dead_letter.discard",
   "legacy",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -152,5 +154,15 @@ export const AUDIT_TARGET_TYPES = [
   "setting",
   /** A system-wide action with no single target (`target_id` NULL), such as a CSV export. */
   "system",
+  /** A message a DLQ consumer stored (`target_id` = its queue message id), phase 9. */
+  "dead_letter",
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
+
+/**
+ * The queue a dead letter came from (phase 9, ruling 5): `email` is
+ * `smog-<env>-email`, `events` is `smog-<env>-sponsorship-events`. Replay
+ * re-enqueues on it.
+ */
+export const DEAD_LETTER_ORIGINS = ["email", "events"] as const;
+export type DeadLetterOrigin = (typeof DEAD_LETTER_ORIGINS)[number];

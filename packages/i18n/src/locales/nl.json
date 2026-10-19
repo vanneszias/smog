@@ -648,6 +648,18 @@
         "app": "Gebruik je de app? Werk de app dan bij naar de nieuwste versie: de oude versie werkt niet meer.",
         "button": "Aanmelden",
         "footer": "Je krijgt deze e-mail één keer, omdat je een account hebt bij SMOG & Co."
+      },
+      "adminDeadLetter": {
+        "subject": "Dead letters vragen aandacht",
+        "preheader": "Berichten konden niet worden afgeleverd, of een video is al meer dan een dag mislukt.",
+        "heading": "Dead letters vragen aandacht",
+        "body": "Sommige berichten konden na alle pogingen niet worden afgeleverd, of een video is al meer dan 24 uur mislukt. Speel ze opnieuw af of verwijder ze in het beheer.",
+        "emailOpen": "E-mails in de wachtrij",
+        "eventsOpen": "Sponsorgebeurtenissen in de wachtrij",
+        "lost": "Berichten verloren terwijl de database niet beschikbaar was",
+        "renderFailed": "Video’s die al meer dan 24 uur mislukt zijn",
+        "types": "Wachtend per type",
+        "button": "Dead letters openen"
       }
     }
   },
@@ -854,7 +866,8 @@
       "users": "Gebruikers",
       "audit": "Logboek",
       "emails": "E-mails",
-      "settings": "Instellingen"
+      "settings": "Instellingen",
+      "deadLetters": "Dead letters"
     },
     "comingSoon": {
       "title": "Komt in deze fase",
@@ -899,6 +912,18 @@
         "expiring_other": "{{count}} lopen binnenkort af",
         "refundNeeded_one": "{{count}} betaling terug te betalen",
         "refundNeeded_other": "{{count}} betalingen terug te betalen"
+      },
+      "deadLetters": {
+        "title": "Dead letters",
+        "review": "Dead letters openen",
+        "email_one": "{{count}} e-mail wacht",
+        "email_other": "{{count}} e-mails wachten",
+        "events_one": "{{count}} gebeurtenis wacht",
+        "events_other": "{{count}} gebeurtenissen wachten",
+        "oldest": "Oudste van {{date}}",
+        "none": "Niets in de wachtrij",
+        "renderFailed_one": "{{count}} video mislukt",
+        "renderFailed_other": "{{count}} video’s mislukt"
       }
     },
     "audit": {
@@ -976,7 +1001,11 @@
         "export": {
           "sponsorships_csv": "Sponsorings geëxporteerd (CSV)"
         },
-        "legacy": "Oude logregel"
+        "legacy": "Oude logregel",
+        "dead_letter": {
+          "replay": "Dead letter opnieuw afgespeeld",
+          "discard": "Dead letter verwijderd"
+        }
       },
       "targetTypes": {
         "gesture": "Gebaar",
@@ -986,7 +1015,8 @@
         "payment": "Betaling",
         "list": "Lijst",
         "setting": "Instelling",
-        "system": "Systeem"
+        "system": "Systeem",
+        "dead_letter": "Dead letter"
       }
     },
     "gestures": {
@@ -1486,7 +1516,8 @@
         "adminNewSponsorship": "Nieuwe sponsoring (beheer)",
         "adminRenderFailed": "Video mislukt (beheer)",
         "adminRefundNeeded": "Terugbetaling nodig (beheer)",
-        "weMoved": "We zijn verhuisd"
+        "weMoved": "We zijn verhuisd",
+        "adminDeadLetter": "Dead letters (beheer)"
       },
       "locale": "Taal",
       "width": "Breedte",
@@ -1799,6 +1830,64 @@
       "download": "Downloaden",
       "done_one": "{{count}} rij geëxporteerd.",
       "done_other": "{{count}} rijen geëxporteerd."
+    },
+    "deadLetters": {
+      "title": "Dead letters",
+      "description": "Berichten die na alle pogingen niet konden worden afgeleverd. Speel ze opnieuw af zodra de oorzaak is opgelost, of verwijder ze.",
+      "filters": {
+        "label": "Filters",
+        "queue": "Wachtrij",
+        "status": "Status",
+        "all": "Alle"
+      },
+      "queues": {
+        "email": "E-mail",
+        "events": "Sponsorgebeurtenissen"
+      },
+      "statuses": {
+        "open": "In de wachtrij",
+        "replayed": "Opnieuw afgespeeld",
+        "discarded": "Verwijderd"
+      },
+      "columns": {
+        "received": "Ontvangen",
+        "queue": "Wachtrij",
+        "type": "Type",
+        "attempts": "Pogingen",
+        "status": "Status",
+        "actions": "Acties"
+      },
+      "reasons": {
+        "secret_template": "Inhoud niet bewaard: de e-mail bevat een code of een link met een geheim",
+        "no_idempotency_key": "Geen idempotentiesleutel: opnieuw afspelen is niet veilig",
+        "invalid_message": "Ongeldig bericht"
+      },
+      "notReplayable": "Kan niet opnieuw worden afgespeeld",
+      "replay": {
+        "action": "Opnieuw afspelen",
+        "label": "{{type}} opnieuw afspelen",
+        "title": "Dit bericht opnieuw afspelen?",
+        "description": "‘{{type}}’ komt terug in de wachtrij {{queue}} en wordt opnieuw verwerkt. Een e-mail die toch al verstuurd was, wordt overgeslagen.",
+        "confirm": "Opnieuw afspelen",
+        "done": "Het bericht staat weer in de wachtrij."
+      },
+      "discard": {
+        "action": "Verwijderen",
+        "label": "{{type}} verwijderen",
+        "title": "Dit bericht verwijderen?",
+        "description": "‘{{type}}’ wordt als verwijderd gemarkeerd en nooit verwerkt. Dit kan niet ongedaan worden gemaakt.",
+        "confirm": "Verwijderen",
+        "done": "Het bericht is verwijderd."
+      },
+      "errors": {
+        "alreadyHandled": "Iemand anders heeft dit bericht al opnieuw afgespeeld of verwijderd.",
+        "notReplayable": "Dit bericht kan niet opnieuw worden afgespeeld.",
+        "enqueueFailed": "De wachtrij nam het bericht niet aan. Er is niets veranderd; probeer opnieuw.",
+        "generic": "Dat lukte niet. Probeer opnieuw."
+      },
+      "empty": "Geen dead letters.",
+      "nextPage": "Oudere berichten",
+      "firstPage": "Nieuwste berichten"
     }
   },
   "sponsorship": {

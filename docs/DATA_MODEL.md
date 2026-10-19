@@ -187,6 +187,19 @@ erDiagram
     text data
     integer created_at
   }
+  dead_letter {
+    text id PK
+    text queue
+    text origin_queue
+    text type
+    integer attempts
+    integer received_at
+    text body
+    integer replayable
+    integer replayed_at
+    integer discarded_at
+    text error
+  }
   sponsor {
     text id PK
     text name
@@ -556,15 +569,37 @@ CHECK: `consent_event_purpose_check`, `consent_event_source_check`.
 |---|---|---|---|---|
 | `id` | `id` | text |  | PK |
 | `actor_id` | `actorId` | text | yes | → user.id ON DELETE SET NULL |
-| `action` | `action` | text |  | enum `AUDIT_ACTIONS` (30 values, `src/enums.ts`) |
-| `target_type` | `targetType` | text |  | enum `AUDIT_TARGET_TYPES`: `gesture`, `category`, `user`, `sponsorship`, `payment`, `list`, `setting`, `system` |
+| `action` | `action` | text |  | enum `AUDIT_ACTIONS` (32 values, `src/enums.ts`; `dead_letter.replay` and `dead_letter.discard` since 0013) |
+| `target_type` | `targetType` | text |  | enum `AUDIT_TARGET_TYPES`: `gesture`, `category`, `user`, `sponsorship`, `payment`, `list`, `setting`, `system`, `dead_letter` (since 0013) |
 | `target_id` | `targetId` | text | yes | the target row's id; the setting key for `setting` (e.g. `maintenance`); NULL for `system` actions (e.g. `export.sponsorships_csv`) |
 | `data` | `data` | text (JSON) |  |  |
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 
-Indexes: `audit_log_created_at_idx` (created_at); `audit_log_target_idx` (target_type, target_id); `audit_log_action_created_idx` (action, created_at); `audit_log_actor_id_idx` (actor_id).
+Indexes: `audit_log_created_at_idx` (created_at); `audit_log_action_created_idx` (action, created_at); `audit_log_type_created_idx` (target_type, created_at); `audit_log_target_created_idx` (target_type, target_id, created_at); `audit_log_actor_created_idx` (actor_id, created_at).
 
-CHECK: `audit_log_action_check`, `audit_log_target_type_check`.
+CHECK: `audit_log_action_check`, `audit_log_target_type_check`. **Migration 0013 rebuilt this table** (SQLite cannot alter a CHECK): create new, copy every row, drop, rename, recreate the five indexes. No trigger is on `audit_log`; no table references it.
+
+#### `dead_letter`
+
+A message a consumer took from `smog-<env>-email-dlq` or `smog-<env>-sponsorship-events-dlq` (phase 9 ruling 5, migration 0013).
+
+| Column | TS | Type | Null | Notes |
+|---|---|---|---|---|
+| `id` | `id` | text |  | PK = the queue message id (`INSERT … ON CONFLICT DO NOTHING`) |
+| `queue` | `queue` | text |  | the DLQ's name |
+| `origin_queue` | `originQueue` | text |  | enum `DEAD_LETTER_ORIGINS`: `email`, `events`; replay re-enqueues there |
+| `type` | `type` | text |  | email template id or event type; `unknown` for an invalid message |
+| `attempts` | `attempts` | integer |  | delivery attempts the DLQ message had |
+| `received_at` | `receivedAt` | integer (ms) → Date |  |  |
+| `body` | `body` | text (JSON) | yes | only when replayable; **NULL for an email whose template carries a token or code, a message without an idempotency key, and an invalid message**; never returned by the admin API |
+| `replayable` | `replayable` | integer (0/1) → boolean |  |  |
+| `replayed_at` | `replayedAt` | integer (ms) → Date | yes |  |
+| `discarded_at` | `discardedAt` | integer (ms) → Date | yes |  |
+| `error` | `error` | text | yes | a short reason code, never an address or a body |
+
+Indexes: `dead_letter_received_at_idx` (received_at, id); `dead_letter_open_idx` (origin_queue, received_at) WHERE replayed_at IS NULL AND discarded_at IS NULL.
+
+CHECK: `dead_letter_origin_check`, `dead_letter_replayable_check`. Retention: 14 days (the daily purge); account deletion removes the rows whose body's `to` is the deleted address; the DSAR export does not include them.
 
 ### Sponsorships
 #### `sponsor`
@@ -719,9 +754,9 @@ CHECK: `sponsorship_token_purpose_check`.
 
 ## Migrations, seed and tests
 
-**Migrations are append-only.** `0000`–`0012` are merged (the next free number is `0013`); never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
+**Migrations are append-only.** `0000`–`0013` are merged (the next free number is `0014`); never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
 
-- **Retention** (phase 6 ruling 9, `packages/db/src/retention.ts`): the daily `15 3 * * *` cron deletes `audit_log` rows older than 3 × 365 days, expired `session` and `verification` rows, and `sponsorship_token` rows used or expired more than 29 days ago (so a daily run removes them within 30 days), in chunks of 500 (`rowid IN (SELECT rowid … LIMIT 500)`, at most 20 per purge per run). Each chunk read seeks an index except the used-token one (`used_at` has no index; the table is small). The same run (`runRetentionPurge`, `@smog/sponsorships/server`) clears `sponsorship.logo_key` on sponsorships that ended (`rejected`, `cancelled`, `expired`) more than 30 days ago and can no longer use the logo (`payment_item.includes_logo` keeps the fact), and deletes R2 `logos/*` objects that no sponsorship references and that were uploaded more than 24 h ago (a KV cursor resumes the listing across runs). `bun run retention --env <env> --dry-run` counts what it would delete.
+- **Retention** (phase 6 ruling 9, `packages/db/src/retention.ts`): the daily `15 3 * * *` cron deletes `audit_log` rows older than 3 × 365 days, `dead_letter` rows older than 14 days (phase 9), expired `session` and `verification` rows, and `sponsorship_token` rows used or expired more than 29 days ago (so a daily run removes them within 30 days), in chunks of 500 (`rowid IN (SELECT rowid … LIMIT 500)`, at most 20 per purge per run). Each chunk read seeks an index except the used-token one (`used_at` has no index; the table is small). The same run (`runRetentionPurge`, `@smog/sponsorships/server`) clears `sponsorship.logo_key` on sponsorships that ended (`rejected`, `cancelled`, `expired`) more than 30 days ago and can no longer use the logo (`payment_item.includes_logo` keeps the fact), and deletes R2 `logos/*` objects that no sponsorship references and that were uploaded more than 24 h ago (a KV cursor resumes the listing across runs). `bun run retention --env <env> --dry-run` counts what it would delete.
 - `bun -F @smog/db db:generate` runs `drizzle-kit generate` (generate only; wrangler applies migrations). Hand-written SQL (such as the FTS table) goes in a file made with `drizzle-kit generate --custom --name <name>`, so the drizzle journal stays in step.
 - `bun -F @smog/db migrate:dev` applies them to the local dev D1 (`wrangler d1 migrations apply DB --env dev --local`, from `apps/site`; `migrations_dir` is `../../packages/db/migrations` in every env). `deploy.yml` applies them remotely before each deploy.
 - `bun -F @smog/db seed:dev` regenerates `seed/dev.sql` (`scripts/seed.ts`), applies it locally and bumps the local `catalog:version` KV key (so a running dev server drops its typo-tier projection): 5 categories, 20 published gestures (sample Mux playback id, keywords, FTS rows rebuilt by `rebuildGestureFtsSql`, the statements `reindexGesture` runs) and the admin user `admin@smog.test` with the **dev-only** password `smog-dev-admin` (a Better Auth scrypt credential with a fixed salt; the seed replaces any other credential of that user). The admin row upserts on `email`, so an account that already signed up with that address keeps its id and is promoted to `admin`. Ids and timestamps are fixed and every statement is an upsert, so it can be re-run.

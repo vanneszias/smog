@@ -8,6 +8,25 @@
 
 export { CRON, type CronName, cronName } from "./cron";
 export {
+  countLost,
+  type DeadLetterDelivery,
+  type DeadLetterOrigin,
+  type DeadLetterReason,
+  type DeadLetterRecord,
+  DLQ_KV_TTL_SECONDS,
+  DLQ_LOST_PREFIX,
+  DLQ_MAX_RETRIES,
+  DLQ_RETRY_DELAY_SECONDS,
+  type DlqKv,
+  deadLetterOrigin,
+  digestMarkerKey,
+  lostCounterKey,
+  type ReplayMessage,
+  toDeadLetter,
+  toReplayMessage,
+  utcDay,
+} from "./dead-letter";
+export {
   EMAIL_SENT_TTL_SECONDS,
   type EmailConsumerDeps,
   type EmailDecision,
