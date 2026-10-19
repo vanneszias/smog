@@ -935,13 +935,16 @@
       "deadLetters": {
         "title": "Dead letters",
         "review": "Ouvrir les dead letters",
-        "email_one": "{{count}} e-mail en attente",
-        "email_other": "{{count}} e-mails en attente",
-        "events_one": "{{count}} événement en attente",
-        "events_other": "{{count}} événements en attente",
         "oldest": "Le plus ancien date du {{date}}",
         "none": "Rien en attente",
+        "email_one": "{{count}} e-mail en attente",
+        "email_many": "{{count}} e-mails en attente",
+        "email_other": "{{count}} e-mails en attente",
+        "events_one": "{{count}} événement en attente",
+        "events_many": "{{count}} événements en attente",
+        "events_other": "{{count}} événements en attente",
         "renderFailed_one": "{{count}} vidéo en échec",
+        "renderFailed_many": "{{count}} vidéos en échec",
         "renderFailed_other": "{{count}} vidéos en échec"
       }
     },
