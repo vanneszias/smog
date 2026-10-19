@@ -1137,6 +1137,41 @@ describe("apply --reset-only and --reset's preflight", () => {
     expect(reset.code).toBe(0);
   });
 
+  test("a reset file that fails part-way still bumps catalog:version, and says which file failed", async () => {
+    const dir = planCopy("production");
+    const wrangler = freshDev();
+    expect((await apply(wrangler, ["--env", "dev", "--out", dir])).code).toBe(
+      0
+    );
+    wrangler.kv.delete("catalog:version");
+    const original = wrangler.run;
+    const failing: SqliteWrangler = {
+      ...wrangler,
+      run: (args) => {
+        if (args.includes("--file")) {
+          // Part of the reset got through before the failure.
+          wrangler.db.run("DELETE FROM gesture_category");
+          return Promise.resolve({
+            code: 1,
+            stderr: "FOREIGN KEY constraint failed",
+            stdout: "",
+          });
+        }
+        return original(args);
+      },
+    };
+    const { lines, out } = capture();
+    const code = await main(
+      ["apply", "--env", "dev", "--out", dir, "--reset-only"],
+      out,
+      context(failing)
+    );
+    expect(code).toBe(1);
+    expect(lines.error.join("\n")).toContain("Failed on");
+    expect(wrangler.kv.get("catalog:version")).toBe("catalog-version-test");
+    expect(record(dir)).toMatchObject({ resetOnly: true, status: "failed" });
+  });
+
   test("--reset-only checks the migrations and, on staging, maintenance; not the foreign rows", async () => {
     const behind = sqliteWrangler(migratedDatabase(11));
     const old = await apply(behind, [

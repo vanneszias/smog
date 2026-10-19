@@ -85,7 +85,10 @@ Commands:
       The ledger records QUEUED, not delivered. --resend sends the given
       ledger keys (user ids, one per line, absolute path) again, or with
       --failed the keys a failed run recorded in we-moved-failed.json (their
-      Queues API call failed or was never made). A key whose consumer
+      Queues API call failed or was never made; a failed batch may already
+      have been accepted, so a duplicate queue entry is possible and harmless:
+      the consumer's idempotency drops it). At most 200 keys per run. A key
+      queued more than 7 days ago is warned about (the marker expires). A key whose consumer
       marker (email:sent:we_moved:<id>) exists was delivered and is
       skipped, and the output says which; a send replaces the key's ledger
       entry. Dry without --apply; only ids are printed, never an address.

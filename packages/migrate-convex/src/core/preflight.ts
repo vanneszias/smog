@@ -181,6 +181,8 @@ function resetList(statement: string): unknown[] {
  * checks read are parsed; the files are hash-checked against the manifest
  * before this runs.
  */
+// Trusts `resetStatements`' exact shape (the first `json_each('<json>')` of a
+// line is the key list) and the manifest hash that guards the files.
 export function ownRowsOf(resetSql: readonly string[]): OwnRows {
   const ids = {
     category: new Set<string>(),

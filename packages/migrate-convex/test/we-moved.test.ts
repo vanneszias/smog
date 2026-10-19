@@ -751,6 +751,47 @@ describe("we-moved --resend (phase 9 ruling 11)", () => {
     expect(Object.keys(failedOf())).toEqual(["user-0000", "user-0001"]);
   });
 
+  test("warns when a key was queued before the marker's 7-day window, and refuses more than 200 keys", async () => {
+    const queues = fakeQueuesApi();
+    const first = setup(recipients(3), queues);
+    await runWeMoved(
+      { ...RUN, apply: true, outDir: dir },
+      first.context,
+      capture().out
+    );
+    // The fake clock is 2026-10-04: make user-0001's ledger entry 40 days old.
+    const path = join(dir, WE_MOVED_LEDGER);
+    const ledger = JSON.parse(readFileSync(path, "utf8"));
+    ledger.entries["user-0001"].queuedAt = "2026-08-25T12:00:00.000Z";
+    writeFileSync(path, JSON.stringify(ledger));
+    const again = setup(recipients(3), queues);
+    const { all, lines, out } = capture();
+    await runWeMoved(
+      {
+        ...RUN,
+        outDir: dir,
+        resend: { keys: ["user-0000", "user-0001"] },
+      },
+      again.context,
+      out
+    );
+    expect(lines.error.join("\n")).toContain(
+      "1 key(s) were queued more than 7 days ago, past the consumer marker's window"
+    );
+    expect(lines.error.join("\n")).toContain("user-0001");
+    expect(lines.error.join("\n")).not.toContain("user-0000)");
+    expect(all()).not.toContain(`@${MAIL_DOMAIN}`);
+
+    const many = Array.from({ length: 201 }, (_, index) => `user-${index}`);
+    await expect(
+      runWeMoved(
+        { ...RUN, outDir: dir, resend: { keys: many } },
+        setup(recipients(3), queues).context,
+        capture().out
+      )
+    ).rejects.toThrow("at most 200 per run");
+  });
+
   test("production only, and a plan folder for production", async () => {
     const { context, wrangler } = setup(recipients(1));
     await expect(

@@ -293,6 +293,30 @@ describe("--reset's preflight (phase 9 ruling 10)", () => {
     }
   });
 
+  it("--reset ignores a Mollie id held by another of the plan's own payments", async () => {
+    await importFixture();
+    const a = await factsOf("fixture");
+    const [first, second] = a.facts.mollieIds;
+    if (!(first && second)) {
+      throw new Error("the fixture has two Mollie payments");
+    }
+    await env.DB.batch([
+      env.DB.prepare("UPDATE payment SET mollie_id = ? WHERE id = ?").bind(
+        "tr_swapped0001",
+        first.id
+      ),
+      env.DB.prepare("UPDATE payment SET mollie_id = ? WHERE id = ?").bind(
+        first.mollieId,
+        second.id
+      ),
+    ]);
+    const plain = await preflight(a.facts, null);
+    expect(plain.refusals.map((refusal) => refusal.code)).toContain(
+      "mollieIdTaken"
+    );
+    expect((await preflight(a.facts, a.own)).refusals).toEqual([]);
+  });
+
   it("after A's reset files ran, B has no refusal at all", async () => {
     const { plan: a } = await importFixture();
     await run(statementsOf(a, "reset"));

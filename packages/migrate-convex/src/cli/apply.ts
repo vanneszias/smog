@@ -496,6 +496,23 @@ async function verify(
   return missing.length === 0;
 }
 
+/** The bump after a reset; a failure here is reported, never masks the reset's own error. */
+async function bumpCatalogVersion(
+  wrangler: Wrangler,
+  version: string,
+  record: ApplyRecord,
+  out: Output
+): Promise<void> {
+  try {
+    await wrangler.kvPut(CATALOG_VERSION_KEY, version);
+    record.catalogVersion = version;
+  } catch (error) {
+    out.error(
+      `${PREFIX} Failed to bump ${CATALOG_VERSION_KEY} after the reset: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
+
 interface ResetOnlyRun {
   readonly env: ApplyEnv;
   readonly maintenance: string | null;
@@ -555,10 +572,16 @@ async function runResetOnly(
   try {
     await runSteps(steps, wrangler, { outDir: request.outDir, record }, out);
   } finally {
+    // A reset file that failed part-way may still have deleted catalogue
+    // rows (a file is not one transaction on D1): the version always moves.
+    await bumpCatalogVersion(wrangler, version, record, out);
     writeRecord(request.outDir, record);
   }
-  await wrangler.kvPut(CATALOG_VERSION_KEY, version);
-  record.catalogVersion = version;
+  if (record.catalogVersion === undefined) {
+    throw new Error(
+      `${PREFIX} The reset ran but ${CATALOG_VERSION_KEY} could not be bumped: put it by hand.`
+    );
+  }
   const after = await verifyCounts(query, report);
   record.counts = after;
   let removed = 0;

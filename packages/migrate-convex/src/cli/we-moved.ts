@@ -557,6 +557,11 @@ class FailedKeys {
     return [...this.entries.keys()].sort();
   }
 
+  /** When the key was recorded as failed, or undefined. */
+  at(id: string): string | undefined {
+    return this.entries.get(id)?.at;
+  }
+
   add(ids: readonly string[], reason: FailedReason, at: string): void {
     for (const id of ids) {
       this.entries.set(id, { at, reason });
@@ -596,9 +601,20 @@ interface ResendPlan {
   readonly selected: number;
   /** Selected keys whose consumer marker exists: delivered, not resent. */
   readonly skipped: string[];
+  /**
+   * Keys to send whose last queueing (ledger `queuedAt`, or the failure
+   * record) is older than the consumer marker's 7 days: no marker no longer
+   * proves the email was not delivered.
+   */
+  readonly stale: string[];
   /** Selected keys that are not a current recipient (never migrated, banned, deleted). */
   readonly unknown: string[];
 }
+
+/** The consumer's `email:sent` marker lives 7 days (`EMAIL_SENT_TTL_SECONDS`). */
+const MARKER_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+/** One `wrangler kv key get` per key: more than this is split into runs. */
+const MAX_RESEND_KEYS = 200;
 
 /** The marker the email consumer writes once a `we_moved` email was sent. */
 function weMovedMarkerKey(userId: string): string {
@@ -610,11 +626,17 @@ async function selectResend(
   recipients: readonly Recipient[],
   ledger: Ledger<z.infer<typeof ledgerEntrySchema>>,
   failed: FailedKeys,
-  wrangler: Wrangler
+  wrangler: Wrangler,
+  now: number
 ): Promise<ResendPlan> {
   const keys = [
     ...new Set("failed" in selection ? failed.keys() : selection.keys),
   ].sort();
+  if (keys.length > MAX_RESEND_KEYS) {
+    throw new InputError(
+      `--resend selected ${keys.length} keys: at most ${MAX_RESEND_KEYS} per run (one KV read each). Split the ids file.`
+    );
+  }
   const byId = new Map(
     recipients.map((recipient) => [recipient.id, recipient])
   );
@@ -634,11 +656,18 @@ async function selectResend(
     }
     pending.push(recipient);
   }
+  const stale = pending
+    .filter((recipient) => {
+      const at = ledger.get(recipient.id)?.queuedAt ?? failed.at(recipient.id);
+      return at !== undefined && now - Date.parse(at) > MARKER_WINDOW_MS;
+    })
+    .map((recipient) => recipient.id);
   return {
     pending,
     replaced: pending.filter((recipient) => ledger.get(recipient.id)).length,
     selected: keys.length,
     skipped,
+    stale,
     unknown,
   };
 }
@@ -649,6 +678,11 @@ function logResend(resend: ResendPlan, out: WeMovedOutput): void {
   );
   if (resend.skipped.length > 0) {
     out.log(`${PREFIX} Skipped (delivered): ${resend.skipped.join(", ")}.`);
+  }
+  if (resend.stale.length > 0) {
+    out.error(
+      `${PREFIX} warning: ${resend.stale.length} key(s) were queued more than 7 days ago, past the consumer marker's window: a missing marker there means unknown, not undelivered, so these may be sent twice (${resend.stale.join(", ")}).`
+    );
   }
   if (resend.unknown.length > 0) {
     out.error(
@@ -705,7 +739,8 @@ export async function runWeMoved(
         recipients,
         ledger,
         failed,
-        context.wrangler
+        context.wrangler,
+        context.timer.now()
       )
     : null;
   const pending =
