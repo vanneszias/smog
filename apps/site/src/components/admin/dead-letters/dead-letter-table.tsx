@@ -183,6 +183,9 @@ interface Pending {
   letter: DeadLetter;
 }
 
+/** `EMAIL_SENT_TTL_SECONDS` (`@smog/jobs`): 7 days. */
+const SENT_MARKER_MS = 7 * 86_400_000;
+
 function letterId(letter: DeadLetter): string {
   return letter.id;
 }
@@ -352,8 +355,21 @@ function ConfirmDialog({
 }): ReactNode {
   const { t } = useTranslation();
   const kind = pending?.kind ?? "replay";
+  // The consumer's `email:sent:<key>` marker lives 7 days: an older email
+  // that was in fact delivered could be sent twice.
+  const stale =
+    pending?.kind === "replay" &&
+    pending.letter.queue === "email" &&
+    Date.now() - pending.letter.receivedAt > SENT_MARKER_MS;
   return (
     <AlertDialog
+      body={
+        stale ? (
+          <Text size="body-sm" tone="muted">
+            {t("admin.deadLetters.replay.old")}
+          </Text>
+        ) : undefined
+      }
       confirmLabel={t(
         kind === "discard"
           ? "admin.deadLetters.discard.confirm"

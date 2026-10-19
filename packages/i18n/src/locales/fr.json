@@ -1906,7 +1906,8 @@
         "title": "Rejouer ce message\u202f?",
         "description": "«\u00a0{{type}}\u00a0» retourne dans la file {{queue}} et est traité à nouveau. Un e-mail déjà envoyé est ignoré.",
         "confirm": "Rejouer",
-        "done": "Le message est de nouveau dans la file."
+        "done": "Le message est de nouveau dans la file.",
+        "old": "Ce message a plus de 7\u00a0jours. Si l’e-mail d’origine a bien été distribué, le marqueur d’envoi a expiré et le destinataire peut le recevoir deux fois."
       },
       "discard": {
         "action": "Supprimer",

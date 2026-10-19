@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { call } from "@orpc/server";
 import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ACCOUNT_EXPORT_VERSION,
   accountExportSchema,
@@ -822,6 +822,35 @@ describe("account.delete", () => {
 
     expect(JSON.stringify(data)).not.toContain("dl-export");
     expect(Object.keys(data)).not.toContain("deadLetters");
+  });
+
+  it("logs and does not throw when the erasure of the dead letters fails", async () => {
+    const authed = await signedUpUser();
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    // The table is gone for the erase only: the account deletion itself succeeds.
+    await env.DB.prepare(
+      "ALTER TABLE dead_letter RENAME TO dead_letter_away"
+    ).run();
+    try {
+      await expect(
+        call(
+          accountRouter.delete,
+          { confirm: "DELETE", password: PASSWORD },
+          await authedContext(authed)
+        )
+      ).resolves.toEqual({ deleted: true });
+    } finally {
+      await env.DB.prepare(
+        "ALTER TABLE dead_letter_away RENAME TO dead_letter"
+      ).run();
+    }
+    expect(error).toHaveBeenCalledWith(
+      "[account] Failed to erase the dead letters of a deleted account:",
+      expect.anything()
+    );
+    error.mockRestore();
   });
 
   it("keeps the dead letters when the deletion is refused", async () => {

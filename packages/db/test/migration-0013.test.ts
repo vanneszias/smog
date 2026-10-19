@@ -1,6 +1,7 @@
 import { applyD1Migrations } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
+import { AUDIT_ACTIONS, AUDIT_TARGET_TYPES } from "../src/enums";
 
 /*
  * Migration 0013 (`dead_letter`, phase 9 task 4, ruling 5a) rebuilds
@@ -165,6 +166,28 @@ describe("migration 0013_dead_letter", () => {
         .prepare("SELECT actor_id FROM audit_log WHERE id = 'd-5'")
         .first()
     ).toEqual({ actor_id: null });
+  });
+
+  it("accepts every action and target type of the enums (the CHECK lists match the code)", async () => {
+    await applyD1Migrations(db, env.TEST_MIGRATIONS);
+    const statements = AUDIT_ACTIONS.flatMap((action, i) =>
+      AUDIT_TARGET_TYPES.map((type, j) =>
+        db
+          .prepare(
+            "INSERT INTO audit_log (id, actor_id, action, target_type, target_id, data, created_at) VALUES (?, NULL, ?, ?, NULL, '{}', 1)"
+          )
+          .bind(`enum-${i}-${j}`, action, type)
+      )
+    );
+    await db.batch(statements);
+    expect(
+      await db
+        .prepare("SELECT count(*) AS n FROM audit_log WHERE id LIKE 'enum-%'")
+        .first<{ n: number }>()
+    ).toEqual({ n: AUDIT_ACTIONS.length * AUDIT_TARGET_TYPES.length });
+    expect(AUDIT_ACTIONS).toEqual(
+      expect.arrayContaining(["dead_letter.replay", "dead_letter.discard"])
+    );
   });
 
   it("creates dead_letter with its indexes, checks and a partial open index", async () => {

@@ -1869,7 +1869,8 @@
         "title": "Dit bericht opnieuw afspelen?",
         "description": "‘{{type}}’ komt terug in de wachtrij {{queue}} en wordt opnieuw verwerkt. Een e-mail die toch al verstuurd was, wordt overgeslagen.",
         "confirm": "Opnieuw afspelen",
-        "done": "Het bericht staat weer in de wachtrij."
+        "done": "Het bericht staat weer in de wachtrij.",
+        "old": "Dit bericht is meer dan 7 dagen oud. Als de oorspronkelijke e-mail wel is aangekomen, is de verzendmarkering verlopen en kan de ontvanger hem twee keer krijgen."
       },
       "discard": {
         "action": "Verwijderen",

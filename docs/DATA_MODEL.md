@@ -589,8 +589,8 @@ A message a consumer took from `smog-<env>-email-dlq` or `smog-<env>-sponsorship
 | `queue` | `queue` | text |  | the DLQ's name |
 | `origin_queue` | `originQueue` | text |  | enum `DEAD_LETTER_ORIGINS`: `email`, `events`; replay re-enqueues there |
 | `type` | `type` | text |  | email template id or event type; `unknown` for an invalid message |
-| `attempts` | `attempts` | integer |  | delivery attempts the DLQ message had |
-| `received_at` | `receivedAt` | integer (ms) → Date |  |  |
+| `attempts` | `attempts` | integer |  | the delivery count **on the DLQ** (normally 1; it is not the original queue's 5 or 10 retries, which the platform does not carry over) |
+| `received_at` | `receivedAt` | integer (ms) → Date |  | when the consumer stored it (after a D1 outage up to about 100 minutes after it entered the DLQ) |
 | `body` | `body` | text (JSON) | yes | only when replayable; **NULL for an email whose template carries a token or code, a message without an idempotency key, and an invalid message**; never returned by the admin API |
 | `replayable` | `replayable` | integer (0/1) → boolean |  |  |
 | `replayed_at` | `replayedAt` | integer (ms) → Date | yes |  |

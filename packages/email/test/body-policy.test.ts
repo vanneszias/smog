@@ -72,6 +72,8 @@ describe("EMAIL_BODY_CLASS", () => {
       expect(carriesSecret(template), template).toBe(true);
     }
     expect(carriesSecret("transactional/renewal-reminder")).toBe(true);
+    // Third-party personal data (sponsor contact, invoice, VAT): never stored.
+    expect(carriesSecret("transactional/admin-new-sponsorship")).toBe(true);
   });
 
   it("treats a template it does not know as secret", () => {

@@ -36,13 +36,19 @@ export type DlqDecision =
   | { action: "ack" }
   | { action: "retry"; delaySeconds: number };
 
-/** Handles one message of `queue` (see the module comment). */
+/**
+ * Handles one message of `queue` (see the module comment). `resolve` gives
+ * the bindings and runs inside the try with the store: an environment that
+ * fails to validate is a failed delivery like a D1 outage (retried with the
+ * delay, then `[dlq] lost`), never a silent drop.
+ */
 export async function processDeadLetter(
   queue: string,
   message: DeadLetterDelivery,
-  deps: DlqDeps
+  resolve: DlqDeps | (() => DlqDeps)
 ): Promise<DlqDecision> {
-  const now = deps.now?.() ?? new Date();
+  let deps: DlqDeps | undefined;
+  let now = new Date();
   const record = toDeadLetter(queue, message);
   if (record === null) {
     console.warn(
@@ -51,6 +57,8 @@ export async function processDeadLetter(
     return { action: "ack" };
   }
   try {
+    deps = typeof resolve === "function" ? resolve() : resolve;
+    now = deps.now?.() ?? now;
     await deps.db
       .insert(deadLetter)
       .values({
@@ -71,7 +79,13 @@ export async function processDeadLetter(
       console.error(
         `[dlq] lost ${JSON.stringify({ id: record.id, queue, type: record.type })}`
       );
-      await countLost(deps.kv, now);
+      if (deps) {
+        await countLost(deps.kv, now);
+      } else {
+        console.error(
+          "[dlq] Failed to count a lost message: the environment is unavailable"
+        );
+      }
       return { action: "ack" };
     }
     console.error(
@@ -88,11 +102,13 @@ export async function handleDeadLetterBatch(
   _env: Env,
   _ctx: ExecutionContext
 ): Promise<void> {
-  const { db: d1, kv } = siteEnv();
-  const deps: DlqDeps = { db: createDb(d1), kv };
+  const resolve = (): DlqDeps => {
+    const { db: d1, kv } = siteEnv();
+    return { db: createDb(d1), kv };
+  };
   for (const message of batch.messages) {
     // biome-ignore lint/performance/noAwaitInLoops: one message at a time, so a D1 outage retries them in order.
-    const decision = await processDeadLetter(batch.queue, message, deps);
+    const decision = await processDeadLetter(batch.queue, message, resolve);
     if (decision.action === "retry") {
       message.retry({ delaySeconds: decision.delaySeconds });
     } else {

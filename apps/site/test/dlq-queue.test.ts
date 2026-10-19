@@ -295,6 +295,34 @@ describe("the dead-letter consumer while D1 is down (ruling 5b)", () => {
   });
 });
 
+describe("an environment that fails before the store (ruling 5b)", () => {
+  const broken = () => {
+    throw new Error("env validation failed");
+  };
+
+  it("retries with the delay while deliveries remain", async () => {
+    expect(
+      await processDeadLetter(EMAIL_DLQ, delivery("m-env", email(), 2), broken)
+    ).toEqual({ action: "retry", delaySeconds: 300 });
+  });
+
+  it("logs [dlq] lost on the last delivery instead of dropping silently", async () => {
+    const error = vi.spyOn(console, "error");
+
+    const decision = await processDeadLetter(
+      EMAIL_DLQ,
+      delivery("m-env-lost", email(), DLQ_MAX_RETRIES + 1),
+      broken
+    );
+
+    expect(decision).toEqual({ action: "ack" });
+    expect(error).toHaveBeenCalledWith(
+      `[dlq] lost ${JSON.stringify({ id: "m-env-lost", queue: EMAIL_DLQ, type: "transactional/welcome" })}`
+    );
+    expect(JSON.stringify(error.mock.calls)).not.toContain(ADDRESS);
+  });
+});
+
 describe("the queue() handler for the two DLQs", () => {
   async function run(queue: string, messages: { body: unknown; id: string }[]) {
     const batch = createMessageBatch(

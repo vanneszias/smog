@@ -1869,7 +1869,8 @@
         "title": "Replay this message?",
         "description": "‘{{type}}’ goes back on the {{queue}} queue and is processed again. An email that was in fact sent is skipped.",
         "confirm": "Replay",
-        "done": "The message was put back on the queue."
+        "done": "The message was put back on the queue.",
+        "old": "This message is more than 7 days old. If the original email was in fact delivered, the sent marker has expired and the recipient may get it twice."
       },
       "discard": {
         "action": "Discard",

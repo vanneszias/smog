@@ -9,7 +9,9 @@
  * `EMAIL_BODY_CLASS` is a mapped type over every template: a new template
  * does not compile until it is classified, and `test/body-policy.test.ts`
  * holds each class to what the template's sample props take:
- * - `secret`: a code, a token, or a link with one (never stored);
+ * - `secret`: a code, a token, or a link with one, or third-party personal
+ *   data that erasure by recipient cannot reach (`admin-new-sponsorship`
+ *   carries the sponsor's contact and invoice data): never stored;
  * - `link`: a `url` prop that was reviewed and is a public or admin page,
  *   with no secret in it (stored);
  * - `none`: no `url`, `token` or `code` prop (stored).
@@ -26,7 +28,9 @@ export const EMAIL_BODY_CLASS: {
   "auth/reset-password": "secret",
   "auth/verify-email": "secret",
   "transactional/admin-dead-letter": "link",
-  "transactional/admin-new-sponsorship": "link",
+  // The sponsor's contact, invoice address and VAT number: a person who
+  // has no account, so erasure by recipient could never remove them.
+  "transactional/admin-new-sponsorship": "secret",
   "transactional/admin-refund-needed": "link",
   "transactional/admin-render-failed": "link",
   "transactional/payment-confirmed": "none",
