@@ -23,7 +23,7 @@ import {
 } from "@smog/ui-native";
 import { useRouter } from "expo-router";
 import { type ReactElement, useCallback } from "react";
-import { ScrollView, View } from "react-native";
+import { Alert, ScrollView, View } from "react-native";
 import { AnalyticsSwitch, openPrivacy } from "@/components/consent-sheet";
 import { PreferencesFields } from "@/components/preferences-fields";
 import { useAuthClient } from "@/lib/auth-client";
@@ -191,12 +191,32 @@ function SignedIn(): ReactElement | null {
         throw new Error(error.message ?? error.statusText);
       }
       toast({ title: t("auth.signedOut"), variant: "success" });
-      leave(router);
+      // To the welcome screen (home); the session turning signed out also
+      // clears the analytics identity (`AnalyticsBridge`).
+      router.replace("/");
     } catch (error) {
       console.error("[account] Failed to sign out:", error);
       toast({ title: t("auth.errors.generic"), variant: "danger" });
     }
   }, [client, router, t, toast]);
+  // U-11: signing out asks first (the old app's confirm alert).
+  const confirmSignOut = useCallback(() => {
+    Alert.alert(
+      t("signOutConfirm.title"),
+      t("signOutConfirm.message"),
+      [
+        { style: "cancel", text: t("kit.cancel") },
+        {
+          onPress: () => {
+            signOut();
+          },
+          style: "destructive",
+          text: t("signOutConfirm.confirm"),
+        },
+      ],
+      { cancelable: true }
+    );
+  }, [signOut, t]);
   const retry = useCallback(() => {
     account.refetch();
   }, [account]);
@@ -221,7 +241,7 @@ function SignedIn(): ReactElement | null {
           <Section title={t("settings.preferences")}>
             <PreferencesFields />
           </Section>
-          <Button onPress={signOut} variant="secondary">
+          <Button onPress={confirmSignOut} variant="secondary">
             {t("nav.signOut")}
           </Button>
           <DeleteSection

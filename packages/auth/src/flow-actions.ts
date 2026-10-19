@@ -66,7 +66,7 @@ export interface FlowAuthClient {
 }
 
 export interface FlowActionOptions {
-  /** Where a finished sign-in lands (a path; Expo turns it into `smog://`). */
+  /** Where a finished sign-in lands (a path; Expo turns it into the app's scheme, `smog://` or a variant's). */
   callbackURL: string;
   /** The current Turnstile token, when a widget is shown. */
   captchaToken?: () => string | null | undefined;

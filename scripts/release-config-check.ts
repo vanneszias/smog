@@ -824,17 +824,65 @@ const CONSUMER_SETTINGS = {
     max_retries: 5,
     retry_delay: 30,
   },
+  // The two DLQs' consumers (phase 9 ruling 5): they store the message in
+  // D1 and have no DLQ of their own. 20 retries 300 s apart ride out a D1
+  // outage of about 100 minutes before a message is lost.
+  "email-dlq": {
+    max_batch_size: 10,
+    max_retries: 20,
+    retry_delay: 300,
+  },
   "sponsorship-events": {
     max_batch_size: 10,
     max_retries: 10,
     retry_delay: 30,
+  },
+  "sponsorship-events-dlq": {
+    max_batch_size: 10,
+    max_retries: 20,
+    retry_delay: 300,
   },
 } as const;
 const QUEUE_BINDINGS = {
   EMAIL_QUEUE: "email",
   EVENTS_QUEUE: "sponsorship-events",
 } as const;
+/** A DLQ's consumer: it must not have a dead-letter queue itself. */
+const DLQ_KIND = /-dlq$/;
 const COMMENT_PREFIX = /^#\s*/;
+
+/** One consumer of `CONSUMER_SETTINGS`: present, with its DLQ rule and its settings. */
+function checkConsumer(
+  kind: string,
+  settings: Record<string, number>,
+  consumers: Record<string, unknown>[],
+  name: string,
+  where: string
+): string[] {
+  const queue = `smog-${name}-${kind}`;
+  const consumer = consumers.find((entry) => entry.queue === queue);
+  if (!consumer) {
+    return [`${where}: no consumer for ${queue}`];
+  }
+  const errors: string[] = [];
+  if (DLQ_KIND.test(kind)) {
+    if (consumer.dead_letter_queue !== undefined) {
+      errors.push(
+        `${where}: the consumer of ${queue} must not have a dead_letter_queue (a message it cannot store is lost and logged)`
+      );
+    }
+  } else if (consumer.dead_letter_queue !== `${queue}-dlq`) {
+    errors.push(
+      `${where}: the consumer of ${queue} needs dead_letter_queue ${queue}-dlq`
+    );
+  }
+  for (const [key, value] of Object.entries(settings)) {
+    if (consumer[key] !== value) {
+      errors.push(`${where}: the consumer of ${queue} needs ${key} ${value}`);
+    }
+  }
+  return errors;
+}
 
 function checkQueues(
   name: string,
@@ -853,22 +901,7 @@ function checkQueues(
   }
   const consumers = asArray(queues.consumers).filter(isRecord);
   for (const [kind, settings] of Object.entries(CONSUMER_SETTINGS)) {
-    const queue = `smog-${name}-${kind}`;
-    const consumer = consumers.find((entry) => entry.queue === queue);
-    if (!consumer) {
-      errors.push(`${where}: no consumer for ${queue}`);
-      continue;
-    }
-    if (consumer.dead_letter_queue !== `${queue}-dlq`) {
-      errors.push(
-        `${where}: the consumer of ${queue} needs dead_letter_queue ${queue}-dlq`
-      );
-    }
-    for (const [key, value] of Object.entries(settings)) {
-      if (consumer[key] !== value) {
-        errors.push(`${where}: the consumer of ${queue} needs ${key} ${value}`);
-      }
-    }
+    errors.push(...checkConsumer(kind, settings, consumers, name, where));
   }
   for (const consumer of consumers) {
     const known = Object.keys(CONSUMER_SETTINGS).some(
@@ -876,7 +909,7 @@ function checkQueues(
     );
     if (!known) {
       errors.push(
-        `${where}: unexpected consumer ${String(consumer.queue)} (worker/queues.ts dispatches email and sponsorship-events only)`
+        `${where}: unexpected consumer ${String(consumer.queue)} (worker/queues.ts dispatches email, sponsorship-events and their DLQs only)`
       );
     }
   }
@@ -886,7 +919,8 @@ function checkQueues(
 /**
  * The phase 6 bindings of every env (ruling 12): the queues
  * `smog-<env>-email` and `smog-<env>-sponsorship-events` with their
- * producers and consumers (each with its `…-dlq`), the R2 bucket
+ * producers and consumers (each with its `…-dlq`, and a consumer for each
+ * DLQ since phase 9), the R2 bucket
  * `smog-<env>-media` as `MEDIA` (and `vars.MEDIA_BUCKET`), `RENDER_MODE`,
  * and the four `CRON` schedules of `@smog/jobs`.
  */
@@ -1438,8 +1472,14 @@ const EAS_PROFILES = {
   production: "production",
   staging: "staging",
 } as const satisfies Record<string, Environment>;
-/** The only keys a profile's `env` may hold: public, reviewed in git. */
+/**
+ * The only keys a profile's `env` may hold: public, reviewed in git.
+ * `APP_VARIANT` (phase 9 task 3, ruling 9) is the build variant of the
+ * development and staging profiles; `mobile-release-check` and the app-config
+ * tests pin which profile sets which value.
+ */
 const EAS_ENV_KEYS = [
+  "APP_VARIANT",
   "EXPO_PUBLIC_API_URL",
   "EXPO_PUBLIC_ENVIRONMENT",
   "EXPO_PUBLIC_SITE_HOST",

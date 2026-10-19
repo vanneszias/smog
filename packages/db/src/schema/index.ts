@@ -1,6 +1,7 @@
 // biome-ignore-all lint/performance/noBarrelFile: Drizzle and drizzle-kit need every table in one schema module.
 export { auditLog, consentEvent, guestImport } from "./account";
 export { account, passkey, session, user, verification } from "./auth";
+export { deadLetter } from "./dead-letter";
 export {
   category,
   favorite,

@@ -32,6 +32,7 @@ import users from "../fixtures/export/users/documents.jsonl?raw";
 import muxMap from "../fixtures/mux-map.json?raw";
 import overrides from "../fixtures/overlay-overrides.json?raw";
 import workosUsers from "../fixtures/workos-users.csv?raw";
+import { otherExportText } from "../other-export";
 
 /** The plan's `--now`. */
 export const NOW = new Date("2026-10-04T12:00:00.000Z");
@@ -60,33 +61,41 @@ export function testDb(): Db {
 export const query: D1Query = async (sql) =>
   (await env.DB.prepare(sql).all<Record<string, unknown>>()).results;
 
-const plans = new Map<Target, Promise<PlanOutput>>();
+const plans = new Map<string, Promise<PlanOutput>>();
 
-/** The fixture's plan for `target` (made once per file). */
+/**
+ * The fixture's plan for `target` (made once per file). `other` is another
+ * export: the same fixture with every Convex id changed (`other-export.ts`),
+ * so it holds the same slugs, addresses and tokens under other legacy ids.
+ */
 export function fixturePlan(
-  target: Target = "production"
+  target: Target = "production",
+  variant: "fixture" | "other" = "fixture"
 ): Promise<PlanOutput> {
-  let made = plans.get(target);
+  const key = `${variant}:${target}`;
+  const same = (text: string): string => text;
+  const change = variant === "other" ? otherExportText : same;
+  let made = plans.get(key);
   if (!made) {
     made = plan({
       export: {
-        adminLogs,
-        categories,
-        gesture_list_items: gestureListItems,
-        gesture_lists: gestureLists,
-        gestures,
-        sponsorships,
-        user_consents: userConsents,
-        user_favorites: userFavorites,
-        users,
+        adminLogs: change(adminLogs),
+        categories: change(categories),
+        gesture_list_items: change(gestureListItems),
+        gesture_lists: change(gestureLists),
+        gestures: change(gestures),
+        sponsorships: change(sponsorships),
+        user_consents: change(userConsents),
+        user_favorites: change(userFavorites),
+        users: change(users),
       },
-      muxMap,
+      muxMap: change(muxMap),
       now: NOW,
-      overrides,
+      overrides: change(overrides),
       target,
       workosUsers,
     });
-    plans.set(target, made);
+    plans.set(key, made);
   }
   return made;
 }

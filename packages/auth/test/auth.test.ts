@@ -496,6 +496,40 @@ describe("cookies and origins", () => {
     );
     expect(productionContext.trustedOrigins).not.toContain("exp://");
   });
+
+  // Phase 9 ruling 9: an app variant's scheme is trusted only by its own env.
+  it.each([
+    {
+      env: "dev",
+      refused: ["smog-staging://"],
+      site: SITE_URL,
+      trusted: ["smog-dev://"],
+    },
+    {
+      env: "staging",
+      refused: ["smog-dev://"],
+      site: "https://smog-site-staging.zias.workers.dev",
+      trusted: ["smog-staging://"],
+    },
+    {
+      env: "production",
+      refused: ["smog-staging://", "smog-dev://"],
+      site: "https://smog-site-production.zias.workers.dev",
+      trusted: [],
+    },
+  ] as const)("$env trusts its own app variant only", async (row) => {
+    const ctx = setup({ ENVIRONMENT: row.env, SITE_URL: row.site });
+    const { trustedOrigins } = await ctx.auth.$context;
+    expect(trustedOrigins).toEqual(
+      expect.arrayContaining([row.site, "smog://"])
+    );
+    for (const origin of row.trusted) {
+      expect(trustedOrigins).toContain(origin);
+    }
+    for (const origin of row.refused) {
+      expect(trustedOrigins).not.toContain(origin);
+    }
+  });
 });
 
 describe("optional providers", () => {

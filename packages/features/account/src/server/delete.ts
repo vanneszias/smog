@@ -9,11 +9,15 @@
  * passkeys, favorites, lists with their items and share links, and
  * consent rows cascade; `audit_log.actor_id`, `list_item.added_by`,
  * `list_share.created_by` and `sponsorship_event.actor_id` become NULL.
- * Sponsor rows have no user reference and stay (retention).
+ * Sponsor rows have no user reference and stay (retention). The stored
+ * dead letters (`dead_letter`, phase 9 ruling 5c) have no user reference
+ * either: the ones whose body's `to` is the deleted address are removed by
+ * address once the account is gone (`eraseDeadLetters`).
  */
 import type { Auth } from "@smog/auth";
 import {
   account,
+  deadLetter,
   otherActiveAdminExists,
   user,
   userBanInForce,
@@ -95,6 +99,39 @@ async function isLastAdmin(db: Db, userId: string): Promise<boolean> {
   return row !== undefined;
 }
 
+/** The account's address as stored (Better Auth lowercases it), or `null`. */
+async function emailOf(db: Db, userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return row?.email ?? null;
+}
+
+/**
+ * Removes the dead letters addressed to `email` (phase 9 ruling 5c,
+ * erasure): the rows whose stored body's `to` is that address, compared
+ * case-insensitively. Rows without a body hold no address. The table is
+ * small (14 days of retention), so the scan is bounded. A failure is
+ * logged and not rethrown: the account is already deleted, and the daily
+ * retention removes the row within 14 days anyway.
+ */
+async function eraseDeadLetters(db: Db, email: string): Promise<void> {
+  try {
+    await db
+      .delete(deadLetter)
+      .where(
+        sql`${deadLetter.body} IS NOT NULL AND lower(json_extract(${deadLetter.body}, '$.to')) = ${email.toLowerCase()}`
+      );
+  } catch (error) {
+    console.error(
+      "[account] Failed to erase the dead letters of a deleted account:",
+      error
+    );
+  }
+}
+
 export interface DeleteAccountDeps {
   auth: Auth;
   db: Db;
@@ -121,10 +158,14 @@ export async function deleteAccount(
     if (input.password === undefined && (await hasPassword(deps.db, userId))) {
       throw new DeleteAccountError("PASSWORD_REQUIRED");
     }
+    const email = await emailOf(deps.db, userId);
     await deps.auth.api.deleteUser({
       body: input.password === undefined ? {} : { password: input.password },
       headers: deps.headers,
     });
+    if (email !== null) {
+      await eraseDeadLetters(deps.db, email);
+    }
     return { deleted: true };
   } catch (error) {
     if (error instanceof DeleteAccountError) {

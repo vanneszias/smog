@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { call } from "@orpc/server";
 import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ACCOUNT_EXPORT_VERSION,
   accountExportSchema,
@@ -765,6 +765,112 @@ describe("account.delete", () => {
     ).rejects.toMatchObject({ code: "PASSWORD_REQUIRED", status: 400 });
     expect(
       await count("SELECT count(*) AS n FROM user WHERE id = ?", authed.user.id)
+    ).toBe(1);
+  });
+
+  it("erases the dead letters addressed to the deleted account, by address", async () => {
+    const authed = await signedUpUser();
+    const { user } = authed;
+    const insert = (id: string, body: string | null) =>
+      env.DB.prepare(
+        "INSERT INTO dead_letter (id, queue, origin_queue, type, attempts, received_at, body, replayable) VALUES (?, 'smog-dev-email-dlq', 'email', 'transactional/welcome', 6, 1000, ?, ?)"
+      )
+        .bind(id, body, body === null ? 0 : 1)
+        .run();
+    const welcome = (to: string) =>
+      JSON.stringify({
+        id: crypto.randomUUID(),
+        idempotencyKey: "welcome:x",
+        locale: "nl",
+        props: { name: "Anna", url: "https://smog.example" },
+        template: "transactional/welcome",
+        to,
+      });
+    await insert("dl-mine", welcome(user.email));
+    await insert("dl-mine-case", welcome(user.email.toUpperCase()));
+    await insert("dl-other", welcome("someone.else@example.test"));
+    await insert("dl-no-body", null);
+
+    await call(
+      accountRouter.delete,
+      { confirm: "DELETE", password: PASSWORD },
+      await authedContext(authed)
+    );
+
+    const left = await env.DB.prepare(
+      "SELECT id FROM dead_letter WHERE id LIKE 'dl-%' ORDER BY id"
+    ).all<{ id: string }>();
+    expect(left.results.map((row) => row.id)).toEqual([
+      "dl-no-body",
+      "dl-other",
+    ]);
+  });
+
+  it("leaves the stored dead letters out of the DSAR export (docs/LEGAL-SIGNOFF.md)", async () => {
+    const owner = await addUser("Anna");
+    await env.DB.prepare(
+      "INSERT INTO dead_letter (id, queue, origin_queue, type, attempts, received_at, body, replayable) VALUES ('dl-export', 'smog-dev-email-dlq', 'email', 'transactional/welcome', 6, 1000, ?, 1)"
+    )
+      .bind(JSON.stringify({ to: owner.email }))
+      .run();
+
+    const data = await exportAccount(
+      { ...accountDeps, db: testDb(), siteUrl: SITE_URL },
+      owner.id,
+      NOW
+    );
+
+    expect(JSON.stringify(data)).not.toContain("dl-export");
+    expect(Object.keys(data)).not.toContain("deadLetters");
+  });
+
+  it("logs and does not throw when the erasure of the dead letters fails", async () => {
+    const authed = await signedUpUser();
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    // The table is gone for the erase only: the account deletion itself succeeds.
+    await env.DB.prepare(
+      "ALTER TABLE dead_letter RENAME TO dead_letter_away"
+    ).run();
+    try {
+      await expect(
+        call(
+          accountRouter.delete,
+          { confirm: "DELETE", password: PASSWORD },
+          await authedContext(authed)
+        )
+      ).resolves.toEqual({ deleted: true });
+    } finally {
+      await env.DB.prepare(
+        "ALTER TABLE dead_letter_away RENAME TO dead_letter"
+      ).run();
+    }
+    expect(error).toHaveBeenCalledWith(
+      "[account] Failed to erase the dead letters of a deleted account:",
+      expect.anything()
+    );
+    error.mockRestore();
+  });
+
+  it("keeps the dead letters when the deletion is refused", async () => {
+    const authed = await signedUpUser();
+    await env.DB.prepare(
+      "INSERT INTO dead_letter (id, queue, origin_queue, type, attempts, received_at, body, replayable) VALUES ('dl-kept', 'smog-dev-email-dlq', 'email', 'transactional/welcome', 6, 1000, ?, 1)"
+    )
+      .bind(JSON.stringify({ to: authed.user.email }))
+      .run();
+
+    await expect(
+      call(
+        accountRouter.delete,
+        { confirm: "DELETE", password: "not the password" },
+        await authedContext(authed)
+      )
+    ).rejects.toBeDefined();
+
+    expect(
+      await count("SELECT count(*) AS n FROM dead_letter WHERE id = 'dl-kept'")
     ).toBe(1);
   });
 

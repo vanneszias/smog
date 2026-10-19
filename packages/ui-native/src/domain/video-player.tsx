@@ -3,6 +3,7 @@ import { createNearEndTracker, muxStreamUrl } from "@smog/utils";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { View, type ViewProps } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
 import { cn } from "../lib/cn";
 
 export type VideoAspect = "3:4" | "16:9";
@@ -10,7 +11,11 @@ export type VideoAspect = "3:4" | "16:9";
 export interface VideoPlayerProps extends Omit<ViewProps, "children"> {
   /** 3:4 for gesture videos (default), 16:9 for others. */
   aspect?: VideoAspect;
-  /** Starts playing on its own, muted (as web, where browsers require it). */
+  /**
+   * Starts playing on its own, muted (as web, where browsers require it).
+   * Not when the system asks for reduced motion (WCAG 2.2.2, inventory
+   * P-25): the person starts it, with sound.
+   */
   autoPlay?: boolean;
   className?: string;
   /**
@@ -42,7 +47,7 @@ const TIME_UPDATE_INTERVAL = 0.25;
 /** The gesture video: expo-video on the Mux HLS stream, with native controls. */
 export function VideoPlayer({
   aspect = "3:4",
-  autoPlay = false,
+  autoPlay: autoPlayRequested = false,
   className,
   isFocused = true,
   loop = false,
@@ -54,6 +59,8 @@ export function VideoPlayer({
   ...props
 }: VideoPlayerProps): ReactElement {
   const { t } = useTranslation();
+  const reducedMotion = useReducedMotion();
+  const autoPlay = autoPlayRequested && !reducedMotion;
   const [tracker] = useState(createNearEndTracker);
   const onNearEndRef = useRef(onNearEnd);
   const onEndedRef = useRef(onEnded);

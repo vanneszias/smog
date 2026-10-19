@@ -2,14 +2,19 @@ import { env } from "cloudflare:workers";
 import { CATALOG_VERSION_KEY } from "@smog/gestures/server";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  type OwnRows,
+  ownRowsOf,
+  type PreflightFacts,
   preflightFactsSchema,
   runPreflight,
   verifyCounts,
 } from "../../src/core/preflight";
 import {
+  convex,
   counts,
   fixturePlan,
   importFixture,
+  newIdOf,
   PRE_EXISTING,
   query,
   run,
@@ -210,5 +215,112 @@ describe("apply's files on D1", () => {
         "SELECT count(*) AS n FROM sponsorship_token"
       ).first()
     ).toEqual({ n: 0 });
+  });
+});
+
+describe("--reset's preflight (phase 9 ruling 10)", () => {
+  async function factsOf(
+    variant: "fixture" | "other"
+  ): Promise<{ facts: PreflightFacts; own: OwnRows }> {
+    const result = await fixturePlan("production", variant);
+    return {
+      facts: preflightFactsSchema.parse(
+        JSON.parse(result.files.get("preflight.json") ?? "")
+      ),
+      own: ownRowsOf(
+        (result.manifest?.reset ?? []).map(
+          (file) => result.files.get(file.name) ?? ""
+        )
+      ),
+    };
+  }
+
+  function preflight(facts: PreflightFacts, own: OwnRows | null) {
+    return runPreflight(query, {
+      env: "dev",
+      facts,
+      maintenance: null,
+      nativeCatalog: false,
+      ownRows: own,
+      target: "production",
+    });
+  }
+
+  it("A's rows are ignored for A's --reset, and still block B (another export)", async () => {
+    await importFixture();
+    const a = await factsOf("fixture");
+    const b = await factsOf("other");
+
+    // A's own rows hold each other's tokens and legacy ids: they block a
+    // plain apply, not A's own --reset.
+    const [first, second] = a.facts.shareTokens;
+    if (!(first && second)) {
+      throw new Error("the fixture has two shares");
+    }
+    await env.DB.batch([
+      env.DB.prepare("UPDATE list_share SET token = ? WHERE id = ?").bind(
+        "swapped-token-0001",
+        first.id
+      ),
+      env.DB.prepare("UPDATE list_share SET token = ? WHERE id = ?").bind(
+        first.token,
+        second.id
+      ),
+      env.DB.prepare("UPDATE user SET legacy_id = NULL WHERE email = ?").bind(
+        PRE_EXISTING.email
+      ),
+      env.DB.prepare("UPDATE user SET legacy_id = ? WHERE id = ?").bind(
+        PRE_EXISTING.legacyId,
+        await newIdOf("user", convex.user("ada1"))
+      ),
+    ]);
+    const plain = await preflight(a.facts, null);
+    expect(plain.refusals.map((refusal) => refusal.code).sort()).toEqual([
+      "addressClaimedByOtherLegacyId",
+      "legacyIdOnOtherAddress",
+      "shareTokenTaken",
+    ]);
+    expect((await preflight(a.facts, a.own)).refusals).toEqual([]);
+
+    // B is another export: A's rows are not B's, with or without --reset.
+    for (const own of [null, b.own]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one case after the other.
+      const refused = await preflight(b.facts, own);
+      const codes = refused.refusals.map((refusal) => refusal.code);
+      expect(codes).toContain("slugTakenByOtherImport");
+      expect(codes).toContain("shareTokenTaken");
+      expect(codes).toContain("addressClaimedByOtherLegacyId");
+    }
+  });
+
+  it("--reset ignores a Mollie id held by another of the plan's own payments", async () => {
+    await importFixture();
+    const a = await factsOf("fixture");
+    const [first, second] = a.facts.mollieIds;
+    if (!(first && second)) {
+      throw new Error("the fixture has two Mollie payments");
+    }
+    await env.DB.batch([
+      env.DB.prepare("UPDATE payment SET mollie_id = ? WHERE id = ?").bind(
+        "tr_swapped0001",
+        first.id
+      ),
+      env.DB.prepare("UPDATE payment SET mollie_id = ? WHERE id = ?").bind(
+        first.mollieId,
+        second.id
+      ),
+    ]);
+    const plain = await preflight(a.facts, null);
+    expect(plain.refusals.map((refusal) => refusal.code)).toContain(
+      "mollieIdTaken"
+    );
+    expect((await preflight(a.facts, a.own)).refusals).toEqual([]);
+  });
+
+  it("after A's reset files ran, B has no refusal at all", async () => {
+    const { plan: a } = await importFixture();
+    await run(statementsOf(a, "reset"));
+    const b = await factsOf("other");
+    expect((await preflight(b.facts, null)).refusals).toEqual([]);
   });
 });

@@ -27,6 +27,7 @@ import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAuditRouteImport } from './routes/admin/audit'
 import { Route as AdminCategoriesRouteImport } from './routes/admin/categories'
+import { Route as AdminDeadLettersRouteImport } from './routes/admin/dead-letters'
 import { Route as AdminEmailsRouteImport } from './routes/admin/emails'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
@@ -149,6 +150,11 @@ const AdminAuditRoute = AdminAuditRouteImport.update({
 const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
   id: '/categories',
   path: '/categories',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDeadLettersRoute = AdminDeadLettersRouteImport.update({
+  id: '/dead-letters',
+  path: '/dead-letters',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminEmailsRoute = AdminEmailsRouteImport.update({
@@ -335,6 +341,7 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/dead-letters': typeof AdminDeadLettersRoute
   '/admin/emails': typeof AdminEmailsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -387,6 +394,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/dead-letters': typeof AdminDeadLettersRoute
   '/admin/emails': typeof AdminEmailsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -441,6 +449,7 @@ export interface FileRoutesById {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/dead-letters': typeof AdminDeadLettersRoute
   '/admin/emails': typeof AdminEmailsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -496,6 +505,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/audit'
     | '/admin/categories'
+    | '/admin/dead-letters'
     | '/admin/emails'
     | '/admin/settings'
     | '/admin/users'
@@ -548,6 +558,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/audit'
     | '/admin/categories'
+    | '/admin/dead-letters'
     | '/admin/emails'
     | '/admin/settings'
     | '/admin/users'
@@ -601,6 +612,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/audit'
     | '/admin/categories'
+    | '/admin/dead-letters'
     | '/admin/emails'
     | '/admin/settings'
     | '/admin/users'
@@ -806,6 +818,13 @@ declare module '@tanstack/react-router' {
       path: '/categories'
       fullPath: '/admin/categories'
       preLoaderRoute: typeof AdminCategoriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dead-letters': {
+      id: '/admin/dead-letters'
+      path: '/dead-letters'
+      fullPath: '/admin/dead-letters'
+      preLoaderRoute: typeof AdminDeadLettersRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/emails': {
@@ -1045,6 +1064,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminAuditRoute: typeof AdminAuditRoute
   AdminCategoriesRoute: typeof AdminCategoriesRoute
+  AdminDeadLettersRoute: typeof AdminDeadLettersRoute
   AdminEmailsRoute: typeof AdminEmailsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -1059,6 +1079,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAuditRoute: AdminAuditRoute,
   AdminCategoriesRoute: AdminCategoriesRoute,
+  AdminDeadLettersRoute: AdminDeadLettersRoute,
   AdminEmailsRoute: AdminEmailsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminUsersRoute: AdminUsersRoute,

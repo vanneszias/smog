@@ -31,8 +31,12 @@
   // Phase 6: the R2 bucket `MEDIA` (sponsor logos), the queues
   // `EMAIL_QUEUE` (smog-<env>-email) and `EVENTS_QUEUE`
   // (smog-<env>-sponsorship-events), each consumed by this Worker with a
-  // DLQ (smog-<env>-…-dlq, no consumer: checked by hand, kept 4 days), and
-  // the four Cron Triggers. Every email (auth codes and links too) goes
+  // DLQ (smog-<env>-…-dlq, kept 4 days). Since phase 9 each DLQ has a push
+  // consumer on this Worker too (an ordinary queue takes one): it stores the
+  // message in D1 `dead_letter` for the admin to replay or discard, with
+  // `max_retries` 20 and `retry_delay` 300 s so a D1 outage loses nothing
+  // (docs/DECISIONS.md, phase 9 task 4). The DLQ consumers have no DLQ of
+  // their own. The Worker also has the four Cron Triggers. Every email (auth codes and links too) goes
   // through EMAIL_QUEUE; its consumer does not wait to fill a batch
   // (`max_batch_timeout` 0), so a sign-in code still arrives in seconds, and
   // sends with this env's EMAIL binding and EMAIL_FROM / EMAIL_REPLY_TO
@@ -97,6 +101,18 @@
             "max_retries": 10,
             "retry_delay": 30,
             "dead_letter_queue": "smog-dev-sponsorship-events-dlq"
+          },
+          {
+            "queue": "smog-dev-email-dlq",
+            "max_batch_size": 10,
+            "max_retries": 20,
+            "retry_delay": 300
+          },
+          {
+            "queue": "smog-dev-sponsorship-events-dlq",
+            "max_batch_size": 10,
+            "max_retries": 20,
+            "retry_delay": 300
           }
         ]
       },
@@ -179,6 +195,18 @@
             "max_retries": 10,
             "retry_delay": 30,
             "dead_letter_queue": "smog-staging-sponsorship-events-dlq"
+          },
+          {
+            "queue": "smog-staging-email-dlq",
+            "max_batch_size": 10,
+            "max_retries": 20,
+            "retry_delay": 300
+          },
+          {
+            "queue": "smog-staging-sponsorship-events-dlq",
+            "max_batch_size": 10,
+            "max_retries": 20,
+            "retry_delay": 300
           }
         ]
       },
@@ -273,6 +301,18 @@
             "max_retries": 10,
             "retry_delay": 30,
             "dead_letter_queue": "smog-production-sponsorship-events-dlq"
+          },
+          {
+            "queue": "smog-production-email-dlq",
+            "max_batch_size": 10,
+            "max_retries": 20,
+            "retry_delay": 300
+          },
+          {
+            "queue": "smog-production-sponsorship-events-dlq",
+            "max_batch_size": 10,
+            "max_retries": 20,
+            "retry_delay": 300
           }
         ]
       },

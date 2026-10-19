@@ -20,6 +20,10 @@ import {
   ADMIN_PROCEDURES as DASHBOARD_PROCEDURES,
   dashboardSlice,
 } from "./dashboard";
+import {
+  ADMIN_PROCEDURES as DEAD_LETTERS_PROCEDURES,
+  deadLettersSlice,
+} from "./dead-letters";
 import { ADMIN_PROCEDURES as EMAILS_PROCEDURES, emailsSlice } from "./emails";
 import { ADMIN_PROCEDURES as EXPORT_PROCEDURES, exportSlice } from "./export";
 import {
@@ -48,6 +52,7 @@ export type {
 export const adminContract = {
   ...dashboardSlice,
   ...auditSlice,
+  ...deadLettersSlice,
   ...gesturesSlice,
   ...categoriesSlice,
   ...muxSlice,
@@ -73,6 +78,10 @@ export const ADMIN_SLICES = {
   audit: { contract: auditSlice, procedures: AUDIT_PROCEDURES },
   categories: { contract: categoriesSlice, procedures: CATEGORIES_PROCEDURES },
   dashboard: { contract: dashboardSlice, procedures: DASHBOARD_PROCEDURES },
+  deadLetters: {
+    contract: deadLettersSlice,
+    procedures: DEAD_LETTERS_PROCEDURES,
+  },
   emails: { contract: emailsSlice, procedures: EMAILS_PROCEDURES },
   export: { contract: exportSlice, procedures: EXPORT_PROCEDURES },
   gestures: { contract: gesturesSlice, procedures: GESTURES_PROCEDURES },

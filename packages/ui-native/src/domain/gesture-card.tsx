@@ -4,6 +4,7 @@ import { Pressable, View, type ViewProps } from "react-native";
 import { Badge } from "../components/badge";
 import { Text } from "../components/text";
 import { cn } from "../lib/cn";
+import { useLineLimit } from "../lib/line-limit";
 import { FavoriteButton } from "./favorite-button";
 import { categoryLine, GestureThumbnail } from "./gesture-parts";
 import type { GestureCardData } from "./types";
@@ -35,6 +36,7 @@ export function GestureCard({
   ...props
 }: GestureCardProps): ReactElement {
   const { t } = useTranslation();
+  const oneLine = useLineLimit(1);
   const categories = categoryLine(gesture.categories);
   const body = (
     <>
@@ -45,11 +47,15 @@ export function GestureCard({
         width={480}
       />
       <View className="gap-0.5 p-3">
-        <Text className="text-title-3" numberOfLines={1} weight="semibold">
+        <Text
+          className="text-title-3"
+          numberOfLines={oneLine}
+          weight="semibold"
+        >
           {gesture.name}
         </Text>
         {categories ? (
-          <Text numberOfLines={1} size="body-sm" tone="muted">
+          <Text numberOfLines={oneLine} size="body-sm" tone="muted">
             {categories}
           </Text>
         ) : null}

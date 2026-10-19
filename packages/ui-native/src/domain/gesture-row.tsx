@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 import { Pressable, View, type ViewProps } from "react-native";
 import { Text } from "../components/text";
 import { cn } from "../lib/cn";
+import { useLineLimit } from "../lib/line-limit";
 import { FavoriteButton } from "./favorite-button";
 import { categoryLine, GestureThumbnail } from "./gesture-parts";
 import type { GestureCardData } from "./types";
@@ -30,6 +31,7 @@ export function GestureRow({
   trailing,
   ...props
 }: GestureRowProps): ReactElement {
+  const oneLine = useLineLimit(1);
   const categories = categoryLine(gesture.categories);
   const body = (
     <>
@@ -39,11 +41,11 @@ export function GestureRow({
         width={96}
       />
       <View className="flex-1">
-        <Text numberOfLines={1} weight="medium">
+        <Text numberOfLines={oneLine} weight="medium">
           {gesture.name}
         </Text>
         {categories ? (
-          <Text numberOfLines={1} size="body-sm" tone="muted">
+          <Text numberOfLines={oneLine} size="body-sm" tone="muted">
             {categories}
           </Text>
         ) : null}

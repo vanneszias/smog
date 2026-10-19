@@ -1,7 +1,14 @@
-import { category, gesture, payment, sponsorship, user } from "@smog/db";
+import {
+  category,
+  deadLetter,
+  gesture,
+  payment,
+  sponsorship,
+  user,
+} from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { DAY_MS } from "@smog/utils";
-import { count, sql } from "drizzle-orm";
+import { and, count, isNull, sql } from "drizzle-orm";
 import {
   DASHBOARD_NEW_USER_DAYS,
   DASHBOARD_RECENT_AUDIT,
@@ -27,7 +34,7 @@ export async function getDashboard(
 ): Promise<Dashboard> {
   const since = now - DASHBOARD_NEW_USER_DAYS * DAY_MS;
   try {
-    const [gestures, categories, users, recent, statuses, refunds] =
+    const [gestures, categories, users, recent, statuses, refunds, open] =
       await db.batch([
         db
           .select({ published: count(gesture.publishedAt), total: count() })
@@ -54,14 +61,36 @@ export async function getDashboard(
           .select({ n: count() })
           .from(payment)
           .where(paymentNeedsAdmin("payment")),
+        // The open dead letters per queue (`dead_letter_open_idx`), phase 9.
+        db
+          .select({
+            n: count(),
+            oldest: sql<number | null>`min(${deadLetter.receivedAt})`,
+            queue: deadLetter.originQueue,
+          })
+          .from(deadLetter)
+          .where(
+            and(isNull(deadLetter.replayedAt), isNull(deadLetter.discardedAt))
+          )
+          .groupBy(deadLetter.originQueue),
       ]);
     const byStatus = new Map(statuses.map((row) => [row.status, row.n]));
     const of = (status: (typeof statuses)[number]["status"]) =>
       byStatus.get(status) ?? 0;
     const gestureCounts = gestures[0] ?? { published: 0, total: 0 };
     const categoryCounts = categories[0] ?? { published: 0, total: 0 };
+    const openOf = (queue: "email" | "events") =>
+      open.find((row) => row.queue === queue)?.n ?? 0;
+    const oldest = open
+      .map((row) => row.oldest)
+      .filter((value): value is number => typeof value === "number");
     return {
       categories: categoryCounts,
+      deadLetters: {
+        email: openOf("email"),
+        events: openOf("events"),
+        oldestReceivedAt: oldest.length > 0 ? Math.min(...oldest) : null,
+      },
       gestures: {
         ...gestureCounts,
         unpublished: gestureCounts.total - gestureCounts.published,
