@@ -33,10 +33,17 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
+      # Staging without the secrets skips every step (green, nothing
+      # deployed); production fails instead, so a missing token never looks
+      # like a deploy (phase 8 review I-4).
       - name: Check Cloudflare secrets
         id: secrets
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            if [ "$CLOUDFLARE_ENV" = "production" ]; then
+              echo "::error::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set for the production environment: nothing would be deployed or checked, so the job fails instead of skipping."
+              exit 1
+            fi
             echo "::warning::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set for the $CLOUDFLARE_ENV environment; skipping the deploy."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0

@@ -45,6 +45,8 @@ const CONFIG_CHECK_STEP = DEPLOY.slice(
   DEPLOY.indexOf("      # The deploy config check"),
   DEPLOY.indexOf("      # The queues,")
 );
+const PRODUCTION_FAIL_BLOCK =
+  /^ {12}if \[ "\$CLOUDFLARE_ENV" = "production" \]; then\n {14}echo "::error[^\n]*\n {14}exit 1\n {12}fi\n/m;
 const WARN_ONLY_LINE =
   "bun scripts/check-deploy-config.ts --env staging --warn-only || echo";
 const ENFORCING_LINE =
@@ -214,6 +216,21 @@ describe("checkDeployWorkflow", () => {
       DEPLOY.replaceAll("secrets.CLOUDFLARE_ACCOUNT_ID", "vars.ACCOUNT")
     );
     expect(errors.join("\n")).toContain("CLOUDFLARE_ACCOUNT_ID");
+  });
+});
+
+describe("the Cloudflare secrets step (phase 8 fix wave, I-4)", () => {
+  test("the real deploy.yml fails production without the secrets", () => {
+    expect(DEPLOY).toContain('"$CLOUDFLARE_ENV" = "production"');
+    expect(checkDeployWorkflow(DEPLOY)).toEqual([]);
+  });
+
+  test("fails when a missing production token only skips", () => {
+    const skipping = DEPLOY.replace(PRODUCTION_FAIL_BLOCK, "");
+    expect(skipping).not.toBe(DEPLOY);
+    expect(checkDeployWorkflow(skipping).join("\n")).toContain(
+      "must fail for production"
+    );
   });
 });
 

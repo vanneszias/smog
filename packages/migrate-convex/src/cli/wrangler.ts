@@ -167,14 +167,28 @@ export function parseWranglerJson(stdout: string): unknown {
   );
 }
 
-/** wrangler's own reason for a failure: its JSON error text, or the last line it printed. */
+const QUOTED_TEXT = /(["'`])(?:(?!\1).)*\1/g;
+const ADDRESS_LIKE = /\S+@\S+/g;
+
+/**
+ * Wrangler's text with quoted fragments and address-like words masked: a D1
+ * syntax or constraint error can quote part of the SQL, which may hold an
+ * address, and the importer never logs one (runbook section 9).
+ */
+function scrub(text: string): string {
+  return text
+    .replace(QUOTED_TEXT, (_match, quote: string) => `${quote}…${quote}`)
+    .replace(ADDRESS_LIKE, "…");
+}
+
+/** wrangler's own reason for a failure: its JSON error text, or the last line it printed (quoted text masked). */
 function failureReason(result: CommandResult): string {
   try {
     const parsed = parseWranglerJson(result.stdout) as {
       error?: { text?: unknown };
     } | null;
     if (typeof parsed?.error?.text === "string") {
-      return parsed.error.text;
+      return scrub(parsed.error.text);
     }
   } catch {
     // Not JSON: use the text.
@@ -183,7 +197,7 @@ function failureReason(result: CommandResult): string {
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
-  return lines.at(-1) ?? "no output";
+  return scrub(lines.at(-1) ?? "no output");
 }
 
 /**

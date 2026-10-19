@@ -32,7 +32,8 @@ import {
 
 export const USAGE = `Usage: bun run migrate:convex <command> [options]
 
-Every command that writes outside the plan folder is dry by default.
+mux renditions and we-moved are dry without --apply; apply is dry only with
+--dry-run (staging and dev write at once, production also needs --yes).
 Every path must be absolute (the command runs from packages/migrate-convex).
 
 Commands:

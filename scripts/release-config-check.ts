@@ -333,6 +333,24 @@ function checkDeployEnv(deployJob: Job, file: string): string[] {
   return errors;
 }
 
+const PRODUCTION_FAILS = /"\$CLOUDFLARE_ENV" = "production"[\s\S]*?exit 1/;
+
+/**
+ * The Cloudflare secrets step may skip the deploy for staging, but a missing
+ * token on production must fail the job: a green Deploy job with nothing
+ * deployed is how a cutover goes wrong (phase 8 review I-4).
+ */
+function checkSecretsStep(steps: Step[], file: string): string[] {
+  const run = (steps.find((step) => step.name === "Check Cloudflare secrets")
+    ?.run ?? "") as string;
+  if (PRODUCTION_FAILS.test(run)) {
+    return [];
+  }
+  return [
+    `${file}: the "Check Cloudflare secrets" step must fail for production when a secret is missing (exit 1 under \`"$CLOUDFLARE_ENV" = "production"\`); only staging may skip`,
+  ];
+}
+
 function checkDeploySteps(
   steps: Step[],
   migrationsDir: string,
@@ -352,6 +370,7 @@ function checkDeploySteps(
   if (migrations !== -1 && deploy !== -1 && migrations > deploy) {
     errors.push(`${file}: the D1 migrations must run before the deploy`);
   }
+  errors.push(...checkSecretsStep(steps, file));
   errors.push(...checkEnsureStep(steps, migrations, file));
   errors.push(...checkConfigCheckStep(steps, file));
   errors.push(...checkRenderFlag(steps, file));
