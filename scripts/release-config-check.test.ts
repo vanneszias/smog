@@ -151,7 +151,10 @@ describe("checkE2eJob", () => {
   test("fails when a shard is not a Playwright project", () => {
     expect(
       check(
-        CI.replace("shard: [public, a11y, admin, serial]", "shard: [public]")
+        CI.replace(
+          "shard: [public, a11y, admin, admin-a11y, serial]",
+          "shard: [public]"
+        )
       )
     ).toContain("shards must be the Playwright projects");
   });

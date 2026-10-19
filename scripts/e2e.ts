@@ -15,7 +15,13 @@
  */
 
 /** The projects in the order a full run takes them; the config's names. */
-export const PROJECTS = ["public", "a11y", "admin", "serial"] as const;
+export const PROJECTS = [
+  "public",
+  "a11y",
+  "admin",
+  "admin-a11y",
+  "serial",
+] as const;
 
 /** `a11y` is empty until its specs land; an empty project is not an error. */
 const MAY_BE_EMPTY = new Set<string>(["a11y"]);

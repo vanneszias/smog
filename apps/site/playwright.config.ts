@@ -62,7 +62,13 @@ const WORKERS = Number(process.env.E2E_WORKERS ?? (process.env.CI ? 1 : 2));
 const SERIAL_SPECS = /\/admin-(catalog|settings)\.spec\.ts$/;
 /** The accessibility specs (Task 5 adds them; the project exists already). */
 const A11Y_SPECS = /\/a11y-[^/]*\.spec\.ts$/;
-/** The admin specs, except the serial ones. */
+/**
+ * The admin accessibility specs (axe over every admin screen, light and dark
+ * at two widths: about 13 of the admin shard's 18 minutes on a loaded
+ * machine), their own project so no shard passes 15 minutes.
+ */
+const ADMIN_A11Y_SPECS = /\/admin-[^/]*a11y[^/]*\.spec\.ts$/;
+/** The other admin specs, except the serial ones. */
 const ADMIN_SPECS = /\/admin-[^/]*\.spec\.ts$/;
 
 const DESKTOP = {
@@ -75,7 +81,7 @@ const DESKTOP = {
  * its own runner with its own dev server and D1 (`--project <name>`), and
  * `bun run test:e2e` (scripts/e2e.ts) runs them one after another in this
  * order (`PROJECTS` there; a test keeps the two lists equal). A spec lands in the first project that matches it by name:
- * `serial`, `a11y`, `admin`, else `public`.
+ * `serial`, `a11y`, `admin-a11y`, `admin`, else `public`.
  */
 export default defineConfig({
   // Assertions wait up to 15 s (the default is 5 s): a first compile, or
@@ -99,8 +105,13 @@ export default defineConfig({
     },
     {
       name: "admin",
-      testIgnore: SERIAL_SPECS,
+      testIgnore: [SERIAL_SPECS, ADMIN_A11Y_SPECS],
       testMatch: ADMIN_SPECS,
+      use: DESKTOP,
+    },
+    {
+      name: "admin-a11y",
+      testMatch: ADMIN_A11Y_SPECS,
       use: DESKTOP,
     },
     {

@@ -78,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [public, a11y, admin, serial]
+        shard: [public, a11y, admin, admin-a11y, serial]
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2

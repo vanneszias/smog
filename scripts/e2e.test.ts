@@ -19,6 +19,7 @@ describe("planRuns", () => {
       ["--project", "public"],
       ["--project", "a11y", "--pass-with-no-tests"],
       ["--project", "admin"],
+      ["--project", "admin-a11y"],
       ["--project", "serial"],
     ]);
   });
