@@ -9,6 +9,7 @@ import {
   checkCiWorkflow,
   checkDeployConfigStep,
   checkDeployWorkflow,
+  checkE2eJob,
   checkEasProfiles,
   checkEasUpdateScripts,
   checkReleaseConfig,
@@ -113,6 +114,66 @@ describe("checkCiWorkflow order and reuse", () => {
       CI.replace("workflow_call:", "workflow_dispatch:")
     );
     expect(errors.join("\n")).toContain("workflow_call");
+  });
+});
+
+describe("checkE2eJob", () => {
+  const PLAYWRIGHT_CONFIG = readFileSync(
+    join(ROOT, "apps", "site", "playwright.config.ts"),
+    "utf8"
+  );
+  const check = (ci: string, rootPackage = PACKAGE): string =>
+    checkE2eJob({
+      ci,
+      playwrightConfig: PLAYWRIGHT_CONFIG,
+      rootPackage,
+    }).join("\n");
+
+  test("passes on the real workflow", () => {
+    expect(check(CI)).toBe("");
+  });
+
+  test("fails when the job is gated or waits for the release lanes", () => {
+    expect(
+      check(
+        CI.replace("  e2e:\n", "  e2e:\n    if: github.event_name == 'push'\n")
+      )
+    ).toContain("no `if:`");
+    expect(
+      check(CI.replace("  e2e:\n", "  e2e:\n    needs: release-check\n"))
+    ).toContain("no `needs:`");
+  });
+
+  test("fails when the placeholder variable is back", () => {
+    expect(check(`${CI}\n# vars.E2E_ENABLED\n`)).toContain("E2E_ENABLED");
+  });
+
+  test("fails when a shard is not a Playwright project", () => {
+    expect(
+      check(
+        CI.replace("shard: [public, a11y, admin, serial]", "shard: [public]")
+      )
+    ).toContain("shards must be the Playwright projects");
+  });
+
+  test("fails without the job, the Chromium install or the root script", () => {
+    expect(check(CI.slice(0, CI.indexOf("  e2e:\n")))).toContain(
+      "no `e2e` job"
+    );
+    expect(
+      check(CI.replace("playwright install --with-deps chromium", "true"))
+    ).toContain("Chromium");
+    expect(check(CI, PACKAGE.replace('"test:e2e"', '"test:other"'))).toContain(
+      "no test:e2e script"
+    );
+  });
+
+  test("fails when the job can run for too long", () => {
+    const e2e = CI.indexOf("  e2e:\n");
+    const slow =
+      CI.slice(0, e2e) +
+      CI.slice(e2e).replace("timeout-minutes: 30", "timeout-minutes: 90");
+    expect(check(slow)).toContain("timeout-minutes");
   });
 });
 

@@ -38,8 +38,9 @@ interface Job {
   steps?: Step[];
   strategy?: {
     "fail-fast"?: boolean;
-    matrix?: { check?: string[] };
+    matrix?: { check?: string[]; shard?: string[] };
   };
+  "timeout-minutes"?: unknown;
   uses?: string;
 }
 
@@ -257,6 +258,94 @@ export function checkCiWorkflow(source: string): string[] {
     );
   }
   return errors;
+}
+
+/** The e2e job's matrix names, the Playwright projects (`apps/site/playwright.config.ts`). */
+const E2E_JOB = "e2e";
+const E2E_PROJECT_NAME = /^\s{6}name: "([^"]+)",$/gm;
+const E2E_MAX_MINUTES = 30;
+const E2E_INSTALL_BROWSER = "playwright install --with-deps chromium";
+
+/**
+ * The Playwright e2e job of `ci.yml` (phase 9 ruling 1): always on (no
+ * `if:`, no `needs:`, so it runs beside the release lanes and Deploy's
+ * reusable call waits for it), one shard per Playwright project, the
+ * matching Chromium installed, and the root `test:e2e` script it calls.
+ */
+export function checkE2eJob(input: {
+  ci: string;
+  playwrightConfig: string;
+  rootPackage: string;
+}): string[] {
+  const file = "ci.yml";
+  const workflow = parseWorkflow(input.ci, file);
+  if (typeof workflow === "string") {
+    return [workflow];
+  }
+  const errors: string[] = [];
+  if (input.ci.includes("E2E_ENABLED")) {
+    errors.push(`${file}: the E2E_ENABLED placeholder must be gone`);
+  }
+  const job = workflow.jobs?.[E2E_JOB];
+  if (job === undefined) {
+    return [...errors, `${file}: no \`${E2E_JOB}\` job`];
+  }
+  const raw = job as Job & { if?: unknown };
+  if (raw.if !== undefined) {
+    errors.push(`${file}: the ${E2E_JOB} job must always run (no \`if:\`)`);
+  }
+  if (job.needs !== undefined) {
+    errors.push(
+      `${file}: the ${E2E_JOB} job runs beside the release lanes (no \`needs:\`)`
+    );
+  }
+  const minutes = job["timeout-minutes"];
+  if (typeof minutes !== "number" || minutes > E2E_MAX_MINUTES) {
+    errors.push(
+      `${file}: the ${E2E_JOB} job needs timeout-minutes of at most ${E2E_MAX_MINUTES}`
+    );
+  }
+  if (job.strategy?.["fail-fast"] !== false) {
+    errors.push(`${file}: the ${E2E_JOB} matrix must set fail-fast: false`);
+  }
+  const projects = [...input.playwrightConfig.matchAll(E2E_PROJECT_NAME)].map(
+    (match) => match[1] ?? ""
+  );
+  if (!sameList(job.strategy?.matrix?.shard ?? [], projects)) {
+    errors.push(
+      `${file}: the ${E2E_JOB} shards must be the Playwright projects (${projects.join(", ")})`
+    );
+  }
+  const steps = job.steps ?? [];
+  const commands: [string, string][] = [
+    ["bun install --frozen-lockfile", "install"],
+    [E2E_INSTALL_BROWSER, "install the matching Chromium"],
+    ["migrate:dev", "migrate the dev D1"],
+    ["seed:dev", "seed the dev D1"],
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expression, not JavaScript interpolation.
+    ["bun run test:e2e -- --project ${{ matrix.shard }}", "run the shard"],
+  ];
+  for (const [command, what] of commands) {
+    if (findStepIndex(steps, command) === -1) {
+      errors.push(
+        `${file}: the ${E2E_JOB} job has no step to ${what} (\`${command}\`)`
+      );
+    }
+  }
+  const rootScripts = parseJsonRecord(input.rootPackage, "scripts");
+  if (typeof rootScripts["test:e2e"] !== "string") {
+    errors.push("package.json: no test:e2e script");
+  }
+  return errors;
+}
+
+function parseJsonRecord(source: string, key: string): Record<string, unknown> {
+  try {
+    const value = (JSON.parse(source) as Record<string, unknown>)[key];
+    return isRecord(value) ? value : {};
+  } catch {
+    return {};
+  }
 }
 
 function needsList(job: Job): string[] {
@@ -1541,6 +1630,11 @@ export function checkReleaseConfig(
   return [
     ...checkCiWorkflow(read(".github/workflows/ci.yml")),
     ...checkRenderLaneBuild(read(".github/workflows/ci.yml")),
+    ...checkE2eJob({
+      ci: read(".github/workflows/ci.yml"),
+      playwrightConfig: read("apps/site/playwright.config.ts"),
+      rootPackage: read("package.json"),
+    }),
     ...checkDeployWorkflow(read(".github/workflows/deploy.yml"), migrationsDir),
     ...checkReleaseScripts(read("package.json")),
     ...checkSiteDryRuns(read("apps/site/package.json")),

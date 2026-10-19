@@ -11,7 +11,7 @@ import {
   themedContext,
   WIDTHS,
 } from "./admin";
-import { blockingViolations, watchErrors } from "./helpers";
+import { blockingViolations, settleForShot, watchErrors } from "./helpers";
 import { signInAsAdmin } from "./maintenance";
 import { ensureViewFixtures, openDetail, VIEW_IDS } from "./sponsorships";
 
@@ -172,7 +172,7 @@ test.describe("admin sponsorships: accessibility", () => {
             if (!overlay) {
               await page.evaluate(() => window.scrollTo(0, 0));
             }
-            await page.waitForTimeout(300);
+            await settleForShot(page);
             await page.screenshot({ fullPage: !overlay, path });
           }
         );

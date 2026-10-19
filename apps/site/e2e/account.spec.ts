@@ -296,7 +296,7 @@ test.describe("consent banner", () => {
     await toggle.click();
     await expect(toggle).not.toBeChecked();
     expect(await storedConsent(page)).toBe(false);
-    await page.waitForTimeout(300);
+    await page.waitForLoadState("networkidle");
     const withdrawn = relay.length;
     await page.getByRole("link", { name: "Aanmelden" }).first().click();
     await page.waitForLoadState("networkidle");

@@ -9,6 +9,7 @@
       "packages/features/*"
     ],
     "catalog": {
+      "@axe-core/playwright": "4.13.0",
       "@cloudflare/containers": "0.3.7",
       "@cloudflare/vite-plugin": "1.62.5",
       "@cloudflare/vitest-plugin": "1.3.6",
@@ -20,6 +21,7 @@
       "@orpc/server": "1.15.4",
       "@orpc/tanstack-query": "1.15.4",
       "@orpc/zod": "1.15.4",
+      "@playwright/test": "1.64.1",
       "@react-native-async-storage/async-storage": "2.2.0",
       "@remotion/bundler": "4.0.532",
       "@remotion/fonts": "4.0.532",
@@ -73,6 +75,7 @@
     "release:check:tests": "bun run test",
     "retention": "bun scripts/retention.ts",
     "test": "turbo run test test:scripts --log-order=stream",
+    "test:e2e": "bun scripts/e2e.ts",
     "test:scripts": "bun scripts/test-deadline.ts -- bun test ./scripts"
   },
   "overrides": {

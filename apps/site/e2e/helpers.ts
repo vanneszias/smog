@@ -332,3 +332,48 @@ export async function tabTo(
   }
   await expect(target).toBeFocused();
 }
+
+/**
+ * Waits until the page has painted what a screenshot should show: web
+ * fonts loaded, every image decoded (or failed) and two animation frames
+ * past the last layout change. Conditions, not a fixed sleep.
+ */
+export async function settleForShot(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all(
+      [...document.images].map((image) =>
+        image.complete
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              image.addEventListener("load", () => resolve(), { once: true });
+              image.addEventListener("error", () => resolve(), { once: true });
+            })
+      )
+    );
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+  });
+}
+
+/**
+ * Starts listening for the next `storage` event (another tab wrote
+ * localStorage) in `page`. Await the returned function after the write: the
+ * app's own listener (registered earlier) has run by then, so a "nothing is
+ * sent afterwards" assertion starts from a settled state, not a sleep.
+ */
+export async function expectStorageEvent(
+  page: Page
+): Promise<() => Promise<void>> {
+  // An object around the promise: `evaluateHandle` would await a bare one.
+  const handle = await page.evaluateHandle(() => ({
+    seen: new Promise<void>((resolve) => {
+      window.addEventListener("storage", () => resolve(), { once: true });
+    }),
+  }));
+  return async () => {
+    await handle.evaluate((box) => box.seen);
+    await handle.dispose();
+  };
+}

@@ -19,6 +19,7 @@ import {
   blockingViolations,
   e2eSeed,
   ORIGIN,
+  settleForShot,
   stubMux,
   stubMuxRenditions,
   stubMuxStream,
@@ -679,7 +680,7 @@ async function shoot(page: Page, path: string): Promise<void> {
     }
   });
   await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(300);
+  await settleForShot(page);
   await page.screenshot({ fullPage: true, path });
 }
 

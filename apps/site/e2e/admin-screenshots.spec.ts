@@ -8,7 +8,7 @@ import {
   openAdmin,
   shotsDir,
 } from "./admin";
-import { e2eSeed, signInWithApi } from "./helpers";
+import { e2eSeed, settleForShot, signInWithApi } from "./helpers";
 
 /*
  * The review screenshots of every admin screen and its dialogs and sheets
@@ -37,13 +37,13 @@ async function shoot(page: Page, path: string): Promise<void> {
     }
   });
   await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(300);
+  await settleForShot(page);
   await page.screenshot({ fullPage: true, path });
 }
 
 /** A viewport shot, for an open dialog or sheet (it covers the page). */
 async function shootOverlay(page: Page, path: string): Promise<void> {
-  await page.waitForTimeout(300);
+  await settleForShot(page);
   await page.screenshot({ path });
 }
 
