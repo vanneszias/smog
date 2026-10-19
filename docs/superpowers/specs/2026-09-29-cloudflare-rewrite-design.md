@@ -76,9 +76,9 @@ packages/
   brand/                logo artwork + icon generator (ported from the reference branch)
   ui-web/               web component kit (Tailwind v4, Radix primitives, cva)
   ui-native/            native component kit (NativeWind)
+  migrate-convex/       one-off Convex → D1 importer (Bun CLI + pure core; nothing depends on it; spec §15)
 scripts/
-  migrate-from-convex/  one-off data migration (Bun)
-  check-boundaries.ts, release-config-check.ts, mobile-release-check.ts
+  check-boundaries.ts, release-config-check.ts, check-deploy-config.ts, mobile-release-check.ts (amended in phase 8: the one-off data migration is the package `migrate-convex/` above, not a script)
 ```
 
 Package names: `@smog/<dir>` (`@smog/gestures`, not `@smog/features-gestures`).
@@ -478,16 +478,24 @@ External services are faked at the adapter boundary. `@smog/payments/testing` pr
   - `ci.yml` (push + PR): install → Biome → boundaries → typecheck → tests (incl. workers pool) → build → knip → expo-doctor + export → Playwright e2e.
   - `deploy.yml` (push to `develop`/`master`): `wrangler d1 migrations apply DB --env <env> --remote` then `wrangler deploy --env <env>`, using the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets. Skipped with a warning when the secrets are absent.
 - Docs: `docs/deployment.md` (first-time setup) and `docs/cutover-runbook.md` (production switch-over including the data migration), in the reference branch's style.
+- **Amended in phase 8** (rulings in `docs/DECISIONS.md`, "phase 8 task N"):
+  - **Production's origin (ruling 2).** The default launch origin is `https://smog-site-production.zias.workers.dev`, the account's workers.dev subdomain (no custom domain, as §1 says). Production first deploys there with maintenance on; the import and the admin check happen before any public switch. Moving to `app.smog.vlaanderen` is the owner's decision, prepared as a documented domain diff (a Custom Domain route, `SITE_URL`, the EAS production origin, `PRODUCTION_LAUNCH_ORIGIN`) with its checklist (the bucket's CORS for both origins first, the DNS record, Turnstile hostnames, OAuth redirects, passkeys, AASA) in `docs/cutover-runbook.md`.
+  - **The deploy config check (ruling 1).** `deploy.yml` runs `scripts/check-deploy-config.ts` first (after `bun install`, before `Ensure Cloudflare resources`): the env's vars, `SITE_URL` and KV/D1 ids in `wrangler.jsonc`, and `wrangler secret list` against `requiredWorkerConfig(env, renderMode)` plus the sign-in provider pairs. Staging only warns until `SMOG_REQUIRE_SECRETS=1` (a staging environment variable); production always enforces.
+  - **Mux per env (ruling 4).** Staging and production use separate Mux environments (production keeps the existing one); render passthroughs are `render-job:<env>:<jobId>` and another env's events are ignored.
+  - **EAS (ruling 3).** `appVersionSource: "remote"` with the owner seeding iOS 51 / Android 80; the profiles `development`, `staging` and `production` point at their site origins, and every OTA update goes through `bun -F @smog/mobile update`.
+  - **The CSP report endpoint (ruling 11).** `POST /api/csp-report`, same-origin, capped, rate-limited, logging only (no relay to OpenPanel).
 
-## 15. Data migration (`scripts/migrate-from-convex`)
+## 15. Data migration (`packages/migrate-convex`)
+
+> **Amended in phase 8.** The importer is a workspace package, `@smog/migrate-convex` (`bun run migrate:convex <command>`), not `scripts/migrate-from-convex`: it needs its own dependencies and a Workers-pool suite (ruling 6). Below, the original text stays where it still holds; the amendments are marked and the authority is `docs/DECISIONS.md` (phase 8 tasks 5 to 10) and `docs/cutover-runbook.md`.
 
 - Input: `npx convex export` ZIP, or a directory of per-table JSONL files.
 - Pipeline:
   1. `read` streams each table.
   2. `transform`: pure functions per entity, with an ID map; unit-tested with fixture exports.
-  3. `emit` writes SQL batch files (`INSERT … ON CONFLICT(legacy_id) DO UPDATE`, which makes re-runs idempotent) and `report.json` + `report.md`.
-  4. Apply with `wrangler d1 execute DB --env <env> --remote --file <batch>`.
-- `--dry-run` produces only the report.
+  3. `emit` writes SQL batch files and `report.json` + `report.md`. **Amended (ruling 7):** every migrated row's id is a deterministic `legacyUuid(table, key)` and every insert is `INSERT … ON CONFLICT(<key>) DO NOTHING` with the conflict target always named (`legacy_id`, also `email` on `user`, the primary key elsewhere); no statement updates a column the new system owns, and **existing accounts are claimed by email, never overwritten, and their role is never changed** (the `user_keep_one_admin` trigger, migration 0007). Re-runs finish an interrupted apply; a changed export needs `apply --reset`.
+  4. Apply with `wrangler d1 execute DB --env <env> --remote --file <batch>`. **Amended (ruling 14):** `apply --env <dev|staging|production> --out <dir> [--dry-run] [--yes] [--reset]` first checks the plan folder against its manifest, the target guard (a staging plan only on staging, a production plan only on production, dev takes either) and a read-only **preflight** (migrations ≥ 0012, maintenance on, no slug, share token, Mollie id or address held by a foreign row, at least one admin), then applies the files in order (`10-users`, `20-catalog`, `30-learning`, `40-account`, `50-sponsorships`, `90-fts`), bumps `catalog:version` and verifies the counts. Production needs `--yes` and refuses `--reset`.
+- **Amended (ruling 6):** `plan --export … --target <staging|production> --out … [--now …] [--workos-users …] [--mux-map …] [--overrides …] [--report-only]` replaces `--dry-run`: `--report-only` produces only the report. A staging target is always pseudonymised.
 - Rules:
   - Guests (a `guestId` with no `workosId`/email) and all their rows are skipped, and counted.
   - WorkOS users become Better Auth `user` rows (same email, `email_verified = true`, `role`, `created_at`) with no credential.
@@ -505,7 +513,8 @@ External services are faked at the adapter boundary. `@smog/payments/testing` pr
   - Mux ids carry over unchanged.
   - Unexpired old re-edit tokens become `sponsorship_token` rows with purpose `reedit`. They store the SHA-256 hash of the old raw token and keep its expiry, so links already sent keep working. The legacy `/sponsors/re-edit?token=` path redirects to `/sponsor/edit?token=` with the token kept.
   - Payments created just before cutover still have the old webhook URL (`<origin>/webhooks/mollie`). The site therefore also serves `POST /webhooks/mollie` as an alias of `/api/webhooks/mollie`, and matches those payments through `payment.mollie_id` from the migrated `molliePaymentId`. The alias can be removed 30 days after cutover.
-- The `we_moved` email job is optional and enqueued by `--send-we-moved`.
+- The `we_moved` email job is optional. **Amended (ruling 15):** it is the separate command `we-moved --env production --out <dir> [--apply]` (production only, dry by default, a ledger, the Queues HTTP API to `smog-production-email`), not a `--send-we-moved` flag.
+- **Amended (rulings 8 to 10):** users are skipped as guests when they have no `workosId`; the WorkOS email wins when `--workos-users` is given; `welcomed_at` is set so a migrated user is never welcomed (migration 0012); each sponsored gesture gets its own video back (the old `approve` had overwritten `gestures.playbackId`); `display_name` is the old `overlayText` (over 35 characters is a blocker unless overridden); logos are not migrated; an old `pending_payment` with a Mollie id imports as `awaiting_payment` with an `open` payment and the stale sweep asks Mollie. Two more commands: `mux scan` (read-only) and `mux renditions [--apply]` (`static_renditions: highest` on the gesture assets, billable). See `docs/DATA_MODEL.md`, "Migrated data".
 
 ## 16. UI/UX design brief
 
