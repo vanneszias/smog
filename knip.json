@@ -71,7 +71,7 @@
       "ignoreDependencies": ["cloudflare"]
     },
     "packages/migrate-convex": {
-      "entry": ["src/cli/main.ts", "test/**/*.test.ts"],
+      "entry": ["test/**/*.test.ts"],
       "project": ["src/**/*.ts", "test/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },

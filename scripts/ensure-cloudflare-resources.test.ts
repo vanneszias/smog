@@ -451,10 +451,15 @@ describe("ensureResources --create", () => {
     expect(result.ok).toBe(true);
   });
 
-  test("production's workers.dev origin in wrangler.jsonc is not a placeholder", async () => {
+  test("production's origin in wrangler.jsonc is not a placeholder", async () => {
+    // Whichever origin the owner chose (workers.dev or the domain,
+    // `docs/cutover-runbook.md`): the file's own SITE_URL is the CORS origin.
+    const wrangler = Bun.JSONC.parse(WRANGLER) as {
+      env: { production: { vars: { SITE_URL: string } } };
+    };
     const plan = planResources(WRANGLER, "production");
     expect(plan.buckets[0]?.corsOrigin).toBe(
-      "https://smog-site-production.zias.workers.dev"
+      new URL(wrangler.env.production.vars.SITE_URL).origin
     );
     const { result } = await ensure("create", account(), "production", {
       plan,

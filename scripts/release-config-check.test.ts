@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { PRODUCTION_LAUNCH_ORIGIN } from "@smog/config/constants";
 import {
   type AppLinkIdentity,
   appLinkIdentity,
@@ -798,7 +799,11 @@ describe("checkEasUpdateScripts (OTA updates carry the profile's origin)", () =>
 describe("checkEasProfiles (phase 8 ruling 3)", () => {
   const EAS = readFileSync(join(ROOT, "apps", "mobile", "eas.json"), "utf8");
   const STAGING = "https://smog-site-staging.zias.workers.dev";
-  const PRODUCTION = "https://smog-site-production.zias.workers.dev";
+  // The committed launch origin, whichever path the owner chose (workers.dev
+  // or the domain, `docs/cutover-runbook.md`): no test assumes either.
+  const PRODUCTION = PRODUCTION_LAUNCH_ORIGIN;
+  // Another origin than the committed one, for the tests that change it.
+  const ELSEWHERE = "https://elsewhere.zias.workers.dev";
   const base = {
     eas: EAS,
     fallbackHost: "smog-site-staging.zias.workers.dev",
@@ -843,31 +848,33 @@ describe("checkEasProfiles (phase 8 ruling 3)", () => {
   });
 
   test("fails when the production profile is not PRODUCTION_LAUNCH_ORIGIN", () => {
-    const domain = "https://app.smog.vlaanderen";
-    const result = checkEasProfiles({ ...base, launchOrigin: domain });
+    const result = checkEasProfiles({ ...base, launchOrigin: ELSEWHERE });
     expect(result.errors).toEqual([
-      `apps/mobile/eas.json: build.production.env.EXPO_PUBLIC_API_URL must be ${domain} (PRODUCTION_LAUNCH_ORIGIN)`,
-      "apps/mobile/eas.json: build.production.env.EXPO_PUBLIC_SITE_HOST must be app.smog.vlaanderen",
+      `apps/mobile/eas.json: build.production.env.EXPO_PUBLIC_API_URL must be ${ELSEWHERE} (PRODUCTION_LAUNCH_ORIGIN)`,
+      `apps/mobile/eas.json: build.production.env.EXPO_PUBLIC_SITE_HOST must be ${new URL(ELSEWHERE).host}`,
     ]);
   });
 
   test("warns, not fails, when PRODUCTION_LAUNCH_ORIGIN is not production's SITE_URL", () => {
-    const domain = "https://app.smog.vlaanderen";
+    const wrangler = Bun.JSONC.parse(WRANGLER) as {
+      env: { production: { vars: { SITE_URL: string } } };
+    };
+    const siteUrl = wrangler.env.production.vars.SITE_URL;
     const result = checkEasProfiles({
       ...base,
       eas: EAS.replace(
         `"EXPO_PUBLIC_API_URL": "${PRODUCTION}"`,
-        `"EXPO_PUBLIC_API_URL": "${domain}"`
+        `"EXPO_PUBLIC_API_URL": "${ELSEWHERE}"`
       ).replace(
-        '"EXPO_PUBLIC_SITE_HOST": "smog-site-production.zias.workers.dev"',
-        '"EXPO_PUBLIC_SITE_HOST": "app.smog.vlaanderen"'
+        `"EXPO_PUBLIC_SITE_HOST": "${new URL(PRODUCTION).host}"`,
+        `"EXPO_PUBLIC_SITE_HOST": "${new URL(ELSEWHERE).host}"`
       ),
-      launchOrigin: domain,
+      launchOrigin: ELSEWHERE,
     });
     expect(result).toEqual({
       errors: [],
       warnings: [
-        `PRODUCTION_LAUNCH_ORIGIN (${domain}) differs from production's SITE_URL (${PRODUCTION}): the production app is built for another origin than the site deploys to`,
+        `PRODUCTION_LAUNCH_ORIGIN (${ELSEWHERE}) differs from production's SITE_URL (${siteUrl}): the production app is built for another origin than the site deploys to`,
       ],
     });
   });
