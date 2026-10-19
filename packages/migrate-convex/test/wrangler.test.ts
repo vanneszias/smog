@@ -108,6 +108,40 @@ describe("the wrangler runner, against the fake", () => {
     await expect(failure).rejects.not.toThrow("ada@example.test");
   });
 
+  test("masks quoted SQL fragments and addresses in wrangler's reason (M-5)", async () => {
+    const failing =
+      (stderr: string, stdout = ""): CommandRunner =>
+      () =>
+        Promise.resolve({ code: 1, stderr, stdout });
+    for (const [stderr, stdout] of [
+      ['✘ [ERROR] near "ada@example.test": syntax error\n', ""],
+      ["✘ [ERROR] UNIQUE constraint failed: 'ada@example.test'\n", ""],
+      ["", `{"error":{"text":"near 'ada@example.test': syntax error"}}`],
+      ["✘ [ERROR] failed for ada@example.test in user\n", ""],
+    ] as const) {
+      const failure = createWrangler(
+        "staging",
+        failing(stderr, stdout)
+      ).d1Execute({ command: "SELECT 1" });
+      const message = String(
+        // biome-ignore lint/performance/noAwaitInLoops: four cases, one after the other.
+        await failure.then(
+          () => "resolved",
+          (error: unknown) => (error as Error).message
+        )
+      );
+      expect(message).toContain("failed on staging (exit 1)");
+      expect(message).not.toContain("ada@");
+      expect(message).not.toContain("example.test");
+    }
+    await expect(
+      createWrangler(
+        "staging",
+        failing('✘ [ERROR] near "x": syntax error\n')
+      ).d1Execute({ command: "SELECT 1" })
+    ).rejects.toThrow('near "…": syntax error');
+  });
+
   test("reads wrangler's JSON error, refuses an odd shape and a failed statement", async () => {
     const answer =
       (stdout: string, code = 0): CommandRunner =>
