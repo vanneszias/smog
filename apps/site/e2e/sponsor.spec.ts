@@ -345,8 +345,13 @@ test("keyboard only: the cards, the selection bar, the dropzone's button and the
   await tabTo(page, page.getByRole("checkbox", { name: LOGO_TOEVOEGEN }));
   await page.keyboard.press("Space");
   // The dropzone's keyboard path is its button, which opens the file picker.
-  await tabTo(page, page.getByRole("button", { name: "kies een bestand" }));
+  // The chooser listener goes first: Playwright turns file chooser
+  // interception on when the listener is added, and Enter must not beat it
+  // (a loaded runner lost the event now and then). No-op catch: if the Tab
+  // walk throws first, the page closing must not reject unhandled.
   const chooser = page.waitForEvent("filechooser");
+  chooser.catch(() => undefined);
+  await tabTo(page, page.getByRole("button", { name: "kies een bestand" }));
   await page.keyboard.press("Enter");
   await (await chooser).setFiles({
     buffer: PNG,
