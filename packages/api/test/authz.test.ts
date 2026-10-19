@@ -134,6 +134,15 @@ describe("admin mount", () => {
       path.startsWith(ADMIN_PREFIX)
     );
     expect(admin).toContain("admin.dashboard");
+    // Phase 9 task 4: the dead-letter procedures are in the table (each is
+    // then checked below: UNAUTHORIZED for a guest, FORBIDDEN for a user).
+    expect(admin).toEqual(
+      expect.arrayContaining([
+        "admin.deadLetters.discard",
+        "admin.deadLetters.list",
+        "admin.deadLetters.replay",
+      ])
+    );
     for (const path of admin) {
       expect(procedureAt(path), path).toBeDefined();
     }

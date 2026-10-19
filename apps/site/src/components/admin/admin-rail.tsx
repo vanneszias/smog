@@ -15,6 +15,7 @@ import {
   HandCoins,
   LayoutDashboard,
   Mail,
+  MailWarning,
   PanelLeft,
   ScrollText,
   Settings,
@@ -52,6 +53,11 @@ const RAIL_ITEMS: readonly RailItem[] = [
   { href: "/admin/users", icon: <Users />, label: "admin.rail.users" },
   { href: "/admin/audit", icon: <ScrollText />, label: "admin.rail.audit" },
   { href: "/admin/emails", icon: <Mail />, label: "admin.rail.emails" },
+  {
+    href: "/admin/dead-letters",
+    icon: <MailWarning />,
+    label: "admin.rail.deadLetters",
+  },
   { href: "/admin/settings", icon: <Settings />, label: "admin.rail.settings" },
 ];
 

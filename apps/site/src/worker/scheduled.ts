@@ -1,3 +1,4 @@
+import { runDeadLetterDigest } from "@smog/admin/server";
 import { createDb } from "@smog/db/client";
 import {
   type CronName,
@@ -9,6 +10,7 @@ import {
 } from "@smog/jobs";
 import { createMollie } from "@smog/payments";
 import {
+  adminRecipients,
   runExpirySweep,
   runReminderSweep,
   runRetentionPurge,
@@ -106,6 +108,54 @@ function cronQueues(): JobQueues {
   return { email: bindings.EMAIL_QUEUE, events: bindings.EVENTS_QUEUE };
 }
 
+/**
+ * The daily retention cron: the purge, then the dead-letter digest (phase 9
+ * task 4: one `admin_dead_letter` email per admin when dead letters wait,
+ * messages were lost or a render has been failed for over a day, at most
+ * once a day). Each part runs even when the other fails; the first failure
+ * is rethrown after both, so the run shows as failed and the next day
+ * continues.
+ */
+async function runRetention(now: Date): Promise<Record<string, number>> {
+  const { bindings, db: d1, kv, vars } = siteEnv();
+  const db = createDb(d1);
+  let failure: unknown;
+  let purged: Record<string, number> = {};
+  try {
+    purged = {
+      ...(await runRetentionPurge({
+        db,
+        kv,
+        media: bindings.MEDIA,
+        mux: createMux(siteEnv().worker),
+        now,
+      })),
+    };
+  } catch (error) {
+    failure = error;
+  }
+  let digest = { digestSent: 0 };
+  try {
+    digest = await runDeadLetterDigest({
+      db,
+      kv,
+      now,
+      queue: bindings.EMAIL_QUEUE as unknown as
+        | QueueProducer<EmailMessage>
+        | undefined,
+      recipients: adminRecipients,
+      siteUrl: vars.SITE_URL,
+    });
+  } catch (error) {
+    console.error("[cron] Failed to send the dead-letter digest:", error);
+    failure ??= error;
+  }
+  if (failure !== undefined) {
+    throw failure;
+  }
+  return { ...purged, ...digest };
+}
+
 const HANDLERS: Record<CronName, CronHandler> = {
   expiry: async (now) => ({
     ...(await runExpirySweep({
@@ -122,15 +172,7 @@ const HANDLERS: Record<CronName, CronHandler> = {
       siteUrl: siteEnv().vars.SITE_URL,
     })),
   }),
-  retention: async (now) => ({
-    ...(await runRetentionPurge({
-      db: createDb(siteEnv().db),
-      kv: siteEnv().kv,
-      media: siteEnv().bindings.MEDIA,
-      mux: createMux(siteEnv().worker),
-      now,
-    })),
-  }),
+  retention: runRetention,
   stale: async (now) => ({
     ...(await runStaleSweep({
       db: createDb(siteEnv().db),

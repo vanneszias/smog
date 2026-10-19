@@ -17,6 +17,7 @@ import { FolderTree, Hand, HandCoins, Plus, Users } from "lucide-react";
 import { type ReactNode, useCallback } from "react";
 import { AdminPage } from "@/components/admin/admin-page";
 import { AuditEntries } from "@/components/admin/audit-table";
+import { DeadLetterStats } from "@/components/admin/dead-letters/dead-letter-stats";
 import { SponsorshipStats } from "@/components/admin/sponsorships/dashboard-stats";
 import { pageMeta } from "@/lib/head";
 
@@ -68,6 +69,10 @@ function Stats({ data }: { data: Dashboard }): ReactNode {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <SponsorshipStats stats={data.sponsorships} />
+      <DeadLetterStats
+        renderFailed={data.sponsorships.renderFailed}
+        stats={data.deadLetters}
+      />
       <StatCard
         details={[
           t("admin.dashboard.published", { count: gestures.published }),
