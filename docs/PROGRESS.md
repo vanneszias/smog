@@ -53,7 +53,7 @@ Workflow: superpowers by hand (the plugin was unavailable). Plans are in `docs/s
 
 ## Next
 
-- Phases 2–8: built. Phase 8 is done once its phase review and fix wave are merged. Next: phase 9 (hardening: e2e in CI, a11y, perf, docs, the parity audit and the carries at the end of this file), **and the owner's sequence below, which nothing else can replace**: no env deploys the render pipeline, production has never deployed, and the real import has never run.
+- Phases 2–8: done (phase 8's review and fix wave are merged and deployed to staging as 415bdc1). Next: phase 9 (hardening: e2e in CI, a11y, perf, docs, the parity audit and the carries at the end of this file), **and the owner's sequence below, which nothing else can replace**: no env deploys the render pipeline, production has never deployed, and the real import has never run.
 - Phase 6: tasks 1–9, the whole-phase review, both fix waves (server and UI) and the close-out are in. Every phase 6 carry from phase 5 is done: the sponsorship admin (A-04–A-12, A-15, A-29, the rail entry, the dashboard stats, the user panel's sponsorships, task 6/7), the audit data schemas (task 6), the email samples and labels (tasks 1/2), R-11 (task 8), the presigned logo PUT (task 4), L-17 and `sponsorship_checkout_started` (task 8), the daily retention purge (task 5) and the required-config list (tasks 1/9). The e2e skip flags (`apps/site/e2e/phase6.ts`, `PHASE6_PENDING`) are deleted and `scripts/phase6-guard.test.ts` keeps them (and any `notImplemented(` stub) out.
 - Phase 6 open items for the owner (none blocks phase 7):
   - Whether renewals get an analytics event (`sponsorship_renewal_started`) before launch.
