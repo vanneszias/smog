@@ -217,6 +217,24 @@ describe("checkDeployWorkflow", () => {
   });
 });
 
+describe("the Cloudflare secrets step (phase 8 fix wave, I-4)", () => {
+  test("the real deploy.yml fails production without the secrets", () => {
+    expect(DEPLOY).toContain('"$CLOUDFLARE_ENV" = "production"');
+    expect(checkDeployWorkflow(DEPLOY)).toEqual([]);
+  });
+
+  test("fails when a missing production token only skips", () => {
+    const skipping = DEPLOY.replace(
+      /            if \[ "\$CLOUDFLARE_ENV" = "production" \]; then\n {14}echo "::error[^\n]*\n {14}exit 1\n {12}fi\n/,
+      ""
+    );
+    expect(skipping).not.toBe(DEPLOY);
+    expect(checkDeployWorkflow(skipping).join("\n")).toContain(
+      "must fail for production"
+    );
+  });
+});
+
 describe("checkDeployConfigStep (phase 8 ruling 1)", () => {
   const errorsOf = (source: string): string =>
     checkDeployConfigStep(source).join("\n");
