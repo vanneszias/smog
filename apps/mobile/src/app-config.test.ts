@@ -6,9 +6,8 @@ import { PRODUCTION_LAUNCH_ORIGIN } from "@smog/config/constants";
 import { parseMobileEnv } from "@smog/config/env/mobile";
 import { tokens } from "@smog/styles/tokens";
 import type { ConfigContext, ExpoConfig } from "expo/config";
-import createConfig from "../app.config";
+import createConfig, { parseAppVariant, variantIdentity } from "../app.config";
 import easJson from "../eas.json";
-import { parseAppVariant, variantIdentity } from "./app-variant";
 import { devToolsAvailable } from "./lib/dev-tools";
 
 const PROJECT_ID = "9fa68b63-dfa5-498a-9196-5eba93ecac29";
