@@ -122,11 +122,20 @@ describe("checkE2eJob", () => {
     join(ROOT, "apps", "site", "playwright.config.ts"),
     "utf8"
   );
-  const check = (ci: string, rootPackage = PACKAGE): string =>
+  const SITE_PACKAGE = readFileSync(
+    join(ROOT, "apps", "site", "package.json"),
+    "utf8"
+  );
+  const check = (
+    ci: string,
+    rootPackage = PACKAGE,
+    sitePackage = SITE_PACKAGE
+  ): string =>
     checkE2eJob({
       ci,
       playwrightConfig: PLAYWRIGHT_CONFIG,
       rootPackage,
+      sitePackage,
     }).join("\n");
 
   test("passes on the real workflow", () => {
@@ -171,11 +180,54 @@ describe("checkE2eJob", () => {
     );
   });
 
+  test("fails without the flaky report, the upload or the browser override", () => {
+    expect(
+      check(CI.replace("scripts/e2e-flaky-report.ts", "scripts/other.ts"))
+    ).toContain("flaky-report");
+    expect(
+      check(
+        CI.replace(
+          "      - if: always()\n        uses: actions/upload",
+          "      - if: failure()\n        uses: actions/upload"
+        )
+      )
+    ).toContain("if: always()");
+    expect(
+      check(
+        CI.replace(
+          'PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "0"',
+          'PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"'
+        )
+      )
+    ).toContain("must override");
+  });
+
+  test("fails without a deadline below the job timeout or the site wrapper", () => {
+    expect(
+      check(
+        CI.replace(
+          'SMOG_TEST_DEADLINE_MINUTES: "35"',
+          'SMOG_TEST_DEADLINE_MINUTES: "44"'
+        )
+      )
+    ).toContain("SMOG_TEST_DEADLINE_MINUTES");
+    expect(
+      check(
+        CI,
+        PACKAGE,
+        SITE_PACKAGE.replace(
+          "bun ../../scripts/test-deadline.ts -- playwright",
+          "playwright"
+        )
+      )
+    ).toContain("test-deadline.ts");
+  });
+
   test("fails when the job can run for too long", () => {
     const e2e = CI.indexOf("  e2e:\n");
     const slow =
       CI.slice(0, e2e) +
-      CI.slice(e2e).replace("timeout-minutes: 30", "timeout-minutes: 90");
+      CI.slice(e2e).replace("timeout-minutes: 45", "timeout-minutes: 90");
     expect(check(slow)).toContain("timeout-minutes");
   });
 });

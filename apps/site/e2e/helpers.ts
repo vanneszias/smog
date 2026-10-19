@@ -367,20 +367,34 @@ export async function tabTo(
  */
 export async function settleForShot(page: Page): Promise<void> {
   await page.evaluate(async () => {
-    await document.fonts.ready;
-    await Promise.all(
-      [...document.images].map((image) =>
-        image.complete
-          ? Promise.resolve()
-          : new Promise<void>((resolve) => {
-              image.addEventListener("load", () => resolve(), { once: true });
-              image.addEventListener("error", () => resolve(), { once: true });
-            })
-      )
-    );
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-    });
+    const settled = async (): Promise<void> => {
+      await document.fonts.ready;
+      await Promise.all(
+        [...document.images]
+          // An offscreen lazy image never loads (a full-page shot does not
+          // scroll): not waited for.
+          .filter((image) => !image.complete && image.loading !== "lazy")
+          .map(
+            (image) =>
+              new Promise<void>((resolve) => {
+                image.addEventListener("load", () => resolve(), { once: true });
+                image.addEventListener("error", () => resolve(), {
+                  once: true,
+                });
+              })
+          )
+      );
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+    };
+    // Bounded: a stuck image must not eat the test's whole timeout.
+    await Promise.race([
+      settled(),
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, 5000);
+      }),
+    ]);
   });
 }
 

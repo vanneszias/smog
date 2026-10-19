@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { findFlaky, summaryMarkdown, warningLines } from "./e2e-flaky-report";
 
 const REPORT = {
@@ -66,5 +69,22 @@ describe("the outputs", () => {
   test("the summary names the test, or says there are none", () => {
     expect(summaryMarkdown(findFlaky(REPORT))).toContain("1 flaky test");
     expect(summaryMarkdown([])).toContain("no flaky tests");
+  });
+});
+
+describe("the command", () => {
+  test("tolerates a truncated report (warns, exits 0)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "flaky-"));
+    try {
+      const path = join(dir, "results.json");
+      writeFileSync(path, '{"suites": [{"specs": [');
+      const run = Bun.spawnSync(["bun", "scripts/e2e-flaky-report.ts", path], {
+        cwd: join(import.meta.dir, ".."),
+      });
+      expect(run.exitCode).toBe(0);
+      expect(run.stdout.toString()).toContain("Failed to read");
+    } finally {
+      rmSync(dir, { force: true, recursive: true });
+    }
   });
 });

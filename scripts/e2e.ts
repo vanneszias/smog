@@ -2,7 +2,7 @@
  * `bun run test:e2e [-- <playwright args>]`: the Playwright e2e suite of
  * `apps/site` (phase 9 ruling 1).
  *
- * The suite is four independent Playwright projects (`apps/site/playwright.config.ts`).
+ * The suite is five independent Playwright projects (`apps/site/playwright.config.ts`).
  * With no `--project`, this runs them one after another in `PROJECTS` order,
  * each as its own `bun -F @smog/site test:e2e` command, which carries its own
  * `test-deadline.ts` wrapper: the wrapper's 25 minutes apply per project, so
@@ -43,22 +43,50 @@ function projectsIn(args: readonly string[]): string[] {
   return found;
 }
 
-function withEmptyAllowance(args: string[], projects: string[]): string[] {
-  const allEmptyOk =
-    projects.length > 0 && projects.every((name) => MAY_BE_EMPTY.has(name));
-  return allEmptyOk && !args.includes("--pass-with-no-tests")
-    ? [...args, "--pass-with-no-tests"]
+const PASS_WITH_NO_TESTS = "--pass-with-no-tests";
+
+/**
+ * `--project x` becomes `--project=x`: Playwright's `--project` is variadic,
+ * so a positional file filter after it would be read as a second project.
+ */
+function singleTokenProjects(args: readonly string[]): string[] {
+  const out: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index] ?? "";
+    const next = args[index + 1];
+    if ((arg === "--project" || arg === "-p") && next !== undefined) {
+      out.push(`--project=${next}`);
+      index += 1;
+    } else {
+      out.push(arg);
+    }
+  }
+  return out;
+}
+
+function allowEmpty(args: string[], allowed: boolean): string[] {
+  return allowed && !args.includes(PASS_WITH_NO_TESTS)
+    ? [...args, PASS_WITH_NO_TESTS]
     : args;
 }
 
-/** The argument lists of the `test:e2e` commands to run, in order. */
+/**
+ * The argument lists of the `test:e2e` commands to run, in order. A full run
+ * puts the user's arguments first and `--project=<name>` last; any user
+ * argument (a file filter, `--grep`) may match nothing in a project, which
+ * must not stop the chain, so it also passes `--pass-with-no-tests`.
+ */
 export function planRuns(args: readonly string[]): string[][] {
   const requested = projectsIn(args);
   if (requested.length > 0) {
-    return [withEmptyAllowance([...args], requested)];
+    const only = requested.every((name) => MAY_BE_EMPTY.has(name));
+    return [allowEmpty(singleTokenProjects(args), only)];
   }
   return PROJECTS.map((name) =>
-    withEmptyAllowance(["--project", name, ...args], [name])
+    allowEmpty(
+      [...args, `--project=${name}`],
+      args.length > 0 || MAY_BE_EMPTY.has(name)
+    )
   );
 }
 

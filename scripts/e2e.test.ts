@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PROJECTS, planRuns } from "./e2e";
+import { E2E_PROJECT_NAME } from "./release-config-check";
 
 const ROOT = join(import.meta.dir, "..");
 const E2E_DIR = join(ROOT, "apps", "site", "e2e");
@@ -9,40 +10,49 @@ const CONFIG = readFileSync(
   join(ROOT, "apps", "site", "playwright.config.ts"),
   "utf8"
 );
-const PROJECT_NAME = /^\s{6}name: "([^"]+)",$/gm;
 const SPEC = /\.spec\.ts$/;
 const DEPENDENCIES = /^\s+dependencies:/m;
 
 describe("planRuns", () => {
   test("runs every project in order, each as its own command", () => {
     expect(planRuns([])).toEqual([
-      ["--project", "public"],
-      ["--project", "a11y", "--pass-with-no-tests"],
-      ["--project", "admin"],
-      ["--project", "admin-a11y"],
-      ["--project", "serial"],
+      ["--project=public"],
+      ["--project=a11y", "--pass-with-no-tests"],
+      ["--project=admin"],
+      ["--project=admin-a11y"],
+      ["--project=serial"],
     ]);
   });
 
-  test("passes the other arguments to each project", () => {
+  test("a file filter goes first and may match nothing in a project", () => {
+    expect(planRuns(["admin-settings"])).toEqual(
+      PROJECTS.map((name) => [
+        "admin-settings",
+        `--project=${name}`,
+        "--pass-with-no-tests",
+      ])
+    );
     expect(planRuns(["--grep", "sponsor"])[0]).toEqual([
-      "--project",
-      "public",
       "--grep",
       "sponsor",
+      "--project=public",
+      "--pass-with-no-tests",
     ]);
   });
 
-  test("runs only the project it is given", () => {
-    expect(planRuns(["--project", "admin"])).toEqual([["--project", "admin"]]);
+  test("runs only the project it is given, as one token", () => {
+    expect(planRuns(["--project", "admin"])).toEqual([["--project=admin"]]);
     expect(planRuns(["--project=serial", "--workers=1"])).toEqual([
       ["--project=serial", "--workers=1"],
+    ]);
+    expect(planRuns(["admin-settings", "--project", "serial"])).toEqual([
+      ["admin-settings", "--project=serial"],
     ]);
   });
 
   test("lets only the accessibility project be empty", () => {
     expect(planRuns(["--project", "a11y"])).toEqual([
-      ["--project", "a11y", "--pass-with-no-tests"],
+      ["--project=a11y", "--pass-with-no-tests"],
     ]);
     expect(planRuns(["--project", "public"])[0]).not.toContain(
       "--pass-with-no-tests"
@@ -52,7 +62,7 @@ describe("planRuns", () => {
 
 describe("the Playwright projects", () => {
   test("the config and the runner name the same projects in the same order", () => {
-    const names = [...CONFIG.matchAll(PROJECT_NAME)].map((m) => m[1]);
+    const names = [...CONFIG.matchAll(E2E_PROJECT_NAME)].map((m) => m[1]);
     expect(names).toEqual([...PROJECTS]);
   });
 

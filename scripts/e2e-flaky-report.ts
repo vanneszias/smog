@@ -115,7 +115,15 @@ export function summaryMarkdown(flaky: readonly FlakyTest[]): string {
 if (import.meta.main) {
   const path = process.argv[2] ?? "playwright-report/results.json";
   if (existsSync(path)) {
-    const flaky = findFlaky(JSON.parse(readFileSync(path, "utf8")));
+    let flaky: FlakyTest[] = [];
+    try {
+      flaky = findFlaky(JSON.parse(readFileSync(path, "utf8")));
+    } catch (error) {
+      // A deadline kill can leave a truncated report: the run already failed.
+      console.log(
+        `[e2e-flaky-report] Failed to read ${path} (${String(error)}); nothing to report.`
+      );
+    }
     for (const line of warningLines(flaky)) {
       console.log(line);
     }

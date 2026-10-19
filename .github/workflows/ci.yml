@@ -74,7 +74,10 @@ jobs:
   e2e:
     name: Playwright e2e (${{ matrix.shard }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Headroom over the 35-minute command deadline below: setup is 3 to 6
+    # minutes, and a hung test must be killed by the deadline (with its
+    # process tree report) while the artifact step can still run.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -109,10 +112,13 @@ jobs:
       - run: bun run test:e2e -- --project ${{ matrix.shard }}
         env:
           E2E_WORKERS: "1"
+          SMOG_TEST_DEADLINE_MINUTES: "35"
       # A pass on the retry is a bug to fix: warning annotations and the job summary.
       - if: always()
         run: bun scripts/e2e-flaky-report.ts apps/site/playwright-report/results.json
-      - if: failure()
+      # Always: a pass on the retry keeps its trace too (ruling 2), and a
+      # failed or timed-out shard keeps its evidence.
+      - if: always()
         uses: actions/upload-artifact@v7
         with:
           name: e2e-${{ matrix.shard }}

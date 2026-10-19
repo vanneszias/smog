@@ -262,8 +262,10 @@ export function checkCiWorkflow(source: string): string[] {
 
 /** The e2e job's matrix names, the Playwright projects (`apps/site/playwright.config.ts`). */
 const E2E_JOB = "e2e";
-const E2E_PROJECT_NAME = /^\s{6}name: "([^"]+)",$/gm;
-const E2E_MAX_MINUTES = 30;
+export const E2E_PROJECT_NAME = /^\s{6}name: "([^"]+)",$/gm;
+const E2E_MAX_MINUTES = 45;
+const E2E_DEADLINE_ENV = "SMOG_TEST_DEADLINE_MINUTES";
+const SKIP_BROWSER_DOWNLOAD = "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD";
 const E2E_INSTALL_BROWSER = "playwright install --with-deps chromium";
 
 /**
@@ -276,6 +278,7 @@ export function checkE2eJob(input: {
   ci: string;
   playwrightConfig: string;
   rootPackage: string;
+  sitePackage: string;
 }): string[] {
   const file = "ci.yml";
   const workflow = parseWorkflow(input.ci, file);
@@ -332,9 +335,61 @@ export function checkE2eJob(input: {
       );
     }
   }
+  errors.push(...checkE2eSupport(steps, minutes, input));
+  return errors;
+}
+
+/** The e2e job's evidence, browser, deadline and package-script rules. */
+function checkE2eSupport(
+  steps: Step[],
+  minutes: unknown,
+  input: { rootPackage: string; sitePackage: string }
+): string[] {
+  const file = "ci.yml";
+  const errors: string[] = [];
+  const flakyStep = findStepIndex(steps, "scripts/e2e-flaky-report.ts");
+  if (flakyStep === -1) {
+    errors.push(`${file}: the ${E2E_JOB} job has no flaky-report step`);
+  }
+  const uploads = steps.filter((step) =>
+    step.uses?.startsWith("actions/upload-artifact@")
+  );
+  if (uploads.length === 0) {
+    errors.push(`${file}: the ${E2E_JOB} job uploads no artifact`);
+  } else if (!uploads.every((step) => step.if?.includes("always()"))) {
+    errors.push(
+      `${file}: the ${E2E_JOB} artifact upload must run if: always() (retry traces, timeouts)`
+    );
+  }
+  const install = steps.find((step) => step.run?.includes(E2E_INSTALL_BROWSER));
+  const skip = install?.env?.[SKIP_BROWSER_DOWNLOAD];
+  if (install !== undefined && (skip === undefined || String(skip) === "1")) {
+    errors.push(
+      `${file}: the Chromium install step must override ${SKIP_BROWSER_DOWNLOAD} (the workflow sets it to 1)`
+    );
+  }
+  const runStep = steps.find((step) => step.run?.includes("bun run test:e2e"));
+  const deadline = Number(runStep?.env?.[E2E_DEADLINE_ENV]);
+  if (
+    !(Number.isFinite(deadline) && typeof minutes === "number") ||
+    deadline >= minutes - 5
+  ) {
+    errors.push(
+      `${file}: the shard step needs ${E2E_DEADLINE_ENV} at least 5 minutes below the job timeout`
+    );
+  }
   const rootScripts = parseJsonRecord(input.rootPackage, "scripts");
   if (typeof rootScripts["test:e2e"] !== "string") {
     errors.push("package.json: no test:e2e script");
+  }
+  const siteScript = parseJsonRecord(input.sitePackage, "scripts")["test:e2e"];
+  if (
+    typeof siteScript !== "string" ||
+    !siteScript.includes("scripts/test-deadline.ts")
+  ) {
+    errors.push(
+      "apps/site/package.json: test:e2e must run through scripts/test-deadline.ts"
+    );
   }
   return errors;
 }
@@ -1634,6 +1689,7 @@ export function checkReleaseConfig(
       ci: read(".github/workflows/ci.yml"),
       playwrightConfig: read("apps/site/playwright.config.ts"),
       rootPackage: read("package.json"),
+      sitePackage: read("apps/site/package.json"),
     }),
     ...checkDeployWorkflow(read(".github/workflows/deploy.yml"), migrationsDir),
     ...checkReleaseScripts(read("package.json")),

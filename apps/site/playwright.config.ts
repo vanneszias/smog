@@ -138,7 +138,7 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     // Accept-Language picks the page language (no cookie yet): Dutch, the default.
     locale: "nl-BE",
-    trace: "on-first-retry",
+    trace: process.env.CI ? "on-first-retry" : "retain-on-failure",
   },
   webServer: [
     {
