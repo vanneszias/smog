@@ -28,6 +28,8 @@ const ACTION_LABEL_KEYS = {
   "category.reorder": "admin.audit.actions.category.reorder",
   "category.unpublish": "admin.audit.actions.category.unpublish",
   "category.update": "admin.audit.actions.category.update",
+  "dead_letter.discard": "admin.audit.actions.dead_letter.discard",
+  "dead_letter.replay": "admin.audit.actions.dead_letter.replay",
   "export.sponsorships_csv": "admin.audit.actions.export.sponsorships_csv",
   "gesture.bulk_update": "admin.audit.actions.gesture.bulk_update",
   "gesture.create": "admin.audit.actions.gesture.create",
@@ -58,6 +60,7 @@ const ACTION_LABEL_KEYS = {
 
 const TARGET_TYPE_LABEL_KEYS = {
   category: "admin.audit.targetTypes.category",
+  dead_letter: "admin.audit.targetTypes.dead_letter",
   gesture: "admin.audit.targetTypes.gesture",
   list: "admin.audit.targetTypes.list",
   payment: "admin.audit.targetTypes.payment",
@@ -82,6 +85,7 @@ export type AuditTargetLink =
   | { params: { id: string }; to: "/admin/sponsorships/$id" }
   | { search: { payment: string; tab: "all" }; to: "/admin/sponsorships" }
   | { search: { user: string }; to: "/admin/users" }
+  | { search: { status: "discarded" | "replayed" }; to: "/admin/dead-letters" }
   | { to: "/admin/categories" | "/admin/settings" };
 
 /**
@@ -103,6 +107,15 @@ export function auditTargetLink(entry: AuditEntry): AuditTargetLink | null {
       return { search: { user: id }, to: "/admin/users" };
     case "setting":
       return { to: "/admin/settings" };
+    case "dead_letter":
+      // Handled messages are in the replayed or discarded list.
+      return {
+        search: {
+          status:
+            entry.action === "dead_letter.replay" ? "replayed" : "discarded",
+        },
+        to: "/admin/dead-letters",
+      };
     case "sponsorship":
       return { params: { id }, to: "/admin/sponsorships/$id" };
     case "payment":

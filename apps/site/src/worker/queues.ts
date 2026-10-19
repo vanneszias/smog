@@ -1,10 +1,15 @@
+import { handleDeadLetterBatch } from "@/worker/dlq-queue";
 import { handleEmailBatch } from "@/worker/email-queue";
 import { handleEventsBatch } from "@/worker/events-queue";
 
-/** The consumers this Worker runs, by queue name suffix (`smog-<env>-…`). */
+/**
+ * The consumers this Worker runs, by queue name suffix (`smog-<env>-…`).
+ * The DLQs come first: `…-email-dlq` must not be read as `…-email`.
+ */
 const QUEUE_SUFFIXES = {
-  email: "-email",
-  events: "-sponsorship-events",
+  dlq: ["-email-dlq", "-sponsorship-events-dlq"],
+  email: ["-email"],
+  events: ["-sponsorship-events"],
 } as const;
 
 export type QueueKind = keyof typeof QUEUE_SUFFIXES;
@@ -12,11 +17,13 @@ export type QueueKind = keyof typeof QUEUE_SUFFIXES;
 /**
  * Which consumer a batch is for. Only the suffix counts, so one Worker
  * serves `smog-dev-email`, `smog-staging-email` and `smog-production-email`
- * alike; a DLQ (`…-dlq`) has no consumer and is `null`.
+ * alike. The two DLQs (`…-dlq`) have a consumer too since phase 9: they
+ * are `dlq` (an ordinary queue takes one push consumer); any other queue
+ * is `null`.
  */
 export function queueKind(queue: string): QueueKind | null {
-  for (const [kind, suffix] of Object.entries(QUEUE_SUFFIXES)) {
-    if (queue.endsWith(suffix)) {
+  for (const [kind, suffixes] of Object.entries(QUEUE_SUFFIXES)) {
+    if (suffixes.some((suffix) => queue.endsWith(suffix))) {
       return kind as QueueKind;
     }
   }
@@ -24,9 +31,10 @@ export function queueKind(queue: string): QueueKind | null {
 }
 
 /**
- * The Worker's `queue()` handler: the email consumer (task 2) or the
- * sponsorship-events consumer (task 4). A batch from any other queue is
- * logged and acked, so it never retries into a DLQ.
+ * The Worker's `queue()` handler: the email consumer (task 2), the
+ * sponsorship-events consumer (task 4) or a dead-letter consumer (phase 9
+ * task 4). A batch from any other queue is logged and acked, so it never
+ * retries into a DLQ.
  */
 export async function dispatchQueue(
   batch: MessageBatch,
@@ -34,6 +42,9 @@ export async function dispatchQueue(
   ctx: ExecutionContext
 ): Promise<void> {
   switch (queueKind(batch.queue)) {
+    case "dlq":
+      await handleDeadLetterBatch(batch, env, ctx);
+      return;
     case "email":
       await handleEmailBatch(batch, env, ctx);
       return;

@@ -19,7 +19,7 @@ import { join } from "node:path";
  * migrated ones it never deletes (no `rejected` event: the runbook's
  * rejected-asset decision).
  *
- * The windows mirror `@smog/db` `retention.ts`,
+ * The windows mirror `@smog/db` `retention.ts` (the dead-letter window too),
  * `@smog/sponsorships` `orphan-logos.ts` and its `schema/retention.ts` and
  * `server/sweeps.ts` (scripts may not import them); change them together.
  */
@@ -30,6 +30,8 @@ export type RetentionEnv = (typeof ENVS)[number];
 const DAY_MS = 86_400_000;
 /** `AUDIT_RETENTION_MS`. */
 const AUDIT_MS = 3 * 365 * DAY_MS;
+/** `DEAD_LETTER_RETENTION_MS`. */
+const DEAD_LETTER_MS = 14 * DAY_MS;
 /** `SPONSORSHIP_TOKEN_GRACE_MS`. */
 const TOKEN_GRACE_MS = 29 * DAY_MS;
 /** `TERMINAL_LOGO_GRACE_MS`. */
@@ -59,6 +61,7 @@ export function buildCountSql(): string {
   return [
     "SELECT",
     `(SELECT count(*) FROM audit_log WHERE created_at < ${NOW} - ${AUDIT_MS}) AS audit_log,`,
+    `(SELECT count(*) FROM dead_letter WHERE received_at < ${NOW} - ${DEAD_LETTER_MS}) AS dead_letter,`,
     `(SELECT count(*) FROM session WHERE expires_at < ${NOW}) AS session,`,
     `(SELECT count(*) FROM verification WHERE expires_at < ${NOW}) AS verification,`,
     `(SELECT count(*) FROM sponsorship_token WHERE expires_at < ${NOW} - ${TOKEN_GRACE_MS} OR used_at < ${NOW} - ${TOKEN_GRACE_MS}) AS sponsorship_token,`,
@@ -148,6 +151,7 @@ export function reportLines(
   const lines = [
     `[retention] Dry run on ${env} (nothing is deleted):`,
     `  audit_log older than 3 × 365 days: ${row.audit_log}`,
+    `  dead letters older than 14 days: ${row.dead_letter}`,
     `  expired sessions: ${row.session}`,
     `  expired verifications: ${row.verification}`,
     `  sponsorship tokens used or expired more than 29 days ago: ${row.sponsorship_token}`,

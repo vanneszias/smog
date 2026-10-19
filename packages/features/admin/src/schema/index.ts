@@ -39,6 +39,7 @@ export {
   dashboardSchema,
   dashboardSponsorshipsSchema,
 } from "./dashboard";
+export * from "./dead-letters";
 export * from "./maintenance";
 export * from "./mux";
 export * from "./sponsorships";

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./body-policy": "./src/body-policy.ts",
     "./samples": "./src/samples.ts"
   },
   "scripts": {

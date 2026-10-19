@@ -1,6 +1,7 @@
 /** `admin.dashboard` (A-03): the counts and the newest audit entries. */
 import { z } from "zod";
 import { auditEntrySchema } from "./audit";
+import { dashboardDeadLettersSchema } from "./dead-letters";
 
 /** How many audit entries the dashboard shows. */
 export const DASHBOARD_RECENT_AUDIT = 5;
@@ -27,6 +28,8 @@ export const dashboardSponsorshipsSchema = z.object({
 
 export const dashboardSchema = z.object({
   categories: z.object({ published: count, total: count }),
+  /** The dead letters nobody replayed or discarded (phase 9 task 4). */
+  deadLetters: dashboardDeadLettersSchema,
   gestures: z.object({ published: count, total: count, unpublished: count }),
   recentAudit: z.array(auditEntrySchema).max(DASHBOARD_RECENT_AUDIT),
   sponsorships: dashboardSponsorshipsSchema,

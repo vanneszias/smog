@@ -289,6 +289,7 @@ describe("runRetentionPurge (J-04)", () => {
 
     expect(dry).toEqual({
       audit_log: 1,
+      dead_letter: 0,
       logosDeleted: 2,
       logosReleased: 1,
       rejectedVideosDeleted: 0,
