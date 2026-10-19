@@ -1,7 +1,8 @@
 /**
- * `we-moved --out <dir> --env production [--apply]` (E-13, phase 8
- * ruling 15): queues the one-time `we_moved` email to every migrated
- * account. Bun only.
+ * `we-moved --out <dir> --env production [--apply] [--resend <ids-file |
+ * --failed>]` (E-13, phase 8 ruling 15; `--resend` phase 9 ruling 11):
+ * queues the one-time `we_moved` email to every migrated account. Bun
+ * only.
  *
  * - **Production only.** Any other `--env` is refused, and so is a plan
  *   folder whose `manifest.json` was not made for `production` (B2).
@@ -34,11 +35,28 @@
  *   records every queued user after each batch, so a re-run sends only
  *   the rest (and the consumer's `email:sent:<key>` drops a repeat within
  *   7 days).
+ * - **`--resend <ids-file | --failed>`** (phase 9 ruling 11). The ledger
+ *   records *queued*, not *delivered*. `--resend` sends the given ledger
+ *   keys (user ids, one per line, `#` comments allowed) again, or with
+ *   `--failed` the keys `we-moved-failed.json` holds: a run that fails
+ *   records the failed batch ("failed") and every later one ("not-sent"),
+ *   and a key leaves the file once it is queued. A selected key whose
+ *   consumer marker `email:sent:we_moved:<id>` exists in production's KV
+ *   was delivered and is skipped (the tool says which: the consumer is
+ *   idempotent, so a duplicate would be harmless, but it is not needed); a
+ *   key that is not a current recipient is reported. The send is the
+ *   normal one (same batches, same message, same rate), and its ledger
+ *   entry replaces the old one, so a failure mid-way never loses the old
+ *   entry. Dry by default (the dry run reads the markers and changes
+ *   nothing); production only; only ids are printed, never an address.
+ *   Messages that exhausted the consumer's retries and sit in the email
+ *   DLQ are replayed with the admin dead-letter screen (phase 9 task 4),
+ *   not by this tool.
  * - `CLOUDFLARE_API_TOKEN` (Queues: Edit, plus D1 for wrangler) and
  *   `CLOUDFLARE_ACCOUNT_ID` come from the process env and are never
  *   printed; no address is printed either.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   emailLocale,
@@ -49,6 +67,7 @@ import {
 import {
   EMAIL_MESSAGE_MAX_BYTES,
   emailMessageSchema,
+  emailSentKey,
   messageBytes,
 } from "@smog/jobs";
 import { z } from "zod";
@@ -133,10 +152,21 @@ export interface WeMovedContext {
   readonly wranglerConfigPath?: string;
 }
 
+/**
+ * `--resend` (phase 9 ruling 11): which ledger keys (user ids) to send
+ * again: the ones given (`keys`, from an ids file), or `failed`: the ones
+ * a run recorded in `we-moved-failed.json` because their Queues API call
+ * failed or was never made.
+ */
+export type ResendSelection =
+  | { readonly failed: true }
+  | { readonly keys: readonly string[] };
+
 export interface WeMovedOptions {
   readonly apply: boolean;
   readonly env: string;
   readonly outDir: string;
+  readonly resend?: ResendSelection;
 }
 
 const PREFIX = "[migrate-convex]";
@@ -469,12 +499,199 @@ function cloudflareRateLimit(error: unknown): RateLimited | null {
     : null;
 }
 
-// --- The command ----------------------------------------------------------------
+// --- Failures and --resend ---------------------------------------------------------
+
+export const WE_MOVED_FAILED = "we-moved-failed.json";
 
 const ledgerEntrySchema = z.object({
   messageId: z.string(),
   queuedAt: z.string(),
 });
+
+const failedFileSchema = z.object({
+  keys: z.record(
+    z.string(),
+    z.object({ at: z.string(), reason: z.enum(["failed", "not-sent"]) })
+  ),
+  version: z.literal(1),
+});
+type FailedReason = "failed" | "not-sent";
+
+/**
+ * The keys whose Queues API call failed or was never made (the run stopped
+ * before it), written when a run fails and read by `--resend --failed`. A
+ * key leaves the file when it is queued. User ids only.
+ */
+class FailedKeys {
+  readonly path: string;
+  private readonly entries: Map<string, { at: string; reason: FailedReason }>;
+
+  private constructor(
+    path: string,
+    entries: Map<string, { at: string; reason: FailedReason }>
+  ) {
+    this.path = path;
+    this.entries = entries;
+  }
+
+  static open(path: string): FailedKeys {
+    if (!existsSync(path)) {
+      return new FailedKeys(path, new Map());
+    }
+    let json: unknown;
+    try {
+      json = JSON.parse(readFileSync(path, "utf8"));
+    } catch (error) {
+      throw new InputError(`${path} is not valid JSON.`, { cause: error });
+    }
+    const parsed = failedFileSchema.safeParse(json);
+    if (!parsed.success) {
+      throw new InputError(
+        `${path} is not a file this command wrote; move it away to start over.`
+      );
+    }
+    return new FailedKeys(path, new Map(Object.entries(parsed.data.keys)));
+  }
+
+  keys(): string[] {
+    return [...this.entries.keys()].sort();
+  }
+
+  /** When the key was recorded as failed, or undefined. */
+  at(id: string): string | undefined {
+    return this.entries.get(id)?.at;
+  }
+
+  add(ids: readonly string[], reason: FailedReason, at: string): void {
+    for (const id of ids) {
+      this.entries.set(id, { at, reason });
+    }
+    this.write();
+  }
+
+  remove(ids: readonly string[]): void {
+    let changed = false;
+    for (const id of ids) {
+      changed = this.entries.delete(id) || changed;
+    }
+    if (changed) {
+      this.write();
+    }
+  }
+
+  private write(): void {
+    const sorted = Object.fromEntries(
+      [...this.entries].sort(([a], [b]) => (a < b ? -1 : 1))
+    );
+    const temporary = `${this.path}.tmp`;
+    writeFileSync(
+      temporary,
+      `${JSON.stringify({ keys: sorted, version: 1 }, null, 2)}\n`
+    );
+    renameSync(temporary, this.path);
+  }
+}
+
+/** What `--resend` made of its selection (counts and ids, never an address). */
+interface ResendPlan {
+  /** The recipients to send: selected, known, with no `email:sent` marker. */
+  readonly pending: Recipient[];
+  /** Selected keys that have a ledger entry (the resend replaces it). */
+  readonly replaced: number;
+  readonly selected: number;
+  /** Selected keys whose consumer marker exists: delivered, not resent. */
+  readonly skipped: string[];
+  /**
+   * Keys to send whose last queueing (ledger `queuedAt`, or the failure
+   * record) is older than the consumer marker's 7 days: no marker no longer
+   * proves the email was not delivered.
+   */
+  readonly stale: string[];
+  /** Selected keys that are not a current recipient (never migrated, banned, deleted). */
+  readonly unknown: string[];
+}
+
+/** The consumer's `email:sent` marker lives 7 days (`EMAIL_SENT_TTL_SECONDS`). */
+const MARKER_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+/** One `wrangler kv key get` per key: more than this is split into runs. */
+const MAX_RESEND_KEYS = 200;
+
+/** The marker the email consumer writes once a `we_moved` email was sent. */
+function weMovedMarkerKey(userId: string): string {
+  return emailSentKey(`we_moved:${userId}`);
+}
+
+async function selectResend(
+  selection: ResendSelection,
+  recipients: readonly Recipient[],
+  ledger: Ledger<z.infer<typeof ledgerEntrySchema>>,
+  failed: FailedKeys,
+  wrangler: Wrangler,
+  now: number
+): Promise<ResendPlan> {
+  const keys = [
+    ...new Set("failed" in selection ? failed.keys() : selection.keys),
+  ].sort();
+  if (keys.length > MAX_RESEND_KEYS) {
+    throw new InputError(
+      `--resend selected ${keys.length} keys: at most ${MAX_RESEND_KEYS} per run (one KV read each). Split the ids file.`
+    );
+  }
+  const byId = new Map(
+    recipients.map((recipient) => [recipient.id, recipient])
+  );
+  const unknown: string[] = [];
+  const skipped: string[] = [];
+  const pending: Recipient[] = [];
+  for (const key of keys) {
+    const recipient = byId.get(key);
+    if (!recipient) {
+      unknown.push(key);
+      continue;
+    }
+    // biome-ignore lint/performance/noAwaitInLoops: one wrangler call at a time.
+    if ((await wrangler.kvGet(weMovedMarkerKey(key))) !== null) {
+      skipped.push(key);
+      continue;
+    }
+    pending.push(recipient);
+  }
+  const stale = pending
+    .filter((recipient) => {
+      const at = ledger.get(recipient.id)?.queuedAt ?? failed.at(recipient.id);
+      return at !== undefined && now - Date.parse(at) > MARKER_WINDOW_MS;
+    })
+    .map((recipient) => recipient.id);
+  return {
+    pending,
+    replaced: pending.filter((recipient) => ledger.get(recipient.id)).length,
+    selected: keys.length,
+    skipped,
+    stale,
+    unknown,
+  };
+}
+
+function logResend(resend: ResendPlan, out: WeMovedOutput): void {
+  out.log(
+    `${PREFIX} Resend: ${resend.skipped.length} skipped (the consumer's email:sent marker exists: delivered), ${resend.unknown.length} not a current recipient, ${resend.replaced} of the ${resend.pending.length} to send have a ledger entry that the new send replaces.`
+  );
+  if (resend.skipped.length > 0) {
+    out.log(`${PREFIX} Skipped (delivered): ${resend.skipped.join(", ")}.`);
+  }
+  if (resend.stale.length > 0) {
+    out.error(
+      `${PREFIX} warning: ${resend.stale.length} key(s) were queued more than 7 days ago, past the consumer marker's window: a missing marker there means unknown, not undelivered, so these may be sent twice (${resend.stale.join(", ")}).`
+    );
+  }
+  if (resend.unknown.length > 0) {
+    out.error(
+      `${PREFIX} warning: not a current recipient (never migrated, banned or deleted): ${resend.unknown.join(", ")}.`
+    );
+  }
+}
+
+// --- The command ----------------------------------------------------------------
 
 export async function runWeMoved(
   options: WeMovedOptions,
@@ -515,7 +732,20 @@ export async function runWeMoved(
     join(options.outDir, WE_MOVED_LEDGER),
     ledgerEntrySchema
   );
-  const pending = recipients.filter((recipient) => !ledger.get(recipient.id));
+  const failed = FailedKeys.open(join(options.outDir, WE_MOVED_FAILED));
+  const resend = options.resend
+    ? await selectResend(
+        options.resend,
+        recipients,
+        ledger,
+        failed,
+        context.wrangler,
+        context.timer.now()
+      )
+    : null;
+  const pending =
+    resend?.pending ??
+    recipients.filter((recipient) => !ledger.get(recipient.id));
   const { invalid, messages } = buildMessages(pending, {
     providers,
     url: site.siteUrl,
@@ -539,8 +769,11 @@ export async function runWeMoved(
     "nl"
   );
   out.log(
-    `${PREFIX} we-moved${options.apply ? " --apply" : " (dry run)"}: ${recipients.length} migrated account(s); ${recipients.length - pending.length} already queued (ledger); ${messages.length} to queue in ${batches.length} batch(es) to ${site.queueName} (${queueId}); ${invalid.length} without a usable address.`
+    `${PREFIX} we-moved${resend ? " --resend" : ""}${options.apply ? " --apply" : " (dry run)"}: ${recipients.length} migrated account(s); ${resend ? `${resend.selected} selected` : `${recipients.length - pending.length} already queued (ledger)`}; ${messages.length} to queue in ${batches.length} batch(es) to ${site.queueName} (${queueId}); ${invalid.length} without a usable address.`
   );
+  if (resend) {
+    logResend(resend, out);
+  }
   out.log(
     `${PREFIX} Address in the email: ${site.siteUrl} (the "new address" sentence is ${site.siteUrl === WE_MOVED_OLD_ORIGIN ? "left out" : "shown"}); nl subject: ${preview.subject}`
   );
@@ -564,7 +797,7 @@ export async function runWeMoved(
   }
   if (!options.apply) {
     out.log(
-      `${PREFIX} Nothing was queued. Run again with --apply to queue ${messages.length} email(s).`
+      `${PREFIX} Nothing was queued${resend ? " and no ledger entry was changed" : ""}. Run again with --apply to queue ${messages.length} email(s).`
     );
     return 0;
   }
@@ -582,8 +815,17 @@ export async function runWeMoved(
         )
       );
     } catch (error) {
+      // This batch (it may even have been accepted: the consumer's marker
+      // tells at --resend) and every later one are what `--resend --failed` sends.
+      const at = new Date(context.timer.now()).toISOString();
+      failed.add(batch.userIds, "failed", at);
+      failed.add(
+        batches.slice(index + 1).flatMap((later) => later.userIds),
+        "not-sent",
+        at
+      );
       out.error(
-        `${PREFIX} Failed to queue batch ${index + 1} of ${batches.length}; ${queued} email(s) were queued and are in the ledger, so a re-run sends the rest.`
+        `${PREFIX} Failed to queue batch ${index + 1} of ${batches.length}; ${queued} email(s) were queued and are in the ledger, the rest are in ${WE_MOVED_FAILED}: run again (or with --resend --failed) to send them.`
       );
       throw error;
     }
@@ -597,6 +839,7 @@ export async function runWeMoved(
           ] as const
       )
     );
+    failed.remove(batch.userIds);
     queued += batch.userIds.length;
   }
   out.log(

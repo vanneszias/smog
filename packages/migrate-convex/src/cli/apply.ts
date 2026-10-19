@@ -1,11 +1,13 @@
 /**
  * `apply --env <dev|staging|production> --out <dir> [--dry-run] [--yes]
- * [--reset] [--native-catalog]` (phase 8 ruling 14). Bun only.
+ * [--reset | --reset-only] [--native-catalog]` (phase 8 ruling 14, phase 9
+ * ruling 10). Bun only.
  *
  * In this order, and nothing is written before the last check passed:
  * 1. The flags: production needs `--yes` (unless `--dry-run`) and refuses
- *    `--reset`; `--native-catalog` needs `--reset` and is not for
- *    production.
+ *    `--reset` and `--reset-only`; `--native-catalog` needs `--reset` and
+ *    is not for production; `--reset` and `--reset-only` exclude each
+ *    other.
  * 2. The plan folder: `manifest.json` must parse, and every file it lists
  *    must still have its size and SHA-256 (a changed file is refused). The
  *    hashed `preflight.json` names the plan's target, blocker count and
@@ -16,10 +18,20 @@
  *    dev either).
  * 3. The preflight (`runPreflight`, reads only): the migrations, the
  *    maintenance key, the slugs, share tokens and Mollie ids, the claimed
- *    addresses and the admins.
+ *    addresses and the admins. With `--reset` the checks leave out the
+ *    rows this plan's own reset deletes (read from its
+ *    `reset-imported-*.sql`); a row of any other source, another export's
+ *    import included, still blocks. With `--reset-only`, only the
+ *    migrations and the maintenance key are checked
+ *    (`runResetOnlyPreflight`): the foreign-row checks would fail on the
+ *    very rows being removed.
  * 4. With `--dry-run`: print every wrangler command it would run, and stop.
  *    Nothing reaches D1 or KV; only `apply-report.json` (and, with
  *    `--native-catalog`, `reset-native-catalog.sql`) are written to `--out`.
+ *    `--reset-only` runs the reset files and nothing else, then bumps
+ *    `catalog:version` (the catalogue changed, so caches must not keep
+ *    it) and prints, per table, how many imported rows it removed (a
+ *    second run removes 0).
  * 5. `--reset`: `reset-imported-*.sql` (from the manifest), then with
  *    `--native-catalog` `reset-native-catalog.sql` (the native rows whose
  *    slugs collide, and their `gesture_fts` rows).
@@ -48,10 +60,12 @@ import {
   type D1Query,
   isApplyEnv,
   type NativeCatalog,
+  ownRowsOf,
   type PreflightFacts,
   type PreflightResult,
   preflightFactsSchema,
   runPreflight,
+  runResetOnlyPreflight,
   type VerifiedCount,
   verifyCounts,
 } from "../core/preflight";
@@ -73,6 +87,8 @@ export interface ApplyRequest {
   readonly nativeCatalog: boolean;
   readonly outDir: string;
   readonly reset: boolean;
+  /** Only the plan's `reset-imported-*.sql` (dev, staging). */
+  readonly resetOnly?: boolean;
   readonly yes: boolean;
 }
 
@@ -132,8 +148,22 @@ function checkFlags(request: ApplyRequest): ApplyEnv {
       "--reset is refused on production: the import there runs once (ruling 14)."
     );
   }
+  if (env === "production" && request.resetOnly) {
+    throw new ApplyRefusal(
+      "--reset-only is refused on production: the import there runs once (ruling 14); its rollback is D1 Time Travel (docs/cutover-runbook.md)."
+    );
+  }
+  if (request.reset && request.resetOnly) {
+    throw new ApplyRefusal(
+      "--reset and --reset-only exclude each other: --reset deletes and applies again, --reset-only deletes and stops."
+    );
+  }
   if (request.nativeCatalog && !request.reset) {
-    throw new ApplyRefusal("--native-catalog needs --reset.");
+    throw new ApplyRefusal(
+      request.resetOnly
+        ? "--native-catalog does not go with --reset-only (it removes only this plan's own rows)."
+        : "--native-catalog needs --reset."
+    );
   }
   if (env === "production" && !request.yes && !request.dryRun) {
     throw new ApplyRefusal(
@@ -259,6 +289,7 @@ interface ApplyRecord {
   nativeCatalog: boolean;
   preflight?: PreflightResult;
   reset: boolean;
+  resetOnly: boolean;
   startedAt: string;
   status:
     | "refused"
@@ -266,6 +297,7 @@ interface ApplyRecord {
     | "failed"
     | "files_applied"
     | "applied"
+    | "reset_done"
     | "verification-failed";
   steps: string[];
   target: Target;
@@ -348,6 +380,8 @@ interface LoadedPlan {
   readonly facts: PreflightFacts;
   readonly manifest: Manifest;
   readonly report: Pick<Report, "sections">;
+  /** The plan's `reset-imported-*.sql` texts (hash-checked), in manifest order. */
+  readonly resetSql: readonly string[];
 }
 
 /** The checked plan folder: its manifest, preflight facts and report (steps 1 and 2). */
@@ -374,7 +408,12 @@ function loadPlan(request: ApplyRequest, env: ApplyEnv): LoadedPlan {
       `The plan has ${facts.plan.blockers} blocker(s) (report.md lists them): fix them and plan again.`
     );
   }
-  return { facts, manifest, report };
+  return {
+    facts,
+    manifest,
+    report,
+    resetSql: manifest.reset.map((file) => texts.get(file.name) ?? ""),
+  };
 }
 
 /** The `d1 execute --file` steps, in order: the reset (with `--reset`), then the plan's files. */
@@ -457,6 +496,110 @@ async function verify(
   return missing.length === 0;
 }
 
+/** The bump after a reset; a failure here is reported, never masks the reset's own error. */
+async function bumpCatalogVersion(
+  wrangler: Wrangler,
+  version: string,
+  record: ApplyRecord,
+  out: Output
+): Promise<void> {
+  try {
+    await wrangler.kvPut(CATALOG_VERSION_KEY, version);
+    record.catalogVersion = version;
+  } catch (error) {
+    out.error(
+      `${PREFIX} Failed to bump ${CATALOG_VERSION_KEY} after the reset: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
+
+interface ResetOnlyRun {
+  readonly env: ApplyEnv;
+  readonly maintenance: string | null;
+  readonly manifest: Manifest;
+  readonly query: D1Query;
+  readonly record: ApplyRecord;
+  readonly report: Pick<Report, "sections">;
+  readonly request: ApplyRequest;
+  readonly wrangler: Wrangler;
+}
+
+/** `--reset-only`: the migrations check, the reset files, the catalogue bump and the removed counts. */
+async function runResetOnly(
+  run: ResetOnlyRun,
+  context: ApplyContext,
+  out: Output
+): Promise<number> {
+  const { env, manifest, query, record, report, request, wrangler } = run;
+  const preflight = await runResetOnlyPreflight(query, {
+    env,
+    maintenance: run.maintenance,
+  });
+  for (const refusal of preflight.refusals) {
+    out.error(`${PREFIX} Refused (${refusal.code}): ${refusal.message}`);
+  }
+  if (preflight.refusals.length > 0) {
+    writeRecord(request.outDir, record);
+    out.error(
+      `${PREFIX} apply refused: ${preflight.refusals.length} preflight problem(s). Nothing was written.`
+    );
+    return 1;
+  }
+  out.log(
+    `${PREFIX} Preflight (--reset-only): migration ${String(preflight.migration)}; no foreign-row check runs, the reset deletes by this plan's own keys only.`
+  );
+  const steps = manifest.reset.map((file) =>
+    fileStep(env, request.outDir, file.name)
+  );
+  const version = context.newVersion?.() ?? crypto.randomUUID();
+  record.steps = [
+    ...steps.map((step) => `wrangler ${step.args.join(" ")}`),
+    `wrangler ${kvPutArgs(env, CATALOG_VERSION_KEY, version).join(" ")}`,
+  ];
+  for (const line of record.steps) {
+    out.log(`${PREFIX} ${request.dryRun ? "Would run" : "Runs"}: ${line}`);
+  }
+  if (request.dryRun) {
+    record.status = "dry-run";
+    writeRecord(request.outDir, record);
+    out.log(
+      `${PREFIX} Dry run: nothing was written to D1 or KV (${APPLY_REPORT_FILE} records it).`
+    );
+    return 0;
+  }
+  const before = await verifyCounts(query, report);
+  record.status = "failed";
+  try {
+    await runSteps(steps, wrangler, { outDir: request.outDir, record }, out);
+  } finally {
+    // A reset file that failed part-way may still have deleted catalogue
+    // rows (a file is not one transaction on D1): the version always moves.
+    await bumpCatalogVersion(wrangler, version, record, out);
+    writeRecord(request.outDir, record);
+  }
+  if (record.catalogVersion === undefined) {
+    throw new Error(
+      `${PREFIX} The reset ran but ${CATALOG_VERSION_KEY} could not be bumped: put it by hand.`
+    );
+  }
+  const after = await verifyCounts(query, report);
+  record.counts = after;
+  let removed = 0;
+  for (const [index, count] of before.entries()) {
+    const left = after[index]?.actual ?? 0;
+    removed += count.actual - left;
+    out.log(
+      `${PREFIX} ${count.name}: removed ${count.actual - left} (${count.actual} imported before, ${left} after, ${count.expected} in the plan).`
+    );
+  }
+  record.status = "reset_done";
+  writeRecord(request.outDir, record);
+  out.log(
+    `${PREFIX} Reset the ${manifest.target} plan's rows on ${env}: ${removed} row(s) removed in all (a claimed account keeps its row and loses its legacy id, and the last admin stays); ${APPLY_REPORT_FILE} records it. A second run removes 0.`
+  );
+  return 0;
+}
+
 /** Runs `apply` (see the module comment) and returns the exit code. */
 export async function runApply(
   request: ApplyRequest,
@@ -464,7 +607,7 @@ export async function runApply(
   out: Output
 ): Promise<number> {
   const env = checkFlags(request);
-  const { facts, manifest, report } = loadPlan(request, env);
+  const { facts, manifest, report, resetSql } = loadPlan(request, env);
   const { wrangler } = context;
   if (wrangler.env !== env) {
     throw new Error(`${PREFIX} The wrangler runner is for ${wrangler.env}`);
@@ -478,6 +621,7 @@ export async function runApply(
     ),
     nativeCatalog: request.nativeCatalog,
     reset: request.reset,
+    resetOnly: request.resetOnly === true,
     startedAt: (context.now?.() ?? new Date()).toISOString(),
     status: "refused",
     steps: [],
@@ -486,11 +630,21 @@ export async function runApply(
   };
 
   const query = d1Query(wrangler);
+  const maintenance =
+    env === "dev" ? null : await wrangler.kvGet(MAINTENANCE_KEY);
+  if (request.resetOnly) {
+    return await runResetOnly(
+      { env, maintenance, manifest, query, record, report, request, wrangler },
+      context,
+      out
+    );
+  }
   const preflight = await runPreflight(query, {
     env,
     facts,
-    maintenance: env === "dev" ? null : await wrangler.kvGet(MAINTENANCE_KEY),
+    maintenance,
     nativeCatalog: request.nativeCatalog,
+    ownRows: request.reset ? ownRowsOf(resetSql) : null,
     target: manifest.target,
   });
   record.preflight = preflight;
