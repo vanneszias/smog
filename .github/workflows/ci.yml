@@ -65,11 +65,65 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
 
+  # Playwright e2e (phase 9 ruling 1): always on, beside the release lanes
+  # (no `needs`), so a failure in either blocks Deploy, which calls this
+  # workflow. One shard per Playwright project (apps/site/playwright.config.ts),
+  # each on its own runner with its own dev server and D1; `serial` runs the
+  # two specs that change what every visitor sees. Mollie, Mux and Turnstile
+  # are the repository's fakes; nothing here needs a secret.
   e2e:
-    name: Playwright e2e
-    # Placeholder: Playwright e2e is added in phase 9 (off until then).
-    if: ${{ vars.E2E_ENABLED == 'true' }}
-    needs: release-check
+    name: Playwright e2e (${{ matrix.shard }})
     runs-on: ubuntu-latest
+    # Headroom over the 35-minute command deadline below: setup is 3 to 6
+    # minutes, and a hung test must be killed by the deadline (with its
+    # process tree report) while the artifact step can still run.
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [public, a11y, admin, admin-a11y, serial]
     steps:
-      - run: echo "Playwright e2e is added in phase 9"
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - run: cp apps/site/.dev.vars.example apps/site/.dev.vars
+      # The Chromium this Playwright version expects, cached by the version.
+      - id: playwright
+        working-directory: apps/site
+        run: echo "version=$(bunx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Install Chromium
+        working-directory: apps/site
+        # The workflow-level skip flag is for the release lanes; here the
+        # browser is the point ("0" does not skip).
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "0"
+        run: bunx playwright install --with-deps chromium
+      - run: bun -F @smog/db migrate:dev
+      - run: bun -F @smog/db seed:dev
+      - run: bun run test:e2e -- --project ${{ matrix.shard }}
+        env:
+          E2E_WORKERS: "1"
+          SMOG_TEST_DEADLINE_MINUTES: "35"
+      # A pass on the retry is a bug to fix: warning annotations and the job summary.
+      - if: always()
+        run: bun scripts/e2e-flaky-report.ts apps/site/playwright-report/results.json
+      # Always: a pass on the retry keeps its trace too (ruling 2), and a
+      # failed or timed-out shard keeps its evidence.
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-${{ matrix.shard }}
+          path: |
+            apps/site/test-results/
+            apps/site/playwright-report/
+          if-no-files-found: warn
+          retention-days: 7

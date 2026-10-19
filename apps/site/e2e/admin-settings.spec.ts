@@ -34,8 +34,8 @@ import {
  * Maintenance is one site-wide KV flag, so this file is the `maintenance`
  * project (playwright.config.ts): one worker, after every other spec.
  * Every test leaves the site open (the file's `afterAll`, and `finally`
- * around each window). On its own: `bunx playwright test --project
- * maintenance --no-deps`.
+ * around each window). On its own: `bun run test:e2e -- --project
+ * serial`.
  */
 
 const ACTIVE_UNTIL = /^Actief tot /;
@@ -237,7 +237,7 @@ test.describe("the first admin (admin:grant --create)", () => {
 /**
  * The settings review screenshots with maintenance on and off (light/dark
  * × 390/1280, reduced motion, nl-BE), when ADMIN_SHOTS_DIR is set:
- * `ADMIN_SHOTS_DIR=/tmp/shots bunx playwright test --project maintenance --no-deps`.
+ * `ADMIN_SHOTS_DIR=/tmp/shots bun run test:e2e -- --project serial`.
  * Every other admin screen is shot by `admin-screenshots.spec.ts`.
  */
 test.describe("admin settings screenshots", () => {

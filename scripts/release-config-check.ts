@@ -38,8 +38,9 @@ interface Job {
   steps?: Step[];
   strategy?: {
     "fail-fast"?: boolean;
-    matrix?: { check?: string[] };
+    matrix?: { check?: string[]; shard?: string[] };
   };
+  "timeout-minutes"?: unknown;
   uses?: string;
 }
 
@@ -257,6 +258,149 @@ export function checkCiWorkflow(source: string): string[] {
     );
   }
   return errors;
+}
+
+/** The e2e job's matrix names, the Playwright projects (`apps/site/playwright.config.ts`). */
+const E2E_JOB = "e2e";
+export const E2E_PROJECT_NAME = /^\s{6}name: "([^"]+)",$/gm;
+const E2E_MAX_MINUTES = 45;
+const E2E_DEADLINE_ENV = "SMOG_TEST_DEADLINE_MINUTES";
+const SKIP_BROWSER_DOWNLOAD = "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD";
+const E2E_INSTALL_BROWSER = "playwright install --with-deps chromium";
+
+/**
+ * The Playwright e2e job of `ci.yml` (phase 9 ruling 1): always on (no
+ * `if:`, no `needs:`, so it runs beside the release lanes and Deploy's
+ * reusable call waits for it), one shard per Playwright project, the
+ * matching Chromium installed, and the root `test:e2e` script it calls.
+ */
+export function checkE2eJob(input: {
+  ci: string;
+  playwrightConfig: string;
+  rootPackage: string;
+  sitePackage: string;
+}): string[] {
+  const file = "ci.yml";
+  const workflow = parseWorkflow(input.ci, file);
+  if (typeof workflow === "string") {
+    return [workflow];
+  }
+  const errors: string[] = [];
+  if (input.ci.includes("E2E_ENABLED")) {
+    errors.push(`${file}: the E2E_ENABLED placeholder must be gone`);
+  }
+  const job = workflow.jobs?.[E2E_JOB];
+  if (job === undefined) {
+    return [...errors, `${file}: no \`${E2E_JOB}\` job`];
+  }
+  const raw = job as Job & { if?: unknown };
+  if (raw.if !== undefined) {
+    errors.push(`${file}: the ${E2E_JOB} job must always run (no \`if:\`)`);
+  }
+  if (job.needs !== undefined) {
+    errors.push(
+      `${file}: the ${E2E_JOB} job runs beside the release lanes (no \`needs:\`)`
+    );
+  }
+  const minutes = job["timeout-minutes"];
+  if (typeof minutes !== "number" || minutes > E2E_MAX_MINUTES) {
+    errors.push(
+      `${file}: the ${E2E_JOB} job needs timeout-minutes of at most ${E2E_MAX_MINUTES}`
+    );
+  }
+  if (job.strategy?.["fail-fast"] !== false) {
+    errors.push(`${file}: the ${E2E_JOB} matrix must set fail-fast: false`);
+  }
+  const projects = [...input.playwrightConfig.matchAll(E2E_PROJECT_NAME)].map(
+    (match) => match[1] ?? ""
+  );
+  if (!sameList(job.strategy?.matrix?.shard ?? [], projects)) {
+    errors.push(
+      `${file}: the ${E2E_JOB} shards must be the Playwright projects (${projects.join(", ")})`
+    );
+  }
+  const steps = job.steps ?? [];
+  const commands: [string, string][] = [
+    ["bun install --frozen-lockfile", "install"],
+    [E2E_INSTALL_BROWSER, "install the matching Chromium"],
+    ["migrate:dev", "migrate the dev D1"],
+    ["seed:dev", "seed the dev D1"],
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expression, not JavaScript interpolation.
+    ["bun run test:e2e -- --project ${{ matrix.shard }}", "run the shard"],
+  ];
+  for (const [command, what] of commands) {
+    if (findStepIndex(steps, command) === -1) {
+      errors.push(
+        `${file}: the ${E2E_JOB} job has no step to ${what} (\`${command}\`)`
+      );
+    }
+  }
+  errors.push(...checkE2eSupport(steps, minutes, input));
+  return errors;
+}
+
+/** The e2e job's evidence, browser, deadline and package-script rules. */
+function checkE2eSupport(
+  steps: Step[],
+  minutes: unknown,
+  input: { rootPackage: string; sitePackage: string }
+): string[] {
+  const file = "ci.yml";
+  const errors: string[] = [];
+  const flakyStep = findStepIndex(steps, "scripts/e2e-flaky-report.ts");
+  if (flakyStep === -1) {
+    errors.push(`${file}: the ${E2E_JOB} job has no flaky-report step`);
+  }
+  const uploads = steps.filter((step) =>
+    step.uses?.startsWith("actions/upload-artifact@")
+  );
+  if (uploads.length === 0) {
+    errors.push(`${file}: the ${E2E_JOB} job uploads no artifact`);
+  } else if (!uploads.every((step) => step.if?.includes("always()"))) {
+    errors.push(
+      `${file}: the ${E2E_JOB} artifact upload must run if: always() (retry traces, timeouts)`
+    );
+  }
+  const install = steps.find((step) => step.run?.includes(E2E_INSTALL_BROWSER));
+  const skip = install?.env?.[SKIP_BROWSER_DOWNLOAD];
+  if (install !== undefined && (skip === undefined || String(skip) === "1")) {
+    errors.push(
+      `${file}: the Chromium install step must override ${SKIP_BROWSER_DOWNLOAD} (the workflow sets it to 1)`
+    );
+  }
+  const runStep = steps.find((step) => step.run?.includes("bun run test:e2e"));
+  const deadline = Number(runStep?.env?.[E2E_DEADLINE_ENV]);
+  if (
+    !(Number.isFinite(deadline) && typeof minutes === "number") ||
+    deadline >= minutes - 5
+  ) {
+    errors.push(
+      `${file}: the shard step needs ${E2E_DEADLINE_ENV} at least 5 minutes below the job timeout`
+    );
+  }
+  const rootScripts = parseJsonRecord(input.rootPackage, "scripts");
+  if (typeof rootScripts["test:e2e"] !== "string") {
+    errors.push("package.json: no test:e2e script");
+  }
+  const siteScript = parseJsonRecord(input.sitePackage, "scripts")["test:e2e"];
+  if (
+    typeof siteScript !== "string" ||
+    !siteScript.includes("scripts/test-deadline.ts")
+  ) {
+    errors.push(
+      "apps/site/package.json: test:e2e must run through scripts/test-deadline.ts"
+    );
+  }
+  return errors;
+}
+
+function parseJsonRecord(source: string, key: string): Record<string, unknown> {
+  try {
+    const value = (JSON.parse(source) as Record<string, unknown>)[key];
+    return isRecord(value) ? value : {};
+  } catch {
+    return {};
+  }
 }
 
 function needsList(job: Job): string[] {
@@ -1581,6 +1725,12 @@ export function checkReleaseConfig(
   return [
     ...checkCiWorkflow(read(".github/workflows/ci.yml")),
     ...checkRenderLaneBuild(read(".github/workflows/ci.yml")),
+    ...checkE2eJob({
+      ci: read(".github/workflows/ci.yml"),
+      playwrightConfig: read("apps/site/playwright.config.ts"),
+      rootPackage: read("package.json"),
+      sitePackage: read("apps/site/package.json"),
+    }),
     ...checkDeployWorkflow(read(".github/workflows/deploy.yml"), migrationsDir),
     ...checkReleaseScripts(read("package.json")),
     ...checkSiteDryRuns(read("apps/site/package.json")),
