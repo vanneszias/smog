@@ -34,6 +34,7 @@ import {
   MobileAnalyticsProvider,
 } from "@/analytics";
 import { createMobileApiClient } from "@/lib/api";
+import { appScheme } from "@/lib/app-scheme";
 import { AuthClientProvider } from "@/lib/auth-client";
 import { mobileEnv } from "@/lib/env";
 import { connectQueryToDevice } from "@/lib/network";
@@ -78,7 +79,7 @@ export function appCacheBuster(): string {
 function createAppClients(): AppClients {
   const auth = createExpoAuthClient({
     baseURL: mobileEnv().EXPO_PUBLIC_API_URL,
-    scheme: "smog",
+    scheme: appScheme(),
     storagePrefix: "smog",
   });
   const queryClient = new QueryClient();

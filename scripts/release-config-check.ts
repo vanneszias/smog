@@ -1294,8 +1294,14 @@ const EAS_PROFILES = {
   production: "production",
   staging: "staging",
 } as const satisfies Record<string, Environment>;
-/** The only keys a profile's `env` may hold: public, reviewed in git. */
+/**
+ * The only keys a profile's `env` may hold: public, reviewed in git.
+ * `APP_VARIANT` (phase 9 task 3, ruling 9) is the build variant of the
+ * development and staging profiles; `mobile-release-check` and the app-config
+ * tests pin which profile sets which value.
+ */
 const EAS_ENV_KEYS = [
+  "APP_VARIANT",
   "EXPO_PUBLIC_API_URL",
   "EXPO_PUBLIC_ENVIRONMENT",
   "EXPO_PUBLIC_SITE_HOST",

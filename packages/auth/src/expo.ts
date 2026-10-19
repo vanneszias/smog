@@ -18,8 +18,11 @@ import { USER_ADDITIONAL_FIELDS } from "./fields";
 export interface ExpoAuthClientOptions {
   /** The site origin (`EXPO_PUBLIC_API_URL`). */
   baseURL: string;
-  /** The app's deep-link scheme. */
-  scheme: "smog";
+  /**
+   * The app's deep-link scheme: `smog`, or a variant's (`smog-staging`,
+   * `smog-dev`; `trustedOrigins` in `server.ts` lists them).
+   */
+  scheme: string;
   /** Prefix of the SecureStore keys. */
   storagePrefix: "smog";
 }

@@ -37,9 +37,10 @@ export interface ModalCardProps {
 }
 
 /**
- * The centred card on a dimmed backdrop in a native `Modal` (focus stays
- * inside, Android back closes it). The theme variables are re-applied at
- * the modal root; it fades in, or appears at once under reduced motion.
+ * The centred card on a dimmed backdrop in a native `Modal` (the screen
+ * reader stays inside, `accessibilityViewIsModal`; Android back closes it).
+ * The theme variables are re-applied at the modal root; it fades in, or
+ * appears at once under reduced motion.
  */
 export function ModalCard({
   children,
@@ -61,7 +62,11 @@ export function ModalCard({
       transparent
       visible={open}
     >
+      {/* `accessibilityViewIsModal` is on the root that holds the card, the
+          backdrop and the toasts: it hides what is *behind* the modal from
+          VoiceOver (iOS), and does not hide the toasts drawn inside it. */}
       <View
+        accessibilityViewIsModal
         className="flex-1 items-center justify-center p-4"
         style={themeVars}
         testID="overlay-theme-root"
@@ -75,9 +80,6 @@ export function ModalCard({
         />
         <View
           accessibilityRole={role}
-          // No `accessibilityViewIsModal`: the native Modal is its own
-          // window, so focus already stays inside, and the flag would hide
-          // the toasts drawn next to the card.
           className={cn(
             "w-full flex-col gap-4 rounded-xl border border-border-subtle bg-surface-raised p-6",
             className

@@ -2132,5 +2132,10 @@
       "fallbackNote": "La vidéo ne peut pas être lue ici, l’aperçu montre donc une image fixe du geste. La vidéo finale utilise le clip complet, avec cette fin.",
       "unavailable": "L’aperçu ne peut pas être affiché pour le moment. La vidéo finale est réalisée avec votre nom et votre logo tels que saisis."
     }
+  },
+  "signOutConfirm": {
+    "title": "Se déconnecter\u202f?",
+    "message": "Vous pouvez vous reconnecter à tout moment.",
+    "confirm": "Se déconnecter"
   }
 }

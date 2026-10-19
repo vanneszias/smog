@@ -2092,5 +2092,10 @@
       "fallbackNote": "De video kan hier niet worden afgespeeld, dus het voorbeeld toont een stilstaand beeld van het gebaar. De definitieve video gebruikt de volledige clip, met dit einde.",
       "unavailable": "Het voorbeeld kan nu niet getoond worden. De definitieve video wordt gemaakt met je naam en logo zoals ingevuld."
     }
+  },
+  "signOutConfirm": {
+    "title": "Afmelden?",
+    "message": "Je kunt op elk moment opnieuw aanmelden.",
+    "confirm": "Afmelden"
   }
 }

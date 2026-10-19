@@ -7,6 +7,7 @@ import {
   type ViewProps,
 } from "react-native";
 import { cn } from "../lib/cn";
+import { useLineLimit } from "../lib/line-limit";
 
 const rowClasses = "min-h-touch w-full flex-row items-center gap-3 px-4 py-3";
 
@@ -34,6 +35,7 @@ export function ListItem({
   trailing,
   ...props
 }: ListItemProps): ReactElement {
+  const oneLine = useLineLimit(1);
   const content = (
     <>
       {leading ? (
@@ -42,14 +44,14 @@ export function ListItem({
       <View className="min-w-0 flex-1 flex-col">
         <Text
           className="font-medium text-body text-foreground"
-          numberOfLines={1}
+          numberOfLines={oneLine}
         >
           {title}
         </Text>
         {description ? (
           <Text
             className="text-body-sm text-foreground-muted"
-            numberOfLines={1}
+            numberOfLines={oneLine}
           >
             {description}
           </Text>

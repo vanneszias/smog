@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json",
-    "./jest-setup": "./jest.setup-env.ts"
+    "./jest-setup": "./jest.setup-env.ts",
+    "./a11y-audit": "./src/test/a11y-audit.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",
