@@ -25,7 +25,7 @@ bun run cron <expiry|reminders|stale|retention>  # Run one Cron Trigger on the l
 bun run retention --env <dev|staging|production> --dry-run  # Count what the daily purge would delete (read-only D1 SELECT)
 bun scripts/ensure-cloudflare-resources.ts --env <staging|production> --check|--create|--dry-run  # Queues, DLQs, R2 bucket + CORS (the deploy job runs it)
 bun scripts/check-deploy-config.ts --env <staging|production> [--offline] [--warn-only]  # Vars, SITE_URL, KV/D1 ids in wrangler.jsonc, and (online) `wrangler secret list` against requiredWorkerConfig(env, renderMode) + provider pairs; --warn-only is staging only (the deploy job runs it first)
-bun run migrate:convex <plan|apply|mux scan|mux renditions|we-moved|help> …  # The Convex → D1 importer (@smog/migrate-convex); every path option is absolute; writes are dry by default (docs/cutover-runbook.md)
+bun run migrate:convex <plan|apply|mux scan|mux renditions|we-moved|help> …  # The Convex → D1 importer (@smog/migrate-convex); every path option is absolute; `mux renditions` and `we-moved` are dry without `--apply`, `apply` only with `--dry-run` (production needs `--yes`) (docs/cutover-runbook.md)
 ```
 
 Setup of the accounts, secrets, stores and the render flip is `docs/deployment.md`; the production switch-over (the domain decision, the Convex import timeline, the rollback) is `docs/cutover-runbook.md`; the owner's ordered list is in `docs/PROGRESS.md` (Owner actions in order).
