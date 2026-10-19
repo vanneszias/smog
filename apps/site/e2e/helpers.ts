@@ -169,6 +169,7 @@ export async function blockingViolations(
   page: Page,
   { exclude = [] }: { exclude?: readonly string[] } = {}
 ) {
+  await settleAnimations(page);
   let builder = new AxeBuilder({ page });
   for (const selector of [...AXE_EXCLUDED, ...exclude]) {
     builder = builder.exclude(selector);
@@ -183,6 +184,32 @@ export async function blockingViolations(
       id: violation.id,
       nodes: violation.nodes.map((node) => node.target.join(" ")),
     }));
+}
+
+/**
+ * Waits until the finite CSS transitions and animations on the page are
+ * done (a button fading from disabled to enabled reads as a failing
+ * `color-contrast` mid-way). Endless ones (a spinner) are left out, and the
+ * wait is bounded.
+ */
+async function settleAnimations(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const finite = document
+      .getAnimations()
+      .filter(
+        (animation) =>
+          animation.effect?.getComputedTiming().iterations !==
+          Number.POSITIVE_INFINITY
+      );
+    await Promise.race([
+      Promise.all(
+        finite.map((animation) => animation.finished.catch(() => undefined))
+      ),
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, 5000);
+      }),
+    ]);
+  });
 }
 
 /**
