@@ -12,7 +12,6 @@
     "test": "bun ../../scripts/test-deadline.ts -- vitest run && bun ../../scripts/test-deadline.ts -- bun test --path-ignore-patterns='test/integration/**'"
   },
   "dependencies": {
-    "@smog/account": "workspace:*",
     "@smog/admin": "workspace:*",
     "@smog/config": "workspace:*",
     "@smog/db": "workspace:*",

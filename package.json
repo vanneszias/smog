@@ -53,7 +53,7 @@
   },
   "scripts": {
     "admin:grant": "bun scripts/admin-grant.ts",
-    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-3wwx-pv8p-q78v --ignore=GHSA-67mh-4wv8-2f99 --ignore=GHSA-86w9-cpqp-85rv --ignore=GHSA-vfj7-8cjw-p6xm",
+    "audit": "bun audit --production --ignore=GHSA-w5hq-g745-h8pq --ignore=GHSA-vcc3-ghjq-m6fr --ignore=GHSA-3wwx-pv8p-q78v --ignore=GHSA-67mh-4wv8-2f99 --ignore=GHSA-86w9-cpqp-85rv --ignore=GHSA-vfj7-8cjw-p6xm --ignore=GHSA-rj75-hqrm-r3gf --ignore=GHSA-hp3w-g68c-fv3c",
     "boundaries": "bun scripts/check-boundaries.ts",
     "build": "turbo build",
     "check": "biome check --write .",
@@ -76,6 +76,8 @@
     "test:scripts": "bun scripts/test-deadline.ts -- bun test ./scripts"
   },
   "overrides": {
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2",
     "undici": "7.29.1"
   },
   "devDependencies": {

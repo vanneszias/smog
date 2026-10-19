@@ -58,11 +58,19 @@ describe("planUpdate", () => {
       "--message",
       "Fix",
     ]);
+    // The production profile's own keys, whichever origin it builds for
+    // (workers.dev or the domain, `docs/cutover-runbook.md`).
+    const profile = (
+      JSON.parse(EAS) as {
+        build: { production: { env: Record<string, string> } };
+      }
+    ).build.production.env;
     expect(plan.env).toEqual({
-      EXPO_PUBLIC_API_URL: "https://smog-site-production.zias.workers.dev",
+      EXPO_PUBLIC_API_URL: profile.EXPO_PUBLIC_API_URL as string,
       EXPO_PUBLIC_ENVIRONMENT: "production",
-      EXPO_PUBLIC_SITE_HOST: "smog-site-production.zias.workers.dev",
+      EXPO_PUBLIC_SITE_HOST: profile.EXPO_PUBLIC_SITE_HOST as string,
     });
+    expect(plan.env.EXPO_PUBLIC_API_URL).toStartWith("https://");
   });
 
   test("maps staging to the preview EAS environment", () => {

@@ -13,9 +13,15 @@ import { join } from "node:path";
  * orphan objects cannot be counted from D1; the logo line counts the
  * sponsorships whose `logo_key` would be released.
  *
- * The windows mirror `@smog/db` `retention.ts` and
- * `@smog/sponsorships` `orphan-logos.ts` (scripts may not import them);
- * change them together.
+ * The rejected-video lines (phase 8 ruling 13) count the rejected
+ * sponsorships whose Mux asset the purge would delete (a `rejected` event
+ * 30 days old or more; the cron deletes at most 20 per night) and the
+ * migrated ones it never deletes (no `rejected` event: the runbook's
+ * rejected-asset decision).
+ *
+ * The windows mirror `@smog/db` `retention.ts`,
+ * `@smog/sponsorships` `orphan-logos.ts` and its `schema/retention.ts` and
+ * `server/sweeps.ts` (scripts may not import them); change them together.
  */
 
 const ENVS = ["dev", "staging", "production"] as const;
@@ -28,6 +34,10 @@ const AUDIT_MS = 3 * 365 * DAY_MS;
 const TOKEN_GRACE_MS = 29 * DAY_MS;
 /** `TERMINAL_LOGO_GRACE_MS`. */
 const LOGO_GRACE_MS = 30 * DAY_MS;
+/** `REJECTED_VIDEO_RETENTION_DAYS`. */
+const REJECTED_VIDEO_DAYS = 30;
+/** `REJECTED_VIDEO_PURGE_PER_RUN`. */
+const REJECTED_VIDEO_PER_RUN = 20;
 
 const NOW = "CAST(unixepoch('subsec') * 1000 AS INTEGER)";
 
@@ -35,6 +45,14 @@ const NOW = "CAST(unixepoch('subsec') * 1000 AS INTEGER)";
 function releasable(alias: string): string {
   return `(${alias}.updated_at < ${NOW} - ${LOGO_GRACE_MS} AND (${alias}.status = 'expired' OR (${alias}.status IN ('rejected', 'cancelled') AND NOT EXISTS (SELECT 1 FROM payment_item pi INNER JOIN payment p ON p.id = pi.payment_id WHERE pi.sponsorship_id = ${alias}.id AND pi.includes_logo = 1 AND NOT (p.status IN ('canceled', 'expired', 'failed') AND p.paid_at IS NULL)))))`;
 }
+
+/** The latest `rejected` event of sponsorship `s` (`rejectedEventAtSql`). */
+const REJECTED_EVENT_AT =
+  "(SELECT max(ev.created_at) FROM sponsorship_event ev WHERE ev.sponsorship_id = s.id AND ev.type = 'rejected')";
+
+/** A rejected sponsorship that still holds a video asset. */
+const REJECTED_WITH_VIDEO =
+  "s.status = 'rejected' AND s.video_asset_id IS NOT NULL";
 
 /** The one read-only statement: a count per purge, and the session range. */
 export function buildCountSql(): string {
@@ -45,6 +63,8 @@ export function buildCountSql(): string {
     `(SELECT count(*) FROM verification WHERE expires_at < ${NOW}) AS verification,`,
     `(SELECT count(*) FROM sponsorship_token WHERE expires_at < ${NOW} - ${TOKEN_GRACE_MS} OR used_at < ${NOW} - ${TOKEN_GRACE_MS}) AS sponsorship_token,`,
     `(SELECT count(*) FROM sponsorship s WHERE s.logo_key IS NOT NULL AND ${releasable("s")} AND NOT EXISTS (SELECT 1 FROM sponsorship o WHERE o.logo_key = s.logo_key AND NOT ${releasable("o")})) AS logos_released,`,
+    `(SELECT count(*) FROM sponsorship s WHERE ${REJECTED_WITH_VIDEO} AND ${REJECTED_EVENT_AT} <= ${NOW} - ${REJECTED_VIDEO_DAYS * DAY_MS}) AS rejected_videos,`,
+    `(SELECT count(*) FROM sponsorship s WHERE ${REJECTED_WITH_VIDEO} AND NOT EXISTS (SELECT 1 FROM sponsorship_event ev WHERE ev.sponsorship_id = s.id AND ev.type = 'rejected')) AS rejected_videos_kept,`,
     `(SELECT min(expires_at) FROM session WHERE expires_at < ${NOW}) AS expired_session_min,`,
     `(SELECT max(expires_at) FROM session WHERE expires_at < ${NOW}) AS expired_session_max,`,
     `${NOW} AS now_ms;`,
@@ -132,6 +152,8 @@ export function reportLines(
     `  expired verifications: ${row.verification}`,
     `  sponsorship tokens used or expired more than 29 days ago: ${row.sponsorship_token}`,
     `  sponsorships whose logo would be released: ${row.logos_released}`,
+    `  rejected videos past ${REJECTED_VIDEO_DAYS} days (Mux assets deleted, or only unlinked while a gesture or a running sponsorship still uses them; at most ${REJECTED_VIDEO_PER_RUN} per night): ${row.rejected_videos}`,
+    `  rejected videos without a rejected event (migrated, never purged): ${row.rejected_videos_kept}`,
     "  R2 orphan logos: not countable from D1 (the cron logs logosDeleted)",
   ];
   const max = Number(row.expired_session_max);

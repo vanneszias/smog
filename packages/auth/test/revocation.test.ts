@@ -77,7 +77,7 @@ describe("Better Auth's own rate limiter (I3)", () => {
   it("never limits session reads, even from one shared IP", async () => {
     const ctx = setup({
       ENVIRONMENT: "staging",
-      SITE_URL: "https://smog-site-staging.workers.dev",
+      SITE_URL: "https://smog-site-staging.zias.workers.dev",
     });
     const context = await ctx.auth.$context;
     expect(context.rateLimit.enabled).toBe(true);
