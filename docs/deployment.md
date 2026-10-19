@@ -63,20 +63,20 @@ bunx wrangler d1 create smog-production                  # prints database_id
 bunx wrangler kv namespace create smog-production-kv     # prints id; the title is free
 ```
 
+`wrangler d1 create` and `kv namespace create` may offer to add the binding to `wrangler.jsonc` (an unverified prompt): decline, and paste the printed ids into `env.production` by hand.
+
 **Choose the location now.** D1 takes `--location weur` (a hint) or `--jurisdiction eu` (a restriction), and neither can change afterwards. The owner decides it together with the bucket (below): the data is Belgian users' personal data, and the privacy text does not promise a region. Staging uses the default. Commit the two ids to `develop` (they are not secrets), and the migrations run on the first deploy.
 
 ## 5. Queues and the bucket (production)
 
 Names (from `wrangler.jsonc`): `smog-production-email`, `smog-production-email-dlq`, `smog-production-sponsorship-events`, `smog-production-sponsorship-events-dlq`, bucket `smog-production-media`. With `SMOG_PROVISION_PRODUCTION=1` the deploy creates what is missing and never changes or deletes what exists; without it, `--check` fails with the commands. Preview them: `bun scripts/ensure-cloudflare-resources.ts --env production --dry-run` (prints every command; with `SMOG_RENDER_PIPELINE=1` also the Workflows, Docker and Containers probes).
 
-**The bucket's location or jurisdiction cannot change after creation**, and the script creates with the account default. For a choice other than the default, create the bucket **by hand before the first deploy** (the script then finds it and only checks its CORS):
+**The bucket's location cannot change after creation**, and the script creates with the account default. For a location hint other than the default, create the bucket **by hand before the first deploy** (the script then finds it and only checks its CORS). **Only a location hint is supported.** An EU **jurisdiction** bucket (`--jurisdiction eu`) does **not** work with the code today: the presigned logo PUT is hard-coded to `<account>.r2.cloudflarestorage.com` (`packages/features/sponsorships/src/server/logo.ts`, and the CSP `connect-src` follows it), a jurisdiction bucket lives at `<account>.eu.r2.cloudflarestorage.com`, and `ensure-cloudflare-resources.ts` lists buckets without a jurisdiction, so it would create a second default bucket of the same name. It is a phase 9 candidate (the endpoint from config, and `-J` in the script). D1's `--jurisdiction eu` is fine (no code depends on it).
+
 
 ```bash
 cd apps/site
 bunx wrangler r2 bucket create smog-production-media --location weur --no-update-config
-# or, for an EU jurisdiction (the S3 endpoint becomes <account>.eu.r2.cloudflarestorage.com,
-# and the r2_buckets binding needs "jurisdiction": "eu"):
-bunx wrangler r2 bucket create smog-production-media --jurisdiction eu --no-update-config
 ```
 
 **The bucket's CORS** (the browser's presigned logo `PUT` from the site) is set by the script when the bucket has none. It is **never overwritten**: when `SITE_URL` is not among the allowed origins the deploy fails and prints `wrangler r2 bucket cors set smog-production-media --file cors.json --force` with the JSON. The JSON is `{"rules":[{"allowed":{"headers":["content-type"],"methods":["PUT"],"origins":["<origin>"]},"maxAgeSeconds":3600}]}`. A rule that lists the origin among several is accepted, which is what path D needs (both origins).
@@ -120,6 +120,7 @@ Staging sits behind Cloudflare Access (`ziasbe.cloudflareaccess.com`): every pat
 | `/webhooks/mollie` | Mollie's legacy alias path |
 | `/api/csp-report` | browsers' CSP reports (staging sends `Content-Security-Policy-Report-Only`; without the bypass the reports never reach the Worker) |
 | `/.well-known/*` | the app-link files (`apple-app-site-association`, `assetlinks.json`) |
+| `/turnstile-bridge` | the staging mobile builds' Turnstile challenge page (`/api/*` does not cover it), and likewise the app magic-link page `/magic-link/app` |
 | `/api/*` (or at least `/api/rpc/*` and `/api/auth/*`) | the staging **mobile builds**, which carry no Access session |
 
 How much of staging to open is the owner's decision. The same applies to production if Access is ever put in front of it.
@@ -129,7 +130,7 @@ How much of staging to open is the owner's decision. The same applies to product
 - **Production uses the existing (old) production Mux environment**: every gesture asset is there, so master access and the admin asset picker need its token. **Staging gets a new Mux environment**; dev keeps the fake. Separate environments keep staging uploads out of the production picker and staging assets off the production bill (`test: true` is dev only).
 - Each Mux environment has its own **access token** (`MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`; permissions: Mux Video read and write) and its own **webhook** with a **signing secret** (`MUX_WEBHOOK_SECRET`). The webhook URL is **`<SITE_URL>/api/webhooks/mux`**.
 - Render uploads carry the passthrough `render-job:<env>:<jobId>`: another env's event, or the untagged phase 7 form, is answered `IGNORED` and touches no asset, and an event tagged for this env whose job it does not know is deleted. So a Mux environment shared by accident does not delete the other env's assets.
-- **Production's webhook secret exists before the cutover.** `MUX_WEBHOOK_SECRET` is required at the first production deploy, but the old webhook of the old environment points at the old system until T-0. Add a **second** webhook endpoint (Mux dashboard → Settings → Webhooks, in the production environment) for `<production SITE_URL>/api/webhooks/mux` at T-1 and put its signing secret in `MUX_WEBHOOK_SECRET`; the old endpoint is removed at step 10 of T-0. The new endpoint ignores the old app's events (they are not `gesture-upload:` or `render-job:` passthroughs). If the dashboard allows only one endpoint per environment, set any random value as `MUX_WEBHOOK_SECRET` at T-1 (every delivery is then `400`) and put the real secret in at step 10 with `wrangler secret put MUX_WEBHOOK_SECRET --env production`.
+- **Production's webhook secret exists before the secrets and the first deploy (PROGRESS step 4, before step 5).** `MUX_WEBHOOK_SECRET` is required at the first production deploy, but the old webhook of the old environment points at the old system until T-0. The new URL is known now (the production `SITE_URL`), so add a **second** webhook endpoint (Mux dashboard → Settings → Webhooks, in the production environment) for `<production SITE_URL>/api/webhooks/mux` first, and put its signing secret in `MUX_WEBHOOK_SECRET`; the old endpoint is removed at step 10 of T-0. The new endpoint ignores the old app's events (they are not `gesture-upload:` or `render-job:` passthroughs). If the dashboard allows only one endpoint per environment, set any random value as `MUX_WEBHOOK_SECRET` before the first deploy (every delivery is then `400`) and put the real secret in at step 10 with `wrangler secret put MUX_WEBHOOK_SECRET --env production`.
 - **Staging smoke (owner, pending):** answer one delivery with a 503 (for example unset `MUX_WEBHOOK_SECRET` briefly) and confirm Mux's retry more than 5 minutes later still verifies (that Mux signs each attempt with a fresh `t`); if it does not, widen the 300 s window or verify `t` against the event's `created_at`.
 - **The importer's two Mux commands use a separate, low-priority token** of the production environment, created for the migration and revoked afterwards (`docs/cutover-runbook.md`).
 
@@ -149,7 +150,7 @@ Both are optional (section 6). The redirect URIs are Better Auth's: **`<origin>/
 
 ## 12. Apple private-relay email registration (`smog.vlaanderen`)
 
-Users who chose "Hide my email" in Sign in with Apple have an address `…@privaterelay.appleid.com`, and **Apple forwards our mail only from domains and addresses registered for the relay**. The importer counts these users (the plan report's `privateRelay`), and they get **no email at all** (sign-in codes, reset, magic links, `we_moved`, sponsor emails) until this is done. Do it before T-1:
+Users who chose "Hide my email" in Sign in with Apple have an address `…@privaterelay.appleid.com`, and **Apple forwards our mail only from domains and addresses registered for the relay**. The importer counts these users (the plan report's `privateRelay`), and they get **no email at all** (sign-in codes, reset, magic links, `we_moved`, sponsor emails) until this is done. Do it before the first production deploy:
 
 1. Apple Developer → Certificates, Identifiers & Profiles → **Services → Sign in with Apple for Email Communication (Configure)** **(dashboard)**.
 2. Add the domain **`smog.vlaanderen`** and the sender address **`noreply@smog.vlaanderen`** (production's `EMAIL_FROM`).
@@ -159,7 +160,7 @@ Users who chose "Hide my email" in Sign in with Apple have an address `…@priva
 ## 13. Mollie and the Email Service
 
 - **Mollie.** The production **profile** (Mollie dashboard → Developers / Website profiles) has its **website** set to the production `SITE_URL` (Mollie checks the profile's website), and the **live** API key comes from that profile (`MOLLIE_API_KEY`, `live_…`; the schema refuses `test_` in production and `live_` elsewhere). There is **no webhook to configure**: every payment carries `webhookUrl: <SITE_URL>/api/webhooks/mollie` and `redirectUrl: <SITE_URL>/sponsor/success?payment=<id>`, and the site checks a webhook by fetching the payment back with the key. **Confirm early that Mollie accepts a workers.dev website for the profile**: if it does not, path D (the domain) is forced. Staging uses the test key and its own profile. The old payments created before the cutover keep the old webhook URL (`<old origin>/webhooks/mollie`); the site serves `POST /webhooks/mollie` as an alias (`docs/cutover-runbook.md`).
-- **Email Service onboarding (production, before T-1).** Production sends from `noreply@smog.vlaanderen` through the `EMAIL` `send_email` binding (`allowed_sender_addresses` in `wrangler.jsonc`). Until the domain is onboarded the binding only sends to verified destination addresses, and the first production admin could not receive a sign-in code. Cloudflare dashboard → **Email Service** **(dashboard)** → onboard `smog.vlaanderen`: it shows the SPF and DKIM (and any other) DNS records to add. The dashboard says whether the zone must be on Cloudflare DNS (expected: yes, it adds the records itself), which is also what path D needs. Staging is onboarded for `smog.zias.be`. Test with the first admin's code (`admin:grant --create`).
+- **Email Service onboarding (production, before the first admin signs in).** Production sends from `noreply@smog.vlaanderen` through the `EMAIL` `send_email` binding (`allowed_sender_addresses` in `wrangler.jsonc`). Until the domain is onboarded the binding only sends to verified destination addresses, and the first production admin could not receive a sign-in code. Cloudflare dashboard → **Email Service** **(dashboard)** → onboard `smog.vlaanderen`: it shows the SPF and DKIM (and any other) DNS records to add. The dashboard says whether the zone must be on Cloudflare DNS (expected: yes, it adds the records itself), which is also what path D needs. Staging is onboarded for `smog.zias.be`. Test with the first admin's code (`admin:grant --create`).
 
 ## 14. The Remotion licence and the container cost
 

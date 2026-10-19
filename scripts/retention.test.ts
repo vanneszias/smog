@@ -169,7 +169,7 @@ describe("runRetentionDryRun", () => {
     expect(lines).toContain("  audit_log older than 3 × 365 days: 2");
     expect(lines).toContain("  sponsorships whose logo would be released: 1");
     expect(lines).toContain(
-      "  rejected videos past 30 days (Mux assets, at most 20 deleted per night): 6"
+      "  rejected videos past 30 days (Mux assets deleted, or only unlinked while a gesture or a running sponsorship still uses them; at most 20 per night): 6"
     );
     expect(lines).toContain(
       "  rejected videos without a rejected event (migrated, never purged): 7"

@@ -152,7 +152,7 @@ export function reportLines(
     `  expired verifications: ${row.verification}`,
     `  sponsorship tokens used or expired more than 29 days ago: ${row.sponsorship_token}`,
     `  sponsorships whose logo would be released: ${row.logos_released}`,
-    `  rejected videos past ${REJECTED_VIDEO_DAYS} days (Mux assets, at most ${REJECTED_VIDEO_PER_RUN} deleted per night): ${row.rejected_videos}`,
+    `  rejected videos past ${REJECTED_VIDEO_DAYS} days (Mux assets deleted, or only unlinked while a gesture or a running sponsorship still uses them; at most ${REJECTED_VIDEO_PER_RUN} per night): ${row.rejected_videos}`,
     `  rejected videos without a rejected event (migrated, never purged): ${row.rejected_videos_kept}`,
     "  R2 orphan logos: not countable from D1 (the cron logs logosDeleted)",
   ];
