@@ -293,7 +293,7 @@ function ListCell({
     <CellShell state={state}>
       <button
         aria-describedby={state.describedBy}
-        aria-label={title}
+        aria-label={summary ? `${summary}: ${title}` : title}
         className={cn(
           "flex min-h-touch w-full min-w-[10rem] max-w-[16rem] items-center gap-2 rounded-md border border-border bg-surface px-3 text-left text-body-sm hover:border-foreground-muted",
           "outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",

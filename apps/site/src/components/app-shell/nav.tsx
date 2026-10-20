@@ -41,7 +41,14 @@ export function MainNav({ className }: { className?: string }): ReactNode {
 }
 
 /** The same links as rows, for the mobile menu sheet. */
-export function MainNavList({ className }: { className?: string }): ReactNode {
+export function MainNavList({
+  className,
+  onNavigate,
+}: {
+  className?: string;
+  /** Called when a link is followed (the sheet closes, the page changes). */
+  onNavigate?: () => void;
+}): ReactNode {
   const { t } = useTranslation();
   return (
     <nav
@@ -52,7 +59,9 @@ export function MainNavList({ className }: { className?: string }): ReactNode {
         {NAV_ITEMS.map((item) => (
           <li key={item.href}>
             <ListItem asChild leading={item.icon} title={t(item.label)}>
-              <Link to={item.href}>{t(item.label)}</Link>
+              <Link onClick={onNavigate} to={item.href}>
+                {t(item.label)}
+              </Link>
             </ListItem>
           </li>
         ))}

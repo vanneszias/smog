@@ -65,9 +65,19 @@ export function UserMenu(): ReactNode {
   if (!auth.user) {
     const redirect = signInReturnPath(href);
     return (
-      <Button asChild icon={<LogIn />} variant="secondary">
+      <Button
+        asChild
+        className="max-[22.5rem]:size-touch max-[22.5rem]:px-0"
+        variant="secondary"
+      >
         <Link search={redirect ? { redirect } : {}} to="/sign-in">
-          {t("nav.signIn")}
+          {/* Below 360 px the header cannot fit the label (320 px reflow,
+              WCAG 1.4.10): the icon stands in, the text still names the link. */}
+          <LogIn
+            aria-hidden="true"
+            className="hidden size-5 max-[22.5rem]:block"
+          />
+          <span className="max-[22.5rem]:sr-only">{t("nav.signIn")}</span>
         </Link>
       </Button>
     );

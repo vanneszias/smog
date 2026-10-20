@@ -61,6 +61,8 @@ describe("SearchResults", () => {
       screen.getByRole("heading", { name: "No gestures found" })
     ).toBeDefined();
     expect(screen.getByRole("button", { name: "Clear filters" })).toBeDefined();
+    // Announced too: the empty state does not take the focus.
+    expect(screen.getByRole("status").textContent).toBe("No gestures found");
   });
 
   test("error: an alert with retry", async () => {

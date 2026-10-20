@@ -9,7 +9,7 @@
       "packages/features/*"
     ],
     "catalog": {
-      "@axe-core/playwright": "4.13.0",
+      "@axe-core/playwright": "4.14.0",
       "@cloudflare/containers": "0.3.7",
       "@cloudflare/vite-plugin": "1.62.5",
       "@cloudflare/vitest-plugin": "1.3.6",

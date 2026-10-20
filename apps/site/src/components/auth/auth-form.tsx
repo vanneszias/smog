@@ -37,6 +37,7 @@ import {
 import {
   type FormEvent,
   type ReactNode,
+  type RefObject,
   useCallback,
   useEffect,
   useMemo,
@@ -62,6 +63,25 @@ const METHOD_ICONS: Record<AuthMethod, ReactNode> = {
 };
 
 type FormValues = (name: string) => string;
+
+/**
+ * Moves the focus to the first field a failed submit marked invalid (WCAG
+ * 3.3.1: the user lands on what to correct; its message is the field's
+ * `aria-describedby`). The effect runs after the render that set the error.
+ */
+function useFocusInvalid(
+  error: AuthErrorKey | null
+): RefObject<HTMLFormElement | null> {
+  const form = useRef<HTMLFormElement | null>(null);
+  useEffect(() => {
+    if (error) {
+      form.current
+        ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+        ?.focus();
+    }
+  }, [error]);
+  return form;
+}
 
 /** A stable submit handler that reads the form's fields by name. */
 function useSubmit(
@@ -152,6 +172,7 @@ function EmailStep({ flow }: { flow: AuthFlow }): ReactNode {
   const { t } = useTranslation();
   const { state } = flow;
   const error = useFieldError(state.error, "email");
+  const form = useFocusInvalid(state.error);
   const { submitEmail } = flow;
   const onSubmit = useSubmit(
     useCallback(
@@ -160,7 +181,12 @@ function EmailStep({ flow }: { flow: AuthFlow }): ReactNode {
     )
   );
   return (
-    <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
+    <form
+      className="flex flex-col gap-4"
+      noValidate
+      onSubmit={onSubmit}
+      ref={form}
+    >
       <Field error={error} label={t("auth.email.label")}>
         <Input
           autoComplete="email"
@@ -258,6 +284,7 @@ function PasswordStep({
   const passwordError = useFieldError(state.error, "password");
   const confirmError = useFieldError(state.error, "confirm");
   const signUp = state.mode === "signUp";
+  const form = useFocusInvalid(state.error);
   const { submitPassword } = flow;
   const onSubmit = useSubmit(
     useCallback(
@@ -271,7 +298,12 @@ function PasswordStep({
     )
   );
   return (
-    <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
+    <form
+      className="flex flex-col gap-4"
+      noValidate
+      onSubmit={onSubmit}
+      ref={form}
+    >
       {signUp ? (
         <Field error={nameError} label={t("auth.name.label")}>
           <Input
@@ -322,6 +354,7 @@ function CodeStep({ flow }: { flow: AuthFlow }): ReactNode {
   const { t } = useTranslation();
   const { state, submitCode } = flow;
   const codeError = useFieldError(state.error, "code");
+  const form = useFocusInvalid(state.error);
   const onSubmit = useSubmit(
     useCallback(
       (values: FormValues) => submitCode(values("code")),
@@ -329,7 +362,12 @@ function CodeStep({ flow }: { flow: AuthFlow }): ReactNode {
     )
   );
   return (
-    <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
+    <form
+      className="flex flex-col gap-4"
+      noValidate
+      onSubmit={onSubmit}
+      ref={form}
+    >
       <Field
         error={codeError}
         hint={t("auth.otp.description", {

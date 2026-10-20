@@ -58,7 +58,15 @@ export function Avatar({
           src={src}
         />
       ) : null}
-      <AvatarPrimitive.Fallback>{initialsOf(name)}</AvatarPrimitive.Fallback>
+      {/* The initials are generated content, not text: an avatar inside a
+          named control (the user menu's button) would otherwise be "visible
+          text missing from the accessible name" (axe 4.14
+          label-content-name-mismatch, WCAG 2.5.3). The image role names it. */}
+      <AvatarPrimitive.Fallback
+        aria-hidden="true"
+        className="before:content-[attr(data-initials)]"
+        data-initials={initialsOf(name)}
+      />
     </AvatarPrimitive.Root>
   );
 }

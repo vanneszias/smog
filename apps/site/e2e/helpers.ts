@@ -164,13 +164,27 @@ export function watchErrors(page: Page): string[] {
  * `AXE_EXCLUDED` (the Mux player). `exclude` leaves more selectors out,
  * frames included: axe never enters an excluded frame (a sandboxed
  * preview frame refuses its script, and the run can hang there).
+ * `menuOpen` is for a scan taken while a menu is open: Radix's modal menu
+ * hides the rest of the page from assistive technology (`aria-hidden`) and
+ * traps the focus in the menu, which axe only accepts for a dialog, so
+ * `aria-hidden-focus` and (the whole page being hidden) `page-has-heading-one`
+ * are not run then (DECISIONS, phase 9 task 5).
  */
 export async function blockingViolations(
   page: Page,
-  { exclude = [] }: { exclude?: readonly string[] } = {}
+  {
+    exclude = [],
+    menuOpen = false,
+  }: { exclude?: readonly string[]; menuOpen?: boolean } = {}
 ) {
   await settleAnimations(page);
   let builder = new AxeBuilder({ page });
+  if (menuOpen) {
+    builder = builder.disableRules([
+      "aria-hidden-focus",
+      "page-has-heading-one",
+    ]);
+  }
   for (const selector of [...AXE_EXCLUDED, ...exclude]) {
     builder = builder.exclude(selector);
   }
