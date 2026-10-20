@@ -1683,7 +1683,9 @@ The audit walked every open row of `docs/superpowers/specs/2026-09-29-feature-in
 - **2026-10-20 · [changed] X-17: the contact address is `info@smog.vlaanderen`** (`CONTACT_EMAIL`). The inventory listed `hello@smog.vlaanderen` as well; no screen, email or document of the rewrite uses it.
 - **2026-10-20 · [process] Section 1.3 has no open item.** All twelve "no DECISIONS entry" rules are recorded under "Rule changes recorded from the feature inventory (2026-09-29)" (guests, category slugs, auth provider, CSV columns, rate limits, Mux webhooks, typo tolerance, route names, web guests, the Favorites tab, legal pages, Turnstile); the audit confirmed each against the code. Item 7's "no explicit successor" is stale: the entry names the Damerau-Levenshtein tier (`typo-gate.test.ts`).
 - **2026-10-20 · [process] R-15's note is updated** to Task 7's fragment redirect: 302 `/sponsor/edit#token=<same>`, 301 only without a token.
-- **2026-10-20 · [not done] Three things the audit records and does not do**, each with an owner and a date so Task 11 carries them: (1) **load and abuse testing of the rate limits** (the table is pinned by `scripts/security-guard.test.ts`, the numbers by DECISIONS "Rate limits: the binding only has 10 s and 60 s periods"; a real load needs the staging deploy and the owner's Cloudflare account; owner, before the production cutover); (2) **a cost review** (Workers Paid, Containers, Queues, Mux and Mollie fees against real traffic: needs a month of staging and production usage; owner, one month after the cutover); (3) **a backup-restore drill** (the runbook has D1 Time Travel and the R2 notes; the drill needs a real database; owner, before the cutover rehearsal in `docs/cutover-runbook.md`).
+- **2026-10-20 · [changed] P-23: the developer tools ship as the 5-tap unlock plus the component gallery, on dev and staging builds only. The old Logs section is dropped for now.** The old screen exported, saved and cleared logs from an in-app logger (console patch, a 5000-entry ring, files of 1 MB, ten at most) and showed a viewer. None of that is ported: `apps/mobile/app/settings/developer-tools/index.tsx` shows the gallery entry only. Why: it is a dev and staging tool; the server side has Workers Logs and the structured `[error]`, `[csp]` and `[dlq]` lines, and the app's console is reachable through the Expo dev tools; and a native log ring that persists to the device adds on-device personal-data risk (a log line can carry an email or a token by accident) that the Worker-side log redaction of phase 9 task 8 does not cover. The unused `devTools.exportLogs` i18n keys remain for a later screen. **Carry (phase 10 or after launch, owner: the app team, only if the owners want it):** a redacted in-memory ring with an export action and no file persistence. The inventory row says `changed`, not `done`.
+- **2026-10-20 · [changed] P-28: `GET /api/health` replaces `GET /` and `GET /health`** (the Docker and Caddy healthchecks are gone, P-38); it answers `{ ok, environment }` from the vars only and is exempt from maintenance mode (`apps/site/test/health.test.ts`, `apps/site/test/maintenance.test.ts`).
+- **2026-10-20 · [not done] Three things the audit records and does not do**, each with an owner and a date, copied into Task 11's owner list (`docs/PROGRESS.md`, "Owner actions in order"; the cutover date is the owner's, so the dates are relative to it, with the step in `docs/cutover-runbook.md` that comes first): (1) **load and abuse testing of the rate limits** (the table is pinned by `scripts/security-guard.test.ts`, the numbers by DECISIONS "Rate limits: the binding only has 10 s and 60 s periods"; a real load needs the staging deploy and the owner's Cloudflare account; owner, before the production cutover); (2) **a cost review** (Workers Paid, Containers, Queues, Mux and Mollie fees against real traffic: needs a month of staging and production usage; owner, one month after the cutover); (3) **a backup-restore drill** (the runbook has D1 Time Travel and the R2 notes; the drill needs a real database; owner, before the cutover rehearsal in `docs/cutover-runbook.md`).
 
 ### The disposition table (inventory rows)
 
@@ -1695,11 +1697,11 @@ The audit walked every open row of `docs/superpowers/specs/2026-09-29-feature-in
 | P-10 | done | the 5 MiB RPC body cap, also for streamed bodies that declare no length (phase 9 task 8, `apps/site/test/security-rpc-body.test.ts`); same-origin web needs no CORS, mobile uses Better Auth trusted origins (`packages/auth/test/auth.test.ts`) |
 | P-14 | changed | `/manifest.webmanifest` generated from tokens with the old values, linked once from the document (`apps/site/test/manifest.test.ts`, `apps/site/e2e/routes-parity.spec.ts`); the generated icon set (192, 512, maskable, SVG) replaces the nine `android-chrome-*` sizes; `browserconfig.xml` and the Yandex manifest are dropped (DECISIONS, Parity audit) |
 | P-18 | done | `public/_headers` and the Worker's cache table, kept equal (phase 9 task 6, `apps/site/test/cache-policy.test.ts`) |
-| P-23 | done | unlock by 5 taps, off in production builds (`apps/mobile/src/lib/dev-tools.test.ts`), the gallery in `apps/mobile/src/dev/component-gallery.test.tsx` |
+| P-23 | changed | 5-tap unlock, off in production builds (`apps/mobile/src/lib/dev-tools.test.ts`) and the component gallery (`apps/mobile/src/dev/component-gallery.test.tsx`); the Logs section, viewer, ring and file rotation are not ported (entry above, carry to phase 10) |
 | P-25 | done | the haptics helper in `@smog/ui-native` (`packages/ui-native/src/components/choice.test.tsx`, `chip.test.tsx`, `overlays.test.tsx`) |
 | P-26 | changed | `logErrors` with the `[rpc:<path>]` prefix and redacted logs (`packages/rpc/test/middleware.test.ts`, `apps/site/test/security-observability.test.ts`, `scripts/security-guard.test.ts` log scan); OTLP dropped (X-10) |
 | P-27 | done | the typed error map (`packages/rpc/src/errors.ts`, `packages/rpc/test/contract.test.ts`); the old `SyncError`/`DatabaseError`/`ConvexError` are gone with Convex |
-| P-29 | done | `Toast` with an `aria-live` viewport in both kits (`packages/ui-web/src/components/toast.test.tsx`, `packages/ui-native/src/a11y.test.tsx`) |
+| P-29 | done | `Toast` with a polite live region in both kits (`packages/ui-web/src/components/toast.test.tsx`, asserts `role=status` and `aria-live=polite`; `packages/ui-native/src/a11y.test.tsx`) |
 | P-30 | done | skip link, landmarks, keyboard and reflow runs (phase 9 task 5: `apps/site/e2e/a11y-landmarks.spec.ts`, `a11y-keyboard.spec.ts`, `a11y-reflow.spec.ts`; mobile `apps/mobile/src/a11y.test.tsx`) |
 | P-32 | done | direct uploads with `static_renditions [{resolution: "highest"}]` (`packages/video/src/uploads.test.ts`), the master-ready and asset-ready webhooks (`apps/site/test/mux-webhook.test.ts`) |
 | P-33 | done | Zod env schemas per runtime and the renamed constants (`packages/config/src/env/worker.test.ts`, `mobile.test.ts`, `render.test.ts`, `packages/config/src/constants.ts`); the sync constants are dropped |
@@ -1716,7 +1718,7 @@ The audit walked every open row of `docs/superpowers/specs/2026-09-29-feature-in
 | W-05 | dropped | the Workflow calls Mux directly, no internal endpoint (bug 10) |
 | W-06 | dropped | services enqueue on `EMAIL_QUEUE` (bug 10) |
 | W-08 | done | `/api/rpc/*` and `/api/openapi/*` on `RL_API` (`apps/site/test/rpc.test.ts`, docs/API.md rate-limit table, `scripts/security-guard.test.ts`) |
-| W-09 | done | `GET /api/health`, exempt from maintenance (`apps/site/test/health.test.ts`, `apps/site/e2e/routes-parity.spec.ts`) |
+| W-09 | done | `GET /api/health`, exempt from maintenance (`apps/site/test/maintenance.test.ts` line 184, `apps/site/test/health.test.ts`, `apps/site/e2e/routes-parity.spec.ts`) |
 | W-10 | changed | the Container's `POST /render`, called only by the Workflow (D-PREVIEW, D-RENDERJOB; `packages/render` tests) |
 | W-11 | done | nothing existed, nothing was added |
 | X-01 | changed | WorkOS to Better Auth (DECISIONS, "Auth provider: WorkOS to Better Auth" and D-AUTH) |
@@ -1726,16 +1728,16 @@ The audit walked every open row of `docs/superpowers/specs/2026-09-29-feature-in
 | X-09 | done | relay at `/api/analytics`, write-only native client, consent-gated (`packages/analytics/src/*.test.ts`, `apps/site/test/analytics.test.ts`) |
 | X-10 | dropped | not in the spec; Workers observability logs instead (P-26) |
 | X-11 | done | EAS profiles and the OTA wrapper (`scripts/eas-update.test.ts`, `apps/mobile/eas.json`) |
-| X-12 | done | Google and Apple through Better Auth, passkeys (`packages/auth/test/methods.test.ts`, `apps/mobile/src/auth-screen.test.tsx`) |
+| X-12 | done | `signInSocial` for Google and Apple (`packages/auth/src/flow-actions.test.ts`), Sign in with Apple on iOS (`apps/mobile/src/auth/apple.ts`), linked accounts and passkeys (`packages/auth/test/methods.test.ts`) |
 | X-14 | changed | FTS5 plus the Damerau-Levenshtein tier replace Fuse.js (D-FTS; DECISIONS "Search typo tolerance") |
 | X-15 | dropped | Cloudflare Workers and GitHub Actions (spec §1 non-goals; DECISIONS, Parity audit) |
 | X-17 | done | the static links live in `packages/config/src/constants.ts` (`SMOG_WEBSITE_URL`, `COURSE_URL`, `CONTACT_EMAIL` = info@smog.vlaanderen) and the footer credit; the one old `hello@` address is replaced by `info@` (DECISIONS, Parity audit) |
 | X-18 | done | Mux webhooks added (`apps/site/test/mux-webhook.test.ts`), the Mollie webhook verifies through the API (`apps/site/test/mollie-webhook.test.ts`), no Sentry |
 | R-01 | done | `apps/site/e2e/routes-parity.spec.ts` |
-| R-04 | done | `apps/site/e2e/routes-parity.spec.ts`, `lists.spec.ts` |
-| R-06 | done | `/favorites` is a page (`apps/site/e2e/routes-parity.spec.ts`, `favorites.spec.ts`) |
-| R-07 | done | `/account` (`apps/site/e2e/routes-parity.spec.ts`, `account.spec.ts`) |
-| R-12 | done | `/sponsor` is the wizard (`apps/site/e2e/routes-parity.spec.ts`, `sponsor.spec.ts`) |
+| R-04 | done | `apps/site/e2e/routes-parity.spec.ts`, `apps/site/e2e/lists.spec.ts` |
+| R-06 | done | `/favorites` is a page (`apps/site/e2e/routes-parity.spec.ts`, `apps/site/e2e/favorites.spec.ts`) |
+| R-07 | done | `/account` (`apps/site/e2e/routes-parity.spec.ts`, `apps/site/e2e/account.spec.ts`) |
+| R-12 | done | `/sponsor` is the wizard (`apps/site/e2e/routes-parity.spec.ts`, `apps/site/e2e/sponsor.spec.ts`) |
 | R-18 | changed | robots and sitemap are routes, the manifest is generated, `/assets/logo.svg` is generated by `@smog/brand` (one-day cache, `apps/site/test/cache-policy.test.ts`); `/browserconfig.xml` is dropped (DECISIONS, Parity audit); all pinned by `apps/site/e2e/routes-parity.spec.ts` |
 | R-23 | done | Better Auth trusts the `smog://` origin (`packages/auth/test/auth.test.ts`) |
 | R-24 | done | unknown paths map to `/`, `/gestures?q=` to search (`apps/mobile/src/native-intent.test.ts`) |
@@ -1743,7 +1745,7 @@ The audit walked every open row of `docs/superpowers/specs/2026-09-29-feature-in
 
 ### Section 8, the old bugs
 
-All 35 are fixed in the rewrite; each line names the test or entry that pins the fix.
+All 40 are fixed in the rewrite; each line names the test or entry that pins the fix.
 
 | Bug | Evidence |
 |---|---|
@@ -1765,8 +1767,8 @@ All 35 are fixed in the rewrite; each line names the test or entry that pins the
 | 16 | `packages/features/admin/test/users.test.ts`, `apps/site/src/components/admin/users/users.test.tsx` |
 | 17 | `packages/features/sponsorships/test/availability.test.ts`, `packages/db/test/schema.test.ts` (the partial unique index) |
 | 18 | `packages/db/test/schema.test.ts`, `migration-0013.test.ts` (CHECK constraints) |
-| 19 | `packages/features/sponsorships/test/lifecycle.test.ts`, `status.test.ts`, `packages/features/admin/test/sponsorships.test.ts` |
-| 20 | `apps/site/test/scheduled.test.ts` (one documented schedule) |
+| 19 | `packages/features/sponsorships/test/lifecycle.test.ts`, `packages/features/sponsorships/src/schema/status.test.ts`, `packages/features/admin/test/sponsorships.test.ts` |
+| 20 | `packages/jobs/test/cron.test.ts` ("is the four schedules": the `CRON` table, expiry daily, reminders daily at 08:00, stale hourly, retention daily; UTC), `apps/site/test/scheduled.test.ts` (each `CRON` entry runs its sweep) |
 | 21 | `packages/features/gestures/src/client/course-banner.test.tsx`, `packages/ui-web/src/domain/course-banner.test.tsx`, `packages/ui-native/src/domain/media.test.tsx` |
 | 22 | `packages/features/sponsorships/src/client/use-checkout.test.ts`, `apps/site/src/components/sponsor/wizard.test.tsx` (one constant per limit) |
 | 23 | `apps/site/test/logo-upload.test.ts`, `packages/features/sponsorships/test/logo.test.ts` (type, size, R2) |
@@ -1782,3 +1784,8 @@ All 35 are fixed in the rewrite; each line names the test or entry that pins the
 | 33 | `apps/site/test/maintenance.test.ts` (503, `Retry-After`, admin bypass) |
 | 34 | `apps/site/test/learning.test.ts` (per-route head, dynamic sitemap), `apps/site/e2e/routes-parity.spec.ts` (`/sitemap.xml`) |
 | 35 | `packages/features/sponsorships/test/renewal.test.ts`, `settle.test.ts` (`reminder_sent_at` reset) |
+| 36 | platform rate-limit bindings and no fail-open path: `scripts/security-guard.test.ts` ("the rate-limit table": every route has a limiter or a stated reason), `apps/site/test/rpc.test.ts`; verified webhooks stay unlimited (`apps/site/test/mollie-webhook.test.ts`) |
+| 37 | `apps/mobile/src/native-intent.test.ts` (`/lists/<token>` and `smog://lists/<token>` open `/shared/<token>`), `apps/mobile/app/shared/[token].tsx`, the AASA `/lists/*` component (`apps/site/public/.well-known/apple-app-site-association`) |
+| 38 | no guest rows (DECISIONS, "Guests are device-only"); server consent needs a session (`packages/api/test/authz.test.ts`: `account.consent.set` is `session` level), `packages/features/account/test/account.test.ts` |
+| 39 | `packages/features/sponsorships/test/checkout.test.ts` ("answers GESTURE_UNAVAILABLE for an unpublished or unknown gesture (bug 39)"), `packages/features/admin/test/gestures.test.ts` (duplicate names reported, unique slug) |
+| 40 | the importer maps and drops them (`packages/migrate-convex/test/transform-learning.test.ts`, `export-schema.test.ts`, `sponsorship-fixtures.ts`); none is in the D1 schema (`packages/db/test/schema.test.ts`) |

@@ -6,7 +6,7 @@ import LayoutGrid from "lucide-react-native/icons/layout-grid";
 import { type ReactElement, useCallback } from "react";
 import { ScrollView } from "react-native";
 
-/** Developer tools (dev and staging builds): the entries; logs and mail join later. */
+/** Developer tools (dev and staging builds): the component gallery only (the old logs section is not ported, DECISIONS "Parity audit (phase 9 task 9)"). */
 export default function DeveloperToolsScreen(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();

@@ -26,12 +26,55 @@ const LEGACY: readonly {
     status: 301,
   },
   { from: "/callback?code=spent", id: "R-09", location: "/", status: 301 },
+  {
+    from: "/gestures?category=Dagelijkse%20zorg",
+    id: "R-02",
+    location: "/gestures?category=dagelijkse-zorg",
+    status: 301,
+  },
+  {
+    from: "/gestures?category=Dagelijkse%20zorg&q=hand",
+    id: "R-02",
+    location: "/gestures?category=dagelijkse-zorg&q=hand",
+    status: 301,
+  },
   { from: "/sponsors", id: "R-11", location: "/sponsor", status: 301 },
+  // An unknown old gesture id is dropped, other params are kept.
+  {
+    from: "/sponsors?gestureId=k17parityunknown",
+    id: "R-11",
+    location: "/sponsor",
+    status: 301,
+  },
+  {
+    from: "/sponsors/?foo=bar",
+    id: "R-11",
+    location: "/sponsor?foo=bar",
+    status: 301,
+  },
   { from: "/sponsors/", id: "R-11", location: "/sponsor", status: 301 },
   {
     from: "/sponsors/success?paymentId=tr_parity1",
     id: "R-13",
     location: "/sponsor/success?payment=tr_parity1",
+    status: 301,
+  },
+  {
+    from: "/sponsors/success?paymentId=tr_parity1&foo=1",
+    id: "R-13",
+    location: "/sponsor/success?payment=tr_parity1&foo=1",
+    status: 301,
+  },
+  {
+    from: "/sponsors/re-edit",
+    id: "R-15",
+    location: "/sponsor/edit",
+    status: 301,
+  },
+  {
+    from: "/sponsors/renew",
+    id: "R-15",
+    location: "/sponsor/renew",
     status: 301,
   },
   { from: "/success", id: "R-14", location: "/sponsor/success", status: 301 },
@@ -96,22 +139,21 @@ test.describe("canonical pages (R-01 to R-16)", () => {
     expect(response.headers().location).toContain("/sign-in");
   });
 
-  test("R-05 a shared-list link keeps its URL (unknown token: a page, not a redirect)", async ({
+  test("R-05 an unknown share token answers 404 at its own URL", async ({
     request,
   }) => {
     const response = await request.get(
       "/lists/parity-unknown-token",
       NO_FOLLOW
     );
-    expect(response.status()).toBeLessThan(500);
-    expect(response.status()).not.toBe(301);
+    expect(response.status()).toBe(404);
   });
 
-  test("R-03 an unknown old gesture id is a 404, not a loop", async ({
+  test("R-03 an unknown old gesture id answers 404 (a known one is the 301 of the phase 8 integration suite)", async ({
     request,
   }) => {
     const response = await request.get("/gestures/k17parityunknown", NO_FOLLOW);
-    expect([404, 301]).toContain(response.status());
+    expect(response.status()).toBe(404);
   });
 
   test("R-25 the mail links resolve: root, /sponsor, /admin", async ({
@@ -143,7 +185,7 @@ test.describe("static and generated files (R-17, R-18)", () => {
     expect(await response.text()).toContain("Disallow: /");
   });
 
-  test("R-18 /sitemap.xml is XML with the home page", async ({ request }) => {
+  test("R-18 /sitemap.xml is a URL set in XML", async ({ request }) => {
     const response = await request.get("/sitemap.xml");
     expect(response.status()).toBe(200);
     expect(contentType(response)).toContain("xml");
@@ -188,8 +230,13 @@ test.describe("static and generated files (R-17, R-18)", () => {
     test(`R-17 ${path} is JSON, with no redirect`, async ({ request }) => {
       const response = await request.get(path, NO_FOLLOW);
       expect(response.status()).toBe(200);
-      // The file's type comes from public/_headers, which the dev server may
-      // not apply; the body must parse either way.
+      // The extensionless AASA gets its type from public/_headers, which the
+      // dev server does not apply (scripts/release-config-check.ts asserts
+      // the rule): there it is served untyped, never as another type.
+      const type = contentType(response);
+      expect(
+        path.endsWith(".json") ? type : type || "application/json"
+      ).toContain("application/json");
       expect(await response.json()).toBeTruthy();
     });
   }
@@ -202,18 +249,19 @@ test.describe("service routes (R-19)", () => {
     expect(await response.json()).toMatchObject({ ok: true });
   });
 
-  test("the old /webhooks/mollie URL still reaches the handler", async ({
-    request,
-  }) => {
-    // Mollie posts `id=tr_…`; an unknown payment is acknowledged (200) so
-    // Mollie stops retrying, whatever the payment: never a 404.
-    const response = await request.post("/webhooks/mollie", {
-      form: { id: "tr_parityunknown" },
-      ...NO_FOLLOW,
+  for (const path of ["/api/webhooks/mollie", "/webhooks/mollie"]) {
+    test(`${path} acknowledges an unknown payment with 200`, async ({
+      request,
+    }) => {
+      // Mollie posts `id=tr_…`; an unknown payment is acknowledged so Mollie
+      // stops retrying. The old URL is the alias of the canonical one.
+      const response = await request.post(path, {
+        form: { id: "tr_parityunknown" },
+        ...NO_FOLLOW,
+      });
+      expect(response.status()).toBe(200);
     });
-    expect(response.status()).not.toBe(404);
-    expect(response.status()).toBeLessThan(500);
-  });
+  }
 
   test("/api/openapi/spec.json is served on dev (P-34)", async ({
     request,
