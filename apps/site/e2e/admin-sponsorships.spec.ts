@@ -161,7 +161,9 @@ test.describe("admin sponsorships", () => {
     await page.keyboard.press("Enter");
     await expect(dialog).toBeHidden();
     // Shown once: the page no longer holds the token.
-    const token = new URL(url).searchParams.get("token") ?? "";
+    const token =
+      new URLSearchParams(new URL(url).hash.slice(1)).get("token") ?? "";
+    expect(token).not.toBe("");
     expect(await page.content()).not.toContain(token);
     await expect(page.getByText("Aanpassing gevraagd").first()).toBeVisible();
 
