@@ -1,8 +1,12 @@
 import { exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
+import headersFile from "../public/_headers?raw";
 import { SYSTEM_THEME_SCRIPT } from "../src/lib/preferences";
 import {
+  BASE_HEADERS,
   buildCsp,
+  DOCUMENT_HEADERS,
+  HSTS,
   r2ConnectSources,
   reportingEndpoints,
   respondSecurely,
@@ -409,5 +413,127 @@ describe("the sponsor token pages (review I-8)", () => {
     expect(response.headers.get("referrer-policy")).toBe(
       "strict-origin-when-cross-origin"
     );
+  });
+});
+
+/** The headers of a `_headers` rule, lower-cased names. */
+function headersRule(source: string, path: string): Map<string, string> {
+  const rule = new Map<string, string>();
+  let current = "";
+  for (const line of source.split("\n")) {
+    if (line.trim() === "" || line.trimStart().startsWith("#")) {
+      continue;
+    }
+    if (line.startsWith(" ")) {
+      if (current === path) {
+        const [name = "", ...value] = line.split(":");
+        rule.set(name.trim().toLowerCase(), value.join(":").trim());
+      }
+    } else {
+      current = line.trim();
+    }
+  }
+  return rule;
+}
+
+describe("the header set per environment (phase 9 task 8)", () => {
+  const page = (): Response =>
+    new Response("<!doctype html>", {
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+
+  it.each(["dev", "staging", "production"] as const)(
+    "%s: every header of the review list on a document",
+    (environment) => {
+      const { headers } = withSecurityHeaders(page(), {
+        environment,
+        nonce: "n",
+        requestUrl: "https://smog.example/",
+      });
+      expect(headers.get("x-content-type-options")).toBe("nosniff");
+      expect(headers.get("referrer-policy")).toBe(
+        "strict-origin-when-cross-origin"
+      );
+      // Camera, microphone and location off: the sponsor logo is a file
+      // input and the QR is a link, so nothing needs them (ruling 16).
+      const permissions = headers.get("permissions-policy") ?? "";
+      for (const feature of ["camera", "microphone", "geolocation"]) {
+        expect(permissions).toContain(`${feature}=()`);
+      }
+      // A navigation, not a popup: Turnstile (an iframe) and Mollie's
+      // redirect (a navigation) keep working under same-origin.
+      expect(headers.get("cross-origin-opener-policy")).toBe("same-origin");
+      expect(headers.get("x-frame-options")).toBe("DENY");
+      // HSTS: one year, subdomains, no preload (the owner's decision).
+      expect(headers.get("strict-transport-security")).toBe(
+        environment === "dev" ? null : "max-age=31536000; includeSubDomains"
+      );
+      expect(headers.get("strict-transport-security") ?? "").not.toContain(
+        "preload"
+      );
+      // The CSP: enforced in dev and production, Report-Only in staging.
+      const enforced = headers.get("content-security-policy");
+      const reportOnly = headers.get("content-security-policy-report-only");
+      const csp = (environment === "staging" ? reportOnly : enforced) ?? "";
+      expect(environment === "staging" ? enforced : reportOnly).toBeNull();
+      for (const directive of [
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+      ]) {
+        expect(csp.split("; ")).toContain(directive);
+      }
+      // No form posts to Mollie (it is a redirect), so no extra form-action.
+      expect(csp).not.toContain("mollie");
+    }
+  );
+
+  it.each(["dev", "staging", "production"] as const)(
+    "%s: a non-document keeps nosniff and Referrer-Policy, no CSP",
+    (environment) => {
+      const { headers } = withSecurityHeaders(Response.json({}), {
+        environment,
+        nonce: "n",
+      });
+      expect(headers.get("x-content-type-options")).toBe("nosniff");
+      expect(headers.get("referrer-policy")).toBe(
+        "strict-origin-when-cross-origin"
+      );
+      expect(headers.get("content-security-policy")).toBeNull();
+      expect(headers.get("content-security-policy-report-only")).toBeNull();
+    }
+  );
+
+  it("gives static assets (public/_headers) the Worker's set where it applies", () => {
+    const rule = headersRule(headersFile, "/*");
+    expect(rule.get("x-content-type-options")).toBe(
+      BASE_HEADERS["x-content-type-options"]
+    );
+    expect(rule.get("referrer-policy")).toBe(BASE_HEADERS["referrer-policy"]);
+    expect(rule.get("strict-transport-security")).toBe(HSTS);
+    expect(rule.get("permissions-policy")).toBe(
+      DOCUMENT_HEADERS["permissions-policy"]
+    );
+    expect(rule.get("cross-origin-opener-policy")).toBe(
+      DOCUMENT_HEADERS["cross-origin-opener-policy"]
+    );
+    // Images and JSON are not documents: no CSP or framing header.
+    expect(rule.has("content-security-policy")).toBe(false);
+    expect(rule.has("x-frame-options")).toBe(false);
+  });
+
+  it("serves the same set on a Worker-answered page as the static rule", async () => {
+    const response = await fetchSite("/");
+    const rule = headersRule(headersFile, "/*");
+    for (const name of [
+      "x-content-type-options",
+      "referrer-policy",
+      "permissions-policy",
+      "cross-origin-opener-policy",
+    ]) {
+      expect(response.headers.get(name), name).toBe(rule.get(name) ?? "");
+    }
+    await response.body?.cancel();
   });
 });

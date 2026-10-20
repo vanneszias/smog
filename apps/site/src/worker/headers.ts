@@ -23,7 +23,7 @@ import { cacheHeaders } from "./cache";
 /** The CSP `sha256-` source of the theme pre-paint script (build-defines.ts). */
 export const THEME_SCRIPT_HASH: string = __SMOG_THEME_SCRIPT_HASH__;
 
-const HSTS = "max-age=31536000; includeSubDomains";
+export const HSTS = "max-age=31536000; includeSubDomains";
 
 /** The CSP report endpoint (`routes/api/csp-report.ts`, phase 8 ruling 11). */
 const CSP_REPORT_PATH = "/api/csp-report";
@@ -33,12 +33,12 @@ const REPORTING_ENDPOINTS = "reporting-endpoints";
 const CSP = "content-security-policy";
 const CSP_REPORT_ONLY = "content-security-policy-report-only";
 
-const BASE_HEADERS: Readonly<Record<string, string>> = {
+export const BASE_HEADERS: Readonly<Record<string, string>> = {
   "referrer-policy": "strict-origin-when-cross-origin",
   "x-content-type-options": "nosniff",
 };
 
-const DOCUMENT_HEADERS: Readonly<Record<string, string>> = {
+export const DOCUMENT_HEADERS: Readonly<Record<string, string>> = {
   "cross-origin-opener-policy": "same-origin",
   "permissions-policy":
     "camera=(), microphone=(), geolocation=(), payment=(), usb=()",

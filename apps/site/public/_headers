@@ -6,9 +6,15 @@
   Content-Type: application/json
 # Static assets are served before the Worker runs, so they do not get the
 # Worker's security headers (src/worker/headers.ts); they get these instead.
+# test/security-headers.test.ts keeps them equal to the Worker's. HSTS is
+# ignored by browsers over plain http (dev); no CSP or X-Frame-Options here:
+# the static files are images and JSON, never documents.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
 # Cache policy (src/worker/cache.ts holds the same table for the Worker's own
 # responses; test/cache-policy.test.ts keeps the two equal). Vite's hashed
 # output is immutable, by extension rather than a blanket /assets/*: the
