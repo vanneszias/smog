@@ -111,6 +111,10 @@ export const sponsorship = sqliteTable(
     // The admin list and the CSV export (`created_at, id` keyset, newest
     // first and oldest first): migration 0010, phase 6 task 6.
     index("sponsorship_created_id_idx").on(t.createdAt, t.id),
+    // The orphan-logo sweep asks, per candidate key, whether another
+    // sponsorship still uses it (`stillNeeded`): migration 0014, phase 9
+    // task 6 (without it each key scanned the whole table).
+    index("sponsorship_logo_key_idx").on(t.logoKey),
   ]
 );
 

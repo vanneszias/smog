@@ -266,7 +266,7 @@ function Grid({
         {Array.from({ length: 8 }, (_, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no identity.
           <li key={index}>
-            <Skeleton className="aspect-3/4 w-full rounded-lg" />
+            <Skeleton className="aspect-3/4 h-auto w-full rounded-lg" />
           </li>
         ))}
       </ul>
