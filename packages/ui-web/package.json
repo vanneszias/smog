@@ -24,7 +24,7 @@
     "tailwind-merge": "3.7.0"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "20.14.5",
+    "@happy-dom/global-registrator": "21.0.3",
     "@smog/config": "workspace:*",
     "@tailwindcss/node": "4.3.3",
     "@tailwindcss/oxide": "4.3.3",
