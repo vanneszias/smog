@@ -16,6 +16,7 @@ import {
 } from "@/worker/maintenance";
 import { dispatchQueue } from "@/worker/queues";
 import { dispatchScheduled } from "@/worker/scheduled";
+import { guardedQueue, guardedScheduled } from "@/worker/top-level";
 
 /**
  * The render Workflow and Container classes (phase 7). Always exported: the
@@ -70,12 +71,13 @@ export default {
         ...devConnectSources(environment, muxApiUrl),
         ...r2ConnectSources(env.R2_ACCOUNT_ID),
       ],
+      requestId: request.headers.get("cf-ray") ?? crypto.randomUUID(),
       requestUrl: request.url,
     });
   },
 
   queue(batch: MessageBatch, env: Env, ctx: ExecutionContext): Promise<void> {
-    return dispatchQueue(batch, env, ctx);
+    return guardedQueue(() => dispatchQueue(batch, env, ctx), batch.queue);
   },
 
   scheduled(
@@ -83,6 +85,9 @@ export default {
     env: Env,
     ctx: ExecutionContext
   ): Promise<void> {
-    return dispatchScheduled(controller, env, ctx);
+    return guardedScheduled(
+      () => dispatchScheduled(controller, env, ctx),
+      controller.cron
+    );
   },
 } satisfies ExportedHandler<Env>;

@@ -370,3 +370,34 @@ Bun, `packages/render/src/server/*` (phase 7 ruling 7). In the Container it list
 - The upload is retried once after a network fault or a 5xx; a 4xx is final.
 - Then: the logo is written to the job's temp directory and served at `/assets/<id>/logo`; `readSourceMetadata(sourceUrl)` (a source that cannot be fetched is `500 renderFailed`, retryable; one that cannot be read is `422 sourceUnreadable`; one longer than 120 s, `RENDER_SOURCE_MAX_SECONDS`, is `422 sourceTooLong`); the props are validated with `sponsoredVideoPropsSchema`; `renderMedia` (H.264, JPEG frames, `concurrency: 1`); the file is `PUT` to `uploadUrl` with `Content-Type: video/mp4` and its `Content-Length` (a refusal or a network fault is `502 uploadFailed`). The temp files are deleted whatever happens. Any other failure is `500 renderFailed`.
 - Messages and logs never hold a URL: every answer and every console line, Remotion's own included, is scrubbed (`scrubUrls`), and an error's `cause` is never logged or answered.
+
+## Rate limits and request caps (phase 9 task 8)
+
+The four Workers Rate Limiting bindings (`ratelimits` in `wrangler.jsonc`; staging and production: `RL_API` 300 per 60 s, `RL_SPONSOR` 5, `RL_AUTH` 5, `RL_ANALYTICS` 120; dev 1000 each) are keyed by the client address, `cf-connecting-ip` only (`clientIp` in `apps/site/src/server/context.ts`). `X-Forwarded-For`, `Forwarded` and `X-Real-IP` are never read, so a caller cannot choose its bucket. A request without `cf-connecting-ip` (the dev server, a test) shares one `unknown` bucket: accepted, because Cloudflare always sets it in front of staging and production. `scripts/security-guard.test.ts` holds this table in code and fails for a route file that is in neither column, for a limiter its source does not name, and for a missing "none, because".
+
+| Route file (`apps/site/src/routes/`) | Serves | Limiter | Key |
+|---|---|---|---|
+| `api/rpc/$.ts` | `/api/rpc/*` | `RL_API` (`@smog/rpc` handler interceptor, after the origin check, before the session read) | `api:<ip>` |
+| `api/openapi/$.ts` | `/api/openapi/*` (dev, staging) | `RL_API`, the same handler options | `api:<ip>` |
+| `api/auth/$.ts` | `/api/auth/*` | `RL_AUTH` on POSTs except `sign-out` and `get-session` | `auth:<ip>` |
+| `api/analytics.ts` | `/api/analytics` | `RL_ANALYTICS` | `analytics:<ip>` |
+| `api/csp-report.ts` | `/api/csp-report` | `RL_ANALYTICS` | `csp:<ip>` |
+| `api/logos/upload.$key.ts` | `PUT /api/logos/upload/<key>` | `RL_SPONSOR` | `<ip>:logo-upload` |
+| `api/sponsor/reedit-logo.ts` | `POST /api/sponsor/reedit-logo` | `RL_API` | `<ip>` |
+| `api/webhooks/mollie.ts`, `webhooks/mollie.ts` (legacy alias) | Mollie | `RL_API` for the counted failures only (a verified id is never limited, so a genuine retry is never refused) | `mollie-webhook:<ip>` |
+| `api/webhooks/mux.ts` | Mux | `RL_API` for rejected deliveries only (a verified delivery is never limited) | `mux-webhook:<ip>` |
+| `api/logos/$key.ts` | `GET /api/logos/<key>` | none, because an admin session is required and a guest has no cookie, so Better Auth answers without a D1 read | |
+| `api/health.ts` | `/api/health` | none, because it reads the vars only (no D1, KV or session) | |
+| `dev/e2e-seed.ts`, `dev/mail.ts`, `dev/mail[.]json.ts` | `/dev/*` | none, because dev only: 404 in staging and production | |
+| `robots[.]txt.ts` | `/robots.txt` | none, because static text | |
+| `sitemap[.]xml.ts` | `/sitemap.xml` | none, because the answer is cached for an hour in the Cache API | |
+| `turnstile-bridge.ts` | `/turnstile-bridge` | none, because a static page with no I/O | |
+| the SSR pages (`*.tsx`) | every page | `RL_API`, once per render, shared with the loaders' in-process calls (`limitRender`); over it the page answers 429 | `api:<ip>` |
+| `worker/maintenance.ts` | `POST /api/maintenance/bypass` | `RL_AUTH` | `mx:<ip>` |
+| Workers Static Assets | `/assets/*`, icons, `/.well-known/*` | none, because they are served before the Worker runs | |
+
+Per procedure, on top of the transport's `RL_API`: `RL_SPONSOR` (`rateLimit("RL_SPONSOR")`, key `<ip>:<procedure path>`) and Turnstile on the sponsor mutations (`sponsorships.checkout`, `reedit.submit`, `renewal.checkout`) and `RL_SPONSOR` alone on `sponsorships.uploadLogo`; see the `sponsorships.*` table.
+
+Request caps: the RPC and OpenAPI transports refuse a body over **5 MiB** with an empty `413` (`no-store`) before the origin check, the rate limit or any procedure (`capRequestBody` in `apps/site/src/server/rpc.ts`; a declared `content-length` is refused without a read, a body without one is counted as it streams and cancelled past the cap, a malformed length is a `400`). The other caps: the sponsor logo 2 MiB (`PUT` upload), the re-edit logo request 1 KiB, the Mollie webhook 4 KiB, the Mux webhook 1 MiB, the CSP report 16 KiB, the analytics relay 4 KiB.
+
+`[csp] violation` log lines are sampled per isolate: at most 20 per minute, then one `[csp] suppressed { count }` line when the window closes (the next report after it). The answer is `204` either way.

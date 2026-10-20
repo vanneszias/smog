@@ -10,6 +10,13 @@ export {
 export { escapeHtml } from "./html";
 export { newId, newToken, sha256Hex } from "./ids";
 export {
+  type ErrorSummary,
+  errorSummary,
+  logUnhandledError,
+  redactMessage,
+  type TopLevelEntry,
+} from "./log";
+export {
   createNearEndTracker,
   type MuxThumbnailOptions,
   muxStreamUrl,

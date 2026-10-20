@@ -22,6 +22,12 @@ import { readCappedBody } from "@smog/utils";
  *   that carry a token (`/lists/<shareToken>`, a reset token, a minted
  *   token anywhere) become `:token`. The sample, the policy, the referrer
  *   and the user agent are never kept.
+ * - At most `CSP_LOG_LIMIT` (20) of those lines per `CSP_LOG_WINDOW_MS`
+ *   (a minute) per isolate (phase 9 ruling 6): a token bucket on top of the
+ *   per-IP limit, because a broken page can report from many addresses.
+ *   Past it the report is still answered 204 and dropped; when the window
+ *   closes (the next report after it) one `[csp] suppressed { count }` line
+ *   says how many were dropped. No timer: a Worker has none to rely on.
  * - No relay to OpenPanel (spec §12: consented events only).
  * - No Origin check: reporting agents send none (or `null`), and these
  *   content types need a CORS preflight the route never grants. The
@@ -205,6 +211,51 @@ export function parseCspReports(
     : fromReportingApi(body);
 }
 
+/** Log lines per window and the window (phase 9 ruling 6). */
+export const CSP_LOG_LIMIT = 20;
+export const CSP_LOG_WINDOW_MS = 60_000;
+
+/** What to do with one more violation line: log it, after `flushed` drops. */
+interface SampleDecision {
+  /** How many lines the window that just closed dropped (0: none). */
+  flushed: number;
+  log: boolean;
+}
+
+/**
+ * A per-isolate fixed-window token bucket for the violation log lines.
+ * `now` is injectable (a fake clock in the tests).
+ */
+export function createLogSampler(
+  limit: number = CSP_LOG_LIMIT,
+  windowMs: number = CSP_LOG_WINDOW_MS,
+  now: () => number = Date.now
+): { admit: () => SampleDecision } {
+  let windowStart = now();
+  let logged = 0;
+  let suppressed = 0;
+  return {
+    admit(): SampleDecision {
+      const current = now();
+      let flushed = 0;
+      if (current - windowStart >= windowMs) {
+        flushed = suppressed;
+        windowStart = current;
+        logged = 0;
+        suppressed = 0;
+      }
+      if (logged < limit) {
+        logged += 1;
+        return { flushed, log: true };
+      }
+      suppressed += 1;
+      return { flushed, log: false };
+    },
+  };
+}
+
+const isolateSampler = createLogSampler();
+
 /** The one line per body: its first violation and how many it held. */
 interface LoggedViolation extends CspViolation {
   count: number;
@@ -214,9 +265,11 @@ export interface CspReportOptions {
   /** The `RL_ANALYTICS` check (`checkRateLimit`); `false` when over the limit. */
   limit: (key: string) => Promise<boolean>;
   /** Where the body's one line goes (`console.warn`). */
-  log?: (message: string, violation: LoggedViolation) => void;
+  log?: (message: string, fields: LoggedViolation | { count: number }) => void;
   /** Where a failure goes (`console.error`). */
   logError?: (message: string, error: unknown) => void;
+  /** The line sampler (`createLogSampler`); the isolate's by default. */
+  sampler?: { admit: () => SampleDecision };
 }
 
 function empty(status: 204 | 400 | 413 | 415): Response {
@@ -236,7 +289,12 @@ function reportContentType(request: Request): ReportContentType | null {
 
 export async function handleCspReport(
   request: Request,
-  { limit, log = console.warn, logError = console.error }: CspReportOptions
+  {
+    limit,
+    log = console.warn,
+    logError = console.error,
+    sampler = isolateSampler,
+  }: CspReportOptions
 ): Promise<Response> {
   const contentType = reportContentType(request);
   if (contentType === null) {
@@ -263,7 +321,13 @@ export async function handleCspReport(
   }
   const [first, ...rest] = parseCspReports(contentType, body);
   if (first) {
-    log("[csp] violation", { ...first, count: rest.length + 1 });
+    const { flushed, log: admitted } = sampler.admit();
+    if (flushed > 0) {
+      log("[csp] suppressed", { count: flushed });
+    }
+    if (admitted) {
+      log("[csp] violation", { ...first, count: rest.length + 1 });
+    }
   }
   return empty(204);
 }
