@@ -113,6 +113,10 @@ export const ROUTE_LIMITS: Readonly<Record<string, Entry>> = {
     because: "dev only: 404 in staging and production",
     none: true,
   },
+  "manifest[.]webmanifest.ts": {
+    because: "static JSON built from constants, no I/O",
+    none: true,
+  },
   "robots[.]txt.ts": {
     because: "static text, no I/O",
     none: true,

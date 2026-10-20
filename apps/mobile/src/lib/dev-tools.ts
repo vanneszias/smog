@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Developer tools (component gallery, logs) exist in dev and staging builds
+ * Developer tools (the component gallery; the old log export is not ported, DECISIONS "Parity audit (phase 9 task 9)") exist in dev and staging builds
  * only (spec §10). Expo inlines `EXPO_PUBLIC_ENVIRONMENT` at build time; a
  * build without it is a local one, which counts as dev.
  */
