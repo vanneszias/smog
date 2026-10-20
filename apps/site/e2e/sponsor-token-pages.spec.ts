@@ -165,6 +165,11 @@ test.describe("the fragment link", () => {
         .poll(() => page.url())
         .toBe(`${ORIGIN}${path}#token=${TOKEN}`);
       expect(page.url()).not.toContain("?");
+      // The router's own location agrees: the header's sign-in link is
+      // built from it and carries no token.
+      const signIn = page.getByRole("link", { name: "Aanmelden" });
+      await expect(signIn).toHaveAttribute("href", SIGN_IN_HREF);
+      expect(await signIn.getAttribute("href")).not.toContain("token");
       // The procedures got it in the body, from the fragment.
       expect(lines.filter((line) => line.includes(TOKEN))).toEqual([]);
       await page.reload();
@@ -182,6 +187,12 @@ test.describe("the fragment link", () => {
     });
     expect(response.status()).toBe(302);
     expect(response.headers().location).toBe(`/sponsor/edit#token=${TOKEN}`);
+    expect(response.headers()["cache-control"]).toBe("no-store");
+    const renew = await request.get(`/sponsors/renew?token=${TOKEN}`, {
+      maxRedirects: 0,
+    });
+    expect(renew.status()).toBe(302);
+    expect(renew.headers().location).toBe(`/sponsor/renew#token=${TOKEN}`);
   });
 
   test("a page without a token says so (no error flash before it is read)", async ({

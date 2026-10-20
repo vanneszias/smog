@@ -298,8 +298,11 @@ export async function legacyRedirect(
   if (target === null) {
     return null;
   }
-  return new Response(null, {
-    headers: { location: target.location },
-    status: target.status,
-  });
+  // A token-carrying redirect is never cached (nor is any 302 by default:
+  // say so).
+  const headers: Record<string, string> = { location: target.location };
+  if (target.status === TOKEN_REDIRECT_STATUS) {
+    headers["cache-control"] = "no-store";
+  }
+  return new Response(null, { headers, status: target.status });
 }

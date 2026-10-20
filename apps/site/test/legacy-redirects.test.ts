@@ -243,7 +243,7 @@ describe("the Worker applies the table first", () => {
     expect(response.headers.get("location")).toBe(
       `/sponsor/edit#token=${token}`
     );
-    // Neither the status nor the headers say the redirect may be cached.
+    expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("location")).not.toContain("?");
     const renew = await get(`/sponsors/renew?token=${token}`);
     expect(renew.status).toBe(302);
