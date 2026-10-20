@@ -29,7 +29,7 @@ import {
 test.describe.configure({ mode: "serial" });
 
 const REEDIT_LINK = new RegExp(
-  `^${ORIGIN.replace(/[.:/]/g, "\\$&")}/sponsor/edit\\?token=[A-Za-z0-9_-]{43}$`
+  `^${ORIGIN.replace(/[.:/]/g, "\\$&")}/sponsor/edit#token=[A-Za-z0-9_-]{43}$`
 );
 const NAAM_IN_DE_VIDEO = /^Naam in de video/;
 const REVIEW_TAB = /^Te beoordelen/;

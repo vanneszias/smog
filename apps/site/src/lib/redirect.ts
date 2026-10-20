@@ -77,8 +77,10 @@ const NO_RETURN = /^\/(?:sign-|magic-link(?:[/?#]|$))/;
 
 /**
  * Where the header's "Sign in" link returns to: the current page without
- * any `token` in its query (a magic-link or reset token must not spread
- * into more URLs), and never an auth page or a magic link.
+ * any `token` in its query or its fragment (a magic-link, reset, re-edit or
+ * renewal token must not spread into more URLs: the sponsor links keep it in
+ * the fragment, and a `?redirect=` would put it in a query), and never an
+ * auth page or a magic link.
  */
 export function signInReturnPath(href: string): string | undefined {
   if (NO_RETURN.test(href)) {
@@ -86,7 +88,9 @@ export function signInReturnPath(href: string): string | undefined {
   }
   const url = new URL(href, PROBE_ORIGIN);
   url.searchParams.delete("token");
-  return `${url.pathname}${url.search}${url.hash}`;
+  const fragment = new URLSearchParams(url.hash.slice(1));
+  const hash = fragment.has("token") ? "" : url.hash;
+  return `${url.pathname}${url.search}${hash}`;
 }
 
 /** Search params of `/reset-password`. */

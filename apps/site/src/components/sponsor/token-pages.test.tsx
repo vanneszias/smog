@@ -135,6 +135,26 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
+describe("a token page before the fragment is read (phase 9 ruling 7)", () => {
+  test("shows the neutral loading state, no error flash, on both pages", async () => {
+    await renderSite(() => (
+      <div data-testid="page">
+        <ReeditView token={undefined} turnstileSiteKey={null} />
+      </div>
+    ));
+    expect(screen.getByRole("status")).toBeDefined();
+    expect(screen.queryByText("Invalid link")).toBeNull();
+    cleanup();
+    await renderSite(() => (
+      <div data-testid="page">
+        <RenewalView token={undefined} turnstileSiteKey={null} />
+      </div>
+    ));
+    expect(screen.getByRole("status")).toBeDefined();
+    expect(screen.queryByText("Invalid link")).toBeNull();
+  });
+});
+
 describe("the re-edit page (S-19)", () => {
   test("guards: no token, unknown or used, expired", async () => {
     await renderSite(() => <Edit token={null} />);

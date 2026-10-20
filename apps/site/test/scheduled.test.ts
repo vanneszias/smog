@@ -174,7 +174,7 @@ describe("the scheduled dispatch (ruling 9)", () => {
     expect(counts(second)).toMatchObject({ failed: 0, reminded: 0 });
     const mail = await waitForMail(email);
     expect(mail).toHaveLength(1);
-    expect(mail[0]?.text).toContain("/sponsor/renew?token=");
+    expect(mail[0]?.text).toContain("/sponsor/renew#token=");
   });
 
   it(`stale (${CRON.stale}) cancels an open payment older than 24 h locally without a Mollie key`, async () => {

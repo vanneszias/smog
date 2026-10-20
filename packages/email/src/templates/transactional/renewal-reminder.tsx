@@ -9,7 +9,7 @@ export interface RenewalReminderProps {
   endsAt: string;
   gestureName: string | null;
   name: string;
-  /** `/sponsor/renew?token=<raw token>`. */
+  /** `/sponsor/renew#token=<raw token>`. */
   url: string;
 }
 

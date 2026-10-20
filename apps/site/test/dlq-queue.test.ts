@@ -148,7 +148,7 @@ describe("the dead-letter consumer: what is stored", () => {
         endsAt: "2027-10-02T08:00:00.000Z",
         gestureName: "Hond",
         name: "Alex",
-        url: `https://smog.example/sponsor/renew?token=${TOKEN}`,
+        url: `https://smog.example/sponsor/renew#token=${TOKEN}`,
       },
     ],
   ])(

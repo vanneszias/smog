@@ -628,7 +628,7 @@ test.describe("CSP (enforced in dev)", () => {
       expect(csp).toEqual([]);
     });
 
-    test("/sponsor/edit?token= keeps the paid logo: the same-origin read, its headers and the blob: image in the Player (fix wave I-2)", async ({
+    test("/sponsor/edit#token= keeps the paid logo: the same-origin read, its headers and the blob: image in the Player (fix wave I-2)", async ({
       page,
     }) => {
       test.setTimeout(120_000);
@@ -666,7 +666,7 @@ test.describe("CSP (enforced in dev)", () => {
         { timeout: 30_000 }
       );
       const response = await page.goto(
-        `/sponsor/edit?token=${KEPT_LOGO_TOKEN}`
+        `/sponsor/edit#token=${KEPT_LOGO_TOKEN}`
       );
       expect(response?.status()).toBe(200);
       expect(response?.headers()["content-security-policy"] ?? "").toMatch(

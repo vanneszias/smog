@@ -81,7 +81,8 @@ describe("the legacy redirect table (spec §9, inventory §7)", () => {
     // R-11: without the D1 lookup, an old gesture id is dropped.
     ["/sponsors?gestureId=j57abc", "/sponsor"],
     ["/sponsor?gestureId=j57abc&x=1", "/sponsor?x=1"],
-    ["/sponsors/re-edit?token=abc-123", "/sponsor/edit?token=abc-123"],
+    // A token moves into the fragment (ruling 7 of phase 9).
+    ["/sponsors/re-edit?token=abc-123", "/sponsor/edit#token=abc-123"],
     ["/sponsors/re-edit/", "/sponsor/edit"],
     [
       "/sponsors/success?paymentId=tr_WDqYK6vllg",
@@ -89,7 +90,7 @@ describe("the legacy redirect table (spec §9, inventory §7)", () => {
     ],
     ["/success", "/sponsor/success"],
     ["/success?paymentId=tr_1&x=1", "/sponsor/success?payment=tr_1&x=1"],
-    ["/sponsors/renew?token=t", "/sponsor/renew?token=t"],
+    ["/sponsors/renew?token=t", "/sponsor/renew#token=t"],
     ["/login", "/sign-in"],
     ["/login?redirect=%2Faccount", "/sign-in?redirect=%2Faccount"],
     ["/login/", "/sign-in"],
@@ -233,6 +234,24 @@ describe("the Worker applies the table first", () => {
     expect(response.headers.get("location")).toBe(
       "/sign-in?redirect=%2Faccount"
     );
+  });
+
+  it("sends an old re-edit link with its token in the fragment, as a 302 (ruling 7)", async () => {
+    const token = "a".repeat(43);
+    const response = await get(`/sponsors/re-edit?token=${token}&x=1`);
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
+      `/sponsor/edit#token=${token}`
+    );
+    // Neither the status nor the headers say the redirect may be cached.
+    expect(response.headers.get("location")).not.toContain("?");
+    const renew = await get(`/sponsors/renew?token=${token}`);
+    expect(renew.status).toBe(302);
+    expect(renew.headers.get("location")).toBe(`/sponsor/renew#token=${token}`);
+    // No token: the plain, permanent redirect.
+    const bare = await get("/sponsors/re-edit");
+    expect(bare.status).toBe(301);
+    expect(bare.headers.get("location")).toBe("/sponsor/edit");
   });
 
   it("redirects HEAD too, but not a POST", async () => {

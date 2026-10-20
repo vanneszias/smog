@@ -66,7 +66,7 @@ beforeEach(() => {
 const AUDIT_INSERT = /insert into "audit_log"/i;
 const LOGO_URL = /^\/api\/logos\/[0-9a-f-]{36}$/;
 const REEDIT_URL =
-  /^http:\/\/localhost:5173\/sponsor\/edit\?token=[A-Za-z0-9_-]{43}$/;
+  /^http:\/\/localhost:5173\/sponsor\/edit#token=[A-Za-z0-9_-]{43}$/;
 
 async function failure(
   run: Promise<unknown>
@@ -709,7 +709,7 @@ describe("requestChanges and regenerateToken", () => {
       "sponsorships.regenerateToken",
       { id: reeditId, purpose: "reedit" }
     );
-    expect(link.url).toContain("/sponsor/edit?token=");
+    expect(link.url).toContain("/sponsor/edit#token=");
     expect(
       (await tokenRows(reeditId)).find((token) => token.id === oldReedit)
         ?.usedAt
@@ -739,7 +739,7 @@ describe("requestChanges and regenerateToken", () => {
       "sponsorships.regenerateToken",
       { id: renewalId, purpose: "renewal" }
     );
-    expect(renewed.url).toContain("/sponsor/renew?token=");
+    expect(renewed.url).toContain("/sponsor/renew#token=");
     expect(renewed.expiresAt).toBe(endsAt.getTime());
     expect(
       (await tokenRows(renewalId)).find((token) => token.id === oldRenewal)

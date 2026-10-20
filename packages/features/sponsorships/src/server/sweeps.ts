@@ -56,6 +56,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { REJECTED_VIDEO_PURGE_PER_RUN } from "../schema/retention";
+import { sponsorshipLinkUrl } from "../schema/tokens";
 import { SETTLED_AT_SQL } from "./email-window";
 import {
   ENDED_STATUSES,
@@ -398,7 +399,7 @@ export async function runReminderSweep({
             endsAt: endsAt.toISOString(),
             gestureName: row.gestureName,
             name: row.sponsorName,
-            url: `${site}/sponsor/renew?token=${encodeURIComponent(token)}`,
+            url: sponsorshipLinkUrl(site, "renewal", token),
           },
           template: "transactional/renewal-reminder",
           to: row.sponsorEmail,

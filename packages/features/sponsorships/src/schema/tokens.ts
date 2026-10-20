@@ -13,6 +13,7 @@ import { displayNameSchema, logoKeySchema } from "./wizard";
 /** A re-edit link is valid for 7 days (S-19). */
 export const REEDIT_TOKEN_TTL_MS = 7 * DAY_MS;
 
+const TRAILING_SLASHES = /\/+$/;
 const NEW_TOKEN = /^[A-Za-z0-9_-]{43}$/;
 
 /** A token from a link: a new base64url token or an old UUID one. */
@@ -33,6 +34,22 @@ export async function newSponsorshipToken(): Promise<{
 }> {
   const token = newToken(32);
   return { hash: await hashSponsorshipToken(token), token };
+}
+
+/**
+ * The link a sponsor opens (ruling 7 of phase 9): the raw token rides in
+ * the URL **fragment**, which no server, CDN, log or `Referer` ever sees.
+ * The only builder of these links; a `?token=` query is never produced
+ * (`apps/site/scripts/token-links.test.ts` guards it). Old `?token=` links
+ * still open: the pages move it into the fragment.
+ */
+export function sponsorshipLinkUrl(
+  siteUrl: string,
+  purpose: "reedit" | "renewal",
+  token: string
+): string {
+  const path = purpose === "reedit" ? "/sponsor/edit" : "/sponsor/renew";
+  return `${siteUrl.replace(TRAILING_SLASHES, "")}${path}#token=${encodeURIComponent(token)}`;
 }
 
 /** The gesture a link is about, as its page shows it. */
