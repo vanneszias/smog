@@ -78,7 +78,7 @@ export interface Finding {
 }
 
 /** axe's blocking findings, each labelled with where it was found. */
-export async function scan(
+async function scan(
   page: Page,
   where: string,
   { menuOpen = false }: { menuOpen?: boolean } = {}
