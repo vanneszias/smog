@@ -94,10 +94,18 @@ test.describe("keyboard: the shell", () => {
     await page.setViewportSize({ height: 800, width: 1280 });
     await openPublic(page, "/");
     const language = page.getByRole("button", { name: "Taal wijzigen" });
-    await language.focus();
-    await page.keyboard.press("Enter");
     const menu = page.getByRole("menu");
-    await expect(menu).toBeVisible();
+    // The first menu of a cold dev server can lose the key (Vite optimising a
+    // dependency reloads the page): focus and press again until it is open,
+    // never pressing on an open menu (Enter on its trigger closes it).
+    await expect(async () => {
+      if (await menu.isVisible()) {
+        return;
+      }
+      await language.focus();
+      await page.keyboard.press("Enter");
+      await expect(menu).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 30_000 });
     // The checked item has the focus; the arrows move; Enter chooses.
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("ArrowDown");
@@ -195,12 +203,16 @@ test.describe("keyboard: signed in", () => {
       await option.focus();
       await page.keyboard.press("Space");
       await expect(option).toBeChecked();
-      await expect(
-        page.getByText(`Toegevoegd aan “${fixture.listName}”`, { exact: true })
-      ).toBeVisible();
+      const toast = page.getByText(`Toegevoegd aan “${fixture.listName}”`, {
+        exact: true,
+      });
+      await expect(toast).toBeVisible();
       // The toast is the topmost layer: the first Escape dismisses it, the
-      // second closes the dialog (Radix's layer stack).
+      // second closes the dialog (Radix's layer stack). The second waits for
+      // the first to have taken effect: a key pressed while the toast is
+      // still leaving goes to the toast, not the dialog (headless shell).
       await page.keyboard.press("Escape");
+      await expect(toast).toBeHidden();
       await page.keyboard.press("Escape");
       await expect(picker).toBeHidden();
       await expect(save).toBeFocused();

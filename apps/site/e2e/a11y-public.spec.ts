@@ -1,25 +1,20 @@
 import { devices, expect, type Page, test } from "@playwright/test";
 import {
   byRule,
-  closeWithEscape,
   type Finding,
   GUEST_ROUTES,
   newPublicPage,
   openPublic,
+  overlay,
+  quiet,
+  STATES_MS,
   scan,
   scanThemes,
-  seedAccount,
+  useSharedGuestPage,
 } from "./a11y-support";
-import { themedContext, WIDTHS } from "./admin";
-import {
-  signInWithApi,
-  stubMux,
-  stubMuxStream,
-  waitForApp,
-  watchErrors,
-} from "./helpers";
+import { WIDTHS } from "./admin";
+import { signInWithApi, stubMux, stubMuxStream, waitForApp } from "./helpers";
 
-const PLAYER_NOISE = /mux-player|getErrorFromHlsErrorData/;
 const VIDEO_NAME = /^Naam in de video/;
 const FULL_NAME = /^Volledige naam/;
 const EMAIL = /^E-mail$/;
@@ -27,67 +22,50 @@ const EMAIL = /^E-mail$/;
 /*
  * Public accessibility (phase 9 task 5): axe over every public route and
  * state, light and dark at 390 and 1280 px, with no serious or critical
- * violation (and the blocking rules of helpers.ts). One test per width and
- * group: each page is loaded once and scanned in both themes
- * (`scanThemes`), so a failure names where and in which theme it happened.
- * Sponsor token pages are phase 9 task 7's; the web has no offline banner
- * (mobile only, DECISIONS) and the kit's is scanned by `dev-ui.spec.ts`.
+ * violation (and the blocking rules of helpers.ts). One test per route or
+ * state and width, so a failure or a hang names where it happened and each
+ * test is bounded on its own (a runner a few times slower than a developer's
+ * machine does not turn one long test into a timeout). Each page is loaded
+ * once and scanned in both themes (`scanThemes`). Sponsor token pages are
+ * phase 9 task 7's; the web has no offline banner (mobile only, DECISIONS)
+ * and the kit's is scanned by `dev-ui.spec.ts`.
  */
 
 const IPHONE = devices["iPhone 15"].userAgent;
 const CONSENT = "Help SMOG verbeteren";
 const DECLINE = "Alleen noodzakelijke";
+/** The body of a test: the page, and where its findings go. */
+type Body = (page: Page, found: Finding[]) => Promise<void>;
 
-function quiet(errors: readonly string[]): string[] {
-  // The Mux player's console noise when the (stubbed) stream has no segments.
-  return errors.filter((line) => !PLAYER_NOISE.test(line));
-}
-
-/** Opens an overlay, scans it in both themes, closes it with Escape. */
-async function overlay(
-  page: Page,
-  found: Finding[],
-  where: string,
-  open: () => Promise<unknown>,
-  visible: () => Promise<unknown>
+/** The shared guest page on `path`: runs `body`, then asserts what it found. */
+async function onGuestPage(
+  shared: ReturnType<typeof useSharedGuestPage>,
+  path: string,
+  body: Body
 ): Promise<void> {
-  await open();
-  await visible();
-  // A menu is dismissed by axe's own run (it moves the focus): it is opened
-  // again for the dark scan, and scanned as a menu (`blockingViolations`).
-  const isMenu = (await page.getByRole("menu").count()) > 0;
-  found.push(
-    ...(await scanThemes(
-      page,
-      where,
-      isMenu ? { menu: { open, visible } } : {}
-    ))
-  );
-  await closeWithEscape(page);
+  const page = shared.page();
+  const found: Finding[] = [];
+  await openPublic(page, path);
+  await body(page, found);
+  expect(byRule(found)).toEqual([]);
+  expect(quiet(shared.errors)).toEqual([]);
 }
 
 test.describe("axe: guest routes", () => {
   for (const width of WIDTHS) {
-    test(`every route at ${width} px, light and dark`, async ({ browser }) => {
-      test.setTimeout(300_000);
-      const { context, page } = await newPublicPage(browser, "light", width);
-      try {
-        const errors = watchErrors(page);
-        const found: Finding[] = [];
-        for (const { name, path } of GUEST_ROUTES) {
-          const logged = errors.length;
-          // biome-ignore lint/performance/noAwaitInLoops: one route at a time.
+    test.describe(`at ${width} px`, () => {
+      const shared = useSharedGuestPage(width);
+      for (const { name, path } of GUEST_ROUTES) {
+        test(`${name}, light and dark`, async () => {
+          const page = shared.page();
           await openPublic(page, path);
-          found.push(...(await scanThemes(page, name)));
-          if (name === "not-found") {
-            // The 404 document's own status is what Chromium logs as an error.
-            errors.splice(logged);
+          const found = await scanThemes(page, name);
+          expect(byRule(found)).toEqual([]);
+          // The 404 document's own status is what Chromium logs as an error.
+          if (name !== "not-found") {
+            expect(quiet(shared.errors)).toEqual([]);
           }
-        }
-        expect(byRule(found)).toEqual([]);
-        expect(quiet(errors)).toEqual([]);
-      } finally {
-        await context.close();
+        });
       }
     });
   }
@@ -95,98 +73,134 @@ test.describe("axe: guest routes", () => {
 
 test.describe("axe: guest overlays and banners", () => {
   for (const width of WIDTHS) {
-    test(`header menus, banners and dialogs at ${width} px`, async ({
-      browser,
-    }) => {
-      test.setTimeout(300_000);
-      const { context, page } = await newPublicPage(browser, "light", width);
-      try {
-        const errors = watchErrors(page);
-        const found: Finding[] = [];
-        await openPublic(page, "/gestures/hond");
+    test.describe(`at ${width} px`, () => {
+      const gesture = "/gestures/hond";
+      // One page for the gesture-page states of this width (each test opens
+      // the path again, so none depends on the one before).
+      const shared = useSharedGuestPage(width);
+      const actions = (page: Page) =>
+        page.getByRole("button", { name: "Acties voor Hond" });
 
-        if (width < 768) {
+      if (width < 768) {
+        test(`the phone's menu sheet at ${width} px`, async () => {
+          test.setTimeout(STATES_MS);
+          await onGuestPage(shared, gesture, async (page, found) => {
+            await overlay(
+              page,
+              found,
+              "header:menu-sheet",
+              () => page.getByRole("button", { name: "Menu openen" }).click(),
+              () => expect(page.getByRole("dialog")).toBeVisible()
+            );
+          });
+        });
+      } else {
+        test(`the language menu at ${width} px`, async () => {
+          test.setTimeout(STATES_MS);
+          await onGuestPage(shared, gesture, async (page, found) => {
+            await overlay(
+              page,
+              found,
+              "header:language-menu",
+              () => page.getByRole("button", { name: "Taal wijzigen" }).click(),
+              () => expect(page.getByRole("menu")).toBeVisible()
+            );
+          });
+        });
+
+        test(`the theme menu at ${width} px`, async () => {
+          test.setTimeout(STATES_MS);
+          await onGuestPage(shared, gesture, async (page, found) => {
+            await overlay(
+              page,
+              found,
+              "header:theme-menu",
+              () =>
+                page.getByRole("button", { name: "Thema wijzigen" }).click(),
+              () => expect(page.getByRole("menu")).toBeVisible()
+            );
+          });
+        });
+      }
+
+      test(`a gesture's actions menu at ${width} px`, async () => {
+        test.setTimeout(STATES_MS);
+        await onGuestPage(shared, gesture, async (page, found) => {
           await overlay(
             page,
             found,
-            "header:menu-sheet",
-            () => page.getByRole("button", { name: "Menu openen" }).click(),
+            "gesture:actions-menu",
+            () => actions(page).click(),
+            () => expect(page.getByRole("menu")).toBeVisible()
+          );
+        });
+      });
+
+      test(`the save-to-list sign-in prompt at ${width} px`, async () => {
+        test.setTimeout(STATES_MS);
+        await onGuestPage(shared, gesture, async (page, found) => {
+          await overlay(
+            page,
+            found,
+            "gesture:save-to-list-sign-in",
+            () =>
+              page.getByRole("button", { name: "Opslaan in lijst" }).click(),
             () => expect(page.getByRole("dialog")).toBeVisible()
           );
-        } else {
-          await overlay(
-            page,
-            found,
-            "header:language-menu",
-            () => page.getByRole("button", { name: "Taal wijzigen" }).click(),
-            () => expect(page.getByRole("menu")).toBeVisible()
-          );
-          await overlay(
-            page,
-            found,
-            "header:theme-menu",
-            () => page.getByRole("button", { name: "Thema wijzigen" }).click(),
-            () => expect(page.getByRole("menu")).toBeVisible()
-          );
-        }
-        await overlay(
-          page,
-          found,
-          "gesture:actions-menu",
-          () => page.getByRole("button", { name: "Acties voor Hond" }).click(),
-          () => expect(page.getByRole("menu")).toBeVisible()
-        );
-        await overlay(
-          page,
-          found,
-          "gesture:save-to-list-sign-in",
-          () => page.getByRole("button", { name: "Opslaan in lijst" }).click(),
-          () => expect(page.getByRole("dialog")).toBeVisible()
-        );
-
-        // The QR dialog (a lazy file of phase 9 task 6: findings go to the controller).
-        await page.getByRole("button", { name: "Acties voor Hond" }).click();
-        await overlay(
-          page,
-          found,
-          "gesture:qr-dialog",
-          () => page.getByRole("menuitem", { name: "QR-code" }).click(),
-          () => expect(page.getByRole("dialog")).toBeVisible()
-        );
-
-        // A toast: the guest's favorite.
-        await page
-          .getByRole("main")
-          .getByRole("button", { exact: true, name: "Favoriet" })
-          .first()
-          .click();
-        found.push(...(await scanThemes(page, "gesture:favorited")));
-
-        expect(byRule(found)).toEqual([]);
-        expect(quiet(errors)).toEqual([]);
-      } finally {
-        await context.close();
-      }
-    });
-
-    test(`the consent banner at ${width} px`, async ({ browser }) => {
-      const { context, page } = await newPublicPage(browser, "light", width, {
-        consent: false,
+        });
       });
-      try {
-        const found: Finding[] = [];
-        await page.goto("/");
-        await waitForApp(page);
-        await expect(page.getByRole("region", { name: CONSENT })).toBeVisible();
-        found.push(...(await scanThemes(page, "consent-banner:home")));
-        await page.goto("/privacy");
-        await waitForApp(page);
-        await expect(page.getByRole("region", { name: CONSENT })).toBeVisible();
-        found.push(...(await scanThemes(page, "consent-banner:privacy")));
-        expect(byRule(found)).toEqual([]);
-      } finally {
-        await context.close();
-      }
+
+      // The QR dialog (a lazy file of phase 9 task 6: findings go to the controller).
+      test(`the QR dialog at ${width} px`, async () => {
+        test.setTimeout(STATES_MS);
+        await onGuestPage(shared, gesture, async (page, found) => {
+          await actions(page).click();
+          await overlay(
+            page,
+            found,
+            "gesture:qr-dialog",
+            () => page.getByRole("menuitem", { name: "QR-code" }).click(),
+            () => expect(page.getByRole("dialog")).toBeVisible()
+          );
+        });
+      });
+
+      // A toast: the guest's favorite.
+      test(`the guest's favorite toast at ${width} px`, async () => {
+        test.setTimeout(STATES_MS);
+        await onGuestPage(shared, gesture, async (page, found) => {
+          await page
+            .getByRole("main")
+            .getByRole("button", { exact: true, name: "Favoriet" })
+            .first()
+            .click();
+          found.push(...(await scanThemes(page, "gesture:favorited")));
+        });
+      });
+
+      test(`the consent banner at ${width} px`, async ({ browser }) => {
+        const { context, page } = await newPublicPage(browser, "light", width, {
+          consent: false,
+        });
+        try {
+          const found: Finding[] = [];
+          await page.goto("/");
+          await waitForApp(page);
+          await expect(
+            page.getByRole("region", { name: CONSENT })
+          ).toBeVisible();
+          found.push(...(await scanThemes(page, "consent-banner:home")));
+          await page.goto("/privacy");
+          await waitForApp(page);
+          await expect(
+            page.getByRole("region", { name: CONSENT })
+          ).toBeVisible();
+          found.push(...(await scanThemes(page, "consent-banner:privacy")));
+          expect(byRule(found)).toEqual([]);
+        } finally {
+          await context.close();
+        }
+      });
     });
   }
 
@@ -304,7 +318,7 @@ test.describe("axe: the error boundary", () => {
 test.describe("axe: sponsor wizard steps", () => {
   for (const width of WIDTHS) {
     test(`steps 1 to 3 at ${width} px`, async ({ browser }) => {
-      test.setTimeout(300_000);
+      test.setTimeout(STATES_MS);
       const { context, page } = await newPublicPage(browser, "light", width);
       try {
         const found: Finding[] = [];
@@ -338,173 +352,6 @@ test.describe("axe: sponsor wizard steps", () => {
         found.push(...(await scanThemes(page, "sponsor:3-review")));
         expect(byRule(found)).toEqual([]);
       } finally {
-        await context.close();
-      }
-    });
-  }
-});
-
-test.describe("axe: signed in", () => {
-  for (const width of WIDTHS) {
-    test(`favorites, lists, shared lists and account at ${width} px`, async ({
-      browser,
-    }) => {
-      test.setTimeout(300_000);
-      const { context, page } = await newPublicPage(browser, "light", width);
-      let cleanup: (() => Promise<void>) | undefined;
-      const visitors = [] as { close: () => Promise<void> }[];
-      try {
-        const errors = watchErrors(page);
-        const found: Finding[] = [];
-        await signInWithApi(page);
-        for (const path of ["/favorites", "/lists", "/account"]) {
-          // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
-          await openPublic(page, path);
-          found.push(...(await scanThemes(page, `${path} (empty)`)));
-        }
-        await overlay(
-          page,
-          found,
-          "header:user-menu",
-          () => page.getByRole("button", { name: "Accountmenu" }).click(),
-          () => expect(page.getByRole("menu")).toBeVisible()
-        );
-        await page
-          .getByRole("button", { name: "Mijn account verwijderen" })
-          .click();
-        await expect(page.getByRole("alertdialog")).toBeVisible();
-        found.push(...(await scanThemes(page, "account:delete-dialog")));
-        await page.getByLabel("Typ DELETE om te bevestigen").fill("DELETE");
-        found.push(...(await scanThemes(page, "account:delete-dialog-ready")));
-        await closeWithEscape(page);
-
-        const fixture = await seedAccount(page);
-        ({ cleanup } = fixture);
-        for (const [name, path] of [
-          ["favorites", "/favorites"],
-          ["lists", "/lists"],
-          ["list", `/lists?id=${fixture.listId}`],
-        ] as const) {
-          // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
-          await openPublic(page, path);
-          found.push(...(await scanThemes(page, `${name} (with items)`)));
-        }
-
-        // The list's own overlays.
-        const detail = page.getByRole("region", { name: fixture.listName });
-        await overlay(
-          page,
-          found,
-          "list:actions-menu",
-          () =>
-            detail
-              .getByRole("button", { name: "Acties voor de lijst" })
-              .click(),
-          () => expect(page.getByRole("menu")).toBeVisible()
-        );
-        await overlay(
-          page,
-          found,
-          "list:item-menu",
-          () =>
-            detail.getByRole("button", { name: "Acties voor Hond" }).click(),
-          () => expect(page.getByRole("menu")).toBeVisible()
-        );
-        await detail
-          .getByRole("button", { name: "Acties voor de lijst" })
-          .click();
-        await page.getByRole("menuitem", { name: "Naam wijzigen" }).click();
-        await expect(
-          page.getByRole("dialog", { name: "Lijst bewerken" })
-        ).toBeVisible();
-        found.push(...(await scanThemes(page, "list:rename-dialog")));
-        await closeWithEscape(page);
-        await detail
-          .getByRole("button", { name: "Acties voor de lijst" })
-          .click();
-        await page.getByRole("menuitem", { name: "Lijst verwijderen" }).click();
-        await expect(page.getByRole("alertdialog")).toBeVisible();
-        found.push(...(await scanThemes(page, "list:delete-dialog")));
-        await closeWithEscape(page);
-        await overlay(
-          page,
-          found,
-          "list:share-sheet",
-          () => detail.getByRole("button", { name: "Delen" }).click(),
-          () =>
-            expect(
-              page.getByRole("dialog", { name: "Lijst delen" })
-            ).toBeVisible()
-        );
-
-        // Save to list on a gesture page, and its toast.
-        await openPublic(page, "/gestures/hond");
-        await page.getByRole("button", { name: "Opslaan in lijst" }).click();
-        const picker = page.getByRole("dialog", { name: "Opslaan in lijst" });
-        await expect(picker).toBeVisible();
-        found.push(...(await scanThemes(page, "gesture:save-to-list")));
-        await picker.getByRole("checkbox", { name: fixture.listName }).click();
-        await expect(
-          page.getByText(`Verwijderd uit “${fixture.listName}”`, {
-            exact: true,
-          })
-        ).toBeVisible();
-        found.push(...(await scanThemes(page, "gesture:save-to-list-toast")));
-        // The toast is the topmost layer: the first Escape dismisses it, the
-        // second closes the dialog (Radix's layer stack).
-        await page.keyboard.press("Escape");
-        await expect(
-          page.getByText(`Verwijderd uit “${fixture.listName}”`, {
-            exact: true,
-          })
-        ).toBeHidden();
-        await closeWithEscape(page);
-
-        // Shared lists: the view link (a guest) and the edit link (another user).
-        const guest = await themedContext(browser, "light", width);
-        visitors.push(guest);
-        const viewer = await guest.newPage();
-        await stubMux(viewer);
-        await stubMuxStream(viewer);
-        await openPublic(viewer, fixture.viewPath);
-        found.push(...(await scanThemes(viewer, "shared-list:view")));
-        const other = await themedContext(browser, "light", width);
-        visitors.push(other);
-        const editor = await other.newPage();
-        await stubMux(editor);
-        await stubMuxStream(editor);
-        await signInWithApi(editor);
-        await openPublic(editor, fixture.editPath);
-        found.push(...(await scanThemes(editor, "shared-list:edit")));
-        await overlay(
-          editor,
-          found,
-          "shared-list:add-sheet",
-          () =>
-            editor.getByRole("button", { name: "Gebaren toevoegen" }).click(),
-          () => expect(editor.getByRole("dialog")).toBeVisible()
-        );
-        // A signed-out visitor of an edit link is asked to sign in.
-        const stranger = await guest.newPage();
-        await stubMux(stranger);
-        await stubMuxStream(stranger);
-        await openPublic(stranger, fixture.editPath);
-        found.push(
-          ...(await scanThemes(stranger, "shared-list:edit-signed-out"))
-        );
-
-        // A revoked or unknown token: the list's 404 state.
-        await openPublic(viewer, "/lists/e2eUnknownShareToken0123456789abcdef");
-        found.push(...(await scanThemes(viewer, "shared-list:not-found")));
-
-        expect(byRule(found)).toEqual([]);
-        expect(quiet(errors)).toEqual([]);
-      } finally {
-        await cleanup?.().catch(() => undefined);
-        for (const visitor of visitors) {
-          // biome-ignore lint/performance/noAwaitInLoops: two contexts.
-          await visitor.close();
-        }
         await context.close();
       }
     });
