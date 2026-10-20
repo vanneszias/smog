@@ -2,6 +2,7 @@ import { waitUntil } from "cloudflare:workers";
 import { RPCHandler } from "@orpc/server/fetch";
 import { appRouter } from "@smog/api";
 import { type RpcContext, rpcHandlerOptions } from "@smog/rpc";
+import { readCappedBody } from "@smog/utils";
 import { siteEnv } from "./auth";
 import { createRpcContext } from "./context";
 import { apiDocsEnabled } from "./dev-tools";
@@ -19,6 +20,39 @@ interface Handler {
 const rpcHandler = new RPCHandler<RpcContext>(appRouter, rpcHandlerOptions);
 
 /**
+ * The request body cap of both transports (phase 9 task 8, P-10): the
+ * largest legitimate input is a guest import or a catalogue batch, well
+ * under 1 MiB, and the logo upload has its own route and its 2 MB limit.
+ * Past the cap the answer is an empty 413 before any procedure runs.
+ */
+export const RPC_MAX_BODY_BYTES = 5 * 1024 * 1024;
+
+const BODYLESS_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * The request itself when its body fits `RPC_MAX_BODY_BYTES`, an empty 413
+ * (or 400 for a malformed `content-length`) when it does not. A declared
+ * length over the cap is refused without a read; a body without one is
+ * counted as it streams and cancelled past the cap (`readCappedBody`), then
+ * handed on as a buffered copy.
+ */
+export async function capRequestBody(
+  request: Request
+): Promise<Request | Response> {
+  if (BODYLESS_METHODS.has(request.method.toUpperCase()) || !request.body) {
+    return request;
+  }
+  const read = await readCappedBody(request, RPC_MAX_BODY_BYTES);
+  if (!read.ok) {
+    return new Response(null, {
+      headers: { "cache-control": "no-store" },
+      status: read.status,
+    });
+  }
+  return new Request(request, { body: read.bytes });
+}
+
+/**
  * Both transports share `rpcHandlerOptions`: `RL_API` per IP, then the
  * session (one D1 read, only when the limit passed), then the procedure.
  */
@@ -28,8 +62,12 @@ async function serve(
   request: Request
 ): Promise<Response> {
   try {
-    const context = createRpcContext(request, siteEnv(), { waitUntil });
-    const { matched, response } = await handler.handle(request, {
+    const capped = await capRequestBody(request);
+    if (capped instanceof Response) {
+      return capped;
+    }
+    const context = createRpcContext(capped, siteEnv(), { waitUntil });
+    const { matched, response } = await handler.handle(capped, {
       context,
       prefix,
     });
