@@ -71,12 +71,10 @@ export function UserMenu(): ReactNode {
         variant="secondary"
       >
         <Link search={redirect ? { redirect } : {}} to="/sign-in">
-          {/* Below 360 px the header cannot fit the label (320 px reflow,
-              WCAG 1.4.10): the icon stands in, the text still names the link. */}
-          <LogIn
-            aria-hidden="true"
-            className="hidden size-5 max-[22.5rem]:block"
-          />
+          {/* The icon always shows; below 360 px the header cannot fit the
+              label (320 px reflow, WCAG 1.4.10), so only the icon is left and
+              the text still names the link. */}
+          <LogIn aria-hidden="true" className="size-5 shrink-0" />
           <span className="max-[22.5rem]:sr-only">{t("nav.signIn")}</span>
         </Link>
       </Button>
