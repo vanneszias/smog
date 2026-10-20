@@ -1665,3 +1665,120 @@ Rulings 6, 14 and 16. Most of the header, authorization and webhook work already
 - **2026-10-20 · Audit re-evaluation (online, `bun audit --production`, 2026-10-20).** The ignore for GHSA-3wwx-pv8p-q78v (undici 7.29.0) is **dropped**: the root `overrides` pin to 7.29.1 (2026-09-29) already fixes it and the audit passes without it. The other seven stay, each re-read on 2026-10-20: GHSA-w5hq-g745-h8pq (uuid 7.0.3, only through `xcode` in `@expo/config-plugins`, a build-time tool; only when a caller passes `buf`; the fix is major 11+ and `xcode` asks `^7`), GHSA-vcc3-ghjq-m6fr (decode-uri-component 0.2.2 via `query-string` 7 in `expo-router`; 0.5.0 exists but is ESM-only and the consumer is CJS), GHSA-67mh-4wv8-2f99 (esbuild 0.18.20 via `drizzle-kit` 0.31.11 → `@esbuild-kit`, still the newest drizzle-kit; the advisory is about `esbuild serve`, never started; dev dependency of `@smog/db`), GHSA-86w9-cpqp-85rv (node-forge 1.4.0, still the newest release, no fix; Expo CLI and update signing at build time), GHSA-vfj7-8cjw-p6xm (braces 3.0.3, still the newest, no fix; glob expansion of our own patterns in build and test tooling), GHSA-rj75-hqrm-r3gf (postcss-selector-parser 6.1.4 under Tailwind 3 and NativeWind; 7.1.6 is a major the mobile styles could feel) and GHSA-hp3w-g68c-fv3c (sprintf-js 1.0.3 and 1.1.3, newest, no fix; Jest, Expo and TanStack Start tooling). None is reachable from the Worker or the exported app bundles (build-time and test-time tooling; the Worker build was checked for the packages in the task report). Revisit when Expo, drizzle-kit, Tailwind or the libraries above ship fixes; the next review is Task 10's final audit.
 - **2026-10-20 · `bun outdated`.** Not newest stable: `@biomejs/biome` 2.5.14 (2.5.15), `knip` 6.39.0 (6.42.1), `turbo` 2.11.7 (2.11.9), `ultracite` 7.12.2 (8.0.1, a major) and `@types/bun` 1.4.2 (1.4.3). Held on purpose: the toolchain (Bun 1.3.11, Biome 2.5.14) stays until Task 10 decides, and a lint-preset major (ultracite 8) changes the rules every task is written against.
 - **Deviations from the brief's file list:** `apps/site/src/worker.ts` (three lines: the request id and the two guards) and the new `apps/site/src/worker/top-level.ts`, because queue and scheduled need a wrapper in a file nobody was assigned; `packages/utils/src/{log,log.test,index}.ts` (the helper the brief allows if the review finds the need); `packages/api/test/authz.test.ts` and four new `apps/site/test/security-*.test.ts` files. No migration, no binding, no var.
+
+
+## Parity audit (phase 9 task 9)
+
+The audit walked every open row of `docs/superpowers/specs/2026-09-29-feature-inventory.md` (51 rows, section 1.3, section 8) and gave each one a disposition with evidence. All 51 rows are now `[x]`; none is deferred. Ticks are in the inventory, evidence in the tables below. What the audit changed in the product is the first list; the rest is bookkeeping.
+
+- **2026-10-20 · [parity] `/manifest.webmanifest` is implemented** (P-14, R-18). `apps/site/src/lib/manifest.ts` builds it with the old values (name and short name `SMOG&Co`, Dutch description, `lang` nl, `display` standalone, `orientation` any, `start_url` and `scope` `/`, background `#ebf4eb`, theme `#00805f` taken from the brand token, categories education and reference); `apps/site/src/routes/manifest[.]webmanifest.ts` serves it as `application/manifest+json` (an hour of cache, the Worker's table); `__root` links it once. Dutch only: a manifest is fetched without cookies, so it has no locale to follow. `apps/site/test/manifest.test.ts` pins the values, that every icon it lists exists in `public/`, and the single `rel="manifest"` link: that is the old release check's assertion, kept in a site test instead of `scripts/release-config-check.ts` (Task 1's file).
+- **2026-10-20 · [rule change] The icon set is the generated one, not nine `android-chrome-*` sizes** (P-14). The manifest lists `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` and `icon.svg`, all produced by `@smog/brand`. Installable-app checks need 192 and 512 plus a maskable icon; the other seven sizes were never needed by a browser that scales.
+- **2026-10-20 · [dropped] `browserconfig.xml` and `yandex-browser-manifest.json`** (P-14, R-18). They served legacy IE/Edge tiles and the Yandex browser; their `mstile-*` PNGs and the iOS startup images were never generated here, and no current browser reads them. `/browserconfig.xml` answers 404 (`apps/site/e2e/routes-parity.spec.ts`). The inventory's P-12 `msapplication` tile colour goes with them.
+- **2026-10-20 · [parity] `/assets/logo.svg` exists** (R-18). `@smog/brand` generates it (the green logo, `compose.ts`, covered by `outputs.test.ts` and `drift.test.ts`) into `apps/site/public/assets/`, merged with Vite's hashed output. Unhashed, so it keeps the one-day cache of `public/_headers` and the Worker table (Task 6), not the year-long immutable rule, which is by extension for hashed `js`, `css` and `woff2` only (`apps/site/test/cache-policy.test.ts`).
+- **2026-10-20 · [test] `apps/site/e2e/routes-parity.spec.ts`** walks the inventory's URL table over HTTP only (the `request` fixture, redirects not followed, about 30 requests, a few seconds): the legacy redirects with their status and `Location` (the re-edit token in the fragment, 302), the canonical pages, `/api/health`, the old `/webhooks/mollie` alias, the OpenAPI spec on dev, and the static and generated files. It stays in the `public` project (no browser, so it adds seconds to that shard, not minutes).
+- **2026-10-20 · [test] `apps/site/test/parity-openapi-production.test.ts`** pins P-34 under a production env: every method on `/api/openapi/*` is a bare 404 before the OpenAPI handler is imported (the existing `apiDocsEnabled` test only checked the predicate).
+- **2026-10-20 · [changed] P-34: the API reference moved to `/api/openapi`, dev and staging only.** The old `/api-reference` was public; spec §7 keeps the reference off production, where the typed client is the only consumer. The inventory said "no DECISIONS entry"; this is it.
+- **2026-10-20 · [changed] X-02: Convex is replaced by D1, R2, KV, Queues and Cron Triggers, with no realtime.** The rewrite's premise (spec §5); live queries become TanStack Query invalidation and `staleTime` (so L-19's `lastUpdated` endpoint is gone). The inventory said "no DECISIONS entry for the whole switch"; this is it.
+- **2026-10-20 · [dropped] P-38 and X-15: Docker Compose, Redis, Caddy and GHCR are replaced by Cloudflare** (spec §1 non-goals): a Worker with D1, R2, KV, Queues, a Workflow and a Container, deployed by `.github/workflows/deploy.yml`.
+- **2026-10-20 · [changed] X-17: the contact address is `info@smog.vlaanderen`** (`CONTACT_EMAIL`). The inventory listed `hello@smog.vlaanderen` as well; no screen, email or document of the rewrite uses it.
+- **2026-10-20 · [process] Section 1.3 has no open item.** All twelve "no DECISIONS entry" rules are recorded under "Rule changes recorded from the feature inventory (2026-09-29)" (guests, category slugs, auth provider, CSV columns, rate limits, Mux webhooks, typo tolerance, route names, web guests, the Favorites tab, legal pages, Turnstile); the audit confirmed each against the code. Item 7's "no explicit successor" is stale: the entry names the Damerau-Levenshtein tier (`typo-gate.test.ts`).
+- **2026-10-20 · [process] R-15's note is updated** to Task 7's fragment redirect: 302 `/sponsor/edit#token=<same>`, 301 only without a token.
+- **2026-10-20 · [not done] Three things the audit records and does not do**, each with an owner and a date so Task 11 carries them: (1) **load and abuse testing of the rate limits** (the table is pinned by `scripts/security-guard.test.ts`, the numbers by DECISIONS "Rate limits: the binding only has 10 s and 60 s periods"; a real load needs the staging deploy and the owner's Cloudflare account; owner, before the production cutover); (2) **a cost review** (Workers Paid, Containers, Queues, Mux and Mollie fees against real traffic: needs a month of staging and production usage; owner, one month after the cutover); (3) **a backup-restore drill** (the runbook has D1 Time Travel and the R2 notes; the drill needs a real database; owner, before the cutover rehearsal in `docs/cutover-runbook.md`).
+
+### The disposition table (inventory rows)
+
+| Row | Disposition | Evidence |
+|---|---|---|
+| L-19 | dropped | Convex live queries and the SQLite sync layer no longer exist; TanStack Query invalidation and `staleTime` replace the `lastUpdated` endpoint (DECISIONS, Parity audit, X-02) |
+| U-11 | done | both apps sign out and clear the analytics identity; the mobile confirm alert is back (phase 9 task 3; `apps/mobile/src/account-screen.test.tsx`, "sign out (inventory U-11)") |
+| A-13 | dropped | no successor, force expire covers it (D-VIDEO, D-AUDIT; phase 5 ruling 1) |
+| P-10 | done | the 5 MiB RPC body cap, also for streamed bodies that declare no length (phase 9 task 8, `apps/site/test/security-rpc-body.test.ts`); same-origin web needs no CORS, mobile uses Better Auth trusted origins (`packages/auth/test/auth.test.ts`) |
+| P-14 | changed | `/manifest.webmanifest` generated from tokens with the old values, linked once from the document (`apps/site/test/manifest.test.ts`, `apps/site/e2e/routes-parity.spec.ts`); the generated icon set (192, 512, maskable, SVG) replaces the nine `android-chrome-*` sizes; `browserconfig.xml` and the Yandex manifest are dropped (DECISIONS, Parity audit) |
+| P-18 | done | `public/_headers` and the Worker's cache table, kept equal (phase 9 task 6, `apps/site/test/cache-policy.test.ts`) |
+| P-23 | done | unlock by 5 taps, off in production builds (`apps/mobile/src/lib/dev-tools.test.ts`), the gallery in `apps/mobile/src/dev/component-gallery.test.tsx` |
+| P-25 | done | the haptics helper in `@smog/ui-native` (`packages/ui-native/src/components/choice.test.tsx`, `chip.test.tsx`, `overlays.test.tsx`) |
+| P-26 | changed | `logErrors` with the `[rpc:<path>]` prefix and redacted logs (`packages/rpc/test/middleware.test.ts`, `apps/site/test/security-observability.test.ts`, `scripts/security-guard.test.ts` log scan); OTLP dropped (X-10) |
+| P-27 | done | the typed error map (`packages/rpc/src/errors.ts`, `packages/rpc/test/contract.test.ts`); the old `SyncError`/`DatabaseError`/`ConvexError` are gone with Convex |
+| P-29 | done | `Toast` with an `aria-live` viewport in both kits (`packages/ui-web/src/components/toast.test.tsx`, `packages/ui-native/src/a11y.test.tsx`) |
+| P-30 | done | skip link, landmarks, keyboard and reflow runs (phase 9 task 5: `apps/site/e2e/a11y-landmarks.spec.ts`, `a11y-keyboard.spec.ts`, `a11y-reflow.spec.ts`; mobile `apps/mobile/src/a11y.test.tsx`) |
+| P-32 | done | direct uploads with `static_renditions [{resolution: "highest"}]` (`packages/video/src/uploads.test.ts`), the master-ready and asset-ready webhooks (`apps/site/test/mux-webhook.test.ts`) |
+| P-33 | done | Zod env schemas per runtime and the renamed constants (`packages/config/src/env/worker.test.ts`, `mobile.test.ts`, `render.test.ts`, `packages/config/src/constants.ts`); the sync constants are dropped |
+| P-34 | changed | the reference is served on dev and staging only and answers 404 in production (`apps/site/test/rpc.test.ts`, `apps/site/test/parity-openapi-production.test.ts`); DECISIONS entry added (Parity audit) |
+| P-36 | done | four native tabs (`apps/mobile/src/app-shell.test.tsx`), the stacks and sheets (`apps/mobile/src/*.test.tsx`) |
+| P-37 | done | header, user menu, language and theme menus, legal links and the credit (`apps/site/e2e/shell.spec.ts`, `legal-links.spec.ts`, `apps/site/src/components/app-shell/`) |
+| P-38 | dropped | replaced by Cloudflare (spec §1 non-goals; DECISIONS, Parity audit) |
+| P-39 | done | `release:check` per spec §3 (`scripts/release-config-check.ts` and its tests, `.github/workflows/ci.yml`) |
+| J-05 | dropped | guests have no server rows (DECISIONS, "Guests are device-only"); the privacy page says guest data never leaves the device |
+| J-08 | done | the Workflow (`apps/site/test/render-workflow.test.ts`: happy path, 422 not retried, early event kept) |
+| J-09 | dropped | durable `render_job` rows replace the in-memory store (D-RENDERJOB) |
+| W-03 | changed | `/api/auth/*` on `RL_AUTH`, 5 per 60 s on POSTs with get-session and sign-out exempt (docs/API.md rate-limit table, `scripts/security-guard.test.ts` "the rate-limit table") |
+| W-04 | done | `POST /api/analytics` (`apps/site/test/analytics.test.ts`), limited on `RL_ANALYTICS` (docs/API.md rate-limit table) |
+| W-05 | dropped | the Workflow calls Mux directly, no internal endpoint (bug 10) |
+| W-06 | dropped | services enqueue on `EMAIL_QUEUE` (bug 10) |
+| W-08 | done | `/api/rpc/*` and `/api/openapi/*` on `RL_API` (`apps/site/test/rpc.test.ts`, docs/API.md rate-limit table, `scripts/security-guard.test.ts`) |
+| W-09 | done | `GET /api/health`, exempt from maintenance (`apps/site/test/health.test.ts`, `apps/site/e2e/routes-parity.spec.ts`) |
+| W-10 | changed | the Container's `POST /render`, called only by the Workflow (D-PREVIEW, D-RENDERJOB; `packages/render` tests) |
+| W-11 | done | nothing existed, nothing was added |
+| X-01 | changed | WorkOS to Better Auth (DECISIONS, "Auth provider: WorkOS to Better Auth" and D-AUTH) |
+| X-02 | changed | Convex to D1, R2, KV, Queues and Cron Triggers, the premise of the rewrite (DECISIONS entry added, Parity audit) |
+| X-04 | done | `@smog/video` and the Mux webhooks (`packages/video/src/*.test.ts`, `apps/site/test/mux-webhook.test.ts`) |
+| X-05 | done | Player preview plus the `SmogRenderer` Container (D-PREVIEW; `apps/site/test/render-workflow.test.ts`) |
+| X-09 | done | relay at `/api/analytics`, write-only native client, consent-gated (`packages/analytics/src/*.test.ts`, `apps/site/test/analytics.test.ts`) |
+| X-10 | dropped | not in the spec; Workers observability logs instead (P-26) |
+| X-11 | done | EAS profiles and the OTA wrapper (`scripts/eas-update.test.ts`, `apps/mobile/eas.json`) |
+| X-12 | done | Google and Apple through Better Auth, passkeys (`packages/auth/test/methods.test.ts`, `apps/mobile/src/auth-screen.test.tsx`) |
+| X-14 | changed | FTS5 plus the Damerau-Levenshtein tier replace Fuse.js (D-FTS; DECISIONS "Search typo tolerance") |
+| X-15 | dropped | Cloudflare Workers and GitHub Actions (spec §1 non-goals; DECISIONS, Parity audit) |
+| X-17 | done | the static links live in `packages/config/src/constants.ts` (`SMOG_WEBSITE_URL`, `COURSE_URL`, `CONTACT_EMAIL` = info@smog.vlaanderen) and the footer credit; the one old `hello@` address is replaced by `info@` (DECISIONS, Parity audit) |
+| X-18 | done | Mux webhooks added (`apps/site/test/mux-webhook.test.ts`), the Mollie webhook verifies through the API (`apps/site/test/mollie-webhook.test.ts`), no Sentry |
+| R-01 | done | `apps/site/e2e/routes-parity.spec.ts` |
+| R-04 | done | `apps/site/e2e/routes-parity.spec.ts`, `lists.spec.ts` |
+| R-06 | done | `/favorites` is a page (`apps/site/e2e/routes-parity.spec.ts`, `favorites.spec.ts`) |
+| R-07 | done | `/account` (`apps/site/e2e/routes-parity.spec.ts`, `account.spec.ts`) |
+| R-12 | done | `/sponsor` is the wizard (`apps/site/e2e/routes-parity.spec.ts`, `sponsor.spec.ts`) |
+| R-18 | changed | robots and sitemap are routes, the manifest is generated, `/assets/logo.svg` is generated by `@smog/brand` (one-day cache, `apps/site/test/cache-policy.test.ts`); `/browserconfig.xml` is dropped (DECISIONS, Parity audit); all pinned by `apps/site/e2e/routes-parity.spec.ts` |
+| R-23 | done | Better Auth trusts the `smog://` origin (`packages/auth/test/auth.test.ts`) |
+| R-24 | done | unknown paths map to `/`, `/gestures?q=` to search (`apps/mobile/src/native-intent.test.ts`) |
+| R-25 | done | `/`, `/sponsor` and `/admin` answer (`apps/site/e2e/routes-parity.spec.ts`) |
+
+### Section 8, the old bugs
+
+All 35 are fixed in the rewrite; each line names the test or entry that pins the fix.
+
+| Bug | Evidence |
+|---|---|
+| 1 | `packages/features/admin/test/sponsorships.test.ts` (approve stores `starts_at`/`ends_at`), `packages/email/test/templates.test.ts` (the email shows the stored end date) |
+| 2 | `packages/email/test/templates.test.ts` (30 days, the renewal link), `packages/features/sponsorships/test/renewal.test.ts` |
+| 3 | `packages/render/src/contract.test.ts`, `props.test.ts` (one `display_name` of at most 35) |
+| 4 | `packages/render/src/compositions/fit.test.ts`, `sponsored-video.dom.test.tsx` (one fixed layout) |
+| 5 | `packages/features/sponsorships/test/settled.test.ts` (`admin_new_sponsorship` after payment), `packages/email/test/templates.test.ts` |
+| 6 | `apps/site/test/mollie-webhook.test.ts`, `packages/features/sponsorships/test/settle.test.ts`, `settle-races.test.ts` |
+| 7 | `apps/site/test/render-workflow.test.ts`, `packages/features/sponsorships/test/render-workflow.test.ts`, `render-watchdog.test.ts` |
+| 8 | `apps/site/test/scheduled.test.ts` (Cron Triggers in UTC, re-run safe), `packages/features/sponsorships/test/sweeps.test.ts` |
+| 9 | `packages/features/sponsorships/test/settle.test.ts`, `settle-races.test.ts`, `lifecycle.test.ts`, `apps/site/test/mollie-webhook.test.ts` (`refund_needed`, always 200) |
+| 10 | no shared-secret internal endpoint exists (W-05, W-06; `scripts/security-guard.test.ts` route table); the remaining secret checks use `crypto.subtle.verify` (`packages/features/sponsorships/src/server/logo.ts`, `apps/site/src/worker/maintenance.ts`) and the Mux SDK verifier (`packages/video/src/webhooks.ts`) |
+| 11 | `packages/features/admin/test/users.test.ts`, `audit.test.ts`, `export.test.ts` |
+| 12 | `packages/features/account/test/account.test.ts` (export and deletion), `packages/api/test/authz.test.ts` |
+| 13 | no guest rows exist (DECISIONS, "Guests are device-only"); `packages/features/account/test/import.test.ts` |
+| 14 | `packages/features/account/test/import.test.ts`, `packages/api/test/authz.test.ts` (`importGuestData` needs a session) |
+| 15 | `packages/api/test/authz.test.ts`, `packages/features/favorites/test/router.test.ts`, `packages/features/lists/test/sharing.test.ts` |
+| 16 | `packages/features/admin/test/users.test.ts`, `apps/site/src/components/admin/users/users.test.tsx` |
+| 17 | `packages/features/sponsorships/test/availability.test.ts`, `packages/db/test/schema.test.ts` (the partial unique index) |
+| 18 | `packages/db/test/schema.test.ts`, `migration-0013.test.ts` (CHECK constraints) |
+| 19 | `packages/features/sponsorships/test/lifecycle.test.ts`, `status.test.ts`, `packages/features/admin/test/sponsorships.test.ts` |
+| 20 | `apps/site/test/scheduled.test.ts` (one documented schedule) |
+| 21 | `packages/features/gestures/src/client/course-banner.test.tsx`, `packages/ui-web/src/domain/course-banner.test.tsx`, `packages/ui-native/src/domain/media.test.tsx` |
+| 22 | `packages/features/sponsorships/src/client/use-checkout.test.ts`, `apps/site/src/components/sponsor/wizard.test.tsx` (one constant per limit) |
+| 23 | `apps/site/test/logo-upload.test.ts`, `packages/features/sponsorships/test/logo.test.ts` (type, size, R2) |
+| 24 | `packages/utils/src/money.test.ts`, `apps/site/src/components/sponsor/payment-result.test.tsx`, `apps/site/e2e/routes-parity.spec.ts` (`/success` redirect) |
+| 25 | `packages/features/sponsorships/src/client/use-checkout.test.ts`, `packages/features/sponsorships/test/checkout.test.ts` (10 enforced) |
+| 26 | `apps/site/test/open-in-app.test.ts` |
+| 27 | `apps/site/e2e/admin-sponsorships.spec.ts`, `admin-catalog.spec.ts`, `admin-users.spec.ts` |
+| 28 | `packages/email/test/templates.test.ts`, `render.test.ts` (localized fallback phrase) |
+| 29 | D-PREVIEW: the browser Player previews, one render after payment (`apps/site/test/render-starter.test.ts`) |
+| 30 | `packages/auth/test/welcome.test.ts` (idempotency key), the email is part of the Better Auth user |
+| 31 | `packages/features/gestures/test/search.test.ts`, `apps/site/test/gestures-search.test.ts` (one FTS5 ranking) |
+| 32 | `packages/features/admin/test/sponsorships.test.ts` (manual payment enters `rendering`) |
+| 33 | `apps/site/test/maintenance.test.ts` (503, `Retry-After`, admin bypass) |
+| 34 | `apps/site/test/learning.test.ts` (per-route head, dynamic sitemap), `apps/site/e2e/routes-parity.spec.ts` (`/sitemap.xml`) |
+| 35 | `packages/features/sponsorships/test/renewal.test.ts`, `settle.test.ts` (`reminder_sent_at` reset) |
