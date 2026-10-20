@@ -27,8 +27,9 @@ import { and, count, desc, eq, isNull, lt } from "drizzle-orm";
  * send was enqueued, so a failed enqueue does not skip the day: a re-run
  * the same day tries again, and the per-admin idempotency key
  * (`admin_dead_letter:<date>:<adminId>`) keeps the admins already reached
- * from getting a second email. The lost counters read are cleared after
- * the marker, so a loss is reported once.
+ * from getting a second email. The lost counters read are settled after
+ * the marker (the reported part comes off, a loss counted since stays), so a
+ * loss is reported once and never dropped unreported.
  */
 
 /** A `render_failed` sponsorship is reported once it has been so for this long. */
@@ -64,7 +65,8 @@ interface DigestFacts {
   emailOpen: number;
   eventsOpen: number;
   lost: number;
-  lostKeys: string[];
+  /** Each counter read, with the value the report counted. */
+  lostCounted: { key: string; value: number }[];
   renderFailed: number;
   types: { count: number; type: string }[];
 }
@@ -99,17 +101,52 @@ async function openDeadLetters(
   };
 }
 
-/** The loss counters still in KV (TTL 3 days): their sum and their keys. */
+function counterValue(value: string | null): number {
+  const n = Number.parseInt(value ?? "0", 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/** The loss counters still in KV (TTL 3 days): their sum and each value read. */
 async function lostCounters(
   kv: DeadLetterDigestDeps["kv"]
-): Promise<{ keys: string[]; lost: number }> {
+): Promise<{ counted: { key: string; value: number }[]; lost: number }> {
   const { keys } = await kv.list({ prefix: DLQ_LOST_PREFIX });
-  const values = await Promise.all(keys.map((key) => kv.get(key.name)));
-  const lost = values.reduce((sum, value) => {
-    const n = Number.parseInt(value ?? "0", 10);
-    return sum + (Number.isFinite(n) ? n : 0);
-  }, 0);
-  return { keys: keys.map((key) => key.name), lost };
+  const counted = await Promise.all(
+    keys.map(async (key) => ({
+      key: key.name,
+      value: counterValue(await kv.get(key.name)),
+    }))
+  );
+  return {
+    counted,
+    lost: counted.reduce((sum, entry) => sum + entry.value, 0),
+  };
+}
+
+/**
+ * Takes what was reported off a counter, never more: a loss counted after
+ * the read (a late DLQ failure between the read and now) stays for the next
+ * report. KV has no compare-and-delete, so the key is read again: unchanged
+ * it is deleted, grown it keeps the difference. A loss landing between that
+ * read and the write is the one remaining window (microseconds, and the
+ * `[dlq] lost` log line exists either way).
+ */
+async function settleLostCounter(
+  kv: DeadLetterDigestDeps["kv"],
+  { key, value }: { key: string; value: number }
+): Promise<void> {
+  try {
+    const now = counterValue(await kv.get(key));
+    if (now <= value) {
+      await kv.delete(key);
+      return;
+    }
+    await kv.put(key, String(now - value), {
+      expirationTtl: DLQ_KV_TTL_SECONDS,
+    });
+  } catch (error) {
+    console.error("[dlq] Failed to clear a lost counter:", error);
+  }
 }
 
 async function renderFailedForTooLong(db: Db, now: Date): Promise<number> {
@@ -134,7 +171,7 @@ async function gather(deps: DeadLetterDigestDeps): Promise<DigestFacts> {
     lostCounters(deps.kv),
     renderFailedForTooLong(deps.db, deps.now),
   ]);
-  return { ...open, lost: lost.lost, lostKeys: lost.keys, renderFailed };
+  return { ...open, lost: lost.lost, lostCounted: lost.counted, renderFailed };
 }
 
 /**
@@ -191,13 +228,10 @@ export async function runDeadLetterDigest(
     );
   }
   await kv.put(marker, "1", { expirationTtl: DLQ_KV_TTL_SECONDS });
-  // Reported now: clear the counters (best effort; their TTL ends them anyway).
+  // Reported now: take the reported part off the counters (best effort;
+  // their TTL ends them anyway).
   await Promise.all(
-    facts.lostKeys.map((key) =>
-      kv.delete(key).catch((error: unknown) => {
-        console.error("[dlq] Failed to clear a lost counter:", error);
-      })
-    )
+    facts.lostCounted.map((entry) => settleLostCounter(kv, entry))
   );
   console.log(
     `[dlq] digest ${JSON.stringify({ admins: admins.length, lost: facts.lost, open, renderFailed: facts.renderFailed })}`
