@@ -1,6 +1,7 @@
 import { isContractProcedure, oc } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { ADMIN_PROCEDURE_KINDS } from "@smog/admin/contract";
+import { loadSession } from "@smog/rpc";
 import { makeRpcContext, makeSession } from "@smog/rpc/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { appContract } from "../src/contract";
@@ -351,17 +352,54 @@ describe("signed-in and admin calls", () => {
   }
 });
 
-describe("a banned user", () => {
+/*
+ * A banned user. The ban is not a branch of any procedure: it lives in the
+ * one shared session read. Better Auth reads the session from D1 on every
+ * request, and `admin.users.ban` revokes the target's sessions, so a banned
+ * user's cookie yields NO session (`@smog/auth` `revocation.test.ts`: "a
+ * banned user's existing session stops working at once"). Two layers prove
+ * every `session` and `admin` row inherits it:
+ *
+ * 1. here, per row, through the real `loadSession` interceptor (the one
+ *    `/api/rpc` and `/api/openapi` use) with an `auth` whose `getSession`
+ *    answers what Better Auth answers for a banned user (`null`), starting
+ *    from a context that still carried a valid-looking session: the
+ *    interceptor replaces it, and the row's guard refuses;
+ * 2. `apps/site/test/security-authz.test.ts`, with a real ban of a real
+ *    account through the Worker, for `account.me`, `account.export`,
+ *    `favorites.ids`, `lists.mine`, `lists.create`, `system.whoami` and an
+ *    admin procedure (not all rows: the table is the other layer).
+ */
+describe("a banned user (through the shared session interceptor)", () => {
+  const bannedAuth = {
+    api: { getSession: () => Promise.resolve(null) },
+  } as unknown as ReturnType<typeof makeRpcContext>["auth"];
+
   for (const [path, row] of rows) {
     if (row.level === "session" || row.level === "admin") {
       it(`${path} refuses a banned user like a guest`, async () => {
-        expect(
-          await outcome(
-            path,
-            "banned",
-            row.level === "admin" ? undefined : row.input
-          )
-        ).toBe("UNAUTHORIZED");
+        const context = makeRpcContext({
+          auth: bannedAuth,
+          // Valid-looking before the interceptor: it must be replaced.
+          session: makeSession(row.level === "admin" ? "admin" : "user"),
+        });
+        let code = "ok";
+        await loadSession({
+          context,
+          next: async (options: { context: typeof context }) => {
+            try {
+              await call(
+                procedureAt(path),
+                row.level === "admin" ? undefined : row.input,
+                { context: options.context, path: path.split(".") }
+              );
+            } catch (error) {
+              code = (error as { code?: string }).code ?? "ERROR";
+            }
+            return await Promise.resolve({} as never);
+          },
+        } as never);
+        expect(code).toBe("UNAUTHORIZED");
       });
     }
   }
