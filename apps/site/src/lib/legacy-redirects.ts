@@ -201,7 +201,7 @@ function tokenTarget(path: string, url: URL): string {
   return token ? `${path}#${TOKEN_PARAM}=${encodeURIComponent(token)}` : path;
 }
 
-export interface LegacyTarget {
+interface LegacyTarget {
   /** A same-site path with its query (and, for a token link, fragment). */
   location: string;
   status: 301 | 302;
@@ -212,7 +212,7 @@ export interface LegacyTarget {
  * is current. The table's paths match case-insensitively, as the old
  * router did (`/Login`).
  */
-export function legacyRedirectResolve(
+function legacyRedirectResolve(
   url: URL,
   categories: CategorySlugs = NO_CATEGORIES,
   gestureSlug: string | null = null
