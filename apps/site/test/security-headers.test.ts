@@ -236,9 +236,13 @@ describe("the dev tools under the headers", () => {
 describe("respondSecurely", () => {
   it("answers an escaping exception with a 500 that has the headers", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const response = await respondSecurely("production", () => {
-      throw new Error("boom");
-    });
+    const response = await respondSecurely(
+      "production",
+      () => {
+        throw new Error("boom for anna@example.test");
+      },
+      { requestId: "ray-7" }
+    );
     expect(response.status).toBe(500);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("strict-transport-security")).toBe(
@@ -246,9 +250,11 @@ describe("respondSecurely", () => {
     );
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     expect(await response.text()).toBe("Internal Server Error");
+    // One `[error] fetch {json}` line: the name and a redacted message
+    // with the request id, never the error object (stack, properties).
+    expect(log).toHaveBeenCalledTimes(1);
     expect(log).toHaveBeenCalledWith(
-      "[site] Failed to handle the request:",
-      expect.any(Error)
+      '[error] fetch {"id":"ray-7","message":"boom for [redacted]","name":"Error"}'
     );
     log.mockRestore();
   });
