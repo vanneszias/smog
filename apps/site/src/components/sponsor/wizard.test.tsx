@@ -173,7 +173,10 @@ describe("the sponsor wizard (S-01–S-11)", () => {
       expect(card("Mama").getAttribute("data-state")).toBe("sponsored")
     );
     expect((card("Mama") as HTMLButtonElement).disabled).toBe(true);
-    expect(within(card("Mama")).getByText("Sponsored")).toBeDefined();
+    // The badge is the card's description (it sits beside the button).
+    expect(card("Mama").getAttribute("aria-describedby")).toBe(
+      screen.getByText("Sponsored").id
+    );
     // The value cards come from the constants (bug 24).
     expect(screen.getByText("€50.00")).toBeDefined();
     expect(screen.getByText("5 sec")).toBeDefined();

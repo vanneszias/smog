@@ -5,6 +5,7 @@ import { type ReactNode, useCallback, useState } from "react";
 import { AlertDialog } from "../components/alert-dialog";
 import { Button } from "../components/button";
 import { Dialog, DialogContent } from "../components/dialog";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "../components/menu";
 import { Sheet, SheetContent } from "../components/sheet";
 import { renderKit } from "../test/render";
 
@@ -78,4 +79,41 @@ describe("focus return without a trigger", () => {
       expect(document.activeElement).toBe(opener);
     });
   }
+});
+
+function FromMenu(): ReactNode {
+  const [open, setOpen] = useState(false);
+  const show = useCallback(() => setOpen(true), []);
+  return (
+    <>
+      <Menu>
+        <MenuTrigger asChild>
+          <Button>Actions</Button>
+        </MenuTrigger>
+        <MenuContent>
+          <MenuItem onSelect={show}>Rename</MenuItem>
+        </MenuContent>
+      </Menu>
+      <Dialog onOpenChange={setOpen} open={open}>
+        {open ? <DialogContent title="Form">Body</DialogContent> : null}
+      </Dialog>
+    </>
+  );
+}
+
+describe("focus return from a menu item", () => {
+  test("a dialog opened by a menu item returns the focus to the menu's button", async () => {
+    renderKit(<FromMenu />);
+    const trigger = screen.getByRole("button", { name: "Actions" });
+    trigger.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(document.activeElement).toBe(trigger);
+  });
 });

@@ -10,7 +10,7 @@ import {
 } from "@smog/ui-web";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Menu as MenuIcon, Search } from "lucide-react";
-import { type ReactNode, useCallback } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { LanguageControl, LanguageMenu } from "./language-menu";
 import { MainNav, MainNavList } from "./nav";
 import { ThemeControl, ThemeMenu } from "./theme-menu";
@@ -23,6 +23,9 @@ import { UserMenu } from "./user-menu";
 export function Header(): ReactNode {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  // The phone menu closes when a section is chosen: the page changes under it.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = useCallback((): void => setMenuOpen(false), []);
   // Search lives on /gestures.
   const openSearch = useCallback((): void => {
     navigate({ to: "/gestures" }).catch((error: unknown) => {
@@ -32,7 +35,7 @@ export function Header(): ReactNode {
   return (
     <header className="sticky top-0 z-40 border-border-subtle border-b bg-background">
       <div className="mx-auto flex h-16 w-full max-w-content items-center gap-2 px-4 md:px-6 lg:px-8">
-        <Sheet>
+        <Sheet onOpenChange={setMenuOpen} open={menuOpen}>
           <SheetTrigger asChild>
             <IconButton
               className="md:hidden"
@@ -41,7 +44,7 @@ export function Header(): ReactNode {
             />
           </SheetTrigger>
           <SheetContent side="left" title={t("common.appName")}>
-            <MainNavList />
+            <MainNavList onNavigate={closeMenu} />
             <div className="flex flex-col gap-2">
               <Text as="span" size="body-sm" tone="muted" weight="medium">
                 {t("language.label")}

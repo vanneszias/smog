@@ -95,13 +95,29 @@ function ResultRows({
 }: ResultsViewProps): ReactNode {
   const { t } = useTranslation();
   if (state === "loading") {
-    return <GestureRowsSkeleton count={8} />;
+    return (
+      <>
+        <p className="sr-only" role="status">
+          {t("search.searching")}
+        </p>
+        <GestureRowsSkeleton count={8} />
+      </>
+    );
   }
   if (state === "error") {
     return <ErrorState onRetry={onRetry} retrying={retrying} />;
   }
   if (state === "empty") {
-    return <NoResultsEmptyState action={emptyAction} />;
+    // Like the kit's grid: the empty state appears without moving the
+    // focus, so a polite status says it too.
+    return (
+      <>
+        <p className="sr-only" role="status">
+          {t("search.noResults.title")}
+        </p>
+        <NoResultsEmptyState action={emptyAction} />
+      </>
+    );
   }
   return (
     <section className="flex flex-col gap-2">

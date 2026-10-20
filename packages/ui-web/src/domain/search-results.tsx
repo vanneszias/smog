@@ -51,6 +51,9 @@ export function SearchResults<T extends GestureCardData>({
     status = t("search.searching");
   } else if (state === "results") {
     status = t("search.resultCount", { count: items.length });
+  } else if (state === "empty") {
+    // The empty state appears without moving the focus: say it, too.
+    status = t("search.noResults.title");
   }
   return (
     <section
