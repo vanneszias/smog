@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import {
+  CSP_LOG_LIMIT,
+  CSP_LOG_WINDOW_MS,
   CSP_REPORT_MAX_BYTES,
   type CspReportOptions,
+  createLogSampler,
   handleCspReport,
   parseCspReports,
   redactReportUrl,
@@ -451,5 +454,79 @@ describe("handleCspReport", () => {
       "[csp] Failed to check the rate limit:",
       expect.any(Error)
     );
+  });
+});
+
+describe("the violation log sampling (phase 9 ruling 6)", () => {
+  function clock(): { advance: (ms: number) => void; now: () => number } {
+    let current = 1_000_000;
+    return {
+      advance: (ms) => {
+        current += ms;
+      },
+      now: () => current,
+    };
+  }
+
+  async function report(options: CspReportOptions): Promise<number> {
+    const response = await handleCspReport(post(legacyReport()), options);
+    return response.status;
+  }
+
+  test("logs at most 20 lines a minute, then one suppressed line when the window closes", async () => {
+    const time = clock();
+    const { logged, options } = harness();
+    const sampled = {
+      ...options,
+      sampler: createLogSampler(CSP_LOG_LIMIT, CSP_LOG_WINDOW_MS, time.now),
+    };
+    expect(CSP_LOG_LIMIT).toBe(20);
+    expect(CSP_LOG_WINDOW_MS).toBe(60_000);
+    for (let index = 0; index < 50; index += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: one report after another.
+      expect(await report(sampled)).toBe(204);
+      time.advance(100);
+    }
+    // 50 reports over 5 s: 20 lines, 30 dropped, no summary yet.
+    expect(logged.map(([message]) => message)).toEqual(
+      Array.from({ length: 20 }, () => "[csp] violation")
+    );
+    time.advance(CSP_LOG_WINDOW_MS);
+    expect(await report(sampled)).toBe(204);
+    expect(logged.slice(20).map(([message]) => message)).toEqual([
+      "[csp] suppressed",
+      "[csp] violation",
+    ]);
+    expect(logged[20]?.[1]).toEqual({ count: 30 });
+    // The new window starts counting again: no second summary.
+    time.advance(CSP_LOG_WINDOW_MS);
+    await report(sampled);
+    expect(
+      logged.filter(([message]) => message === "[csp] suppressed")
+    ).toHaveLength(1);
+  });
+
+  test("a quiet window logs no summary", () => {
+    const time = clock();
+    const sampler = createLogSampler(2, 1000, time.now);
+    expect(sampler.admit()).toEqual({ flushed: 0, log: true });
+    expect(sampler.admit()).toEqual({ flushed: 0, log: true });
+    expect(sampler.admit()).toEqual({ flushed: 0, log: false });
+    time.advance(1000);
+    expect(sampler.admit()).toEqual({ flushed: 1, log: true });
+    time.advance(1000);
+    expect(sampler.admit()).toEqual({ flushed: 0, log: true });
+  });
+
+  test("a dropped report is still answered 204 and the rate limit still applies", async () => {
+    const time = clock();
+    const { limited, logged, options } = harness();
+    const sampled = {
+      ...options,
+      sampler: createLogSampler(0, CSP_LOG_WINDOW_MS, time.now),
+    };
+    expect(await report(sampled)).toBe(204);
+    expect(logged).toEqual([]);
+    expect(limited).toEqual(["csp:unknown"]);
   });
 });
