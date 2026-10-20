@@ -69,18 +69,21 @@ type FormValues = (name: string) => string;
  * 3.3.1: the user lands on what to correct; its message is the field's
  * `aria-describedby`). The effect runs after the render that set the error.
  */
-function useFocusInvalid(
-  error: AuthErrorKey | null
-): RefObject<HTMLFormElement | null> {
-  const form = useRef<HTMLFormElement | null>(null);
+function useFocusInvalid(error: AuthErrorKey | null): {
+  onSubmitCapture: () => void;
+  ref: RefObject<HTMLFormElement | null>;
+} {
+  const ref = useRef<HTMLFormElement | null>(null);
+  // Counted per submit, so a second identical failure focuses the field again.
+  const [attempts, setAttempts] = useState(0);
+  const onSubmitCapture = useCallback(() => setAttempts((n) => n + 1), []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `attempts` re-runs the effect on every submit.
   useEffect(() => {
     if (error) {
-      form.current
-        ?.querySelector<HTMLElement>('[aria-invalid="true"]')
-        ?.focus();
+      ref.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
     }
-  }, [error]);
-  return form;
+  }, [error, attempts]);
+  return { onSubmitCapture, ref };
 }
 
 /** A stable submit handler that reads the form's fields by name. */
@@ -185,7 +188,7 @@ function EmailStep({ flow }: { flow: AuthFlow }): ReactNode {
       className="flex flex-col gap-4"
       noValidate
       onSubmit={onSubmit}
-      ref={form}
+      {...form}
     >
       <Field error={error} label={t("auth.email.label")}>
         <Input
@@ -302,7 +305,7 @@ function PasswordStep({
       className="flex flex-col gap-4"
       noValidate
       onSubmit={onSubmit}
-      ref={form}
+      {...form}
     >
       {signUp ? (
         <Field error={nameError} label={t("auth.name.label")}>
@@ -366,7 +369,7 @@ function CodeStep({ flow }: { flow: AuthFlow }): ReactNode {
       className="flex flex-col gap-4"
       noValidate
       onSubmit={onSubmit}
-      ref={form}
+      {...form}
     >
       <Field
         error={codeError}

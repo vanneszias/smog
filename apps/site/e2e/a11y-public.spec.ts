@@ -6,6 +6,7 @@ import {
   GUEST_ROUTES,
   newPublicPage,
   openPublic,
+  scan,
   scanThemes,
   seedAccount,
 } from "./a11y-support";
@@ -261,6 +262,16 @@ test.describe("axe: guest overlays and banners", () => {
       await context.close();
     }
   });
+});
+
+test("the axe helper is not blind: a button without a name is found", async ({
+  page,
+}) => {
+  await page.setContent(
+    '<!doctype html><html lang="nl"><title>t</title><main><h1>t</h1><button type="button"></button></main></html>'
+  );
+  const found = await scan(page, "self-test");
+  expect(found.map((finding) => finding.id)).toContain("button-name");
 });
 
 test.describe("axe: the error boundary", () => {

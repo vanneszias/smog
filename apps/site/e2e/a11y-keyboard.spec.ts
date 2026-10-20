@@ -60,9 +60,6 @@ async function dialogRun(
   await expect(opener).toBeFocused();
   await page.keyboard.press(key);
   await expect(dialog).toBeVisible();
-  await expect(dialog)
-    .toBeFocused({ timeout: 5000 })
-    .catch(() => undefined);
   await expectTrapped(page, dialog);
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
@@ -434,6 +431,37 @@ test.describe("keyboard: sign-in", () => {
       await expect(described).toHaveText(await error.innerText());
       // The failure leaves the focus on the field to correct, not on the page top.
       await expect(email).toBeFocused();
+      // A second identical failure brings the focus back as well.
+      await page.getByRole("button", { name: "Doorgaan" }).first().focus();
+      await page.keyboard.press("Enter");
+      await expect(email).toBeFocused();
+    } finally {
+      await context.close();
+    }
+  });
+});
+
+test.describe("keyboard: the sponsor cards", () => {
+  test("a card toggles with Space and Enter, and by a click on its corner tick", async ({
+    browser,
+  }) => {
+    const { context, page } = await newPublicPage(browser, "light", 390);
+    try {
+      await openPublic(page, "/sponsor");
+      const card = page.getByRole("button", { exact: true, name: "Appel" });
+      await expect(card).toHaveAttribute("data-state", "available");
+      await card.focus();
+      await page.keyboard.press("Space");
+      await expect(card).toHaveAttribute("aria-pressed", "true");
+      await page.keyboard.press("Enter");
+      await expect(card).toHaveAttribute("aria-pressed", "false");
+      // The tick is painted over the button: a click on it still toggles.
+      const box = await page.locator("li", { has: card }).boundingBox();
+      await page.mouse.click(
+        (box?.x ?? 0) + (box?.width ?? 0) - 20,
+        (box?.y ?? 0) + 20
+      );
+      await expect(card).toHaveAttribute("aria-pressed", "true");
     } finally {
       await context.close();
     }

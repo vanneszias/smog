@@ -155,7 +155,7 @@ function SelectionTick({ selected }: { selected: boolean }): ReactNode {
     <span
       aria-hidden="true"
       className={cn(
-        "absolute top-2 right-2 inline-flex size-6 items-center justify-center rounded-sm border-2",
+        "pointer-events-none absolute top-2 right-2 inline-flex size-6 items-center justify-center rounded-sm border-2",
         selected
           ? "border-primary bg-primary text-primary-foreground"
           : "border-border bg-surface"
@@ -253,7 +253,7 @@ function GestureToggle({
       <SelectionTick selected={selected} />
       {blocked ? (
         <Badge
-          className="absolute top-2 left-2"
+          className="pointer-events-none absolute top-2 left-2"
           icon={state === "sponsored" ? <Heart /> : undefined}
           id={badgeId}
           variant={state === "taken" ? "danger" : "warning"}

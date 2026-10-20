@@ -3,7 +3,7 @@ import { useTranslation } from "@smog/i18n/react";
 import { Button, cn, ListItem } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { Hand, Heart, HeartHandshake, List } from "lucide-react";
-import type { ReactNode } from "react";
+import { type MouseEvent, type ReactNode, useCallback } from "react";
 
 interface NavItem {
   href: string;
@@ -40,6 +40,19 @@ export function MainNav({ className }: { className?: string }): ReactNode {
   );
 }
 
+/** A plain left click follows the link in this tab: only then the sheet closes. */
+function closeOnPlainClick(
+  event: MouseEvent<HTMLAnchorElement>,
+  onNavigate: (() => void) | undefined
+): void {
+  if (
+    event.button === 0 &&
+    !(event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+  ) {
+    onNavigate?.();
+  }
+}
+
 /** The same links as rows, for the mobile menu sheet. */
 export function MainNavList({
   className,
@@ -50,6 +63,11 @@ export function MainNavList({
   onNavigate?: () => void;
 }): ReactNode {
   const { t } = useTranslation();
+  const onClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) =>
+      closeOnPlainClick(event, onNavigate),
+    [onNavigate]
+  );
   return (
     <nav
       aria-label={t("a11y.mainNavigation")}
@@ -59,7 +77,7 @@ export function MainNavList({
         {NAV_ITEMS.map((item) => (
           <li key={item.href}>
             <ListItem asChild leading={item.icon} title={t(item.label)}>
-              <Link onClick={onNavigate} to={item.href}>
+              <Link onClick={onClick} to={item.href}>
                 {t(item.label)}
               </Link>
             </ListItem>
