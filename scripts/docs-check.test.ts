@@ -101,6 +101,10 @@ const ANCHOR_SUFFIX = /#.*$/;
 const PATTERN_CHARS = /[*<>{}$|=]|\.\.\./;
 const CODE_SPAN = /`([^`]+)`/g;
 const SPACES = /\s+/;
+const LEADING_SLASH = /^\//;
+const TRAILING_SLASH = /\/$/;
+const REGEX_SPECIALS = /[.+?^${}()|[\]\\]/g;
+const STAR = /\*/g;
 const PROJECT_USAGE = /--project public\|[\w|-]+/;
 const URL_SCHEME = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 const BUN_FILTER = /\bbun (?:-F|--filter)[ =](@smog\/[\w-]+) ([\w:.-]+)/g;
@@ -149,11 +153,55 @@ function listPackages(): Map<string, ReadonlySet<string>> {
   return map;
 }
 
+/**
+ * The `.gitignore` read by hand, for a tree without a `.git` directory (a
+ * source archive): a pattern with a slash anchors at the root, one without
+ * matches any path segment, `*` stays inside a segment, and the last
+ * matching rule wins, negations included, as in git.
+ */
+function ignoredByFile(path: string): boolean {
+  const file = join(ROOT, ".gitignore");
+  if (!existsSync(file)) {
+    return false;
+  }
+  const segments = path.split("/");
+  let ignored = false;
+  for (const raw of readFileSync(file, "utf8").split("\n")) {
+    const line = raw.trim();
+    if (line === "" || line.startsWith("#")) {
+      continue;
+    }
+    const negated = line.startsWith("!");
+    const pattern = (negated ? line.slice(1) : line)
+      .replace(LEADING_SLASH, "")
+      .replace(TRAILING_SLASH, "");
+    const source = pattern
+      .replace(REGEX_SPECIALS, "\\$&")
+      .replace(STAR, "[^/]*");
+    const matches =
+      pattern.includes("/") || line.startsWith("/")
+        ? new RegExp(`^${source}(?:/|$)`).test(path)
+        : segments.some((part) => new RegExp(`^${source}$`).test(part));
+    if (matches) {
+      ignored = !negated;
+    }
+  }
+  return ignored;
+}
+
 function gitIgnored(path: string): boolean {
-  const result = Bun.spawnSync(["git", "check-ignore", "-q", path], {
-    cwd: ROOT,
-  });
-  return result.exitCode === 0;
+  try {
+    const result = Bun.spawnSync(["git", "check-ignore", "-q", path], {
+      cwd: ROOT,
+    });
+    // 0: ignored, 1: not ignored, 128: not a repository.
+    return result.exitCode === 128
+      ? ignoredByFile(path)
+      : result.exitCode === 0;
+  } catch {
+    // No git executable at all.
+    return ignoredByFile(path);
+  }
 }
 
 /** GitHub's heading slug: lower case, no punctuation, spaces to dashes. */
@@ -533,6 +581,24 @@ describe("the checkers fail on a broken document", () => {
     expect(
       checkDoc("AGENTS.md", "Copy to `apps/site/.dev.vars`.", CTX)
     ).toEqual([]);
+  });
+
+  test("the ignore-file fallback (a tree without a repository) agrees", () => {
+    for (const ignored of [
+      "apps/site/.dev.vars",
+      "apps/site/.wrangler/state/v3/d1",
+      "apps/site/dist/server/wrangler.json",
+      "apps/site/worker-configuration.d.ts",
+    ]) {
+      expect(ignoredByFile(ignored)).toBe(true);
+    }
+    for (const tracked of [
+      "apps/site/src/worker.ts",
+      "apps/site/.dev.vars.example",
+      "docs/PROGRESS.md",
+    ]) {
+      expect(ignoredByFile(tracked)).toBe(false);
+    }
   });
 
   test("a script that no package.json defines fails", () => {
