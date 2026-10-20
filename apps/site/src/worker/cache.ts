@@ -6,13 +6,17 @@
  * runs: `public/_headers` repeats the same values and `test/cache-policy.
  * test.ts` holds the two together.
  *
+ * No `Vary` is needed: every locale-dependent response is a document
+ * (`private, no-cache`) and the static files are language-free.
+ *
  * - hashed build output, `/assets/<name>-<hash>.<ext>`: a year, immutable
  *   (the hash changes with the content);
  * - the unhashed brand files, icons, `og.png`, and any other `/assets/*`
  *   (the legacy `/assets/logo.svg`): a day;
  * - `/robots.txt`, `/sitemap.xml`, the web manifest: an hour;
  * - documents: `private, no-cache` (each carries its CSP nonce);
- * - `/api/*`, `/webhooks/*`, `/dev/*` and every 5xx (the maintenance page
+ * - `/api/*`, `/_serverFn/*` (TanStack server functions, session-dependent),
+ *   `/webhooks/*`, `/dev/*` and every 5xx (the maintenance page
  *   included): `no-store`.
  */
 
@@ -44,7 +48,12 @@ const HOURLY_FILES = new Set([
   "/sitemap.xml",
 ]);
 
-const UNCACHED_PREFIXES = ["/api/", "/dev/", "/webhooks/"] as const;
+const UNCACHED_PREFIXES = [
+  "/_serverFn/",
+  "/api/",
+  "/dev/",
+  "/webhooks/",
+] as const;
 
 export interface CacheContext {
   contentType: string;

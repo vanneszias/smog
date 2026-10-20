@@ -75,7 +75,13 @@ describe("the catalogue's query plans (no full table scan)", () => {
     const report = await scanReport(
       env.DB,
       statements,
-      (detail) => detail === "SCAN category"
+      (detail, sql) =>
+        detail === "SCAN category" ||
+        // Whole-catalogue aggregates and the typo tier's projection read every
+        // published gesture by design (a few hundred rows, cached in KV).
+        (detail.startsWith("SCAN gesture USING INDEX") &&
+          (sql.includes("count(*) from") ||
+            !sql.toLowerCase().includes("limit")))
     );
     expect(report.scans, report.plans.join("\n")).toEqual([]);
   });

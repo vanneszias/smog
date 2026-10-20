@@ -75,6 +75,7 @@ describe("cacheControlFor (P-18), path by path", () => {
   );
 
   it.each([
+    "/_serverFn/abc123",
     "/api/rpc/gestures/list",
     "/api/auth/get-session",
     "/api/health",

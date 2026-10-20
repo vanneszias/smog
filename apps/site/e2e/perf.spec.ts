@@ -56,9 +56,10 @@ test.describe("layout shift", () => {
       await observeLayoutShifts(page);
       await page.goto(path);
       await waitForApp(page);
-      // The data has arrived (a late result list is a real shift, and is
+      // The data has arrived (no loading skeleton left; a late result list is
+      // a real shift, and is
       // measured before the scroll below, which is no input to blame it on).
-      await page.waitForLoadState("networkidle");
+      await expect(page.locator(".animate-pulse")).toHaveCount(0);
       // Scroll to the end: the lazy images and the footer come into view.
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
       await settle(page);

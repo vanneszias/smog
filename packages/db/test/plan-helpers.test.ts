@@ -39,6 +39,29 @@ describe("fullScans", () => {
   });
 });
 
+describe("an ordered index scan needs a LIMIT", () => {
+  const detail = "SCAN gesture USING INDEX gesture_published_sort_name_idx";
+  const ordered = [row(detail)];
+
+  it("passes with a LIMIT and fails without one", () => {
+    expect(fullScans(ordered)).toEqual([]);
+    expect(fullScans(ordered, { limited: false })).toEqual([detail]);
+  });
+
+  it("scanReport reads the LIMIT from the statement", async () => {
+    const { d1, statements } = recordingD1(env.DB);
+    await d1.prepare("SELECT * FROM gesture ORDER BY sort_name LIMIT 5").all();
+    expect((await scanReport(env.DB, statements)).scans).toEqual([]);
+    const unbounded = recordingD1(env.DB);
+    await unbounded.d1
+      .prepare("SELECT * FROM gesture ORDER BY sort_name")
+      .all();
+    expect((await scanReport(env.DB, unbounded.statements)).scans).toHaveLength(
+      1
+    );
+  });
+});
+
 describe("recordingD1 and scanReport", () => {
   it("explains each statement with its own values and reports a scan", async () => {
     const { d1, statements } = recordingD1(env.DB);

@@ -211,6 +211,88 @@ export function checkPerfBudget(
   return { errors, hints };
 }
 
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === "string")
+  );
+}
+
+function isPositive(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+/**
+ * `perf-budget.json` as a `PerfBudget`, or a throw naming every problem: a
+ * missing or misspelled number would otherwise make its comparison false and
+ * the entry pass for ever.
+ */
+export function parsePerfBudget(raw: unknown): PerfBudget {
+  if (!isRecord(raw)) {
+    throw new Error("[deploy-guard] perf-budget.json must be an object");
+  }
+  const problems: string[] = [];
+  if (!isPositive(raw.workerGzip)) {
+    problems.push("workerGzip must be a positive number");
+  }
+  const entries = isRecord(raw.entries) ? raw.entries : {};
+  if (Object.keys(entries).length === 0) {
+    problems.push("entries must be a non-empty object");
+  }
+  for (const [name, entry] of Object.entries(entries)) {
+    if (!isRecord(entry)) {
+      problems.push(`entry "${name}" must be an object`);
+      continue;
+    }
+    for (const key of ["gzip", "target"]) {
+      if (!isPositive(entry[key])) {
+        problems.push(`entry "${name}": ${key} must be a positive number`);
+      }
+    }
+    const { routes } = entry;
+    const valid =
+      Array.isArray(routes) &&
+      routes.length > 0 &&
+      routes.every((visit) => isStringArray(visit) && visit.length > 0);
+    if (!valid) {
+      problems.push(
+        `entry "${name}": routes must be a non-empty list of non-empty string lists`
+      );
+    }
+  }
+  if (problems.length > 0) {
+    throw new Error(
+      `[deploy-guard] apps/site/perf-budget.json is invalid:\n  ${problems.join("\n  ")}`
+    );
+  }
+  return raw as unknown as PerfBudget;
+}
+
+const ROUTES_DIR = "src/routes/";
+const COMPONENT_SPLIT = "?tsr-split=component";
+/** Dev-only pages (compiled out of production) are not budgeted. */
+const UNBUDGETED_PREFIX = "dev/";
+
+/**
+ * The route modules with a component chunk in the manifest that no entry
+ * lists: a new route (or admin screen) must be given a budget.
+ */
+export function unbudgetedRoutes(
+  manifest: unknown,
+  budget: PerfBudget
+): string[] {
+  const listed = new Set(
+    Object.values(budget.entries).flatMap((entry) => entry.routes.flat())
+  );
+  return [...readManifest(manifest).keys()]
+    .filter(
+      (key) => key.startsWith(ROUTES_DIR) && key.endsWith(COMPONENT_SPLIT)
+    )
+    .map((key) => key.slice(ROUTES_DIR.length, -COMPONENT_SPLIT.length))
+    .filter(
+      (route) => !(route.startsWith(UNBUDGETED_PREFIX) || listed.has(route))
+    );
+}
+
 /** Anything that would ship a source map: a `.map` file or a map comment. */
 export function checkNoSourceMaps(
   paths: readonly string[],

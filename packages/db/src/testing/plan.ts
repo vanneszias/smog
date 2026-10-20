@@ -15,6 +15,7 @@ export interface PlanRow {
   parent: number;
 }
 
+const LIMITED = /\blimit\b/i;
 const DERIVED = new Set(["CO-ROUTINE", "MATERIALIZE"]);
 const RECORDED = /^\s*(?:select|with|insert|update|delete|replace)\b/i;
 
@@ -87,10 +88,14 @@ export function plannable(
  * Plan rows that read a whole table: `SCAN <table>` (bare, or over a
  * covering index, which still reads every row), but not an ordered scan
  * `SCAN <table> USING INDEX <i>` (it stops at the LIMIT; a keyset first
- * page), a virtual
+ * page, only when the statement has a LIMIT: pass `limited: false` for one
+ * without), a virtual
  * table (FTS5, `json_each`), a constant row or a materialised subquery.
  */
-export function fullScans(plan: readonly PlanRow[]): string[] {
+export function fullScans(
+  plan: readonly PlanRow[],
+  { limited = true }: { limited?: boolean } = {}
+): string[] {
   // A co-routine or a materialised subquery is a few rows already read.
   const derived = new Set(
     plan.flatMap((row) => {
@@ -106,7 +111,7 @@ export function fullScans(plan: readonly PlanRow[]): string[] {
         detail.includes("VIRTUAL TABLE") ||
         detail.startsWith("SCAN CONSTANT") ||
         detail.startsWith("SCAN (") ||
-        detail.includes(" USING INDEX")
+        (limited && detail.includes(" USING INDEX"))
       ) {
         return false;
       }
@@ -121,11 +126,11 @@ export interface PlanReport {
   scans: string[];
 }
 
-/** Plans every recorded statement and gathers the scans `allowed` does not name. */
+/** Plans every recorded statement and gathers the scans `allowed(detail, sql)` does not name. */
 export async function scanReport(
   d1: D1Database,
   statements: readonly RecordedStatement[],
-  allowed: (detail: string) => boolean = () => false
+  allowed: (detail: string, sql: string) => boolean = () => false
 ): Promise<PlanReport> {
   const report: PlanReport = { plans: [], scans: [] };
   for (const statement of plannable(statements)) {
@@ -134,8 +139,9 @@ export async function scanReport(
     report.plans.push(
       `${statement.sql.slice(0, 80)}\n  ${plan.map((row) => row.detail).join("\n  ")}`
     );
-    for (const detail of fullScans(plan)) {
-      if (!allowed(detail)) {
+    const limited = LIMITED.test(statement.sql);
+    for (const detail of fullScans(plan, { limited })) {
+      if (!allowed(detail, statement.sql)) {
         report.scans.push(`${detail}  <- ${statement.sql.slice(0, 120)}`);
       }
     }

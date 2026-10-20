@@ -16,6 +16,8 @@ import {
   type EntrySize,
   measureEntries,
   type PerfBudget,
+  parsePerfBudget,
+  unbudgetedRoutes,
 } from "./perf-budget";
 
 const MANIFEST = {
@@ -150,6 +152,61 @@ describe("checkPerfBudget", () => {
   });
 });
 
+describe("parsePerfBudget", () => {
+  const valid = budget({ a: 10, b: 10 });
+
+  it("accepts a complete budget", () => {
+    expect(parsePerfBudget(valid)).toEqual(valid);
+  });
+
+  it("fails on a missing, misspelled or non-numeric number", () => {
+    const entry = valid.entries.a;
+    expect(() =>
+      parsePerfBudget({
+        ...valid,
+        entries: { a: { ...entry, gzip: undefined } },
+      })
+    ).toThrow("gzip must be a positive number");
+    expect(() =>
+      parsePerfBudget({ ...valid, entries: { a: { ...entry, gzip: "10" } } })
+    ).toThrow("gzip must be a positive number");
+    expect(() =>
+      parsePerfBudget({ ...valid, entries: { a: { ...entry, gzip: 0 } } })
+    ).toThrow("gzip must be a positive number");
+    expect(() => parsePerfBudget({ ...valid, workerGzip: undefined })).toThrow(
+      "workerGzip"
+    );
+  });
+
+  it("fails on empty entries and bad routes", () => {
+    expect(() => parsePerfBudget({ ...valid, entries: {} })).toThrow(
+      "entries must be"
+    );
+    expect(() =>
+      parsePerfBudget({
+        ...valid,
+        entries: { a: { gzip: 1, routes: [], target: 1 } },
+      })
+    ).toThrow("routes must be");
+    expect(() => parsePerfBudget(null)).toThrow("must be an object");
+  });
+});
+
+describe("unbudgetedRoutes", () => {
+  it("names a route chunk that no entry lists, and ignores dev pages", () => {
+    const manifest = {
+      ...MANIFEST,
+      "src/routes/c.tsx?tsr-split=component": { file: "assets/c.js" },
+      "src/routes/c.tsx?tsr-split=errorComponent": { file: "assets/ce.js" },
+      "src/routes/dev/ui.tsx?tsr-split=component": { file: "assets/ui.js" },
+    };
+    expect(unbudgetedRoutes(manifest, budget({ a: 1, b: 1 }))).toEqual([
+      "c.tsx",
+    ]);
+    expect(unbudgetedRoutes(MANIFEST, budget({ a: 1, b: 1 }))).toEqual([]);
+  });
+});
+
 describe("checkNoSourceMaps", () => {
   it("passes a build without maps", () => {
     expect(() =>
@@ -268,6 +325,48 @@ describe("deploy-guard --bundle against a budget (fixture build)", () => {
     expect(code).toBe(1);
     expect(output).toContain('entry "a"');
     expect(output).toContain("over its budget");
+  });
+
+  it("fails a build with a route that has no budget", () => {
+    const { code, output } = run("unbudgeted", budgetFor(size), {
+      "client/.vite/manifest.json": JSON.stringify({
+        ...MANIFEST,
+        "src/routes/new.tsx?tsr-split=component": { file: "assets/b.js" },
+      }),
+    });
+    expect(code).toBe(1);
+    expect(output).toContain("src/routes/new.tsx");
+    expect(output).toContain("no entry of perf-budget.json");
+  });
+
+  it("fails a build whose budget file is invalid", () => {
+    const dist = join(root, "invalid", "dist");
+    mkdirSync(join(dist, "client", ".vite"), { recursive: true });
+    mkdirSync(join(dist, "server"), { recursive: true });
+    writeFileSync(
+      join(dist, "client", ".vite", "manifest.json"),
+      JSON.stringify(MANIFEST)
+    );
+    writeFileSync(join(dist, "server", "index.js"), "x");
+    const file = join(root, "invalid", "perf-budget.json");
+    writeFileSync(
+      file,
+      JSON.stringify({ entries: { a: { routes: [["a.tsx"]] } } })
+    );
+    const result = Bun.spawnSync(
+      [
+        "bun",
+        join(import.meta.dirname, "deploy-guard.ts"),
+        "--bundle",
+        "--dist",
+        dist,
+        "--perf-budget",
+        file,
+      ],
+      { stderr: "pipe", stdout: "pipe" }
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain("is invalid");
   });
 
   it("fails a build that ships a source map", () => {

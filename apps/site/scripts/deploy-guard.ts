@@ -6,7 +6,8 @@ import {
   checkPerfBudget,
   gzipSize,
   measureEntries,
-  type PerfBudget,
+  parsePerfBudget,
+  unbudgetedRoutes,
 } from "./perf-budget";
 
 /** Cloudflare environments that may be deployed. `dev` is local-only. */
@@ -488,7 +489,9 @@ function builtPaths(dir: string): string[] {
  * `--perf-report` prints the measurements as JSON too.
  */
 function checkPerformance(dist: string, files: readonly BuiltFile[]): void {
-  const budget: PerfBudget = JSON.parse(readFileSync(perfBudgetPath(), "utf8"));
+  const budget = parsePerfBudget(
+    JSON.parse(readFileSync(perfBudgetPath(), "utf8"))
+  );
   checkNoSourceMaps(builtPaths(dist), files);
   const clientDir = join(dist, "client");
   const entries = measureEntries(readClientManifest(dist), budget, (file) =>
@@ -506,6 +509,11 @@ function checkPerformance(dist: string, files: readonly BuiltFile[]): void {
     );
   }
   const { errors, hints } = checkPerfBudget(budget, entries, worker);
+  for (const route of unbudgetedRoutes(readClientManifest(dist), budget)) {
+    errors.push(
+      `src/routes/${route} has a component chunk but no entry of perf-budget.json lists it: add it to an entry (or a new one) and set that budget`
+    );
+  }
   for (const hint of hints) {
     console.warn(`[deploy-guard] ${hint}`);
   }

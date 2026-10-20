@@ -84,7 +84,16 @@ describe("the admin lists' query plans", () => {
       await run("sponsorships.list", filter);
     }
     expect(statements.length).toBeGreaterThan(filters.length);
-    const report = await scanReport(env.DB, statements);
+    // The status tab counts group the whole table by status, by design (admin
+    // only; the status index walks it without a sort).
+    const report = await scanReport(
+      env.DB,
+      statements,
+      (detail, sql) =>
+        detail.startsWith(
+          "SCAN sponsorship USING INDEX sponsorship_status_ends_at_idx"
+        ) && sql.startsWith('select count(*), "sponsorship"."status"')
+    );
     expect(report.scans, report.plans.join("\n")).toEqual([]);
   });
 });
