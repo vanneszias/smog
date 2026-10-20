@@ -14,6 +14,7 @@ const WRITES = /\b(DELETE|UPDATE|INSERT|DROP|REPLACE|ALTER)\b/i;
 
 const ROW = {
   audit_log: 2,
+  dead_letter: 8,
   expired_session_max: 1_790_000_000_000,
   expired_session_min: 1_780_000_000_000,
   logos_released: 1,
@@ -156,6 +157,24 @@ describe("the count statement on D1's schema", () => {
   });
 });
 
+describe("the dead-letter count", () => {
+  test("counts rows received more than 14 days ago, as the purge does", () => {
+    const db = migrated();
+    const add = (id: string, daysAgo: number) =>
+      db.run(
+        "INSERT INTO dead_letter (id, queue, origin_queue, type, attempts, received_at, replayable) VALUES (?, 'smog-dev-email-dlq', 'email', 'auth/otp', 6, ?, 0)",
+        [id, Date.now() - daysAgo * DAY]
+      );
+    add("old", 14.01);
+    add("old-2", 40);
+    add("young", 13.9);
+
+    const row = db.query(buildCountSql()).get() as Record<string, number>;
+
+    expect(row.dead_letter).toBe(2);
+  });
+});
+
 describe("runRetentionDryRun", () => {
   test("runs wrangler once from apps/site and prints the counts", () => {
     const { calls, runner } = fakeRunner();
@@ -166,6 +185,7 @@ describe("runRetentionDryRun", () => {
     expect(calls[0]?.argv[0]).toBe("bunx");
     expect(calls[0]?.cwd.endsWith("apps/site")).toBe(true);
     expect(lines).toContain("  expired sessions: 5");
+    expect(lines).toContain("  dead letters older than 14 days: 8");
     expect(lines).toContain("  audit_log older than 3 × 365 days: 2");
     expect(lines).toContain("  sponsorships whose logo would be released: 1");
     expect(lines).toContain(

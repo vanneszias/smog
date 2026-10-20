@@ -160,12 +160,17 @@ export function appMagicLinkURL({
   return link.toString();
 }
 
-/** `trustedOrigins` for an env: the site, the app scheme, Expo Go in dev. */
+/**
+ * `trustedOrigins` for an env: the site, the app scheme, the env's own app
+ * variant (staging: `smog-staging://`, dev: `smog-dev://`; production trusts
+ * neither, phase 9 ruling 9), Expo Go in dev.
+ */
 function trustedOrigins(env: AuthEnv): string[] {
   return [
     env.SITE_URL,
     "smog://",
-    ...(env.ENVIRONMENT === "dev" ? ["exp://"] : []),
+    ...(env.ENVIRONMENT === "staging" ? ["smog-staging://"] : []),
+    ...(env.ENVIRONMENT === "dev" ? ["smog-dev://", "exp://"] : []),
     ...(env.APPLE_CLIENT_ID ? ["https://appleid.apple.com"] : []),
   ];
 }

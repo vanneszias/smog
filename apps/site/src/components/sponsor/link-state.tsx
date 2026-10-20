@@ -29,8 +29,8 @@ export interface LinkStateProps {
   /** No answer yet. */
   pending: boolean;
   retry: () => void;
-  /** `null`: the link has no (valid) token. */
-  token: string | null;
+  /** `null`: the link has no (valid) token; `undefined`: not read yet. */
+  token: string | null | undefined;
 }
 
 /**

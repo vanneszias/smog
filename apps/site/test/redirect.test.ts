@@ -76,6 +76,12 @@ describe("signInReturnPath (the header's Sign in link)", () => {
       "/gestures/hond?ref=qr"
     );
     expect(signInReturnPath("/lists?token=abc&id=1")).toBe("/lists?id=1");
+    // The sponsor links keep the token in the fragment (phase 9 ruling 7).
+    expect(signInReturnPath("/sponsor/renew#token=abc")).toBe("/sponsor/renew");
+    expect(signInReturnPath("/sponsor/edit?x=1#token=abc&y=2")).toBe(
+      "/sponsor/edit?x=1"
+    );
+    expect(signInReturnPath("/privacy#cookies")).toBe("/privacy#cookies");
     expect(signInReturnPath("/reset-password?token=abc")).toBe(
       "/reset-password"
     );

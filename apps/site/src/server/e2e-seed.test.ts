@@ -7,6 +7,9 @@ import {
   seedStatements,
 } from "./e2e-seed";
 
+const STATE_SELECT = /^SELECT id, replayed_at/;
+const DEAD_LETTER_KEY = /^e2e-dead-letter:e2e-dl-email:[0-9a-f-]{36}$/;
+const WRITES = /\b(DELETE|UPDATE|INSERT|DROP|REPLACE|ALTER)\b/i;
 const STATUS_UPDATE = /UPDATE\s+sponsorship/i;
 const SELECT_ONLY =
   /^SELECT g\.slug, s\.status FROM sponsorship AS s JOIN gesture AS g/;
@@ -279,6 +282,72 @@ describe("the e2e seed endpoint's operations", () => {
     expect(
       e2eSeedSchema.safeParse({ ...base, paymentStatus: "bogus" }).success
     ).toBe(false);
+  });
+
+  test("seeds dead letters by kind, building the body here, all bound (phase 9 task 4)", () => {
+    const { db, seen } = recordingDb();
+    for (const kind of ["email", "events", "secret"] as const) {
+      seedStatements(db, { id: `e2e-dl-${kind}`, kind, op: "deadLetter" });
+    }
+    expect(seen).toHaveLength(3);
+    const [email, events, secret] = seen;
+    expect(email?.sql).toContain("INSERT INTO dead_letter");
+    expect(email?.values[2]).toBe("email");
+    expect(JSON.parse(String(email?.values[5]))).toMatchObject({
+      idempotencyKey: expect.stringMatching(DEAD_LETTER_KEY),
+      template: "transactional/welcome",
+      to: "e2e-dead-letter@smog.test",
+    });
+    expect(events?.values[2]).toBe("events");
+    expect(JSON.parse(String(events?.values[5]))).toEqual({
+      renderJobId: "e2e-dl-events",
+      type: "render.requested",
+    });
+    // A secret template is stored as the consumer stores it: no body.
+    expect(secret?.sql).toContain("NULL, 0, 'secret_template'");
+    expect(secret?.values).toEqual(["e2e-dl-secret"]);
+    for (const row of seen) {
+      expect(row.sql).not.toContain("e2e-dl-");
+    }
+  });
+
+  test("a dead-letter seed takes no body and no id outside e2e-", () => {
+    const parse = (value: unknown) => e2eSeedSchema.safeParse(value).success;
+    expect(parse({ id: "e2e-dl", kind: "email", op: "deadLetter" })).toBe(true);
+    expect(parse({ id: "real-id", kind: "email", op: "deadLetter" })).toBe(
+      false
+    );
+    expect(
+      parse({ body: "{}", id: "e2e-dl", kind: "email", op: "deadLetter" })
+    ).toBe(true);
+    expect(
+      e2eSeedSchema.parse({
+        body: "{}",
+        id: "e2e-dl",
+        kind: "email",
+        op: "deadLetter",
+      })
+    ).toEqual({ id: "e2e-dl", kind: "email", op: "deadLetter" });
+    expect(parse({ id: "e2e-dl", kind: "sms", op: "deadLetter" })).toBe(false);
+  });
+
+  test("resets only the e2e- dead letters and their audit entries, and reads their state without writing", () => {
+    const writes = recordingDb();
+    const prepared: string[] = [];
+    const db = {
+      prepare: (sql: string) => {
+        prepared.push(sql);
+        return {};
+      },
+    } as unknown as D1Database;
+    seedStatements(db, { op: "resetDeadLetters" });
+    seedStatements(db, { op: "deadLetterState" });
+    expect(prepared[0]).toBe("DELETE FROM dead_letter WHERE id LIKE 'e2e-%'");
+    expect(prepared[1]).toContain("target_type = 'dead_letter'");
+    expect(prepared[1]).toContain("target_id LIKE 'e2e-%'");
+    expect(prepared[2]).toMatch(STATE_SELECT);
+    expect(prepared[2]).not.toMatch(WRITES);
+    expect(writes.seen).toEqual([]);
   });
 
   test("binds every value", () => {

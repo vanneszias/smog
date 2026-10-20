@@ -156,4 +156,5 @@ export {
   type VideoPlayerProps,
 } from "./domain/video-player";
 export { cn } from "./lib/cn";
+export { useLineLimit } from "./lib/line-limit";
 export { useColor, useThemeName, useThemeVars } from "./lib/theme";

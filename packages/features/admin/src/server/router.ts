@@ -1,6 +1,7 @@
 import { auditRoutes } from "./audit";
 import { categoriesRoutes } from "./categories";
 import { dashboardRoutes } from "./dashboard";
+import { deadLettersRoutes } from "./dead-letters";
 import { emailsRoutes } from "./emails";
 import { exportRoutes } from "./export";
 import { gesturesRoutes } from "./gestures";
@@ -19,6 +20,7 @@ export function createAdminRouter(deps: AdminDeps) {
   return adminProcedure.router({
     ...dashboardRoutes(),
     ...auditRoutes(),
+    ...deadLettersRoutes(),
     ...gesturesRoutes(deps),
     ...categoriesRoutes(deps),
     ...muxRoutes(deps),

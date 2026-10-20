@@ -1,84 +1,173 @@
-import { isContractProcedure } from "@orpc/contract";
+import { isContractProcedure, oc } from "@orpc/contract";
 import { call } from "@orpc/server";
+import { ADMIN_PROCEDURE_KINDS } from "@smog/admin/contract";
+import { loadSession } from "@smog/rpc";
 import { makeRpcContext, makeSession } from "@smog/rpc/testing";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { appContract } from "../src/contract";
 import { appRouter } from "../src/index";
 
 /*
- * The authorization safety net (phase 3 review M11): every procedure of
- * `appContract` is classified here, and every one that needs a user
- * answers `UNAUTHORIZED` to an anonymous call. A new procedure fails this
- * test until it is added to one of the two lists, so a forgotten
- * `requireUser` cannot ship unnoticed.
+ * The authorization table (phase 3 review M11, phase 9 task 8): every leaf
+ * of the real router, the admin router included, appears in `PROCEDURES`
+ * with its level, and the middleware is shown to enforce that level with an
+ * anonymous, a signed-in and an admin call. A procedure missing from the
+ * table (or a stale row) fails the first test, so a new one cannot ship
+ * unlisted; a stub contract proves the check itself.
  *
- * `admin.*` is the third class: every one needs the admin role, checked
- * here on the mounted router for every admin path. `adminProcedure`'s
- * guards run before input validation (oRPC validates after the
- * middlewares), so no input is needed. The admin package's own auth test
- * adds the admin's successful call, with inputs per area.
+ * Levels:
+ * - `public`: anyone. Sponsoring needs no account; its mutations run
+ *   Turnstile and RL_SPONSOR (tested in @smog/sponsorships).
+ * - `session`: a signed-in user (`UNAUTHORIZED` otherwise). A signed-in
+ *   user is a verified one: email sign-up requires the verification link
+ *   before a session exists (`@smog/auth`), so there is no separate
+ *   `verified` procedure and no procedure may claim it.
+ * - `token`: no session; a capability token in the input is the credential
+ *   (a list's share token, a sponsorship's re-edit or renewal token). The
+ *   token checks are tested in @smog/lists and @smog/sponsorships.
+ * - `admin`: the admin role (`UNAUTHORIZED` for a guest, `FORBIDDEN` for a
+ *   user); each write also carries an `adminGuard` kind that forces its
+ *   audit row into the same batch (`admin` below, from `ADMIN_PROCEDURE_KINDS`).
+ * - `webhook`: provider callbacks are plain routes, never oRPC procedures:
+ *   they are in the route table of `apps/site/test/security-routes.test.ts`.
+ *
+ * A banned user and a deleted or revoked session read as no session
+ * (`getSession` reads D1 on every request), so every `session` and `admin`
+ * row is also refused for them: the `null` session below is exactly what
+ * the middleware sees. The full stack is in `apps/site/test/security-authz.test.ts`.
+ *
+ * `admin.*` guards run before input validation (oRPC validates after the
+ * middlewares), so the admin rows need no input.
  */
 
-const ADMIN_PREFIX = "admin.";
+type Level = "admin" | "public" | "session" | "token" | "verified" | "webhook";
+type AdminKind = "audit" | "exempt" | "read";
 
-/** Anyone may call these (a new public procedure is a deliberate entry). */
-const PUBLIC_PROCEDURES = [
-  "gestures.byIds",
-  "gestures.bySlug",
-  "gestures.categories",
-  "gestures.list",
-  "gestures.related",
-  "gestures.search",
-  "gestures.sitemap",
-  "lists.shared.get",
-  // Sponsoring needs no account; the mutations run Turnstile and
-  // RL_SPONSOR (ruling 5, tested in @smog/sponsorships).
-  "sponsorships.availability",
-  "sponsorships.checkout",
-  "sponsorships.paymentStatus",
-  "sponsorships.quote",
-  "sponsorships.reedit.get",
-  "sponsorships.reedit.submit",
-  "sponsorships.renewal.checkout",
-  "sponsorships.renewal.get",
-  "sponsorships.uploadLogo",
-  "system.authConfig",
-  "system.health",
-  "system.whoami",
-] as const;
+interface Row {
+  /** Admin rows only: how the write is audited (`read` is no write). */
+  admin?: AdminKind;
+  /** A valid input, so the call passes validation and reaches the guard. */
+  input?: unknown;
+  level: Level;
+}
 
-/**
- * Every other procedure needs a session. Each has a valid input, so the
- * anonymous call passes the contract's input validation (which runs
- * first) and reaches the guard.
- */
-const USER_PROCEDURES: Record<string, unknown> = {
-  "account.consent.get": undefined,
-  "account.consent.set": { analytics: true },
-  "account.delete": { confirm: "DELETE" },
-  "account.export": undefined,
-  "account.importGuestData": { favorites: [], lists: [] },
-  "account.me": undefined,
-  "account.updateProfile": {},
-  "favorites.add": { gestureId: "g" },
-  "favorites.ids": undefined,
-  "favorites.list": {},
-  "favorites.remove": { gestureId: "g" },
-  "favorites.toggle": { gestureId: "g" },
-  "lists.addItem": { gestureId: "g", id: "l" },
-  "lists.containing": { gestureId: "g" },
-  "lists.create": { name: "Dieren" },
-  "lists.delete": { id: "l" },
-  "lists.get": { id: "l" },
-  "lists.mine": undefined,
-  "lists.removeItem": { gestureId: "g", id: "l" },
-  "lists.reorder": { gestureIds: [], id: "l" },
-  "lists.share.create": { id: "l", role: "view" },
-  "lists.share.get": { id: "l" },
-  "lists.share.revoke": { id: "l", role: "view" },
-  "lists.shared.addItem": { gestureId: "g", token: "t" },
-  "lists.shared.removeItem": { gestureId: "g", token: "t" },
-  "lists.update": { id: "l", name: "Dieren" },
+/** The admin rows: path (relative to `admin`) to its audit kind. */
+function admin(kinds: Record<string, AdminKind>): Record<string, Row> {
+  return Object.fromEntries(
+    Object.entries(kinds).map(([path, kind]) => [
+      `admin.${path}`,
+      { admin: kind, level: "admin" } satisfies Row,
+    ])
+  );
+}
+
+const PROCEDURES: Record<string, Row> = {
+  "account.consent.get": { level: "session" },
+  "account.consent.set": { input: { analytics: true }, level: "session" },
+  "account.delete": { input: { confirm: "DELETE" }, level: "session" },
+  "account.export": { level: "session" },
+  "account.importGuestData": {
+    input: { favorites: [], lists: [] },
+    level: "session",
+  },
+  "account.me": { level: "session" },
+  "account.updateProfile": { input: {}, level: "session" },
+  ...admin({
+    "audit.actors": "read",
+    "audit.list": "read",
+    "categories.create": "audit",
+    "categories.delete": "audit",
+    "categories.list": "read",
+    "categories.reorder": "audit",
+    "categories.setPublished": "audit",
+    "categories.update": "audit",
+    dashboard: "read",
+    "deadLetters.discard": "audit",
+    "deadLetters.list": "read",
+    "deadLetters.replay": "audit",
+    "emails.list": "read",
+    "emails.preview": "read",
+    "export.sponsorshipsCsv": "audit",
+    "gestures.bulkUpdate": "audit",
+    "gestures.checkName": "read",
+    "gestures.create": "audit",
+    "gestures.delete": "audit",
+    "gestures.get": "read",
+    "gestures.list": "read",
+    "gestures.saveMany": "audit",
+    "gestures.setPublished": "audit",
+    "gestures.update": "audit",
+    "maintenance.get": "read",
+    "maintenance.set": "audit",
+    "mux.assets": "read",
+    "mux.createUpload": "exempt",
+    "mux.status": "read",
+    "mux.uploadStatus": "read",
+    "sponsorships.approve": "audit",
+    "sponsorships.cancel": "audit",
+    "sponsorships.forceExpire": "audit",
+    "sponsorships.get": "read",
+    "sponsorships.list": "read",
+    "sponsorships.markPaid": "audit",
+    "sponsorships.recordRefund": "audit",
+    "sponsorships.regenerateToken": "audit",
+    "sponsorships.reject": "audit",
+    "sponsorships.requestChanges": "audit",
+    "sponsorships.retryRender": "audit",
+    "users.ban": "audit",
+    "users.delete": "audit",
+    "users.get": "read",
+    "users.list": "read",
+    "users.setRole": "audit",
+    "users.unban": "audit",
+  }),
+  "favorites.add": { input: { gestureId: "g" }, level: "session" },
+  "favorites.ids": { level: "session" },
+  "favorites.list": { input: {}, level: "session" },
+  "favorites.remove": { input: { gestureId: "g" }, level: "session" },
+  "favorites.toggle": { input: { gestureId: "g" }, level: "session" },
+  "gestures.byIds": { level: "public" },
+  "gestures.bySlug": { level: "public" },
+  "gestures.categories": { level: "public" },
+  "gestures.list": { level: "public" },
+  "gestures.related": { level: "public" },
+  "gestures.search": { level: "public" },
+  "gestures.sitemap": { level: "public" },
+  "lists.addItem": { input: { gestureId: "g", id: "l" }, level: "session" },
+  "lists.containing": { input: { gestureId: "g" }, level: "session" },
+  "lists.create": { input: { name: "Dieren" }, level: "session" },
+  "lists.delete": { input: { id: "l" }, level: "session" },
+  "lists.get": { input: { id: "l" }, level: "session" },
+  "lists.mine": { level: "session" },
+  "lists.removeItem": { input: { gestureId: "g", id: "l" }, level: "session" },
+  "lists.reorder": { input: { gestureIds: [], id: "l" }, level: "session" },
+  "lists.share.create": { input: { id: "l", role: "view" }, level: "session" },
+  "lists.share.get": { input: { id: "l" }, level: "session" },
+  "lists.share.revoke": { input: { id: "l", role: "view" }, level: "session" },
+  // The shared view is read with the token alone; changing a shared list
+  // needs a session as well as an `edit` token (@smog/lists sharing tests).
+  "lists.shared.addItem": {
+    input: { gestureId: "g", token: "t" },
+    level: "session",
+  },
+  "lists.shared.get": { level: "token" },
+  "lists.shared.removeItem": {
+    input: { gestureId: "g", token: "t" },
+    level: "session",
+  },
+  "lists.update": { input: { id: "l", name: "Dieren" }, level: "session" },
+  "sponsorships.availability": { level: "public" },
+  "sponsorships.checkout": { level: "public" },
+  "sponsorships.paymentStatus": { level: "public" },
+  "sponsorships.quote": { level: "public" },
+  "sponsorships.reedit.get": { level: "token" },
+  "sponsorships.reedit.submit": { level: "token" },
+  "sponsorships.renewal.checkout": { level: "token" },
+  "sponsorships.renewal.get": { level: "token" },
+  "sponsorships.uploadLogo": { level: "public" },
+  "system.authConfig": { level: "public" },
+  "system.health": { level: "public" },
+  "system.whoami": { level: "public" },
 };
 
 /** Every procedure path of a contract (`lists.share.create`, …). */
@@ -100,61 +189,234 @@ function procedureAt(path: string): Parameters<typeof call>[0] {
   return node as Parameters<typeof call>[0];
 }
 
-describe("authorization matrix", () => {
-  const paths = procedurePaths(appContract)
-    .filter((path) => !path.startsWith(ADMIN_PREFIX))
-    .sort();
+/** Paths missing from the table, and table rows without a procedure. */
+function tableProblems(
+  contract: unknown,
+  table: Readonly<Record<string, unknown>>
+): { missing: string[]; stale: string[] } {
+  const paths = procedurePaths(contract);
+  return {
+    missing: paths.filter((path) => !(path in table)).sort(),
+    stale: Object.keys(table)
+      .filter((path) => !paths.includes(path))
+      .sort(),
+  };
+}
 
-  it("classifies every procedure of appContract as public or signed-in", () => {
-    const publicPaths = new Set<string>(PUBLIC_PROCEDURES);
-    const userPaths = new Set(Object.keys(USER_PROCEDURES));
-    const unclassified = paths.filter(
-      (path) => !(publicPaths.has(path) || userPaths.has(path))
-    );
-    expect(unclassified).toEqual([]);
-    // No stale or double entries either.
-    expect([...publicPaths].filter((path) => userPaths.has(path))).toEqual([]);
-    expect(
-      [...publicPaths, ...userPaths].filter((path) => !paths.includes(path))
-    ).toEqual([]);
+type Who = "admin" | "anonymous" | "banned" | "user";
+
+function contextFor(who: Who) {
+  // A banned user's session is gone (`getSession` reads D1 every time).
+  const session =
+    who === "anonymous" || who === "banned" ? null : makeSession(who);
+  return makeRpcContext({ session });
+}
+
+/** The error code a call ends with, or `ok`. */
+async function outcome(
+  path: string,
+  who: Who,
+  input: unknown
+): Promise<string> {
+  try {
+    await call(procedureAt(path), input, {
+      context: contextFor(who),
+      path: path.split("."),
+    });
+    return "ok";
+  } catch (error) {
+    return (error as { code?: string }).code ?? "ERROR";
+  }
+}
+
+function refusedByGuard(code: string): boolean {
+  return code === "FORBIDDEN" || code === "UNAUTHORIZED";
+}
+
+beforeEach(() => {
+  // The handlers run on stub bindings: whatever they hit is an internal
+  // error, logged; nothing may reach the network.
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => Promise.reject(new Error("no network in the authz test")))
+  );
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+describe("the authorization table", () => {
+  it("lists every procedure of appContract (admin included) and nothing stale", () => {
+    expect(tableProblems(appContract, PROCEDURES)).toEqual({
+      missing: [],
+      stale: [],
+    });
   });
 
-  for (const [path, input] of Object.entries(USER_PROCEDURES)) {
-    it(`${path} rejects an anonymous call`, async () => {
-      await expect(
-        call(procedureAt(path), input, { context: makeRpcContext() })
-      ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
-    });
+  it("fails for a procedure that is not in the table (a stub contract)", () => {
+    const rogue = oc.route({ method: "POST" });
+    const stub = { ...appContract, rogue: { shipped: { unlisted: rogue } } };
+    expect(tableProblems(stub, PROCEDURES).missing).toEqual([
+      "rogue.shipped.unlisted",
+    ]);
+    const withoutOne = Object.fromEntries(
+      Object.entries(PROCEDURES).filter(([path]) => path !== "system.health")
+    );
+    expect(tableProblems(appContract, withoutOne).missing).toEqual([
+      "system.health",
+    ]);
+    expect(
+      tableProblems(appContract, {
+        ...PROCEDURES,
+        "gone.away": { level: "public" },
+      }).stale
+    ).toEqual(["gone.away"]);
+  });
+
+  it("uses the oRPC levels only: no procedure claims `verified` or `webhook`", () => {
+    const levels = new Set(Object.values(PROCEDURES).map((row) => row.level));
+    expect([...levels].sort()).toEqual(["admin", "public", "session", "token"]);
+  });
+
+  it("agrees with the admin kinds: a row per admin procedure, writes audited", () => {
+    const adminRows = Object.entries(PROCEDURES).filter(([path]) =>
+      path.startsWith("admin.")
+    );
+    for (const [path, row] of adminRows) {
+      const kind = ADMIN_PROCEDURE_KINDS[path.slice("admin.".length)];
+      expect(kind, path).toBeDefined();
+      let expected: AdminKind = "read";
+      if (kind !== undefined && kind !== "read") {
+        expected = "audit" in kind ? "audit" : "exempt";
+      }
+      expect(row.admin, path).toBe(expected);
+    }
+    // The only unaudited admin write: Mux direct upload creation (it
+    // changes nothing in D1; the video is audited when it is attached).
+    expect(
+      adminRows
+        .filter(([, row]) => row.admin === "exempt")
+        .map(([path]) => path)
+    ).toEqual(["admin.mux.createUpload"]);
+  });
+});
+
+const rows = Object.entries(PROCEDURES).sort(([a], [b]) => a.localeCompare(b));
+
+describe("anonymous calls", () => {
+  for (const [path, row] of rows) {
+    if (row.level === "session") {
+      it(`${path} (session) is UNAUTHORIZED`, async () => {
+        expect(await outcome(path, "anonymous", row.input)).toBe(
+          "UNAUTHORIZED"
+        );
+      });
+    } else if (row.level === "admin") {
+      it(`${path} (admin) is UNAUTHORIZED`, async () => {
+        expect(await outcome(path, "anonymous", undefined)).toBe(
+          "UNAUTHORIZED"
+        );
+      });
+    } else {
+      it(`${path} (${row.level}) is not refused by an auth guard`, async () => {
+        expect(
+          refusedByGuard(await outcome(path, "anonymous", row.input))
+        ).toBe(false);
+      });
+    }
   }
 });
 
-describe("admin mount", () => {
-  it("has admin procedures, each built by the admin router", () => {
-    const admin = procedurePaths(appContract).filter((path) =>
-      path.startsWith(ADMIN_PREFIX)
+describe("signed-in and admin calls", () => {
+  for (const [path, row] of rows) {
+    if (row.level === "admin") {
+      it(`${path} (admin) is FORBIDDEN for a user and let through for an admin`, async () => {
+        expect(await outcome(path, "user", undefined)).toBe("FORBIDDEN");
+        expect(refusedByGuard(await outcome(path, "admin", undefined))).toBe(
+          false
+        );
+      });
+    } else {
+      it(`${path} (${row.level}) is let through for a user and an admin`, async () => {
+        expect(refusedByGuard(await outcome(path, "user", row.input))).toBe(
+          false
+        );
+        expect(refusedByGuard(await outcome(path, "admin", row.input))).toBe(
+          false
+        );
+      });
+    }
+  }
+});
+
+/*
+ * A banned user. The ban is not a branch of any procedure: it lives in the
+ * one shared session read. Better Auth reads the session from D1 on every
+ * request, and `admin.users.ban` revokes the target's sessions, so a banned
+ * user's cookie yields NO session (`@smog/auth` `revocation.test.ts`: "a
+ * banned user's existing session stops working at once"). Two layers prove
+ * every `session` and `admin` row inherits it:
+ *
+ * 1. here, per row, through the real `loadSession` interceptor (the one
+ *    `/api/rpc` and `/api/openapi` use) with an `auth` whose `getSession`
+ *    answers what Better Auth answers for a banned user (`null`), starting
+ *    from a context that still carried a valid-looking session: the
+ *    interceptor replaces it, and the row's guard refuses;
+ * 2. `apps/site/test/security-authz.test.ts`, with a real ban of a real
+ *    account through the Worker, for `account.me`, `account.export`,
+ *    `favorites.ids`, `lists.mine`, `lists.create`, `system.whoami` and an
+ *    admin procedure (not all rows: the table is the other layer).
+ */
+describe("a banned user (through the shared session interceptor)", () => {
+  const bannedAuth = {
+    api: { getSession: () => Promise.resolve(null) },
+  } as unknown as ReturnType<typeof makeRpcContext>["auth"];
+
+  for (const [path, row] of rows) {
+    if (row.level === "session" || row.level === "admin") {
+      it(`${path} refuses a banned user like a guest`, async () => {
+        const context = makeRpcContext({
+          auth: bannedAuth,
+          // Valid-looking before the interceptor: it must be replaced.
+          session: makeSession(row.level === "admin" ? "admin" : "user"),
+        });
+        let code = "ok";
+        await loadSession({
+          context,
+          next: async (options: { context: typeof context }) => {
+            try {
+              await call(
+                procedureAt(path),
+                row.level === "admin" ? undefined : row.input,
+                { context: options.context, path: path.split(".") }
+              );
+            } catch (error) {
+              code = (error as { code?: string }).code ?? "ERROR";
+            }
+            return await Promise.resolve({} as never);
+          },
+        } as never);
+        expect(code).toBe("UNAUTHORIZED");
+      });
+    }
+  }
+});
+
+describe("the admin mount", () => {
+  it("has the dead-letter procedures of phase 9 task 4", () => {
+    const names = Object.keys(PROCEDURES);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "admin.deadLetters.discard",
+        "admin.deadLetters.list",
+        "admin.deadLetters.replay",
+      ])
     );
-    expect(admin).toContain("admin.dashboard");
-    for (const path of admin) {
+    for (const path of names.filter((name) => name.startsWith("admin."))) {
       expect(procedureAt(path), path).toBeDefined();
     }
   });
-
-  for (const path of procedurePaths(appContract).filter((name) =>
-    name.startsWith(ADMIN_PREFIX)
-  )) {
-    it(`${path} is UNAUTHORIZED for a guest and FORBIDDEN for a user`, async () => {
-      await expect(
-        call(procedureAt(path), undefined, {
-          context: makeRpcContext(),
-          path: path.split("."),
-        })
-      ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
-      await expect(
-        call(procedureAt(path), undefined, {
-          context: makeRpcContext({ session: makeSession("user") }),
-          path: path.split("."),
-        })
-      ).rejects.toMatchObject({ code: "FORBIDDEN" });
-    });
-  }
 });

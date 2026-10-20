@@ -9,6 +9,17 @@ export {
   SAMPLE_PLAYBACK_ID,
 } from "./factories";
 
+export {
+  explain,
+  fullScans,
+  type PlanReport,
+  type PlanRow,
+  plannable,
+  type RecordedStatement,
+  recordingD1,
+  scanReport,
+} from "./plan";
+
 /** A Drizzle client for a test env's `DB` binding (migrations applied). */
 export function createTestDb(env: { DB: D1Database }): Db {
   return createDb(env.DB);

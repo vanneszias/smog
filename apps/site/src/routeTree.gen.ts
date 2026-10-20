@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as MagicLinkRouteImport } from './routes/magic-link'
+import { Route as ManifestDotwebmanifestRouteImport } from './routes/manifest[.]webmanifest'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
@@ -27,6 +28,7 @@ import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAuditRouteImport } from './routes/admin/audit'
 import { Route as AdminCategoriesRouteImport } from './routes/admin/categories'
+import { Route as AdminDeadLettersRouteImport } from './routes/admin/dead-letters'
 import { Route as AdminEmailsRouteImport } from './routes/admin/emails'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
@@ -91,6 +93,11 @@ const MagicLinkRoute = MagicLinkRouteImport.update({
   path: '/magic-link',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManifestDotwebmanifestRoute = ManifestDotwebmanifestRouteImport.update({
+  id: '/manifest.webmanifest',
+  path: '/manifest.webmanifest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -149,6 +156,11 @@ const AdminAuditRoute = AdminAuditRouteImport.update({
 const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
   id: '/categories',
   path: '/categories',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDeadLettersRoute = AdminDeadLettersRouteImport.update({
+  id: '/dead-letters',
+  path: '/dead-letters',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminEmailsRoute = AdminEmailsRouteImport.update({
@@ -324,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
+  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -335,6 +348,7 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/dead-letters': typeof AdminDeadLettersRoute
   '/admin/emails': typeof AdminEmailsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -376,6 +390,7 @@ export interface FileRoutesByTo {
   '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
+  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -387,6 +402,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/dead-letters': typeof AdminDeadLettersRoute
   '/admin/emails': typeof AdminEmailsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -430,6 +446,7 @@ export interface FileRoutesById {
   '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
+  '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -441,6 +458,7 @@ export interface FileRoutesById {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/dead-letters': typeof AdminDeadLettersRoute
   '/admin/emails': typeof AdminEmailsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -485,6 +503,7 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/forgot-password'
     | '/magic-link'
+    | '/manifest.webmanifest'
     | '/privacy'
     | '/reset-password'
     | '/robots.txt'
@@ -496,6 +515,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/audit'
     | '/admin/categories'
+    | '/admin/dead-letters'
     | '/admin/emails'
     | '/admin/settings'
     | '/admin/users'
@@ -537,6 +557,7 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/forgot-password'
     | '/magic-link'
+    | '/manifest.webmanifest'
     | '/privacy'
     | '/reset-password'
     | '/robots.txt'
@@ -548,6 +569,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/audit'
     | '/admin/categories'
+    | '/admin/dead-letters'
     | '/admin/emails'
     | '/admin/settings'
     | '/admin/users'
@@ -590,6 +612,7 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/forgot-password'
     | '/magic-link'
+    | '/manifest.webmanifest'
     | '/privacy'
     | '/reset-password'
     | '/robots.txt'
@@ -601,6 +624,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/audit'
     | '/admin/categories'
+    | '/admin/dead-letters'
     | '/admin/emails'
     | '/admin/settings'
     | '/admin/users'
@@ -644,6 +668,7 @@ export interface RootRouteChildren {
   FavoritesRoute: typeof FavoritesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   MagicLinkRoute: typeof MagicLinkRoute
+  ManifestDotwebmanifestRoute: typeof ManifestDotwebmanifestRoute
   PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -722,6 +747,13 @@ declare module '@tanstack/react-router' {
       path: '/magic-link'
       fullPath: '/magic-link'
       preLoaderRoute: typeof MagicLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manifest.webmanifest': {
+      id: '/manifest.webmanifest'
+      path: '/manifest.webmanifest'
+      fullPath: '/manifest.webmanifest'
+      preLoaderRoute: typeof ManifestDotwebmanifestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -806,6 +838,13 @@ declare module '@tanstack/react-router' {
       path: '/categories'
       fullPath: '/admin/categories'
       preLoaderRoute: typeof AdminCategoriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dead-letters': {
+      id: '/admin/dead-letters'
+      path: '/dead-letters'
+      fullPath: '/admin/dead-letters'
+      preLoaderRoute: typeof AdminDeadLettersRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/emails': {
@@ -1045,6 +1084,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminAuditRoute: typeof AdminAuditRoute
   AdminCategoriesRoute: typeof AdminCategoriesRoute
+  AdminDeadLettersRoute: typeof AdminDeadLettersRoute
   AdminEmailsRoute: typeof AdminEmailsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -1059,6 +1099,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAuditRoute: AdminAuditRoute,
   AdminCategoriesRoute: AdminCategoriesRoute,
+  AdminDeadLettersRoute: AdminDeadLettersRoute,
   AdminEmailsRoute: AdminEmailsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminUsersRoute: AdminUsersRoute,
@@ -1079,6 +1120,7 @@ const rootRouteChildren: RootRouteChildren = {
   FavoritesRoute: FavoritesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   MagicLinkRoute: MagicLinkRoute,
+  ManifestDotwebmanifestRoute: ManifestDotwebmanifestRoute,
   PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,

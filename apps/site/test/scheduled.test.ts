@@ -11,6 +11,7 @@ import {
 import { env } from "cloudflare:workers";
 import {
   auditLog,
+  deadLetter,
   payment,
   paymentItem,
   renderJob,
@@ -173,7 +174,7 @@ describe("the scheduled dispatch (ruling 9)", () => {
     expect(counts(second)).toMatchObject({ failed: 0, reminded: 0 });
     const mail = await waitForMail(email);
     expect(mail).toHaveLength(1);
-    expect(mail[0]?.text).toContain("/sponsor/renew?token=");
+    expect(mail[0]?.text).toContain("/sponsor/renew#token=");
   });
 
   it(`stale (${CRON.stale}) cancels an open payment older than 24 h locally without a Mollie key`, async () => {
@@ -237,6 +238,76 @@ describe("the scheduled dispatch (ruling 9)", () => {
     expect(counts(first).logosDeleted).toBeGreaterThanOrEqual(1);
     expect(counts(second)).toMatchObject({ audit_log: 0, logosDeleted: 0 });
     expect(counts(first).audit_log).toBeGreaterThanOrEqual(1);
+  });
+
+  it(`retention (${CRON.retention}) purges dead letters older than 14 days and keeps the rest`, async () => {
+    const later = new Date(Date.now() + DAY_MS + 60_000);
+    const row = (id: string, receivedAt: Date) => ({
+      attempts: 6,
+      body: null,
+      id,
+      originQueue: "email" as const,
+      queue: "smog-dev-email-dlq",
+      receivedAt,
+      replayable: false,
+      type: "auth/otp",
+    });
+    const old = newId();
+    const kept = newId();
+    await db
+      .insert(deadLetter)
+      .values([
+        row(old, new Date(later.getTime() - 14 * DAY_MS - 1)),
+        row(kept, new Date(later.getTime() - 14 * DAY_MS + 1)),
+      ]);
+
+    const first = await runCron("retention", later);
+    const second = await runCron("retention", later);
+
+    const ids = (await db.select({ id: deadLetter.id }).from(deadLetter)).map(
+      (entry) => entry.id
+    );
+    expect(ids).not.toContain(old);
+    expect(ids).toContain(kept);
+    expect(counts(first).dead_letter).toBeGreaterThanOrEqual(1);
+    expect(counts(second).dead_letter).toBe(0);
+  });
+
+  it(`retention (${CRON.retention}) sends the dead-letter digest to the admins once a day, with counts and types only`, async () => {
+    const adminEmail = `${newId()}@smog.test`;
+    await d1
+      .prepare(
+        "INSERT INTO user (id, name, email, email_verified, role, locale, created_at, updated_at) VALUES (?, 'Ada Admin', ?, 1, 'admin', 'en', 1, 1)"
+      )
+      .bind(newId(), adminEmail)
+      .run();
+    // A day nobody else used: the marker is per UTC day.
+    const day = new Date(Date.now() + 3 * DAY_MS);
+    await d1
+      .prepare(
+        "INSERT INTO dead_letter (id, queue, origin_queue, type, attempts, received_at, body, replayable) VALUES (?, 'smog-dev-email-dlq', 'email', 'transactional/welcome', 6, ?, ?, 1)"
+      )
+      .bind(
+        newId(),
+        day.getTime() - 1000,
+        JSON.stringify({ to: "stored.recipient@smog.test" })
+      )
+      .run();
+
+    const first = await runCron("retention", day);
+    const second = await runCron("retention", day);
+
+    expect(counts(first).digestSent).toBeGreaterThanOrEqual(1);
+    expect(counts(second).digestSent).toBe(0);
+    const mail = await waitForMail(adminEmail);
+    expect(mail).toHaveLength(1);
+    expect(mail[0]?.subject).toBe("Dead letters need attention");
+    // Counts and types: nothing of the stored message.
+    expect(mail[0]?.text).not.toContain("stored.recipient");
+    expect(mail[0]?.text).toContain("transactional/welcome");
+    expect(
+      await env.KV?.get(`dlq-digest:${day.toISOString().slice(0, 10)}`)
+    ).toBe("1");
   });
 
   it(`stale (${CRON.stale}) re-sends render.requested for a job queued over 10 minutes, once (fake mode: no Workflow binding)`, async () => {

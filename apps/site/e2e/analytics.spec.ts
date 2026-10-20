@@ -1,5 +1,5 @@
 import { expect, type Page, type Request, test } from "@playwright/test";
-import { stubMux, watchErrors } from "./helpers";
+import { expectStorageEvent, stubMux, watchErrors } from "./helpers";
 
 const STORE_KEY = "smog:guest:v1";
 const SIGN_IN_URL = /\/sign-in/;
@@ -102,9 +102,10 @@ test("no /api/analytics request before consent, or after withdraw", async ({
   // subscription closes the gate, so a client-side navigation sends nothing.
   const other = await page.context().newPage();
   await other.goto("/");
+  const storageSeen = await expectStorageEvent(page);
   await setConsent(other, false);
   await other.close();
-  await page.waitForTimeout(500);
+  await storageSeen();
   const live = relay.requests.length;
   await page.getByRole("link", { name: "Aanmelden" }).first().click();
   await expect(page).toHaveURL(SIGN_IN_URL);

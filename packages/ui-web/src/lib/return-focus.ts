@@ -6,6 +6,18 @@ interface AutoFocusHandlers {
 }
 
 /**
+ * What to return to: the focused element, or, when it is an item of a menu
+ * (a dialog opened by a menu item: the item is gone once the menu closes),
+ * the button that opened the menu (Radix labels the menu by its trigger).
+ */
+function openerOf(active: HTMLElement): HTMLElement {
+  const labelledBy = active
+    .closest('[role="menu"]')
+    ?.getAttribute("aria-labelledby");
+  return (labelledBy ? document.getElementById(labelledBy) : null) ?? active;
+}
+
+/**
  * Returns the focus to the element that had it when a dialog opened.
  *
  * Radix Dialog and AlertDialog focus their `Trigger` on close and prevent
@@ -26,7 +38,7 @@ export function useReturnFocus({
       const active = document.activeElement;
       opener.current =
         active instanceof HTMLElement && active !== document.body
-          ? active
+          ? openerOf(active)
           : null;
       onOpenAutoFocus?.(event);
     },

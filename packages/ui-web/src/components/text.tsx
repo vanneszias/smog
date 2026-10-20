@@ -49,7 +49,9 @@ export function Text({
   );
 }
 
-const headingVariants = cva("text-balance font-semibold", {
+// `wrap-anywhere`: a long word at the display size breaks instead of scrolling
+// the page sideways (320 px reflow with the WCAG text spacing, 1.4.10/1.4.12).
+const headingVariants = cva("wrap-anywhere text-balance font-semibold", {
   variants: {
     size: {
       display: "text-display",

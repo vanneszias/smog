@@ -17,6 +17,7 @@ export { useAdminAudit, useAdminAuditActors } from "./use-admin-audit";
 // The area files (Tasks 2, 3, 5 and 6 fill them).
 export * from "./use-admin-categories";
 export { useAdminDashboard } from "./use-admin-dashboard";
+export * from "./use-admin-dead-letters";
 export * from "./use-admin-export";
 export * from "./use-admin-gestures";
 export * from "./use-admin-sponsorships";

@@ -164,12 +164,27 @@ export function watchErrors(page: Page): string[] {
  * `AXE_EXCLUDED` (the Mux player). `exclude` leaves more selectors out,
  * frames included: axe never enters an excluded frame (a sandboxed
  * preview frame refuses its script, and the run can hang there).
+ * `menuOpen` is for a scan taken while a menu is open: Radix's modal menu
+ * hides the rest of the page from assistive technology (`aria-hidden`) and
+ * traps the focus in the menu, which axe only accepts for a dialog, so
+ * `aria-hidden-focus` and (the whole page being hidden) `page-has-heading-one`
+ * are not run then (DECISIONS, phase 9 task 5).
  */
 export async function blockingViolations(
   page: Page,
-  { exclude = [] }: { exclude?: readonly string[] } = {}
+  {
+    exclude = [],
+    menuOpen = false,
+  }: { exclude?: readonly string[]; menuOpen?: boolean } = {}
 ) {
+  await settleAnimations(page);
   let builder = new AxeBuilder({ page });
+  if (menuOpen) {
+    builder = builder.disableRules([
+      "aria-hidden-focus",
+      "page-has-heading-one",
+    ]);
+  }
   for (const selector of [...AXE_EXCLUDED, ...exclude]) {
     builder = builder.exclude(selector);
   }
@@ -183,6 +198,32 @@ export async function blockingViolations(
       id: violation.id,
       nodes: violation.nodes.map((node) => node.target.join(" ")),
     }));
+}
+
+/**
+ * Waits until the finite CSS transitions and animations on the page are
+ * done (a button fading from disabled to enabled reads as a failing
+ * `color-contrast` mid-way). Endless ones (a spinner) are left out, and the
+ * wait is bounded.
+ */
+async function settleAnimations(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const finite = document
+      .getAnimations()
+      .filter(
+        (animation) =>
+          animation.effect?.getComputedTiming().iterations !==
+          Number.POSITIVE_INFINITY
+      );
+    await Promise.race([
+      Promise.all(
+        finite.map((animation) => animation.finished.catch(() => undefined))
+      ),
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, 5000);
+      }),
+    ]);
+  });
 }
 
 /**
@@ -331,4 +372,63 @@ export async function tabTo(
     await page.keyboard.press("Tab");
   }
   await expect(target).toBeFocused();
+}
+
+/**
+ * Waits until the page has painted what a screenshot should show: web
+ * fonts loaded, every image decoded (or failed) and two animation frames
+ * past the last layout change. Conditions, not a fixed sleep.
+ */
+export async function settleForShot(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const settled = async (): Promise<void> => {
+      await document.fonts.ready;
+      await Promise.all(
+        [...document.images]
+          // An offscreen lazy image never loads (a full-page shot does not
+          // scroll): not waited for.
+          .filter((image) => !image.complete && image.loading !== "lazy")
+          .map(
+            (image) =>
+              new Promise<void>((resolve) => {
+                image.addEventListener("load", () => resolve(), { once: true });
+                image.addEventListener("error", () => resolve(), {
+                  once: true,
+                });
+              })
+          )
+      );
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+    };
+    // Bounded: a stuck image must not eat the test's whole timeout.
+    await Promise.race([
+      settled(),
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, 5000);
+      }),
+    ]);
+  });
+}
+
+/**
+ * Starts listening for the next `storage` event (another tab wrote
+ * localStorage) in `page`. Await the returned function after the write: the
+ * app's own listener (registered earlier) has run by then, so a "nothing is
+ * sent afterwards" assertion starts from a settled state, not a sleep.
+ */
+export async function expectStorageEvent(
+  page: Page
+): Promise<() => Promise<void>> {
+  // An object around the promise: `evaluateHandle` would await a bare one.
+  const handle = await page.evaluateHandle(() => ({
+    seen: new Promise<void>((resolve) => {
+      window.addEventListener("storage", () => resolve(), { once: true });
+    }),
+  }));
+  return async () => {
+    await handle.evaluate((box) => box.seen);
+    await handle.dispose();
+  };
 }

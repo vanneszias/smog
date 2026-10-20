@@ -1,4 +1,4 @@
-import { describe, expect, it, jest } from "@jest/globals";
+import { afterEach, describe, expect, it, jest } from "@jest/globals";
 import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
 import { router } from "expo-router";
 import {
@@ -9,6 +9,7 @@ import {
   within,
 } from "expo-router/testing-library";
 import { shareAsync } from "expo-sharing";
+import { Alert, type AlertButton } from "react-native";
 import { renderApp } from "./test/harness";
 
 // The real auth client (Better Auth, SecureStore) is never built: tests pass fakes.
@@ -266,6 +267,109 @@ describe("settings/account", () => {
         "This is your only sign-in method. Add another one first."
       )
     ).toBeOnTheScreen();
+  });
+
+  describe("sign out (inventory U-11)", () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    /** Presses Sign out and returns the buttons the confirmation offers. */
+    async function askToSignOut(
+      alert: jest.SpiedFunction<typeof Alert.alert>
+    ): Promise<AlertButton[]> {
+      const account = await inAccount();
+      await fireEvent.press(
+        await account.findByRole("button", { name: "Sign out" })
+      );
+      expect(alert).toHaveBeenCalledTimes(1);
+      const [title, message, buttons] = alert.mock.calls[0] ?? [];
+      expect(title).toBe("Sign out?");
+      expect(message).toBe("You can sign in again at any time.");
+      return buttons ?? [];
+    }
+
+    it("asks first: Cancel and Sign out, and signs nobody out by itself", async () => {
+      const alert = jest
+        .spyOn(Alert, "alert")
+        .mockImplementation(() => undefined);
+      const signOut = jest.fn(() => Promise.resolve({ error: null }));
+      await renderApp({
+        auth: { signOut },
+        routes: signedInRoutes(),
+        signedIn: true,
+      });
+      const buttons = await askToSignOut(alert);
+      expect(buttons.map((button) => [button.text, button.style])).toEqual([
+        ["Cancel", "cancel"],
+        ["Sign out", "destructive"],
+      ]);
+      expect(signOut).not.toHaveBeenCalled();
+    });
+
+    it("Cancel keeps the account signed in on the same screen", async () => {
+      const alert = jest
+        .spyOn(Alert, "alert")
+        .mockImplementation(() => undefined);
+      const signOut = jest.fn(() => Promise.resolve({ error: null }));
+      const { result } = await renderApp({
+        auth: { signOut },
+        routes: signedInRoutes(),
+        signedIn: true,
+      });
+      const buttons = await askToSignOut(alert);
+      await act(() => {
+        buttons.find((button) => button.text === "Cancel")?.onPress?.();
+      });
+      expect(signOut).not.toHaveBeenCalled();
+      expect(result.getPathname()).toBe("/settings/account");
+      expect(screen.queryByText("You're signed out.")).toBeNull();
+    });
+
+    it("Sign out signs out, says so and goes to the welcome screen", async () => {
+      const alert = jest
+        .spyOn(Alert, "alert")
+        .mockImplementation(() => undefined);
+      const signOut = jest.fn(() => Promise.resolve({ error: null }));
+      const { result } = await renderApp({
+        auth: { signOut },
+        routes: signedInRoutes(),
+        signedIn: true,
+      });
+      const buttons = await askToSignOut(alert);
+      await act(() => {
+        buttons.find((button) => button.text === "Sign out")?.onPress?.();
+      });
+      await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
+      expect(await screen.findByText("You're signed out.")).toBeOnTheScreen();
+      await waitFor(() => expect(result.getPathname()).toBe("/"));
+    });
+
+    it("a failed sign-out says so and stays on the account screen", async () => {
+      const alert = jest
+        .spyOn(Alert, "alert")
+        .mockImplementation(() => undefined);
+      // Logged by design; keep the run's output clean.
+      const logged = jest.spyOn(console, "error").mockImplementation(() => {
+        // Intentionally empty.
+      });
+      const signOut = jest.fn(() => Promise.reject(new Error("offline")));
+      const { result } = await renderApp({
+        auth: { signOut },
+        routes: signedInRoutes(),
+        signedIn: true,
+      });
+      const buttons = await askToSignOut(alert);
+      await act(() => {
+        buttons.find((button) => button.text === "Sign out")?.onPress?.();
+      });
+      await waitFor(() => expect(signOut).toHaveBeenCalled());
+      expect(
+        await screen.findByText("Something went wrong. Please try again.")
+      ).toBeOnTheScreen();
+      expect(result.getPathname()).toBe("/settings/account");
+      logged.mockRestore();
+    });
   });
 
   it("deletes after typing DELETE and the password, then signs out and clears the device", async () => {

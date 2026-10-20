@@ -56,6 +56,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { REJECTED_VIDEO_PURGE_PER_RUN } from "../schema/retention";
+import { sponsorshipLinkUrl } from "../schema/tokens";
 import { SETTLED_AT_SQL } from "./email-window";
 import {
   ENDED_STATUSES,
@@ -398,7 +399,7 @@ export async function runReminderSweep({
             endsAt: endsAt.toISOString(),
             gestureName: row.gestureName,
             name: row.sponsorName,
-            url: `${site}/sponsor/renew?token=${encodeURIComponent(token)}`,
+            url: sponsorshipLinkUrl(site, "renewal", token),
           },
           template: "transactional/renewal-reminder",
           to: row.sponsorEmail,
@@ -992,7 +993,8 @@ async function purgeRejectedVideo(
 /**
  * The daily purge the privacy text promises (ruling 9, J-04, amended by
  * fix round 1), and nothing else:
- * - `audit_log` older than 3 × 365 days; expired `session` and
+ * - `audit_log` older than 3 × 365 days; `dead_letter` rows older than 14
+ *   days (phase 9); expired `session` and
  *   `verification` rows; `sponsorship_token` used or expired more than 29
  *   days ago (`runRetentionPurges`, `@smog/db`, chunked);
  * - the logo key of sponsorships that ended more than 30 days ago and can
@@ -1030,6 +1032,7 @@ export async function runRetentionPurge({
   let failure: unknown;
   let tables: Record<RetentionTable, number> = {
     audit_log: 0,
+    dead_letter: 0,
     session: 0,
     sponsorship_token: 0,
     verification: 0,

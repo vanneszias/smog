@@ -19,6 +19,7 @@ import {
   blockingViolations,
   e2eSeed,
   ORIGIN,
+  settleForShot,
   stubMux,
   stubMuxRenditions,
   stubMuxStream,
@@ -344,8 +345,13 @@ test("keyboard only: the cards, the selection bar, the dropzone's button and the
   await tabTo(page, page.getByRole("checkbox", { name: LOGO_TOEVOEGEN }));
   await page.keyboard.press("Space");
   // The dropzone's keyboard path is its button, which opens the file picker.
-  await tabTo(page, page.getByRole("button", { name: "kies een bestand" }));
+  // The chooser listener goes first: Playwright turns file chooser
+  // interception on when the listener is added, and Enter must not beat it
+  // (a loaded runner lost the event now and then). No-op catch: if the Tab
+  // walk throws first, the page closing must not reject unhandled.
   const chooser = page.waitForEvent("filechooser");
+  chooser.catch(() => undefined);
+  await tabTo(page, page.getByRole("button", { name: "kies een bestand" }));
   await page.keyboard.press("Enter");
   await (await chooser).setFiles({
     buffer: PNG,
@@ -606,7 +612,7 @@ test("a failed payment frees the gestures, and Try again keeps the selection", a
 test("the re-edit link: a new name, sent for review", async ({ page }) => {
   await stubMux(page);
   await stubMuxRenditions(page);
-  await page.goto(`/sponsor/edit?token=${REEDIT_TOKEN}`);
+  await page.goto(`/sponsor/edit#token=${REEDIT_TOKEN}`);
   await waitForApp(page);
   await expect(
     page.getByRole("heading", { level: 1, name: "Werk je video bij" })
@@ -679,7 +685,7 @@ async function shoot(page: Page, path: string): Promise<void> {
     }
   });
   await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(300);
+  await settleForShot(page);
   await page.screenshot({ fullPage: true, path });
 }
 
@@ -770,7 +776,7 @@ async function stubbedStates(
       headers: { "cache-control": "private, no-store" },
     })
   );
-  await page.goto(`/sponsor/edit?token=${REEDIT_TOKEN}`);
+  await page.goto(`/sponsor/edit#token=${REEDIT_TOKEN}`);
   await expect(
     page.getByRole("heading", { level: 1, name: "Werk je video bij" })
   ).toBeVisible();
@@ -811,7 +817,7 @@ async function stubbedStates(
     gesture: { name: "Broer", slug: "broer" },
     hasLogo: true,
   });
-  await page.goto(`/sponsor/renew?token=${REEDIT_TOKEN}`);
+  await page.goto(`/sponsor/renew#token=${REEDIT_TOKEN}`);
   await expect(
     page.getByRole("heading", {
       level: 1,

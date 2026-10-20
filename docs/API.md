@@ -127,8 +127,14 @@ integer cents, dates epoch milliseconds.
 
 ### The `EMAIL_QUEUE` consumer
 
-- `apps/site/src/worker/email-queue.ts` over `processEmailMessage` (`@smog/jobs`), one message of the batch (at most 10) at a time: an invalid message, an auth email past its validity and a send the Email Service refuses for good (the recipient or the payload) are acked and logged; a message whose `idempotencyKey` has a KV `email:sent:<key>` marker is acked unsent; otherwise it is rendered (React Email, the message's locale) and sent with the env's sender (dev: the KV mailbox at `/dev/mail`; staging and production: the `EMAIL` binding, From and Reply-To from `wrangler.jsonc`), then the marker is written for 7 days. Any other failure (a render failure included) retries after `min(30 × 2^(attempts − 1), 3600)` s; after `max_retries` (5) the platform moves it to `smog-<env>-email-dlq`, which has no consumer (checked by hand).
+- `apps/site/src/worker/email-queue.ts` over `processEmailMessage` (`@smog/jobs`), one message of the batch (at most 10) at a time: an invalid message, an auth email past its validity and a send the Email Service refuses for good (the recipient or the payload) are acked and logged; a message whose `idempotencyKey` has a KV `email:sent:<key>` marker is acked unsent; otherwise it is rendered (React Email, the message's locale) and sent with the env's sender (dev: the KV mailbox at `/dev/mail`; staging and production: the `EMAIL` binding, From and Reply-To from `wrangler.jsonc`), then the marker is written for 7 days. Any other failure (a render failure included) retries after `min(30 × 2^(attempts − 1), 3600)` s; after `max_retries` (5) the platform moves it to `smog-<env>-email-dlq`, which has its own consumer (see "The two DLQ consumers" below).
 - Producers: `QueueEmailOutbox` (`@smog/jobs`) for auth emails, the welcome email and every sponsorship email, always after the D1 commit (phase 6 ruling 8). The keys: `welcome:<userId>`, `sponsorship_received:<sponsorshipId>`, `payment_confirmed:<paymentId>:<sponsorshipId>`, `admin_new_sponsorship:<paymentId>:<adminId>`, `sponsorship_live:<sponsorshipId>:<startsAt>`, `renewal_reminder:<sponsorshipId>:<endsAt>`, `admin_render_failed:<renderJobId>:<adminId>`, `admin_refund_needed:<paymentId>:<adminId>` (`admin_refund_needed:<paymentId>:<mollieId>:<adminId>` for another Mollie payment of ours), `admin_chargeback:<paymentId>:<cents>:<adminId>`; auth emails have none. The sponsor and admin emails of a payment go out only within 6 days of when we first applied it (its first `payment_paid`/`revived`/`renewed`/`marked_paid_manually` event, else `paid_at`); `admin_refund_needed` within 6 days of the payment's first `refund_needed` flag and not once Mollie's refund covers the amount; `admin_chargeback` within 6 days of when that amount was recorded (`charged_back_at`), never for a reversal. An email whose envelope fails its schema (an address `z.email()` refuses) is dropped and logged (`[jobs] Dropped an invalid <template> message`), and the rest of the fan-out still goes out.
+
+### The two DLQ consumers (phase 9)
+
+- `apps/site/src/worker/dlq-queue.ts` consumes `smog-<env>-email-dlq` and `smog-<env>-sponsorship-events-dlq` (an ordinary queue takes one push consumer; `max_batch_size` 10, `max_retries` 20, `retry_delay` 300 s, no DLQ of its own). Each message goes to D1 `dead_letter` (id = the queue message id, `ON CONFLICT DO NOTHING`, so a redelivery stores nothing twice) and is acked. **What is stored** (`toDeadLetter`, `@smog/jobs`): an email whose template carries a token or a code (`@smog/email/body-policy`: the four `auth/*` emails and `transactional/renewal-reminder`), an email without an `idempotencyKey` and an invalid message are stored with **no body** and `replayable = 0` (`error`: `secret_template`, `no_idempotency_key`, `invalid_message`); any other email keeps its body (`to`, `props`, the key); an event keeps its ids.
+- **No silent loss while D1 is down**: a failed store is retried with `message.retry({ delaySeconds: 300 })`, 20 times (about 100 minutes). Only when the last delivery fails too does it log `[dlq] lost {"id","queue","type"}` (never a body or an address) and add one to the KV counter `dlq-lost:<yyyy-mm-dd>` (TTL 3 days), which the digest reports.
+- The retention cron deletes rows older than 14 days, and `account.delete` removes the rows whose body's `to` is the deleted address.
 
 ### Cron Triggers (`scheduled`)
 
@@ -139,7 +145,7 @@ integer cents, dates epoch milliseconds.
 | `stale` | `0 * * * *` | `runStaleSweep`: each `open` payment older than 24 h is re-fetched from Mollie and settled (a `paid` one is never cancelled), else cancelled at Mollie when cancelable and settled `canceled`; one with a Mollie id that cannot be settled now (no key, Mollie answers 404, open and not cancelable) is kept open, and only one without a Mollie id is cancelled locally; then the reconciliation re-sends `payment.settled` for paid payments still waiting for a render job, applied by us (first settling event, else `paid_at`) between 5 minutes and 7 days ago (J-03) |
 | `expiry` | `0 0 * * *` | `runExpirySweep`: `live`/`expiring` past `ends_at` become `expired`, and a sponsored Mux asset that is not the gesture's own is deleted (failures logged, J-01) |
 | `reminders` | `0 8 * * *` | `runReminderSweep`: `live` ending within 30 days without a reminder becomes `expiring`, gets a renewal token valid until `ends_at` and the `renewal_reminder` email (J-02) |
-| `retention` | `15 3 * * *` | `runRetentionPurge`: the daily purge (J-04; see `docs/DATA_MODEL.md`, "Retention") |
+| `retention` | `15 3 * * *` | `runRetentionPurge`: the daily purge (J-04; see `docs/DATA_MODEL.md`, "Retention"; since phase 9 it purges `dead_letter` after 14 days too), then `runDeadLetterDigest` (`@smog/admin/server`): one `admin_dead_letter` email per admin (`admin_dead_letter:<yyyy-mm-dd>:<adminId>`), at most once a day (KV marker `dlq-digest:<date>`, TTL 3 days, written after every send was enqueued), only when open dead letters exist, `dlq-lost:*` counters are non-zero or a sponsorship has been `render_failed` for more than 24 h; counts and types only |
 
 Locally: `bun run cron <stale|expiry|reminders|retention>` calls the dev server's scheduled endpoint; `bun run retention --env <env> --dry-run` counts what the purge would delete.
 
@@ -159,9 +165,9 @@ area; each task fills its own.
 
 | Procedure | Input | Output | Audit |
 |---|---|---|---|
-| `admin.dashboard` | none | `{ gestures: { total, published, unpublished }, categories: { total, published }, users: { total, admins, banned, last30Days }, sponsorships: { inReview, awaitingPayment, rendering, renderFailed, live, expiring, refundNeeded }, recentAudit: AuditEntry[≤5] }` | read |
+| `admin.dashboard` | none | `{ gestures: { total, published, unpublished }, categories: { total, published }, users: { total, admins, banned, last30Days }, sponsorships: { inReview, awaitingPayment, rendering, renderFailed, live, expiring, refundNeeded }, deadLetters: { email, events, oldestReceivedAt: number \| null }, recentAudit: AuditEntry[≤5] }` | read |
 
-One D1 batch. `banned` counts bans that have not expired; `last30Days` counts
+`deadLetters` (phase 9) counts the open dead letters per queue (neither replayed nor discarded) and the oldest one's `received_at`. One D1 batch. `banned` counts bans that have not expired; `last30Days` counts
 accounts created in the last 30 days. The sponsorship counts are by status;
 `refundNeeded` counts payments that need the admin: `refund_needed` with no
 refund recorded yet (`refunded_cents = 0`), or a chargeback while one of the
@@ -278,6 +284,18 @@ payment's sponsorships still holds its gesture (a blocking status).
 - `bun run admin:grant` stays the way to make the first admin (spec §6); it also lifts a ban. **`--create` (phase 8 ruling 18):** `bun run admin:grant --env <dev|staging|production> --create [--yes] [--dry-run] <email>` first inserts the account when no account has that (trimmed, lower-cased) email: `email_verified = 1`, role `admin`, no credential, name `""`, a new UUID, `welcomed_at` set; with an existing account it is the plain grant. It never writes another role than `admin` and never demotes. The new admin signs in with an email code, also during maintenance (the sign-in-only routes of `/api/auth`, then `POST /api/maintenance/bypass`). On staging and production `--create` needs `--yes` (a typo would make a verified admin of someone else's address); `--dry-run` prints the single-quoted `wrangler d1 execute` line to check. The SQL is `@smog/config/admin-grant`'s.
 - `account.delete` is `INVALID_STATE` for the last admin whose ban is not in force.
 
+### Dead letters (phase 9)
+
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `admin.deadLetters.list` | `{ status?: "open" \| "replayed" \| "discarded" (default `open`), queue?: "email" \| "events", cursor?, limit? (1..100, default 50) }` | `{ items: DeadLetter[], nextCursor: string \| null }` | read |
+| `admin.deadLetters.replay` | `{ id }` | `{ replayedAt }` | `dead_letter.replay` `{ queue, type }`, `target_type` `dead_letter` |
+| `admin.deadLetters.discard` | `{ id }` | `{ discardedAt }` | `dead_letter.discard` `{ queue, type }` |
+
+- `DeadLetter` is `{ id, queue, type, attempts, receivedAt, status, replayable, replayedAt, discardedAt, error }`: **never a body, an address or a code** (the list selects no `body` column; a test fails if one appears). `error` is a reason code (`secret_template`, `no_idempotency_key`, `invalid_message`). Newest first (`received_at, id` keyset); a cursor the list did not issue is `VALIDATION`.
+- `replay` puts the stored message back on its origin queue (`EMAIL_QUEUE` or `EVENTS_QUEUE`) and sets `replayed_at` in one D1 batch with its audit entry. An email goes back with its **original idempotency key**, so the consumer skips one that was in fact sent; a message **without a key is refused** whatever `replayable` says, and so is a secret template or a missing body: `INVALID_STATE { reason: "notReplayable" }`. A message already replayed or discarded is `INVALID_STATE { reason: "alreadyHandled" }` (a lost race too: the claim is guarded, and the loser writes no entry). The queue is written first, so a failed enqueue changes nothing (an error, not an entry); two admins at the same moment may both enqueue, and only one claims the row. `NOT_FOUND` for an unknown id.
+- `discard` marks an open message discarded (a non-replayable one too); the same `alreadyHandled` and `NOT_FOUND` rules.
+
 ### Maintenance
 
 | Procedure | Input | Output | Audit |
@@ -320,7 +338,7 @@ payment's sponsorships still holds its gesture (a blocking status).
 - `AdminSponsorshipDetail` holds the sponsorship, the gesture with its original `playbackId`, `video: { playbackId, fakeRender }` (`fakeRender` when the video is the gesture's own: the phase 6 fake render), the sponsor and the invoice request (or `null`), `logoUrl` (`/api/logos/<uuid>`), the payments (`id, mollieId, kind, status, amountCents, refundedCents, refundedAt, refunded, chargedBackCents, chargedBackAt, paidAt, createdAt, mollieDashboardUrl, items: { sponsorshipId, gesture, amountCents, includesLogo, status }[]`), the event trail (`actor` `null` for the system or a deleted account), the render jobs (`attempt`, `status`, `error` (the URL-free summary, at most 300 characters), the dates) and the tokens (`id, purpose, createdAt, expiresAt, usedAt`; never a hash).
 - Every action runs the guarded batch of `@smog/sponsorships` (injected by `@smog/api` as `AdminDeps.sponsorships`) with its audit entries in the **same** D1 batch: the change, its `sponsorship_event` and the entries land together or not at all. A lost race (a guard in the batch) and a status that does not allow the action are `INVALID_STATE stale`; the other refusals are `INVALID_STATE` `noVideo`, `gestureTaken`, `notRenewable`, `paid`, `notRefunded`, `paymentsUnavailable`, `paymentProvider` (Mollie failed); `NOT_FOUND` for an unknown sponsorship or payment. Emails (`sponsorship_live` on approve) and `payment.settled` are enqueued after the commit on the rpc env's queues (`enqueueOutputs`): a failed enqueue is retried, then logged and swallowed, except that `markPaid` fails the call when `payment.settled` cannot be enqueued (the change is committed; the stale sweep re-sends it).
 - `requestChanges` from `rejected` is allowed only while the rejection is younger than `REJECTED_VIDEO_RETENTION_DAYS` (30): after that `INVALID_STATE` with `reason: rejectedTooLongAgo` (the age runs from the latest `rejected` event, else a migrated row's `legacy` event `data.legacy.reviewedAt`, else there is no bound). The daily purge deletes the Mux asset of a sponsorship whose `rejected` event is that old, at most 20 per run, and a migrated row with no `rejected` event is never purged (`docs/cutover-runbook.md`, the rejected-asset decision).
-- `requestChanges` and `regenerateToken` revoke the open links of that purpose; the URL holds the raw token, shown once, and is never stored, logged or audited (only its expiry is).
+- `requestChanges` and `regenerateToken` revoke the open links of that purpose; the URL holds the raw token, shown once, and is never stored, logged or audited (only its expiry is). **The token is in the URL fragment** (phase 9 task 7): `/sponsor/edit#token=<raw>` and `/sponsor/renew#token=<raw>` (`sponsorshipLinkUrl` in `@smog/sponsorships/schema`, the only builder; emails, this dialog), so it never reaches a server, a CDN, Workers Logs or a `Referer`. The pages read it in the browser (`useLinkToken`) and send it in the procedures' body. An old `?token=` link (already emailed, migrated, copied by an admin) still opens: the page moves the token into the fragment with `history.replaceState`. `GET /sponsors/re-edit?token=` (and `/sponsors/renew`) answer `302 Location: /sponsor/edit#token=<same>` (a 301 for a URL with a token would be cached for good; without a token it stays 301). The first request of an old link is the one place a token can reach a log (accepted: the token is single-purpose, expires, and is revoked on use, reject, expire or cancel).
 - `reject`, `forceExpire` and `cancel` (for each sponsorship it cancels) revoke every open re-edit and renewal link of that sponsorship in the same batch, so an emailed link answers `TOKEN_INVALID` ("link no longer usable"). Cancelling a renewal payment leaves its renewal link open for another try.
 - `markPaid` and `cancel` act on the whole payment (every sponsorship in it), only while it is `open`. Both ask Mollie first (when a key and a Mollie id exist). For `markPaid`, a payment Mollie reports `paid` is settled as the webhook does, with the entries (`source: "mollie"`) in the settlement's batch; `result` is `settled`, or `refund_needed` when the settlement flagged it. Otherwise it is marked paid by hand (`marked_paid_manually`, every item to `rendering`, `payment.settled`; an item it did not move is audited `changed: false`), and only after that commit cancelled at Mollie while `isCancelable` (best effort, logged). `cancel` commits, then cancels at Mollie the same way; a payment Mollie reports `paid` is settled with `refused: "paid"` entries and answered `INVALID_STATE paid`.
 - `forceExpire` needs `confirmName` equal to the gesture name (case-insensitive, else `VALIDATION`); after the batch it deletes the sponsored Mux asset through `@smog/video` `deleteAsset` (as the expiry sweep; Mux's 404 is done) unless it is the gesture's own (a failure is logged and swallowed).
@@ -352,3 +370,51 @@ Bun, `packages/render/src/server/*` (phase 7 ruling 7). In the Container it list
 - The upload is retried once after a network fault or a 5xx; a 4xx is final.
 - Then: the logo is written to the job's temp directory and served at `/assets/<id>/logo`; `readSourceMetadata(sourceUrl)` (a source that cannot be fetched is `500 renderFailed`, retryable; one that cannot be read is `422 sourceUnreadable`; one longer than 120 s, `RENDER_SOURCE_MAX_SECONDS`, is `422 sourceTooLong`); the props are validated with `sponsoredVideoPropsSchema`; `renderMedia` (H.264, JPEG frames, `concurrency: 1`); the file is `PUT` to `uploadUrl` with `Content-Type: video/mp4` and its `Content-Length` (a refusal or a network fault is `502 uploadFailed`). The temp files are deleted whatever happens. Any other failure is `500 renderFailed`.
 - Messages and logs never hold a URL: every answer and every console line, Remotion's own included, is scrubbed (`scrubUrls`), and an error's `cause` is never logged or answered.
+
+## Cache policy and the static metadata routes (phase 9 task 6 and 9)
+
+One table, `apps/site/src/worker/cache.ts` (`cacheHeaders`, applied in `worker/headers.ts` only when the route set no `Cache-Control` of its own), and `apps/site/public/_headers` for what Cloudflare serves before the Worker runs; `apps/site/test/cache-policy.test.ts` keeps the two together and `e2e/perf.spec.ts` reads the real headers.
+
+| Path class | `Cache-Control` |
+|---|---|
+| Hashed build output `/assets/<name>-<hash>.(css\|js\|woff2)` | `public, max-age=31536000, immutable` (matched by extension in `_headers`: a new hashed extension needs a line there) |
+| The unhashed brand files, icons, `og.png`, any other `/assets/*` (including the generated `/assets/logo.svg`) | `public, max-age=86400` |
+| `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest` | `public, max-age=3600` |
+| Documents (every SSR page; each carries its CSP nonce) | `private, no-cache` |
+| `/api/*`, `/_serverFn/*` (TanStack server functions, session-dependent), `/webhooks/*`, `/dev/*`, the token `302` and every 5xx (the maintenance page included) | `no-store` |
+
+No `Vary` is needed: every locale-dependent response is a document. `_headers` also sets Permissions-Policy, COOP and HSTS for the static files; the Worker sets the same set (and the CSP) on every response it serves (`worker/headers.ts`, pinned per environment by `test/security-headers.test.ts`).
+
+**Metadata routes.** `GET /manifest.webmanifest` (`routes/manifest[.]webmanifest.ts`, the web app manifest built from constants by `apps/site/src/lib/manifest.ts`; `application/manifest+json`, linked once from `__root` with `<link rel="manifest">`; its icons are `icon-192.png`, `icon-512.png` and `icon-maskable-512.png` in `public/`), `GET /robots.txt`, `GET /sitemap.xml` (cached an hour in the Cache API), `GET /assets/logo.svg` (the old site's logo path, generated by `@smog/brand`, kept for old links and embeds) and the app-link files under `/.well-known/` (static). `browserconfig.xml` and the Yandex manifest are dropped on purpose (`docs/DECISIONS.md`, "Parity audit (phase 9 task 9)").
+
+## Rate limits and request caps (phase 9 task 8)
+
+The four Workers Rate Limiting bindings (`ratelimits` in `wrangler.jsonc`; staging and production: `RL_API` 300 per 60 s, `RL_SPONSOR` 5, `RL_AUTH` 5, `RL_ANALYTICS` 120; dev 1000 each) are keyed by the client address, `cf-connecting-ip` only (`clientIp` in `apps/site/src/server/context.ts`). `X-Forwarded-For`, `Forwarded` and `X-Real-IP` are never read, so a caller cannot choose its bucket. A request without `cf-connecting-ip` (the dev server, a test) shares one `unknown` bucket: accepted, because Cloudflare always sets it in front of staging and production. `scripts/security-guard.test.ts` holds this table in code and fails for a route file that is in neither column, for a limiter its source does not name, and for a missing "none, because".
+
+| Route file (`apps/site/src/routes/`) | Serves | Limiter | Key |
+|---|---|---|---|
+| `api/rpc/$.ts` | `/api/rpc/*` | `RL_API` (`@smog/rpc` handler interceptor, after the origin check, before the session read) | `api:<ip>` |
+| `api/openapi/$.ts` | `/api/openapi/*` (dev, staging) | `RL_API`, the same handler options | `api:<ip>` |
+| `api/auth/$.ts` | `/api/auth/*` | `RL_AUTH` on POSTs except `sign-out` and `get-session` | `auth:<ip>` |
+| `api/analytics.ts` | `/api/analytics` | `RL_ANALYTICS` | `analytics:<ip>` |
+| `api/csp-report.ts` | `/api/csp-report` | `RL_ANALYTICS` | `csp:<ip>` |
+| `api/logos/upload.$key.ts` | `PUT /api/logos/upload/<key>` | `RL_SPONSOR` | `<ip>:logo-upload` |
+| `api/sponsor/reedit-logo.ts` | `POST /api/sponsor/reedit-logo` | `RL_API` | `<ip>` |
+| `api/webhooks/mollie.ts`, `webhooks/mollie.ts` (legacy alias) | Mollie | `RL_API` for the counted failures only (a verified id is never limited, so a genuine retry is never refused) | `mollie-webhook:<ip>` |
+| `api/webhooks/mux.ts` | Mux | `RL_API` for rejected deliveries only (a verified delivery is never limited) | `mux-webhook:<ip>` |
+| `api/logos/$key.ts` | `GET /api/logos/<key>` | none, because an admin session is required and a guest has no cookie, so Better Auth answers without a D1 read | |
+| `api/health.ts` | `/api/health` | none, because it reads the vars only (no D1, KV or session) | |
+| `dev/e2e-seed.ts`, `dev/mail.ts`, `dev/mail[.]json.ts` | `/dev/*` | none, because dev only: 404 in staging and production | |
+| `manifest[.]webmanifest.ts` | `/manifest.webmanifest` | none, because static JSON built from constants, no I/O | |
+| `robots[.]txt.ts` | `/robots.txt` | none, because static text | |
+| `sitemap[.]xml.ts` | `/sitemap.xml` | none, because the answer is cached for an hour in the Cache API | |
+| `turnstile-bridge.ts` | `/turnstile-bridge` | none, because a static page with no I/O | |
+| the SSR pages (`*.tsx`) | every page | `RL_API`, once per render, shared with the loaders' in-process calls (`limitRender`); over it the page answers 429 | `api:<ip>` |
+| `worker/maintenance.ts` | `POST /api/maintenance/bypass` | `RL_AUTH` | `mx:<ip>` |
+| Workers Static Assets | `/assets/*`, icons, `/.well-known/*` | none, because they are served before the Worker runs | |
+
+Per procedure, on top of the transport's `RL_API`: `RL_SPONSOR` (`rateLimit("RL_SPONSOR")`, key `<ip>:<procedure path>`) and Turnstile on the sponsor mutations (`sponsorships.checkout`, `reedit.submit`, `renewal.checkout`) and `RL_SPONSOR` alone on `sponsorships.uploadLogo`; see the `sponsorships.*` table.
+
+Request caps: the RPC and OpenAPI transports refuse a body over **5 MiB** with an empty `413` (`no-store`) before the origin check, the rate limit or any procedure (`capRequestBody` in `apps/site/src/server/rpc.ts`; a declared `content-length` is refused without a read, a body without one is counted as it streams and cancelled past the cap, a malformed length is a `400`). The other caps: the sponsor logo 2 MiB (`PUT` upload), the re-edit logo request 1 KiB, the Mollie webhook 4 KiB, the Mux webhook 1 MiB, the CSP report 16 KiB, the analytics relay 4 KiB.
+
+`[csp] violation` log lines are sampled per isolate: at most 20 per minute, then one `[csp] suppressed { count }` line when the window closes (the next report after it). The answer is `204` either way.

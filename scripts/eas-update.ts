@@ -103,6 +103,13 @@ export function planUpdate(easJson: string, args: UpdateArgs): UpdatePlan {
     }
     env[key] = value;
   }
+  // The variant changes the native identity (and so the fingerprint runtime
+  // version): an update published without it would never match a variant's
+  // build. The production profile leaves it unset, which is passed as an
+  // empty value (the store identity), so a stale `APP_VARIANT` in the
+  // caller's shell cannot turn a production update into a variant's.
+  env.APP_VARIANT =
+    typeof source.APP_VARIANT === "string" ? source.APP_VARIANT : "";
   return {
     command: [
       "eas",

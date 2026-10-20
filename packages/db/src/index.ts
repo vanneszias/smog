@@ -1,5 +1,6 @@
 // biome-ignore-all lint/performance/noBarrelFile: the package entry point (`@smog/db`): the schema, its row types and the enums.
 export * from "./enums";
+export { eraseDeadLettersOf } from "./erase-dead-letters";
 export {
   rebuildCategoryGesturesFtsSql,
   rebuildGestureFtsSql,
@@ -7,6 +8,7 @@ export {
 } from "./fts";
 export {
   AUDIT_RETENTION_MS,
+  DEAD_LETTER_RETENTION_MS,
   RETENTION_CHUNK_SIZE,
   RETENTION_MAX_CHUNKS,
   RETENTION_PURGES,

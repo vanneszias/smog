@@ -1,10 +1,14 @@
-import { describe, expect, it } from "@jest/globals";
+import { afterEach, describe, expect, it, jest } from "@jest/globals";
 import { redirectSystemPath } from "../app/+native-intent";
 
 const ORIGIN = "https://smog.example";
 
 const redirect = (path: string, initial = false): string =>
   redirectSystemPath({ initial, path });
+
+const GESTURE_OR_LIST_PATH = /^\/(gestures|shared)\//;
+const mockScheme = { current: "smog" };
+jest.mock("@/lib/app-scheme", () => ({ appScheme: () => mockScheme.current }));
 
 describe("redirectSystemPath", () => {
   it.each([
@@ -147,6 +151,34 @@ describe("redirectSystemPath", () => {
       expect(redirect(path)).toBe("/magic-link");
     }
   );
+
+  describe("in an app variant (phase 9 ruling 9)", () => {
+    afterEach(() => {
+      mockScheme.current = "smog";
+    });
+
+    it.each([
+      ["smog-staging", "smog-staging://gestures/hond", "smog://gestures/hond"],
+      [
+        "smog-dev",
+        "smog-dev:///lists/Zm9vYmFyYmF6",
+        "smog://lists/Zm9vYmFyYmF6",
+      ],
+    ])("%s opens its own scheme, not the store app's", (scheme, own, store) => {
+      mockScheme.current = scheme;
+      expect(redirect(own)).toMatch(GESTURE_OR_LIST_PATH);
+      expect(redirect(store)).toBe("/");
+      // The site's links work in every build.
+      expect(redirect(`${ORIGIN}/gestures/hond`)).toBe("/gestures/hond");
+    });
+
+    it("opens the variant's magic link with its token only", () => {
+      mockScheme.current = "smog-staging";
+      expect(redirect(`smog-staging://magic-link/app?token=${TOKEN}`)).toBe(
+        TARGET
+      );
+    });
+  });
 
   it.each([
     // No legitimate sender uses these: only /magic-link/app is mapped.

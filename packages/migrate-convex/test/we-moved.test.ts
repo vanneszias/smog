@@ -9,6 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { emailMessageSchema } from "@smog/jobs";
+import { main } from "../src/cli/main";
 import type { Timer } from "../src/cli/remote";
 import {
   batchMessages,
@@ -22,6 +23,7 @@ import {
   readSiteConfig,
   runWeMoved,
   SITE_WRANGLER_CONFIG,
+  WE_MOVED_FAILED,
   WE_MOVED_LEDGER,
   type WeMovedContext,
   type WeMovedMessage,
@@ -205,7 +207,8 @@ function setup(
     CLOUDFLARE_ACCOUNT_ID: ACCOUNT,
     CLOUDFLARE_API_TOKEN: TOKEN,
   },
-  secrets: readonly string[] = ALL_PROVIDER_SECRETS
+  secrets: readonly string[] = ALL_PROVIDER_SECRETS,
+  kv: Readonly<Record<string, string>> = {}
 ) {
   const wrangler = createFakeWrangler({
     d1: (query) => {
@@ -216,6 +219,7 @@ function setup(
       });
       return [rows];
     },
+    kv,
     secrets,
   });
   const { sleeps, timer } = fakeTimer();
@@ -559,5 +563,279 @@ describe("the site config", () => {
     const config = readSiteConfig(readFileSync(SITE_WRANGLER_CONFIG, "utf8"));
     expect(config.queueName).toBe("smog-production-email");
     expect(new URL(config.siteUrl).protocol).toBe("https:");
+  });
+});
+
+describe("we-moved --resend (phase 9 ruling 11)", () => {
+  const MARKER = (id: string) => `email:sent:we_moved:${id}`;
+
+  function ledgerOf(): Record<
+    string,
+    { messageId: string; queuedAt: string } | undefined
+  > {
+    return JSON.parse(readFileSync(join(dir, WE_MOVED_LEDGER), "utf8")).entries;
+  }
+
+  function failedOf(): Record<
+    string,
+    { at: string; reason: string } | undefined
+  > {
+    return JSON.parse(readFileSync(join(dir, WE_MOVED_FAILED), "utf8")).keys;
+  }
+
+  test("a partial failure records what failed and was never made; --resend --failed sends exactly those, once", async () => {
+    const queues = fakeQueuesApi({ failBatch: { nth: 2, status: 500 } });
+    const first = setup(recipients(250), queues);
+    const firstOut = capture();
+    await expect(
+      runWeMoved(
+        { ...RUN, apply: true, outDir: dir },
+        first.context,
+        firstOut.out
+      )
+    ).rejects.toThrow("The Queues API answered 500 to batch 2");
+    expect(Object.keys(ledgerOf())).toHaveLength(100);
+    const failed = failedOf();
+    expect(Object.keys(failed)).toHaveLength(150);
+    expect(failed["user-0100"]?.reason).toBe("failed");
+    expect(failed["user-0199"]?.reason).toBe("failed");
+    expect(failed["user-0200"]?.reason).toBe("not-sent");
+    expect(Object.keys(failed).includes("user-0000")).toBe(false);
+
+    // Dry: reads, prints, changes nothing.
+    const ledgerBefore = readFileSync(join(dir, WE_MOVED_LEDGER), "utf8");
+    const failedBefore = readFileSync(join(dir, WE_MOVED_FAILED), "utf8");
+    const dry = setup(recipients(250), queues);
+    const dryOut = capture();
+    expect(
+      await runWeMoved(
+        { ...RUN, outDir: dir, resend: { failed: true } },
+        dry.context,
+        dryOut.out
+      )
+    ).toBe(0);
+    expect(dryOut.lines.log.join("\n")).toContain(
+      "we-moved --resend (dry run): 250 migrated account(s); 150 selected; 150 to queue in 2 batch(es)"
+    );
+    expect(dryOut.lines.log.join("\n")).toContain(
+      "Nothing was queued and no ledger entry was changed"
+    );
+    expect(readFileSync(join(dir, WE_MOVED_LEDGER), "utf8")).toBe(ledgerBefore);
+    expect(readFileSync(join(dir, WE_MOVED_FAILED), "utf8")).toBe(failedBefore);
+    expect(queues.batches).toHaveLength(1);
+
+    // Apply: the 150 go out, once each; the ledger holds all 250.
+    const again = setup(recipients(250), queues);
+    const againOut = capture();
+    expect(
+      await runWeMoved(
+        { ...RUN, apply: true, outDir: dir, resend: { failed: true } },
+        again.context,
+        againOut.out
+      )
+    ).toBe(0);
+    expect(queues.batches.map((batch) => batch.length)).toEqual([100, 100, 50]);
+    const keys = queues.batches
+      .flat()
+      .map((entry) => entry.body.idempotencyKey);
+    expect(new Set(keys).size).toBe(250);
+    expect(Object.keys(ledgerOf())).toHaveLength(250);
+    expect(Object.keys(failedOf())).toEqual([]);
+
+    // Nothing left to resend.
+    const none = setup(recipients(250), queues);
+    await runWeMoved(
+      { ...RUN, apply: true, outDir: dir, resend: { failed: true } },
+      none.context,
+      capture().out
+    );
+    expect(queues.batches).toHaveLength(3);
+
+    for (const text of [firstOut.all(), dryOut.all(), againOut.all()]) {
+      expect(text).not.toContain(`@${MAIL_DOMAIN}`);
+    }
+  });
+
+  test("a resend by key skips what the consumer's marker says was delivered, replaces the ledger entry of the rest and reports unknown keys", async () => {
+    const queues = fakeQueuesApi();
+    const first = setup(recipients(5), queues);
+    await runWeMoved(
+      { ...RUN, apply: true, outDir: dir },
+      first.context,
+      capture().out
+    );
+    const before = ledgerOf();
+    expect(queues.batches).toHaveLength(1);
+
+    const kv = { [MARKER("user-0001")]: "1" };
+    const dry = setup(recipients(5), queues, undefined, undefined, kv);
+    const dryOut = capture();
+    await runWeMoved(
+      {
+        ...RUN,
+        outDir: dir,
+        resend: {
+          keys: ["user-0001", "user-0002", "user-0002", "user-9999"],
+        },
+      },
+      dry.context,
+      dryOut.out
+    );
+    const dryText = dryOut.all();
+    expect(dryText).toContain("3 selected; 1 to queue in 1 batch(es)");
+    expect(dryText).toContain(
+      "Resend: 1 skipped (the consumer's email:sent marker exists: delivered), 1 not a current recipient, 1 of the 1 to send have a ledger entry"
+    );
+    expect(dryText).toContain("Skipped (delivered): user-0001.");
+    expect(dryText).toContain("not a current recipient");
+    expect(dryText).toContain("user-9999");
+    expect(ledgerOf()).toEqual(before);
+    expect(queues.batches).toHaveLength(1);
+
+    const apply = setup(recipients(5), queues, undefined, undefined, kv);
+    const applyOut = capture();
+    expect(
+      await runWeMoved(
+        {
+          ...RUN,
+          apply: true,
+          outDir: dir,
+          resend: {
+            keys: ["user-0001", "user-0002", "user-0002", "user-9999"],
+          },
+        },
+        apply.context,
+        applyOut.out
+      )
+    ).toBe(0);
+    expect(queues.batches).toHaveLength(2);
+    const resent = queues.batches[1] ?? [];
+    expect(resent.map((entry) => entry.body.idempotencyKey)).toEqual([
+      "we_moved:user-0002",
+    ]);
+    const after = ledgerOf();
+    expect(after["user-0002"]?.messageId).toBe(resent[0]?.body.id);
+    expect(after["user-0002"]?.messageId).not.toBe(
+      before["user-0002"]?.messageId
+    );
+    for (const key of ["user-0000", "user-0001", "user-0003", "user-0004"]) {
+      expect(after[key]).toEqual(before[key]);
+    }
+    expect(`${dryText}${applyOut.all()}`).not.toContain(`@${MAIL_DOMAIN}`);
+  });
+
+  test("a resend that fails keeps the old ledger entries and records the keys for --failed", async () => {
+    const queues = fakeQueuesApi();
+    const first = setup(recipients(3), queues);
+    await runWeMoved(
+      { ...RUN, apply: true, outDir: dir },
+      first.context,
+      capture().out
+    );
+    const before = ledgerOf();
+    const broken = fakeQueuesApi({ failBatch: { nth: 1, status: 503 } });
+    const second = setup(recipients(3), broken);
+    await expect(
+      runWeMoved(
+        {
+          ...RUN,
+          apply: true,
+          outDir: dir,
+          resend: { keys: ["user-0000", "user-0001"] },
+        },
+        second.context,
+        capture().out
+      )
+    ).rejects.toThrow("The Queues API answered 503 to batch 1");
+    expect(ledgerOf()).toEqual(before);
+    expect(Object.keys(failedOf())).toEqual(["user-0000", "user-0001"]);
+  });
+
+  test("warns when a key was queued before the marker's 7-day window, and refuses more than 200 keys", async () => {
+    const queues = fakeQueuesApi();
+    const first = setup(recipients(3), queues);
+    await runWeMoved(
+      { ...RUN, apply: true, outDir: dir },
+      first.context,
+      capture().out
+    );
+    // The fake clock is 2026-10-04: make user-0001's ledger entry 40 days old.
+    const path = join(dir, WE_MOVED_LEDGER);
+    const ledger = JSON.parse(readFileSync(path, "utf8"));
+    ledger.entries["user-0001"].queuedAt = "2026-08-25T12:00:00.000Z";
+    writeFileSync(path, JSON.stringify(ledger));
+    const again = setup(recipients(3), queues);
+    const { all, lines, out } = capture();
+    await runWeMoved(
+      {
+        ...RUN,
+        outDir: dir,
+        resend: { keys: ["user-0000", "user-0001"] },
+      },
+      again.context,
+      out
+    );
+    expect(lines.error.join("\n")).toContain(
+      "1 key(s) were queued more than 7 days ago, past the consumer marker's window"
+    );
+    expect(lines.error.join("\n")).toContain("user-0001");
+    expect(lines.error.join("\n")).not.toContain("user-0000)");
+    expect(all()).not.toContain(`@${MAIL_DOMAIN}`);
+
+    const many = Array.from({ length: 201 }, (_, index) => `user-${index}`);
+    await expect(
+      runWeMoved(
+        { ...RUN, outDir: dir, resend: { keys: many } },
+        setup(recipients(3), queues).context,
+        capture().out
+      )
+    ).rejects.toThrow("at most 200 per run");
+  });
+
+  test("production only, and a plan folder for production", async () => {
+    const { context, wrangler } = setup(recipients(1));
+    await expect(
+      runWeMoved(
+        {
+          ...RUN,
+          env: "staging",
+          outDir: dir,
+          resend: { keys: ["user-0000"] },
+        },
+        context,
+        capture().out
+      )
+    ).rejects.toThrow("we-moved runs on production only");
+    expect(wrangler.calls).toEqual([]);
+  });
+});
+
+describe("we-moved --resend on the command line", () => {
+  async function usage(argv: readonly string[]): Promise<number> {
+    return await main(["we-moved", ...argv], capture().out);
+  }
+
+  test("--resend takes an absolute ids file or --failed, not both, and --failed needs --resend", async () => {
+    const ids = join(dir, "ids.txt");
+    writeFileSync(ids, "user-0001\n");
+    const base = ["--env", "production", "--out", dir];
+    expect(await usage([...base, "--resend"])).toBe(2);
+    expect(await usage([...base, "--resend", "--apply"])).toBe(2);
+    expect(await usage([...base, "--failed"])).toBe(2);
+    expect(await usage([...base, "--resend", ids, "--failed"])).toBe(2);
+    expect(await usage([...base, "--resend", "ids.txt"])).toBe(2);
+  });
+
+  test("an ids file holds keys, never an address, and the error does not echo the line", async () => {
+    const ids = join(dir, "ids.txt");
+    writeFileSync(ids, `# resend\nuser-0001\n\nperson.0001@${MAIL_DOMAIN}\n`);
+    const { all, out } = capture();
+    const code = await main(
+      ["we-moved", "--env", "production", "--out", dir, "--resend", ids],
+      out
+    );
+    expect(code).toBe(2);
+    expect(all()).toContain("Line 4 of the ids file is not a ledger key");
+    expect(all()).not.toContain(MAIL_DOMAIN);
   });
 });

@@ -65,6 +65,7 @@ export {
   reeditSubmitInputSchema,
   renewalCheckoutInputSchema,
   renewalSchema,
+  sponsorshipLinkUrl,
   sponsorshipTokenSchema,
   tokenInputSchema,
 } from "./tokens";

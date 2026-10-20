@@ -268,10 +268,19 @@ export function StepDetails({
         </Text>
       ) : null}
       <div className="flex flex-wrap justify-between gap-3">
-        <Button icon={<ArrowLeft />} onClick={onBack} variant="secondary">
+        <Button
+          className="max-w-full whitespace-normal"
+          icon={<ArrowLeft />}
+          onClick={onBack}
+          variant="secondary"
+        >
           {t("sponsor.details.back")}
         </Button>
-        <Button icon={<ArrowRight />} type="submit">
+        <Button
+          className="max-w-full whitespace-normal"
+          icon={<ArrowRight />}
+          type="submit"
+        >
           {t("sponsor.details.continue")}
         </Button>
       </div>

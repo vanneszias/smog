@@ -743,6 +743,36 @@ describe("admin.users.delete", () => {
     });
   });
 
+  it("erases the dead letters addressed to the deleted account, by address, like the self-service path", async () => {
+    const member = await signedUp("user");
+    const insert = (id: string, body: string | null) =>
+      env.DB.prepare(
+        "INSERT INTO dead_letter (id, queue, origin_queue, type, attempts, received_at, body, replayable) VALUES (?, 'smog-dev-email-dlq', 'email', 'transactional/welcome', 6, 1000, ?, ?)"
+      )
+        .bind(id, body, body === null ? 0 : 1)
+        .run();
+    await insert("dl-admin-mine", JSON.stringify({ to: member.user.email }));
+    await insert(
+      "dl-admin-mine-case",
+      JSON.stringify({ to: member.user.email.toUpperCase() })
+    );
+    await insert("dl-admin-other", JSON.stringify({ to: "other@smog.test" }));
+    await insert("dl-admin-no-body", null);
+
+    await callAs(admin, "users.delete", {
+      confirmEmail: member.user.email,
+      userId: member.user.id,
+    });
+
+    const left = await env.DB.prepare(
+      "SELECT id FROM dead_letter WHERE id LIKE 'dl-admin-%' ORDER BY id"
+    ).all<{ id: string }>();
+    expect(left.results.map((row) => row.id)).toEqual([
+      "dl-admin-no-body",
+      "dl-admin-other",
+    ]);
+  });
+
   it("refuses self and an admin, writing nothing", async () => {
     const other = await signedUp("admin");
     const mark = await auditMark();

@@ -33,10 +33,11 @@ const FAKE_MOLLIE_API_KEY = "test_fakeMollieKeyForTestsOnly000000";
 const SAMPLE_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
 
 /**
- * Browsers are preinstalled (never run `playwright install` here). The
- * Chromium at /opt/pw-browsers can be older than the one this Playwright
- * version expects, so it is launched by path when present;
- * PLAYWRIGHT_CHROMIUM_PATH overrides it.
+ * The sandbox's preinstalled Chromium (/opt/pw-browsers) can be older than
+ * the one this Playwright version expects, so it is launched by path when
+ * present; PLAYWRIGHT_CHROMIUM_PATH overrides it. CI has no such directory:
+ * it installs the matching Chromium (`playwright install --with-deps
+ * chromium`), which Playwright then finds itself.
  */
 const PREINSTALLED_CHROMIUM = "/opt/pw-browsers/chromium";
 const executablePath =
@@ -50,16 +51,47 @@ const executablePath =
  */
 const WORKERS = Number(process.env.E2E_WORKERS ?? (process.env.CI ? 1 : 2));
 
-/** The one spec that turns maintenance mode on (`admin-settings.spec.ts`). */
-const MAINTENANCE_SPEC = /admin-settings\.spec\.ts$/;
+/**
+ * The two specs that change what every visitor sees, on one worker, in this
+ * order (alphabetical file order, one worker): the catalogue spec publishes
+ * 100 gestures of its own for a moment (the bulk smoke), the settings spec
+ * turns maintenance mode on. They are the `serial` project, which runs
+ * alone (its own runner in CI, its own command locally), so no other spec
+ * sees those rows or that window.
+ */
+const SERIAL_SPECS = /\/admin-(catalog|settings)\.spec\.ts$/;
+/**
+ * The accessibility specs (phase 9 task 5), three projects so none passes
+ * about 15 minutes on a CI runner (a hung test was the first problem, the
+ * sum the second: docs/DECISIONS.md, "a11y shard on CI"). `a11y` takes every
+ * `a11y-*` spec the next two do not name, so a new one runs somewhere.
+ */
+const A11Y_SPECS = /\/a11y-[^/]*\.spec\.ts$/;
+/** Signed-in axe states and the keyboard-only runs (a session per test). */
+const A11Y_SIGNED_IN_SPECS = /\/a11y-(signed-in|keyboard)\.spec\.ts$/;
+/** Reflow, text spacing, reduced motion, landmarks and titles (many cheap pages). */
+const A11Y_REFLOW_SPECS = /\/a11y-(reflow|landmarks)\.spec\.ts$/;
+/**
+ * The admin accessibility specs (axe over every admin screen, light and dark
+ * at two widths: about 13 of the admin shard's 18 minutes on a loaded
+ * machine), their own project so no shard passes 15 minutes.
+ */
+const ADMIN_A11Y_SPECS = /\/admin-[^/]*a11y[^/]*\.spec\.ts$/;
+/** The other admin specs, except the serial ones. */
+const ADMIN_SPECS = /\/admin-[^/]*\.spec\.ts$/;
+
+const DESKTOP = {
+  ...devices["Desktop Chrome"],
+  launchOptions: { executablePath },
+};
 
 /**
- * The catalogue spec publishes 100 gestures of its own for a moment (the
- * bulk smoke): its own project, after the public specs, so none of them
- * sees those rows.
+ * Independent projects, no `dependencies`: a CI shard runs one of them on
+ * its own runner with its own dev server and D1 (`--project <name>`), and
+ * `bun run test:e2e` (scripts/e2e.ts) runs them one after another in this
+ * order (`PROJECTS` there; a test keeps the two lists equal). A spec lands in the first project that matches it by name:
+ * `serial`, `a11y-signed-in`, `a11y-reflow`, `a11y`, `admin-a11y`, `admin`, else `public`.
  */
-const CATALOG_SPEC = /admin-catalog\.spec\.ts$/;
-
 export default defineConfig({
   // Assertions wait up to 15 s (the default is 5 s): a first compile, or
   // Vite's "new dependencies optimized, reloading", can land mid-test.
@@ -71,33 +103,51 @@ export default defineConfig({
   outputDir: "test-results",
   projects: [
     {
-      name: "chromium",
-      // The maintenance and catalogue specs change what every visitor
-      // sees: their own projects.
-      testIgnore: [MAINTENANCE_SPEC, CATALOG_SPEC],
-      use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
+      name: "public",
+      testIgnore: [SERIAL_SPECS, A11Y_SPECS, ADMIN_SPECS],
+      use: DESKTOP,
     },
     {
-      // After the public specs, on one worker. Alone: `--project catalog --no-deps`.
-      dependencies: ["chromium"],
-      fullyParallel: false,
-      name: "catalog",
-      testMatch: CATALOG_SPEC,
-      use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
-      workers: 1,
+      name: "a11y",
+      testIgnore: [A11Y_SIGNED_IN_SPECS, A11Y_REFLOW_SPECS],
+      testMatch: A11Y_SPECS,
+      use: DESKTOP,
     },
     {
-      // After every other spec, on one worker, so no other test runs while
-      // the site is in maintenance. Alone: `--project maintenance --no-deps`.
-      dependencies: ["catalog"],
+      name: "a11y-signed-in",
+      testMatch: A11Y_SIGNED_IN_SPECS,
+      use: DESKTOP,
+    },
+    {
+      name: "a11y-reflow",
+      testMatch: A11Y_REFLOW_SPECS,
+      use: DESKTOP,
+    },
+    {
+      name: "admin",
+      testIgnore: [SERIAL_SPECS, ADMIN_A11Y_SPECS],
+      testMatch: ADMIN_SPECS,
+      use: DESKTOP,
+    },
+    {
+      name: "admin-a11y",
+      testMatch: ADMIN_A11Y_SPECS,
+      use: DESKTOP,
+    },
+    {
       fullyParallel: false,
-      name: "maintenance",
-      testMatch: MAINTENANCE_SPEC,
-      use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
+      name: "serial",
+      testMatch: SERIAL_SPECS,
+      use: DESKTOP,
       workers: 1,
     },
   ],
-  reporter: "list",
+  reporter: process.env.CI
+    ? [["list"], ["json", { outputFile: "playwright-report/results.json" }]]
+    : "list",
+  // One retry in CI (traces on it); a pass on the retry is reported as
+  // flaky by scripts/e2e-flaky-report.ts and is a bug to fix. None locally.
+  retries: process.env.CI ? 1 : 0,
   testDir: "./e2e",
   timeout: 60_000,
   use: {
@@ -108,7 +158,7 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     // Accept-Language picks the page language (no cookie yet): Dutch, the default.
     locale: "nl-BE",
-    trace: "retain-on-failure",
+    trace: process.env.CI ? "on-first-retry" : "retain-on-failure",
   },
   webServer: [
     {
@@ -134,7 +184,10 @@ export default defineConfig({
       url: `${MOLLIE_FAKE_URL}/__fake/health`,
     },
     {
-      command: `bunx vite dev --port ${PORT} --strictPort`,
+      // CI runners resolve `localhost` to ::1 first, so the server binds every
+      // address there; a developer machine binds loopback only (the dev-only
+      // seed endpoint must not be reachable from the LAN).
+      command: `bunx vite dev --port ${PORT} --strictPort --host ${process.env.CI ? "0.0.0.0" : "127.0.0.1"}`,
       env: {
         SMOG_DEV_MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY,
         SMOG_DEV_MOLLIE_API_URL: MOLLIE_FAKE_URL,

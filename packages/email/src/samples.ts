@@ -31,6 +31,18 @@ export const EMAIL_SAMPLES: {
     minutes: 60,
     url: `${SAMPLE_ORIGIN}/api/auth/verify-email?token=sample`,
   },
+  "transactional/admin-dead-letter": {
+    emailOpen: 3,
+    eventsOpen: 1,
+    lost: 0,
+    renderFailed: 2,
+    types: [
+      { count: 2, type: "transactional/welcome" },
+      { count: 1, type: "transactional/payment-confirmed" },
+      { count: 1, type: "payment.settled" },
+    ],
+    url: `${SAMPLE_ORIGIN}/admin/dead-letters`,
+  },
   // One checkout of two gestures, one with a logo (€ 60) and one without
   // (€ 50), by Acme BV with an invoice request.
   "transactional/admin-new-sponsorship": {
@@ -73,7 +85,7 @@ export const EMAIL_SAMPLES: {
     endsAt: "2027-10-02T08:00:00.000Z",
     gestureName: "Hond",
     name: "Alex",
-    url: `${SAMPLE_ORIGIN}/sponsor/renew?token=sample`,
+    url: `${SAMPLE_ORIGIN}/sponsor/renew#token=sample`,
   },
   "transactional/sponsorship-live": {
     displayName: "Acme BV",

@@ -66,6 +66,8 @@ describe("planUpdate", () => {
       }
     ).build.production.env;
     expect(plan.env).toEqual({
+      // The store identity: empty, so a stale shell value cannot leak in.
+      APP_VARIANT: "",
       EXPO_PUBLIC_API_URL: profile.EXPO_PUBLIC_API_URL as string,
       EXPO_PUBLIC_ENVIRONMENT: "production",
       EXPO_PUBLIC_SITE_HOST: profile.EXPO_PUBLIC_SITE_HOST as string,
@@ -86,6 +88,12 @@ describe("planUpdate", () => {
     expect(plan.env.EXPO_PUBLIC_API_URL).toBe(
       "https://smog-site-staging.zias.workers.dev"
     );
+    // The variant is part of the runtime fingerprint (phase 9 ruling 9).
+    expect(plan.env.APP_VARIANT).toBe("staging");
+    expect(
+      planUpdate(EAS, { passthrough: [], profile: "development" }).env
+        .APP_VARIANT
+    ).toBe("development");
   });
 
   test("refuses a profile without its channel, environment or origin keys", () => {

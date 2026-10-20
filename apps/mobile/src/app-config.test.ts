@@ -6,7 +6,7 @@ import { PRODUCTION_LAUNCH_ORIGIN } from "@smog/config/constants";
 import { parseMobileEnv } from "@smog/config/env/mobile";
 import { tokens } from "@smog/styles/tokens";
 import type { ConfigContext, ExpoConfig } from "expo/config";
-import createConfig from "../app.config";
+import createConfig, { parseAppVariant, variantIdentity } from "../app.config";
 import easJson from "../eas.json";
 import { devToolsAvailable } from "./lib/dev-tools";
 
@@ -155,6 +155,34 @@ describe("app.config", () => {
   });
 });
 
+describe("APP_VARIANT", () => {
+  it("is production when unset or empty, and refuses an unknown value", () => {
+    expect(parseAppVariant(undefined)).toBe("production");
+    expect(parseAppVariant("")).toBe("production");
+    expect(parseAppVariant("production")).toBe("production");
+    expect(parseAppVariant("staging")).toBe("staging");
+    expect(parseAppVariant("development")).toBe("development");
+    // A typo must not ship under the store identity.
+    expect(() => parseAppVariant("stagin")).toThrow("APP_VARIANT");
+    expect(() => parseAppVariant("Staging")).toThrow("APP_VARIANT");
+  });
+
+  it("gives every variant its own name, id and scheme", () => {
+    const identities = (["development", "staging", "production"] as const).map(
+      variantIdentity
+    );
+    for (const key of ["applicationId", "name", "scheme"] as const) {
+      expect(new Set(identities.map((identity) => identity[key])).size).toBe(3);
+    }
+    // Only the store app is in the AASA / assetlinks files.
+    expect(identities.map((identity) => identity.claimsSiteLinks)).toEqual([
+      false,
+      false,
+      true,
+    ]);
+  });
+});
+
 /** Each EAS profile, resolved the way its build resolves it (ruling 3). */
 describe("eas.json profiles", () => {
   const KEYS = [
@@ -162,10 +190,11 @@ describe("eas.json profiles", () => {
     "EXPO_PUBLIC_ENVIRONMENT",
     "EXPO_PUBLIC_SITE_HOST",
   ] as const;
-  const saved = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
+  const SAVED = [...KEYS, "APP_VARIANT"] as const;
+  const saved = Object.fromEntries(SAVED.map((key) => [key, process.env[key]]));
 
   afterEach(() => {
-    for (const key of KEYS) {
+    for (const key of SAVED) {
       if (saved[key] === undefined) {
         delete process.env[key];
       } else {
@@ -177,30 +206,42 @@ describe("eas.json profiles", () => {
   const MATRIX = [
     {
       api: "http://localhost:5173",
+      applicationId: "be.zias.smog.dev",
+      appName: "SMOG Dev",
       channel: "development",
       devTools: true,
       environment: "development",
       host: "localhost",
       name: "development",
       runtime: "dev",
+      scheme: "smog-dev",
+      variant: "development",
     },
     {
       api: "https://smog-site-staging.zias.workers.dev",
+      applicationId: "be.zias.smog.staging",
+      appName: "SMOG Staging",
       channel: "staging",
       devTools: true,
       environment: "preview",
       host: "smog-site-staging.zias.workers.dev",
       name: "staging",
       runtime: "staging",
+      scheme: "smog-staging",
+      variant: "staging",
     },
     {
       api: PRODUCTION_LAUNCH_ORIGIN,
+      applicationId: "be.zias.smog",
+      appName: "SMOG & Co",
       channel: "production",
       devTools: false,
       environment: "production",
       host: new URL(PRODUCTION_LAUNCH_ORIGIN).hostname,
       name: "production",
       runtime: "production",
+      scheme: "smog",
+      variant: undefined,
     },
   ] as const;
 
@@ -213,7 +254,9 @@ describe("eas.json profiles", () => {
   });
 
   it.each(MATRIX)("$name builds for its origin", (row) => {
-    const { env, ...rest } = profile(row.name);
+    const { env: profileEnv, ...rest } = profile(row.name);
+    const { APP_VARIANT: _variant, ...env } = profileEnv;
+    const variant = profileEnv.APP_VARIANT as string | undefined;
     expect(rest.channel).toBe(row.channel);
     expect(rest.environment).toBe(row.environment);
     // Only the reviewed public origin keys; the OpenPanel pair lives in the
@@ -229,12 +272,36 @@ describe("eas.json profiles", () => {
     expect(parsed.EXPO_PUBLIC_API_URL).toBe(row.api);
     expect(parsed.EXPO_PUBLIC_SITE_HOST).toBe(row.host);
 
+    // Only development and staging set APP_VARIANT; the store build leaves it
+    // unset (its identity is the unvaried one).
+    expect(variant).toBe(row.variant);
+
     Object.assign(process.env, env);
+    delete process.env.APP_VARIANT;
+    if (variant !== undefined) {
+      process.env.APP_VARIANT = variant;
+    }
     const config = load();
-    expect(config.ios?.associatedDomains).toEqual([`applinks:${row.host}`]);
-    const hosts = verifiedHosts(config);
-    expect(hosts.length).toBeGreaterThan(0);
-    expect(new Set(hosts)).toEqual(new Set([row.host]));
+    expect(config.name).toBe(row.appName);
+    expect(config.ios?.bundleIdentifier).toBe(row.applicationId);
+    expect(config.android?.package).toBe(row.applicationId);
+    expect(config.scheme).toBe(row.scheme);
+    expect(config.extra?.eas?.projectId).toBe(PROJECT_ID);
+    // Only the store app claims the site's universal links; a variant's
+    // identifiers are in no AASA or assetlinks file.
+    if (row.name === "production") {
+      expect(config.ios?.associatedDomains).toEqual([`applinks:${row.host}`]);
+      const hosts = verifiedHosts(config);
+      expect(hosts.length).toBeGreaterThan(0);
+      expect(new Set(hosts)).toEqual(new Set([row.host]));
+    } else {
+      expect(config.ios?.associatedDomains).toBeUndefined();
+      expect(verifiedHosts(config)).toEqual([]);
+      const schemes = (config.android?.intentFilters ?? [])
+        .flatMap((filter) => [filter.data ?? []].flat())
+        .map((data) => data.scheme);
+      expect(schemes).toEqual([row.scheme]);
+    }
     expect(devToolsAvailable()).toBe(row.devTools);
   });
 

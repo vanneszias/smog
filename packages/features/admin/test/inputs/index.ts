@@ -2,6 +2,7 @@ import type { Fixtures } from "../helpers";
 import { AUDIT_INPUTS } from "./audit";
 import { CATEGORIES_INPUTS } from "./categories";
 import { DASHBOARD_INPUTS } from "./dashboard";
+import { DEAD_LETTERS_INPUTS } from "./dead-letters";
 import { EMAILS_INPUTS } from "./emails";
 import { EXPORT_INPUTS } from "./export";
 import { GESTURES_INPUTS } from "./gestures";
@@ -26,6 +27,7 @@ export type ProcedureInputs = Record<
 export const ADMIN_INPUTS: ProcedureInputs = {
   ...DASHBOARD_INPUTS,
   ...AUDIT_INPUTS,
+  ...DEAD_LETTERS_INPUTS,
   ...GESTURES_INPUTS,
   ...CATEGORIES_INPUTS,
   ...MUX_INPUTS,

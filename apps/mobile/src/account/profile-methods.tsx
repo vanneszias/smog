@@ -35,7 +35,7 @@ import { appleIdentityToken, useAppleSignInAvailable } from "@/auth/apple";
 import { useAuthClient } from "@/lib/auth-client";
 import { useActionToast, useShowFeedback } from "./use-action-toast";
 
-/** Where a linked provider returns to (Expo turns it into `smog://`). */
+/** Where a linked provider returns to (Expo turns it into the app's scheme, `smog://` or a variant's). */
 const ACCOUNT_PATH = "/settings/account";
 
 type Methods = NonNullable<Account["me"]>["methods"];

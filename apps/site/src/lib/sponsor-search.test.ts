@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
   preselectSlugs,
+  readLinkToken,
   validatePaymentSearch,
   validateSponsorSearch,
-  validateTokenSearch,
 } from "./sponsor-search";
 
 describe("the sponsor pages' query params", () => {
@@ -42,9 +42,71 @@ describe("the sponsor pages' query params", () => {
     expect(validatePaymentSearch({})).toEqual({});
   });
 
-  test("?token= is a link token", () => {
+  test("the fragment carries the token", () => {
     const token = "a".repeat(43);
-    expect(validateTokenSearch({ token })).toEqual({ token });
-    expect(validateTokenSearch({ token: "short" })).toEqual({});
+    expect(
+      readLinkToken({
+        hash: `#token=${token}`,
+        pathname: "/sponsor/edit",
+        search: "",
+      })
+    ).toEqual({ replaceWith: null, token });
+    const uuid = "123e4567-e89b-42d3-a456-426614174000";
+    expect(
+      readLinkToken({ hash: `#token=${uuid}`, pathname: "/x", search: "" })
+        .token
+    ).toBe(uuid);
+  });
+
+  test("missing or malformed: no token, nothing to move", () => {
+    for (const hash of ["", "#", "#token=", "#token=short", "#other=1", "#%"]) {
+      expect(
+        readLinkToken({ hash, pathname: "/sponsor/edit", search: "" })
+      ).toEqual({ replaceWith: null, token: null });
+    }
+  });
+
+  test("an old ?token= is read and moved into the fragment", () => {
+    const token = "a".repeat(43);
+    expect(
+      readLinkToken({
+        hash: "",
+        pathname: "/sponsor/renew",
+        search: `?token=${token}`,
+      })
+    ).toEqual({
+      replaceWith: `/sponsor/renew#token=${token}`,
+      token,
+    });
+    // Other parameters stay.
+    expect(
+      readLinkToken({
+        hash: "",
+        pathname: "/sponsor/edit",
+        search: `?x=1&token=${token}`,
+      }).replaceWith
+    ).toBe(`/sponsor/edit?x=1#token=${token}`);
+  });
+
+  test("an invalid query token is still stripped from the address", () => {
+    expect(
+      readLinkToken({
+        hash: "",
+        pathname: "/sponsor/edit",
+        search: "?token=123",
+      })
+    ).toEqual({ replaceWith: "/sponsor/edit", token: null });
+  });
+
+  test("the fragment wins over the query", () => {
+    const a = "a".repeat(43);
+    const b = "b".repeat(43);
+    expect(
+      readLinkToken({
+        hash: `#token=${a}`,
+        pathname: "/sponsor/edit",
+        search: `?token=${b}`,
+      })
+    ).toEqual({ replaceWith: `/sponsor/edit#token=${a}`, token: a });
   });
 });

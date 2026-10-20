@@ -51,7 +51,7 @@ const REMOVE_PAYMENT_FILTER = /Remove the filter Payment/;
 const DAY = 86_400_000;
 const CREATED = Date.UTC(2026, 8, 20, 9, 30);
 const REEDIT_URL =
-  "https://smog.test/sponsor/edit?token=e2eFakeTokenForTheAdminDialog_0123456789ab";
+  "https://smog.test/sponsor/edit#token=e2eFakeTokenForTheAdminDialog_0123456789ab";
 
 function payment(patch: Partial<AdminPayment> = {}): AdminPayment {
   return {

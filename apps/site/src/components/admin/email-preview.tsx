@@ -34,6 +34,7 @@ const TEMPLATE_LABELS = {
   "auth/otp": "admin.emails.template.otp",
   "auth/reset-password": "admin.emails.template.resetPassword",
   "auth/verify-email": "admin.emails.template.verifyEmail",
+  "transactional/admin-dead-letter": "admin.emails.template.adminDeadLetter",
   "transactional/admin-new-sponsorship":
     "admin.emails.template.adminNewSponsorship",
   "transactional/admin-refund-needed":

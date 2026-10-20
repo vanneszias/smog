@@ -320,7 +320,9 @@ describe("runReminderSweep (J-02)", () => {
       (email?.props as { url: string } | undefined)?.url ?? ""
     );
     expect(`${url.origin}${url.pathname}`).toBe(`${SITE_URL}/sponsor/renew`);
-    const raw = url.searchParams.get("token") ?? "";
+    // The token is in the fragment, never in a query (phase 9 ruling 7).
+    expect(url.search).toBe("");
+    const raw = new URLSearchParams(url.hash.slice(1)).get("token") ?? "";
     expect(await hashSponsorshipToken(raw)).toBe(tokens[0]?.tokenHash);
     const trail = (await eventsOf(db, id)).map((event) => event.type);
     expect(trail).toEqual(["token_issued", "reminder_sent"]);

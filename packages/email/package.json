@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./body-policy": "./src/body-policy.ts",
     "./samples": "./src/samples.ts"
   },
   "scripts": {
@@ -18,7 +19,7 @@
     "@smog/utils": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-email": "6.11.0"
+    "react-email": "6.11.3"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "catalog:",

@@ -92,6 +92,20 @@
       "when": 1791116003496,
       "tag": "0012_user_welcomed_at",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1792421794434,
+      "tag": "0013_dead_letter",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1792454516783,
+      "tag": "0014_sponsorship_logo_key_idx",
+      "breakpoints": true
     }
   ]
 }

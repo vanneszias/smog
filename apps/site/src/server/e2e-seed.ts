@@ -33,6 +33,23 @@ const seedToken = z.object({
 });
 
 export const e2eSeedSchema = z.discriminatedUnion("op", [
+  /**
+   * One open dead letter (phase 9 task 4), by kind: `email` (a keyed
+   * welcome email to `e2e-dead-letter@smog.test`, replayable), `events`
+   * (a `render.requested` for a job that does not exist, replayable: its
+   * consumer acks it) or `secret` (a sign-in code email: stored with no
+   * body and not replayable, as the consumer stores it). The body is built
+   * here from the kind: the request never carries one.
+   */
+  z.object({
+    id: fixtureId,
+    kind: z.enum(["email", "events", "secret"]),
+    op: z.literal("deadLetter"),
+  }),
+  /** Deletes every `e2e-…` dead letter and the audit entries about them. */
+  z.object({ op: z.literal("resetDeadLetters") }),
+  /** A read: each `e2e-…` dead letter and whether it was replayed or discarded. */
+  z.object({ op: z.literal("deadLetterState") }),
   /** Sets a user's role (the shell spec's demotion; `admin:grant` in SQL). */
   z.object({
     email,
@@ -325,12 +342,86 @@ function checkoutStatements(
   return statements;
 }
 
+/** The stored body of a seeded replayable dead letter, as the consumer stores it. */
+function deadLetterBody(
+  kind: "email" | "events",
+  id: string
+): { body: string; type: string } {
+  if (kind === "events") {
+    return {
+      body: JSON.stringify({ renderJobId: id, type: "render.requested" }),
+      type: "render.requested",
+    };
+  }
+  return {
+    body: JSON.stringify({
+      id: crypto.randomUUID(),
+      // Unique per seeding: the email consumer keeps an `email:sent:<key>`
+      // marker in KV for 7 days, so a fixed key made the replay in a second
+      // e2e run on the same local state a silent repeat (no email sent).
+      idempotencyKey: `e2e-dead-letter:${id}:${crypto.randomUUID()}`,
+      locale: "nl",
+      props: { name: "E2E", url: "http://localhost:5173" },
+      template: "transactional/welcome",
+      to: "e2e-dead-letter@smog.test",
+    }),
+    type: "transactional/welcome",
+  };
+}
+
+/** `deadLetter`: one open row, as a DLQ consumer would have stored it. */
+function deadLetterStatement(
+  db: D1Database,
+  seed: Extract<E2eSeed, { op: "deadLetter" }>
+): D1PreparedStatement[] {
+  if (seed.kind === "secret") {
+    return [
+      db
+        .prepare(
+          `INSERT INTO dead_letter (id, queue, origin_queue, type, attempts, received_at, body, replayable, error) VALUES (?, 'smog-dev-email-dlq', 'email', 'auth/otp', 6, ${NOW_MS}, NULL, 0, 'secret_template')`
+        )
+        .bind(seed.id),
+    ];
+  }
+  const { body, type } = deadLetterBody(seed.kind, seed.id);
+  const events = seed.kind === "events";
+  return [
+    db
+      .prepare(
+        `INSERT INTO dead_letter (id, queue, origin_queue, type, attempts, received_at, body, replayable) VALUES (?, ?, ?, ?, ?, ${NOW_MS}, ?, 1)`
+      )
+      .bind(
+        seed.id,
+        events ? "smog-dev-sponsorship-events-dlq" : "smog-dev-email-dlq",
+        seed.kind,
+        type,
+        events ? 11 : 6,
+        body
+      ),
+  ];
+}
+
 /** The statements of any seed operation, in order, with bound values. */
 export function seedStatements(
   db: D1Database,
   seed: E2eSeed
 ): D1PreparedStatement[] {
   switch (seed.op) {
+    case "deadLetter":
+      return deadLetterStatement(db, seed);
+    case "resetDeadLetters":
+      return [
+        db.prepare("DELETE FROM dead_letter WHERE id LIKE 'e2e-%'"),
+        db.prepare(
+          "DELETE FROM audit_log WHERE target_type = 'dead_letter' AND target_id LIKE 'e2e-%'"
+        ),
+      ];
+    case "deadLetterState":
+      return [
+        db.prepare(
+          "SELECT id, replayed_at IS NOT NULL AS replayed, discarded_at IS NOT NULL AS discarded FROM dead_letter WHERE id LIKE 'e2e-%' ORDER BY id"
+        ),
+      ];
     case "resetSponsorships":
       return resetStatements(db, seed.slugs);
     case "sponsorship":

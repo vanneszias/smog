@@ -27,7 +27,7 @@ const MANIFEST = {
   "src/client.tsx": {
     dynamicImports: [
       "src/components/sponsor/sponsor-preview.tsx",
-      "src/routes/sponsor.tsx",
+      "src/routes/sponsor.tsx?tsr-split=component",
     ],
     file: "assets/main.js",
     imports: ["_shared.js"],
@@ -38,7 +38,7 @@ const MANIFEST = {
     imports: ["_remotion.js", "_route-shared.js", "_shared.js"],
     isDynamicEntry: true,
   },
-  "src/routes/sponsor.tsx": {
+  "src/routes/sponsor.tsx?tsr-split=component": {
     file: "assets/route.js",
     imports: ["_route-shared.js", "_shared.js"],
     isDynamicEntry: true,
@@ -127,6 +127,21 @@ describe("deploy-guard --bundle on a built tree (fixture)", () => {
   const root = mkdtempSync(join(tmpdir(), "smog-guard-"));
   afterAll(() => rmSync(root, { force: true, recursive: true }));
 
+  // Only the render-stack checks are under test here: one generous entry.
+  writeFileSync(
+    join(root, "perf-budget.json"),
+    JSON.stringify({
+      entries: {
+        sponsor: {
+          gzip: 5_000_000,
+          routes: [["sponsor.tsx"]],
+          target: 300_000,
+        },
+      },
+      workerGzip: 5_242_880,
+    })
+  );
+
   function tree(name: string, files: Record<string, string>): string {
     // The guard tells the trees apart by `dist/server` and `dist/client`.
     const dist = join(root, name, "dist");
@@ -145,6 +160,8 @@ describe("deploy-guard --bundle on a built tree (fixture)", () => {
         "--bundle",
         "--dist",
         dist,
+        "--perf-budget",
+        join(root, "perf-budget.json"),
       ],
       { stderr: "pipe", stdout: "pipe" }
     );
@@ -158,6 +175,8 @@ describe("deploy-guard --bundle on a built tree (fixture)", () => {
     "client/.vite/manifest.json": JSON.stringify(MANIFEST),
     "client/assets/main.js": "import('./sponsor-preview.js')",
     "client/assets/remotion.js": REMOTION?.marker ?? "",
+    "client/assets/route-shared.js": "",
+    "client/assets/route.js": "",
     "client/assets/shared.js": "",
     "client/assets/sponsor-preview.js": MEDIABUNNY?.marker ?? "",
     "server/index.js": "export default {}",

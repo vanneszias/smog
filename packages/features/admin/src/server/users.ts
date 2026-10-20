@@ -2,6 +2,7 @@ import { ORPCError } from "@orpc/server";
 import {
   account,
   auditLog,
+  eraseDeadLettersOf,
   favorite,
   gesture,
   list,
@@ -501,12 +502,26 @@ export function usersRoutes(_deps: AdminDeps) {
           });
         }
         const hadSessions = (await liveSessions(context.db, target.id)) > 0;
+        // The address is read before the user row goes: the stored dead
+        // letters are erased by it afterwards, like the self-service path
+        // (phase 9 ruling 5c).
+        const { email } = target;
         await authCall(`delete the user ${target.id}`, errors, () =>
           context.auth.api.removeUser({
             body: { userId: target.id },
             headers: context.request.headers,
           })
         );
+        try {
+          await eraseDeadLettersOf(context.db, email);
+        } catch (error) {
+          // The account is already gone and the daily retention removes the
+          // rows within 14 days: log, and still write the audit entry.
+          console.error(
+            `[admin] Failed to erase the dead letters of the deleted user:${target.id}:`,
+            error
+          );
+        }
         // The entry, and the free-text ban reasons about the account
         // dropped from its `user.ban` entries (M-5, data minimisation), in
         // one batch: both or neither. A failure is logged and rethrown.

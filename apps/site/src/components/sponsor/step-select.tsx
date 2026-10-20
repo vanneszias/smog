@@ -125,6 +125,47 @@ const BADGE_KEYS = {
   taken: "sponsor.select.badge.taken",
 } as const;
 
+/** The card's first two categories and how many more there are. */
+function CategoryBadges({
+  categories,
+}: {
+  categories: GestureSummary["categories"];
+}): ReactNode {
+  const [first, second, ...rest] = categories;
+  if (!first) {
+    return null;
+  }
+  return (
+    <span className="flex flex-wrap gap-1 px-3 pb-3">
+      {[first, second]
+        .filter((category) => category !== undefined)
+        .map((category) => (
+          <Badge className="max-w-full whitespace-normal" key={category.slug}>
+            {category.name}
+          </Badge>
+        ))}
+      {rest.length > 0 ? <Badge>+{rest.length}</Badge> : null}
+    </span>
+  );
+}
+
+/** The checkbox look in the card's corner (the button carries the state). */
+function SelectionTick({ selected }: { selected: boolean }): ReactNode {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "pointer-events-none absolute top-2 right-2 inline-flex size-6 items-center justify-center rounded-sm border-2",
+        selected
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-surface"
+      )}
+    >
+      {selected ? <Check className="size-4" strokeWidth={3} /> : null}
+    </span>
+  );
+}
+
 /** A gesture as a toggle (S-03): its still, name, categories and state. */
 function GestureToggle({
   gesture,
@@ -150,24 +191,33 @@ function GestureToggle({
     [gesture, onToggle]
   );
   const blocked = state !== null && state !== "available";
-  const [first, second, ...rest] = gesture.categories;
   const nameId = `${id}-name`;
   const badgeId = `${id}-badge`;
   return (
-    <li className="min-w-0">
-      {/* Named by the gesture; the badge says why it cannot be chosen. */}
+    <li
+      className={cn(
+        "group relative flex min-w-0 flex-col overflow-hidden rounded-lg border-2 bg-surface text-foreground transition",
+        "has-focus-visible:outline-2 has-focus-visible:outline-focus-ring has-focus-visible:outline-offset-2",
+        selected
+          ? "border-primary"
+          : "border-border-subtle hover:border-border hover:shadow-1",
+        blocked && "hover:border-border-subtle hover:shadow-0"
+      )}
+    >
+      {/*
+        Named by the gesture, and only by it: the button holds the still and
+        the name, so its visible text is its name (WCAG 2.5.3). The
+        categories and the badge are the card's other text; the badge says
+        why it cannot be chosen (`aria-describedby`). The button's pseudo
+        element stretches over the whole card, so a click anywhere toggles.
+      */}
       <button
         aria-describedby={blocked ? badgeId : undefined}
         aria-labelledby={nameId}
         aria-pressed={selected}
         className={cn(
-          "group relative flex w-full flex-col overflow-hidden rounded-lg border-2 bg-surface text-left text-foreground transition",
-          "focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2",
-          selected
-            ? "border-primary"
-            : "border-border-subtle hover:border-border hover:shadow-1",
-          blocked &&
-            "cursor-not-allowed hover:border-border-subtle hover:shadow-0"
+          "flex w-full flex-col text-left outline-none after:absolute after:inset-0",
+          blocked && "cursor-not-allowed"
         )}
         data-state={state ?? "loading"}
         // A chosen card that became blocked can still be deselected.
@@ -189,46 +239,28 @@ function GestureToggle({
         />
         <span
           className={cn(
-            "flex min-w-0 flex-col gap-1 p-3",
+            "flex min-w-0 flex-col p-3",
+            gesture.categories.length > 0 && "pb-1",
             blocked && "opacity-50"
           )}
         >
           <span className="truncate font-semibold text-title-3" id={nameId}>
             {gesture.name}
           </span>
-          {first ? (
-            <span className="flex flex-wrap gap-1">
-              {[first, second]
-                .filter((category) => category !== undefined)
-                .map((category) => (
-                  <Badge key={category.slug}>{category.name}</Badge>
-                ))}
-              {rest.length > 0 ? <Badge>+{rest.length}</Badge> : null}
-            </span>
-          ) : null}
         </span>
-        <span
-          aria-hidden="true"
-          className={cn(
-            "absolute top-2 right-2 inline-flex size-6 items-center justify-center rounded-sm border-2",
-            selected
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-surface"
-          )}
-        >
-          {selected ? <Check className="size-4" strokeWidth={3} /> : null}
-        </span>
-        {blocked ? (
-          <Badge
-            className="absolute top-2 left-2"
-            icon={state === "sponsored" ? <Heart /> : undefined}
-            id={badgeId}
-            variant={state === "taken" ? "danger" : "warning"}
-          >
-            {t(BADGE_KEYS[state])}
-          </Badge>
-        ) : null}
       </button>
+      <CategoryBadges categories={gesture.categories} />
+      <SelectionTick selected={selected} />
+      {blocked ? (
+        <Badge
+          className="pointer-events-none absolute top-2 left-2"
+          icon={state === "sponsored" ? <Heart /> : undefined}
+          id={badgeId}
+          variant={state === "taken" ? "danger" : "warning"}
+        >
+          {t(BADGE_KEYS[state])}
+        </Badge>
+      ) : null}
     </li>
   );
 }
@@ -266,7 +298,7 @@ function Grid({
         {Array.from({ length: 8 }, (_, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no identity.
           <li key={index}>
-            <Skeleton className="aspect-3/4 w-full rounded-lg" />
+            <Skeleton className="aspect-3/4 h-auto w-full rounded-lg" />
           </li>
         ))}
       </ul>

@@ -75,6 +75,7 @@ const CURRENT_COLOUR_SVGS = [
 const FIXED_COLOUR_SVGS = [
   { colours: [GREEN, WHITE], path: "apps/site/public/icon.svg" },
   { colours: [GREEN], path: "apps/site/public/brand/logo-green.svg" },
+  { colours: [GREEN], path: "apps/site/public/assets/logo.svg" },
   { colours: [WHITE], path: "apps/site/public/brand/logo-white.svg" },
   { colours: [WHITE], path: "apps/site/public/brand/logo-stacked-white.svg" },
 ];

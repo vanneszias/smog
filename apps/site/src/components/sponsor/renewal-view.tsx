@@ -18,12 +18,13 @@ function sendToMollie(checkoutUrl: string): void {
 
 export interface RenewalViewProps {
   redirect?: (checkoutUrl: string) => void;
-  token: string | null;
+  /** `undefined` until the page has read the fragment (`useLinkToken`). */
+  token: string | null | undefined;
   turnstileSiteKey: string | null;
 }
 
 /**
- * `/sponsor/renew?token=` (S-20): the link's guards, then the summary (the
+ * `/sponsor/renew#token=` (S-20): the link's guards, then the summary (the
  * gesture, the name, the current end → the new end, the amount from
  * `priceSponsorship` on the server), Turnstile and pay. Mollie returns to
  * the wizard's success page.
@@ -35,7 +36,7 @@ export function RenewalView({
 }: RenewalViewProps): ReactNode {
   const { t } = useTranslation();
   const locale = usePageLocale();
-  const link = useRenewal(token);
+  const link = useRenewal(token ?? null);
   const checkout = useRenewalCheckout({ onRedirect: redirect });
   const captcha = useTurnstileToken();
   const retry = useCallback(() => {
@@ -46,13 +47,13 @@ export function RenewalView({
   const busy = checkout.isPending || checkout.redirecting;
   const { reset: resetCaptcha, token: turnstileToken } = captcha;
   const pay = useCallback(() => {
-    if (token === null || busy) {
+    if (!token || busy) {
       return;
     }
     checkout.mutate({ token, turnstileToken }, { onError: resetCaptcha });
   }, [busy, checkout, resetCaptcha, token, turnstileToken]);
 
-  if (token === null || !link.data) {
+  if (!(token && link.data)) {
     return (
       <LinkState
         error={link.error}

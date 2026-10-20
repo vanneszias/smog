@@ -37,6 +37,10 @@ describe("Toast", () => {
     expect(classesOf(toast)).toContain("shadow-3");
     expect(classesOf(toast)).toContain("motion-reduce:animate-none");
     expect(screen.getByText("Added to Favorites.")).toBeDefined();
+    // Radix's polite live region announces it to a screen reader (inventory P-29).
+    expect(
+      document.querySelector('[role="status"][aria-live="polite"]')
+    ).not.toBeNull();
     await act(async () => {
       await userEvent.click(
         screen.getByRole("button", { name: "Dismiss notification" })

@@ -29,7 +29,7 @@ import {
 test.describe.configure({ mode: "serial" });
 
 const REEDIT_LINK = new RegExp(
-  `^${ORIGIN.replace(/[.:/]/g, "\\$&")}/sponsor/edit\\?token=[A-Za-z0-9_-]{43}$`
+  `^${ORIGIN.replace(/[.:/]/g, "\\$&")}/sponsor/edit#token=[A-Za-z0-9_-]{43}$`
 );
 const NAAM_IN_DE_VIDEO = /^Naam in de video/;
 const REVIEW_TAB = /^Te beoordelen/;
@@ -161,7 +161,9 @@ test.describe("admin sponsorships", () => {
     await page.keyboard.press("Enter");
     await expect(dialog).toBeHidden();
     // Shown once: the page no longer holds the token.
-    const token = new URL(url).searchParams.get("token") ?? "";
+    const token =
+      new URLSearchParams(new URL(url).hash.slice(1)).get("token") ?? "";
+    expect(token).not.toBe("");
     expect(await page.content()).not.toContain(token);
     await expect(page.getByText("Aanpassing gevraagd").first()).toBeVisible();
 
