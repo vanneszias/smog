@@ -79,9 +79,9 @@ async function reminded(logo = false) {
     email: {
       send: (email) => {
         token =
-          new URL((email.props as { url: string }).url).searchParams.get(
-            "token"
-          ) ?? "";
+          new URLSearchParams(
+            new URL((email.props as { url: string }).url).hash.slice(1)
+          ).get("token") ?? "";
         return Promise.resolve();
       },
     },

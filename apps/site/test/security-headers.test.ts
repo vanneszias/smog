@@ -387,6 +387,12 @@ describe("withSecurityHeaders", () => {
 
 describe("the sponsor token pages (review I-8)", () => {
   it.each([
+    "/sponsor/edit",
+    "/sponsor/renew",
+    // The old query links still open (the page moves the token on).
+    "/sponsor/edit",
+    "/sponsor/renew",
+    // The old query links still open (the page moves the token on).
     "/sponsor/edit?token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "/sponsor/renew?token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   ])("%s sends no Referer anywhere: the token is in its URL", async (path) => {

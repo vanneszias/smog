@@ -199,7 +199,7 @@ describe("money and dates per locale", () => {
   );
 
   it("renewal_reminder says 30 days and links to the renewal page", async () => {
-    const url = `${SITE}/sponsor/renew?token=abc`;
+    const url = `${SITE}/sponsor/renew#token=abc`;
     const email = await renderEmail(
       "transactional/renewal-reminder",
       { endsAt: LATE_EVENING, gestureName: "Hond", name: "Alex", url },

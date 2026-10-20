@@ -612,7 +612,7 @@ test("a failed payment frees the gestures, and Try again keeps the selection", a
 test("the re-edit link: a new name, sent for review", async ({ page }) => {
   await stubMux(page);
   await stubMuxRenditions(page);
-  await page.goto(`/sponsor/edit?token=${REEDIT_TOKEN}`);
+  await page.goto(`/sponsor/edit#token=${REEDIT_TOKEN}`);
   await waitForApp(page);
   await expect(
     page.getByRole("heading", { level: 1, name: "Werk je video bij" })
@@ -776,7 +776,7 @@ async function stubbedStates(
       headers: { "cache-control": "private, no-store" },
     })
   );
-  await page.goto(`/sponsor/edit?token=${REEDIT_TOKEN}`);
+  await page.goto(`/sponsor/edit#token=${REEDIT_TOKEN}`);
   await expect(
     page.getByRole("heading", { level: 1, name: "Werk je video bij" })
   ).toBeVisible();
@@ -817,7 +817,7 @@ async function stubbedStates(
     gesture: { name: "Broer", slug: "broer" },
     hasLogo: true,
   });
-  await page.goto(`/sponsor/renew?token=${REEDIT_TOKEN}`);
+  await page.goto(`/sponsor/renew#token=${REEDIT_TOKEN}`);
   await expect(
     page.getByRole("heading", {
       level: 1,

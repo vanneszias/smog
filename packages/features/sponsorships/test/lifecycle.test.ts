@@ -180,7 +180,7 @@ describe("reject and request changes", () => {
     await db.batch(first.statements as never);
     expect(await statusOf(db, id)).toBe("changes_requested");
     expect(first.url).toBe(
-      `${SITE_URL}/sponsor/edit?token=${encodeURIComponent(first.token)}`
+      `${SITE_URL}/sponsor/edit#token=${encodeURIComponent(first.token)}`
     );
     expect(first.expiresAt).toBe(NOW.getTime() + 7 * DAY_MS);
     const later = new Date(NOW.getTime() + 1000);
@@ -220,7 +220,7 @@ describe("reject and request changes", () => {
     });
     await db.batch(plan.statements as never);
     expect(plan.expiresAt).toBe(endsAt.getTime());
-    expect(plan.url).toContain(`${SITE_URL}/sponsor/renew?token=`);
+    expect(plan.url).toContain(`${SITE_URL}/sponsor/renew#token=`);
     const live = await one({ endsAt, status: "live" });
     await expect(
       regenerateTokenStatements(db, {

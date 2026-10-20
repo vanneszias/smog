@@ -10,7 +10,7 @@ import { sponsorshipTokenSchema } from "../schema/tokens";
 import { useSponsorshipsClient, useSponsorshipsRpc } from "./slice";
 import { useLogoUpload } from "./use-logo-upload";
 
-/** `?token=` as the procedures take it, else `null` (the page's "invalid link"). */
+/** The link's token (`#token=`, or an old `?token=`) as the procedures take it, else `null` (the page's "invalid link"). */
 export function tokenParam(value: unknown): string | null {
   const parsed = sponsorshipTokenSchema.safeParse(value);
   return parsed.success ? parsed.data : null;

@@ -85,7 +85,7 @@ export const EMAIL_SAMPLES: {
     endsAt: "2027-10-02T08:00:00.000Z",
     gestureName: "Hond",
     name: "Alex",
-    url: `${SAMPLE_ORIGIN}/sponsor/renew?token=sample`,
+    url: `${SAMPLE_ORIGIN}/sponsor/renew#token=sample`,
   },
   "transactional/sponsorship-live": {
     displayName: "Acme BV",

@@ -2,7 +2,7 @@ import { slugify } from "@smog/utils";
 
 /**
  * The old site's URLs that moved (spec §9, inventory §7). Each one answers
- * 301 with its query string. Destinations are fixed paths on this site, so
+ * 301 with its query string, except the token links (below). Destinations are fixed paths on this site, so
  * no input can turn a redirect into an open one.
  *
  * `/favorites` is a real page again and `/lists/<token>` keeps its tokens,
@@ -20,19 +20,34 @@ export interface LegacyRedirect {
   rename?: Readonly<Record<string, string>>;
   /** The new path. */
   to: string;
+  /**
+   * `fragment`: a re-edit or renewal link (ruling 7 of phase 9). The
+   * query's `token` moves into the new URL's fragment
+   * (`/sponsor/edit#token=…`: a fragment in `Location` is not logged by
+   * anything downstream) and the other parameters are dropped. A 301
+   * would be cached indefinitely for a URL with a token, so the answer is
+   * a 302.
+   */
+  token?: "fragment";
 }
 
 const SUCCESS_PARAMS = { paymentId: "payment" } as const;
 
 /** Most specific first: the first match wins. */
 export const LEGACY_REDIRECTS: readonly LegacyRedirect[] = [
-  { from: "/sponsors/re-edit", to: "/sponsor/edit" },
+  { from: "/sponsors/re-edit", to: "/sponsor/edit", token: "fragment" },
+  { from: "/sponsors/renew", to: "/sponsor/renew", token: "fragment" },
   { from: "/sponsors/success", rename: SUCCESS_PARAMS, to: "/sponsor/success" },
   { from: "/sponsors", prefix: true, to: "/sponsor" },
   { from: "/success", rename: SUCCESS_PARAMS, to: "/sponsor/success" },
   { from: "/login", to: "/sign-in" },
   { from: "/callback", query: "drop", to: "/" },
 ];
+
+/** The token parameter of an old link, and the fragment that now holds it. */
+const TOKEN_PARAM = "token";
+const TOKEN_REDIRECT_STATUS = 302;
+const MOVED_PERMANENTLY = 301;
 
 const TRAILING_SLASHES = /\/+$/;
 /** The wizard, old and new path (R-11). */
@@ -180,30 +195,63 @@ function sponsorTarget(url: URL, slug: string | null): string {
   return `${WIZARD_PATH}${search(next)}`;
 }
 
+/** `<path>#token=<token>`, or the bare path when the link has no token. */
+function tokenTarget(path: string, url: URL): string {
+  const token = url.searchParams.get(TOKEN_PARAM);
+  return token ? `${path}#${TOKEN_PARAM}=${encodeURIComponent(token)}` : path;
+}
+
+interface LegacyTarget {
+  /** A same-site path with its query (and, for a token link, fragment). */
+  location: string;
+  status: 301 | 302;
+}
+
 /**
- * Where an old URL now lives (a same-site path with its query), or `null`
- * when the URL is current. The table's paths match case-insensitively, as
- * the old router did (`/Login`).
+ * Where an old URL now lives and with which status, or `null` when the URL
+ * is current. The table's paths match case-insensitively, as the old
+ * router did (`/Login`).
  */
-export function legacyRedirectTarget(
+function legacyRedirectResolve(
   url: URL,
   categories: CategorySlugs = NO_CATEGORIES,
   gestureSlug: string | null = null
-): string | null {
+): LegacyTarget | null {
   const pathname = withoutTrailingSlash(url.pathname);
   if (pathname === GESTURES_PATH) {
-    return categoryTarget(url, categories);
+    const location = categoryTarget(url, categories);
+    return location === null ? null : { location, status: MOVED_PERMANENTLY };
   }
   if (gestureIdParam(url) !== null) {
-    return sponsorTarget(url, gestureSlug);
+    return {
+      location: sponsorTarget(url, gestureSlug),
+      status: MOVED_PERMANENTLY,
+    };
   }
   const match = tablePath(pathname.toLowerCase());
   if (!match) {
     return null;
   }
+  if (match.entry.token === "fragment") {
+    return {
+      location: tokenTarget(match.path, url),
+      status: url.searchParams.get(TOKEN_PARAM)
+        ? TOKEN_REDIRECT_STATUS
+        : MOVED_PERMANENTLY,
+    };
+  }
   const query =
     match.entry.query === "drop" ? "" : renamed(url.search, match.entry.rename);
-  return `${match.path}${query}`;
+  return { location: `${match.path}${query}`, status: MOVED_PERMANENTLY };
+}
+
+/** The `Location` of {@link legacyRedirectResolve}, or `null` when current. */
+export function legacyRedirectTarget(
+  url: URL,
+  categories: CategorySlugs = NO_CATEGORIES,
+  gestureSlug: string | null = null
+): string | null {
+  return legacyRedirectResolve(url, categories, gestureSlug)?.location ?? null;
 }
 
 /** The published gesture's slug for an id, a legacy id or a slug, else `null`. */
@@ -212,7 +260,8 @@ export type GestureSlugLookup = (value: string) => Promise<string | null>;
 const NO_GESTURES: GestureSlugLookup = () => Promise.resolve(null);
 
 /**
- * The Worker's first step for GET and HEAD: a 301 for an old URL, else
+ * The Worker's first step for GET and HEAD: a 301 for an old URL (a 302 for
+ * an old token link, whose token moves into the fragment), else
  * `null` (the request goes on to the app). `Location` is a path, so the
  * browser stays on this origin. `loadCategories` runs only for an old
  * `?category=<Name>`; when it fails, `slugify(name)` stands in.
@@ -245,9 +294,15 @@ export async function legacyRedirect(
       console.error("[legacyRedirects] Failed to look up the gesture:", error);
     }
   }
-  const location = legacyRedirectTarget(url, categories, gestureSlug);
-  if (location === null) {
+  const target = legacyRedirectResolve(url, categories, gestureSlug);
+  if (target === null) {
     return null;
   }
-  return new Response(null, { headers: { location }, status: 301 });
+  // A token-carrying redirect is never cached (nor is any 302 by default:
+  // say so).
+  const headers: Record<string, string> = { location: target.location };
+  if (target.status === TOKEN_REDIRECT_STATUS) {
+    headers["cache-control"] = "no-store";
+  }
+  return new Response(null, { headers, status: target.status });
 }

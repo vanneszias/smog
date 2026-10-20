@@ -36,7 +36,8 @@ import { SponsorPreviewSlot } from "./preview-slot";
 import { useKeptLogo } from "./use-kept-logo";
 
 export interface ReeditViewProps {
-  token: string | null;
+  /** `undefined` until the page has read the fragment (`useLinkToken`). */
+  token: string | null | undefined;
   turnstileSiteKey: string | null;
 }
 
@@ -236,7 +237,7 @@ function ReeditForm({
 }
 
 /**
- * `/sponsor/edit?token=` (S-19): the link's guards, then the name in the
+ * `/sponsor/edit#token=` (S-19): the link's guards, then the name in the
  * video and (only when the sponsorship has one) a new logo, the preview,
  * Turnstile and "Send for review". Nothing is paid again.
  */
@@ -244,11 +245,11 @@ export function ReeditView({
   token,
   turnstileSiteKey,
 }: ReeditViewProps): ReactNode {
-  const link = useReedit(token);
+  const link = useReedit(token ?? null);
   const retry = useCallback(() => {
     link.refetch().catch(() => undefined);
   }, [link]);
-  if (token === null || !link.data) {
+  if (!(token && link.data)) {
     return (
       <LinkState
         error={link.error}

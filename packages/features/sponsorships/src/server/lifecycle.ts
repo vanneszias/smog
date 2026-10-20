@@ -34,7 +34,7 @@ import { DAY_MS } from "@smog/utils";
 import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { REJECTED_VIDEO_RETENTION_DAYS } from "../schema/retention";
 import type { InvalidStateReason } from "../schema/status";
-import { REEDIT_TOKEN_TTL_MS } from "../schema/tokens";
+import { REEDIT_TOKEN_TTL_MS, sponsorshipLinkUrl } from "../schema/tokens";
 import {
   readRejectedAt,
   rejectedBoundGuard,
@@ -241,8 +241,7 @@ function linkUrl(
   purpose: SponsorshipTokenPurpose,
   token: string
 ): string {
-  const path = purpose === "reedit" ? "/sponsor/edit" : "/sponsor/renew";
-  return `${siteUrl}${path}?token=${encodeURIComponent(token)}`;
+  return sponsorshipLinkUrl(siteUrl, purpose, token);
 }
 
 /**
