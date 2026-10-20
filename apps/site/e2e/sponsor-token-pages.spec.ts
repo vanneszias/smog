@@ -195,6 +195,20 @@ test.describe("the fragment link", () => {
     expect(renew.headers().location).toBe(`/sponsor/renew#token=${TOKEN}`);
   });
 
+  test("a direct /sponsor/edit?token= and /sponsor/renew?token= (the emailed links) get the same 302 before any page", async ({
+    request,
+  }) => {
+    for (const path of ["/sponsor/edit", "/sponsor/renew"]) {
+      // biome-ignore lint/performance/noAwaitInLoops: two requests.
+      const response = await request.get(`${path}?token=${TOKEN}&x=1`, {
+        maxRedirects: 0,
+      });
+      expect(response.status(), path).toBe(302);
+      expect(response.headers().location, path).toBe(`${path}#token=${TOKEN}`);
+      expect(response.headers()["cache-control"], path).toBe("no-store");
+    }
+  });
+
   test("a page without a token says so (no error flash before it is read)", async ({
     page,
   }) => {

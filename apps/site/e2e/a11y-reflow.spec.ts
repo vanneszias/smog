@@ -122,6 +122,16 @@ test.describe("reflow at 320 x 256 px", () => {
       expect(label?.width ?? 0).toBeGreaterThan(8);
     });
 
+    test("drops the icon, not the label, from 360 to 420 px, where the header is full", async () => {
+      const page = shared.page();
+      await page.setViewportSize({ height: 800, width: 390 });
+      await openPublic(page, "/");
+      const signIn = link(page);
+      await expect(signIn.locator("svg")).toBeHidden();
+      const label = await signIn.locator("span").boundingBox();
+      expect(label?.width ?? 0).toBeGreaterThan(8);
+    });
+
     test("keeps only the icon, with its accessible name, below 360 px", async () => {
       const page = shared.page();
       await page.setViewportSize({ height: 256, width: 320 });
