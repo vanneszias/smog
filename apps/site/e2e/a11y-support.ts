@@ -1,4 +1,10 @@
-import { type APIRequestContext, expect, type Page } from "@playwright/test";
+import {
+  type APIRequestContext,
+  type BrowserContext,
+  expect,
+  type Page,
+  test,
+} from "@playwright/test";
 import { type Theme, themedContext } from "./admin";
 import {
   blockingViolations,
@@ -12,8 +18,9 @@ import {
 /*
  * Shared by the public accessibility specs (phase 9 task 5): the route
  * list every spec walks, a context per theme and width, the consent that
- * is decided up front, and one axe call that labels what it finds. No
- * `test` here, so importing this registers nothing.
+ * is decided up front, and one axe call that labels what it finds. Importing
+ * this registers nothing (`useSharedGuestPage` registers hooks only when a
+ * `describe` calls it).
  */
 
 /** The localStorage key of `@smog/local-store` (the guest's device store). */
@@ -45,6 +52,25 @@ export async function decideConsent(page: Page): Promise<void> {
   }, STORE_KEY);
 }
 
+/**
+ * How long one step (a click, a wait for hydration) may take. Playwright
+ * waits as long as the test lasts for an action that never becomes possible
+ * (a click on a button something covers); with this bound a hang fails in
+ * seconds, on the line that hung.
+ */
+export const STEP_MS = 30_000;
+
+/** A context in `theme` at `width` whose steps are bounded (`STEP_MS`). */
+export async function boundedContext(
+  browser: Parameters<typeof themedContext>[0],
+  theme: Theme,
+  width: number
+) {
+  const context = await themedContext(browser, theme, width);
+  context.setDefaultTimeout(STEP_MS);
+  return context;
+}
+
 /** A page in `theme` at `width` with its stills stubbed and consent decided. */
 export async function newPublicPage(
   browser: Parameters<typeof themedContext>[0],
@@ -52,7 +78,7 @@ export async function newPublicPage(
   width: number,
   { consent = true }: { consent?: boolean } = {}
 ) {
-  const context = await themedContext(browser, theme, width);
+  const context = await boundedContext(browser, theme, width);
   const page = await context.newPage();
   await stubMux(page);
   // An empty valid playlist: the player shows its poster, no error opens.
@@ -69,6 +95,61 @@ export async function openPublic(page: Page, path: string): Promise<void> {
   await waitForApp(page);
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
   await page.waitForLoadState("networkidle");
+}
+
+/**
+ * One guest page at `width` for every test of the enclosing `describe`
+ * (a context per test costs a cold load of the app's scripts each time,
+ * about two thirds of a route test). The tests stay independent: each one
+ * opens its own path, and `errors` (the console's errors and the page's
+ * uncaught ones) starts empty for each. Call it inside a `describe`.
+ */
+export function useSharedGuestPage(
+  width: number,
+  options: { consent?: boolean } = {}
+) {
+  return useSharedPage((browser) =>
+    newPublicPage(browser, "light", width, options)
+  );
+}
+
+/** `useSharedGuestPage` for any page: `open` makes the context and its page. */
+export function useSharedPage(
+  open: (
+    browser: Parameters<typeof themedContext>[0]
+  ) => Promise<{ context: BrowserContext; page: Page }>
+) {
+  let context: BrowserContext | undefined;
+  let current: Page | undefined;
+  const errors: string[] = [];
+  test.beforeAll(async ({ browser }) => {
+    const opened = await open(browser);
+    ({ context } = opened);
+    current = opened.page;
+    opened.page.on("console", (message) => {
+      if (message.type() === "error") {
+        errors.push(message.text());
+      }
+    });
+    opened.page.on("pageerror", (error) => {
+      errors.push(error.message);
+    });
+  });
+  test.beforeEach(() => {
+    errors.length = 0;
+  });
+  test.afterAll(async () => {
+    await context?.close();
+  });
+  return {
+    errors,
+    page(): Page {
+      if (!current) {
+        throw new Error("[e2e] The shared page is not open yet");
+      }
+      return current;
+    },
+  };
 }
 
 export interface Finding {
@@ -174,7 +255,10 @@ export async function scanThemes(
   // The flip must have changed the palette, or the dark scan proves nothing.
   expect(dark, `${where}: the dark theme applies`).not.toBe(light);
   if (menu) {
-    // axe's run moves the focus, which dismisses a menu: open it again.
+    // axe's run moves the focus, which dismisses a menu in the full browser;
+    // the headless shell (CI) leaves it open, and then its button is covered
+    // and a click on it never lands. Close it either way, then open it again.
+    await closeWithEscape(page);
     await menu.open();
     await menu.visible();
   }
@@ -279,4 +363,37 @@ export async function closeWithEscape(page: Page): Promise<void> {
       )
     )
     .toEqual([]);
+}
+
+/** A test that scans a few states: about 3 to 4 times slower on a CI runner. */
+export const STATES_MS = 90_000;
+
+const PLAYER_NOISE = /mux-player|getErrorFromHlsErrorData/;
+
+/** The console errors that are not the Mux player's (a stubbed stream has no segments). */
+export function quiet(errors: readonly string[]): string[] {
+  return errors.filter((line) => !PLAYER_NOISE.test(line));
+}
+
+/** Opens an overlay, scans it in both themes, closes it with Escape. */
+export async function overlay(
+  page: Page,
+  found: Finding[],
+  where: string,
+  open: () => Promise<unknown>,
+  visible: () => Promise<unknown>
+): Promise<void> {
+  await open();
+  await visible();
+  // A menu is scanned as a menu (`blockingViolations`) and opened again for
+  // the dark scan (`scanThemes`).
+  const isMenu = (await page.getByRole("menu").count()) > 0;
+  found.push(
+    ...(await scanThemes(
+      page,
+      where,
+      isMenu ? { menu: { open, visible } } : {}
+    ))
+  );
+  await closeWithEscape(page);
 }

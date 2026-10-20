@@ -60,8 +60,17 @@ const WORKERS = Number(process.env.E2E_WORKERS ?? (process.env.CI ? 1 : 2));
  * sees those rows or that window.
  */
 const SERIAL_SPECS = /\/admin-(catalog|settings)\.spec\.ts$/;
-/** The accessibility specs (Task 5 adds them; the project exists already). */
+/**
+ * The accessibility specs (phase 9 task 5), three projects so none passes
+ * about 15 minutes on a CI runner (a hung test was the first problem, the
+ * sum the second: docs/DECISIONS.md, "a11y shard on CI"). `a11y` takes every
+ * `a11y-*` spec the next two do not name, so a new one runs somewhere.
+ */
 const A11Y_SPECS = /\/a11y-[^/]*\.spec\.ts$/;
+/** Signed-in axe states and the keyboard-only runs (a session per test). */
+const A11Y_SIGNED_IN_SPECS = /\/a11y-(signed-in|keyboard)\.spec\.ts$/;
+/** Reflow, text spacing, reduced motion, landmarks and titles (many cheap pages). */
+const A11Y_REFLOW_SPECS = /\/a11y-(reflow|landmarks)\.spec\.ts$/;
 /**
  * The admin accessibility specs (axe over every admin screen, light and dark
  * at two widths: about 13 of the admin shard's 18 minutes on a loaded
@@ -81,7 +90,7 @@ const DESKTOP = {
  * its own runner with its own dev server and D1 (`--project <name>`), and
  * `bun run test:e2e` (scripts/e2e.ts) runs them one after another in this
  * order (`PROJECTS` there; a test keeps the two lists equal). A spec lands in the first project that matches it by name:
- * `serial`, `a11y`, `admin-a11y`, `admin`, else `public`.
+ * `serial`, `a11y-signed-in`, `a11y-reflow`, `a11y`, `admin-a11y`, `admin`, else `public`.
  */
 export default defineConfig({
   // Assertions wait up to 15 s (the default is 5 s): a first compile, or
@@ -100,7 +109,18 @@ export default defineConfig({
     },
     {
       name: "a11y",
+      testIgnore: [A11Y_SIGNED_IN_SPECS, A11Y_REFLOW_SPECS],
       testMatch: A11Y_SPECS,
+      use: DESKTOP,
+    },
+    {
+      name: "a11y-signed-in",
+      testMatch: A11Y_SIGNED_IN_SPECS,
+      use: DESKTOP,
+    },
+    {
+      name: "a11y-reflow",
+      testMatch: A11Y_REFLOW_SPECS,
       use: DESKTOP,
     },
     {

@@ -2,7 +2,7 @@
  * `bun run test:e2e [-- <playwright args>]`: the Playwright e2e suite of
  * `apps/site` (phase 9 ruling 1).
  *
- * The suite is five independent Playwright projects (`apps/site/playwright.config.ts`).
+ * The suite is seven independent Playwright projects (`apps/site/playwright.config.ts`).
  * With no `--project`, this runs them one after another in `PROJECTS` order,
  * each as its own `bun -F @smog/site test:e2e` command, which carries its own
  * `test-deadline.ts` wrapper: the wrapper's 25 minutes apply per project, so
@@ -18,13 +18,15 @@
 export const PROJECTS = [
   "public",
   "a11y",
+  "a11y-signed-in",
+  "a11y-reflow",
   "admin",
   "admin-a11y",
   "serial",
 ] as const;
 
-/** `a11y` is empty until its specs land; an empty project is not an error. */
-const MAY_BE_EMPTY = new Set<string>(["a11y"]);
+/** Every project has specs now, so none may be empty (an empty shard is a mistake). */
+const MAY_BE_EMPTY = new Set<string>();
 
 const SITE_COMMAND = ["bun", "-F", "@smog/site", "test:e2e"];
 

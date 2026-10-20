@@ -17,7 +17,9 @@ describe("planRuns", () => {
   test("runs every project in order, each as its own command", () => {
     expect(planRuns([])).toEqual([
       ["--project=public"],
-      ["--project=a11y", "--pass-with-no-tests"],
+      ["--project=a11y"],
+      ["--project=a11y-signed-in"],
+      ["--project=a11y-reflow"],
       ["--project=admin"],
       ["--project=admin-a11y"],
       ["--project=serial"],
@@ -50,13 +52,10 @@ describe("planRuns", () => {
     ]);
   });
 
-  test("lets only the accessibility project be empty", () => {
-    expect(planRuns(["--project", "a11y"])).toEqual([
-      ["--project=a11y", "--pass-with-no-tests"],
-    ]);
-    expect(planRuns(["--project", "public"])[0]).not.toContain(
-      "--pass-with-no-tests"
-    );
+  test("lets no project be empty: a shard without specs is a mistake", () => {
+    for (const name of PROJECTS) {
+      expect(planRuns(["--project", name])).toEqual([[`--project=${name}`]]);
+    }
   });
 });
 

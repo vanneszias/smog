@@ -161,7 +161,7 @@ describe("checkE2eJob", () => {
     expect(
       check(
         CI.replace(
-          "shard: [public, a11y, admin, admin-a11y, serial]",
+          "shard: [public, a11y, a11y-signed-in, a11y-reflow, admin, admin-a11y, serial]",
           "shard: [public]"
         )
       )

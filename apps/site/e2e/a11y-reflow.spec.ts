@@ -1,20 +1,25 @@
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import {
+  type Browser,
+  expect,
+  type Locator,
+  type Page,
+  test,
+} from "@playwright/test";
 import {
   decideConsent,
+  type Fixture,
   GUEST_ROUTES,
   newPublicPage,
   openPublic,
+  STATES_MS,
   seedAccount,
+  useSharedGuestPage,
 } from "./a11y-support";
 import { settleForShot, stubMux, stubMuxStream, waitForApp } from "./helpers";
 
 const VIDEO_NAME = /^Naam in de video/;
 const FULL_NAME = /^Volledige naam/;
 const EMAIL = /^E-mail$/;
-const FAVORIETEN = /Favorieten/;
-const GEBAAR = /gebaar/;
-const NO_RESULTS = /geen|Geen/;
-const SUBMIT = /Doorgaan|Account maken/;
 
 /*
  * Reflow, text spacing, reduced motion and landmarks (phase 9 task 5):
@@ -64,16 +69,31 @@ async function expectNoHorizontalScroll(
   ).toBeLessThanOrEqual(overflow.client + 1);
 }
 
+/** A signed-in page at 320 x 256 px with the fixture's data (removed again). */
+async function withFixture(
+  browser: Browser,
+  body: (page: Page, fixture: Fixture) => Promise<void>
+): Promise<void> {
+  const { context, page } = await newPublicPage(browser, "light", 320);
+  let cleanup: (() => Promise<void>) | undefined;
+  try {
+    await page.setViewportSize({ height: 256, width: 320 });
+    const fixture = await seedAccount(page);
+    ({ cleanup } = fixture);
+    await body(page, fixture);
+  } finally {
+    await cleanup?.().catch(() => undefined);
+    await context.close();
+  }
+}
+
 test.describe("reflow at 320 x 256 px", () => {
-  test("no guest route scrolls sideways, in the light and the dark theme", async ({
-    browser,
-  }) => {
-    test.setTimeout(300_000);
-    const { context, page } = await newPublicPage(browser, "light", 320);
-    try {
-      await page.setViewportSize({ height: 256, width: 320 });
-      for (const { name, path } of GUEST_ROUTES) {
-        // biome-ignore lint/performance/noAwaitInLoops: one route at a time.
+  test.describe("guest routes", () => {
+    const shared = useSharedGuestPage(320);
+    for (const { name, path } of GUEST_ROUTES) {
+      test(`${name} does not scroll sideways, in the light and the dark theme`, async () => {
+        const page = shared.page();
+        await page.setViewportSize({ height: 256, width: 320 });
         await openPublic(page, path);
         await expectNoHorizontalScroll(page, name);
         await page.evaluate(() =>
@@ -83,34 +103,44 @@ test.describe("reflow at 320 x 256 px", () => {
         await page.evaluate(() =>
           document.documentElement.classList.remove("dark")
         );
-      }
-    } finally {
-      await context.close();
+      });
     }
   });
 
-  test("the signed-in pages, a list, a shared list and the open overlays fit too", async ({
-    browser,
-  }) => {
-    test.setTimeout(300_000);
-    const { context, page } = await newPublicPage(browser, "light", 320);
-    let cleanup: (() => Promise<void>) | undefined;
-    try {
-      await page.setViewportSize({ height: 256, width: 320 });
-      const fixture = await seedAccount(page);
-      ({ cleanup } = fixture);
+  test("the signed-in pages and a list fit too", async ({ browser }) => {
+    test.setTimeout(STATES_MS);
+    await withFixture(browser, async (page, fixture) => {
       for (const path of [
         "/favorites",
         "/lists",
         `/lists?id=${fixture.listId}`,
-        fixture.viewPath,
-        fixture.editPath,
         "/account",
       ]) {
         // biome-ignore lint/performance/noAwaitInLoops: one route at a time.
         await openPublic(page, path);
         await expectNoHorizontalScroll(page, path);
       }
+    });
+  });
+
+  test("a shared list, by its view and its edit link, fits too", async ({
+    browser,
+  }) => {
+    test.setTimeout(STATES_MS);
+    await withFixture(browser, async (page, fixture) => {
+      for (const path of [fixture.viewPath, fixture.editPath]) {
+        // biome-ignore lint/performance/noAwaitInLoops: one route at a time.
+        await openPublic(page, path);
+        await expectNoHorizontalScroll(page, path);
+      }
+    });
+  });
+
+  test("the open share sheet and delete dialog fit too", async ({
+    browser,
+  }) => {
+    test.setTimeout(STATES_MS);
+    await withFixture(browser, async (page, fixture) => {
       await openPublic(page, `/lists?id=${fixture.listId}`);
       await page
         .getByRole("region", { name: fixture.listName })
@@ -121,22 +151,20 @@ test.describe("reflow at 320 x 256 px", () => {
       ).toBeVisible();
       await expectNoHorizontalScroll(page, "share sheet");
       await page.keyboard.press("Escape");
+      await expect(page.locator(`div[role="dialog"]`)).toBeHidden();
       await openPublic(page, "/account");
       await page
         .getByRole("button", { name: "Mijn account verwijderen" })
         .click();
       await expect(page.getByRole("alertdialog")).toBeVisible();
       await expectNoHorizontalScroll(page, "delete dialog");
-    } finally {
-      await cleanup?.().catch(() => undefined);
-      await context.close();
-    }
+    });
   });
 
   test("the sponsor wizard's three steps and the consent banner fit", async ({
     browser,
   }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(STATES_MS);
     const { context, page } = await newPublicPage(browser, "light", 320, {
       consent: false,
     });
@@ -253,20 +281,17 @@ async function overlapping(page: Page, scope: string): Promise<string[]> {
 
 test.describe("text spacing (WCAG 1.4.12)", () => {
   for (const width of [320, 390, 1280]) {
-    test(`header, cards and the sponsor wizard clip and overlap nothing at ${width} px`, async ({
-      browser,
-    }) => {
-      test.setTimeout(180_000);
-      const { context, page } = await newPublicPage(browser, "light", width);
-      try {
-        for (const path of [
-          "/",
-          "/gestures",
-          "/gestures/hond",
-          "/sponsor?gesture=blij",
-          "/sign-in",
-        ]) {
-          // biome-ignore lint/performance/noAwaitInLoops: one route at a time.
+    test.describe(`at ${width} px`, () => {
+      const shared = useSharedGuestPage(width);
+      for (const path of [
+        "/",
+        "/gestures",
+        "/gestures/hond",
+        "/sponsor?gesture=blij",
+        "/sign-in",
+      ]) {
+        test(`header, cards and the footer of ${path} clip and overlap nothing`, async () => {
+          const page = shared.page();
           await openPublic(page, path);
           await page.addStyleTag({ content: TEXT_SPACING });
           await expect
@@ -277,8 +302,12 @@ test.describe("text spacing (WCAG 1.4.12)", () => {
           expect(await overlapping(page, "header > div"), path).toEqual([]);
           expect(await overlapping(page, "footer"), path).toEqual([]);
           await expectNoHorizontalScroll(page, `${path} spaced`);
-        }
-        // The wizard's own step bar, with the spacing forced on step 2 as well.
+        });
+      }
+
+      // The wizard's own step bar, with the spacing forced on step 2 as well.
+      test("the sponsor wizard's step 2 clips nothing", async () => {
+        const page = shared.page();
         await openPublic(page, "/sponsor?gesture=blij");
         await page
           .getByRole("button", { exact: true, name: "Doorgaan" })
@@ -296,9 +325,7 @@ test.describe("text spacing (WCAG 1.4.12)", () => {
           })
           .toEqual([]);
         await expectNoHorizontalScroll(page, "sponsor step 2 spaced");
-      } finally {
-        await context.close();
-      }
+      });
     });
   }
 });
@@ -322,18 +349,22 @@ function longestMotion(locator: Locator): Promise<number> {
 }
 
 test.describe("reduced motion", () => {
-  test("the favorite pop, the sheet, the dialog, the menu and the toast do not move", async ({
-    browser,
-  }) => {
-    test.setTimeout(240_000);
-    // `themedContext` emulates `prefers-reduced-motion: reduce`.
-    const { context, page } = await newPublicPage(browser, "light", 390);
-    try {
+  test.describe("with the preference", () => {
+    const shared = useSharedGuestPage(390);
+
+    test("the context emulates the preference", async () => {
+      // `themedContext` emulates `prefers-reduced-motion: reduce`.
       expect(
-        await page.evaluate(
-          () => matchMedia("(prefers-reduced-motion: reduce)").matches
-        )
+        await shared
+          .page()
+          .evaluate(
+            () => matchMedia("(prefers-reduced-motion: reduce)").matches
+          )
       ).toBe(true);
+    });
+
+    test("the favorite pop and the sheet do not move", async () => {
+      const page = shared.page();
       await openPublic(page, "/gestures/hond");
       const heart = page
         .getByRole("main")
@@ -347,16 +378,24 @@ test.describe("reduced motion", () => {
       await expect(sheet).toBeVisible();
       expect(await longestMotion(sheet), "the sheet").toBe(0);
       await page.keyboard.press("Escape");
+      await expect(page.locator(`div[role="dialog"]`)).toBeHidden();
+    });
+
+    test("the dialog, the menu and a header button's hover do not move", async () => {
+      const page = shared.page();
+      await openPublic(page, "/gestures/hond");
       await page.getByRole("button", { name: "Opslaan in lijst" }).click();
       const dialog = page.locator('div[role="dialog"]');
       await expect(dialog).toBeVisible();
       expect(await longestMotion(dialog), "the dialog").toBe(0);
       await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
       await page.getByRole("button", { name: "Acties voor Hond" }).click();
       const menu = page.getByRole("menu");
       await expect(menu).toBeVisible();
       expect(await longestMotion(menu), "the menu").toBe(0);
       await page.keyboard.press("Escape");
+      await expect(menu).toBeHidden();
       // A button's colour change is instant too.
       expect(
         await longestMotion(
@@ -364,8 +403,11 @@ test.describe("reduced motion", () => {
         ),
         "a header button's hover transition"
       ).toBe(0);
+    });
 
-      // A toast: the analytics switch on the account page says it saved.
+    // A toast: the analytics switch on the account page says it saved.
+    test("the toast does not move", async () => {
+      const page = shared.page();
       await openPublic(page, "/account");
       await page.getByRole("switch", { name: "Gebruiksstatistieken" }).click();
       const toast = page
@@ -376,9 +418,7 @@ test.describe("reduced motion", () => {
         await longestMotion(page.getByRole("region", { name: "Meldingen" })),
         "the toast"
       ).toBe(0);
-    } finally {
-      await context.close();
-    }
+    });
   });
 
   test("without the preference the same sheet, dialog and toast do move (the assertions are not vacuous)", async ({
@@ -405,121 +445,6 @@ test.describe("reduced motion", () => {
       const toasts = page.getByRole("region", { name: "Meldingen" });
       await expect(toasts.getByText("Je keuze is bewaard.")).toBeVisible();
       expect(await longestMotion(toasts)).toBeGreaterThan(0);
-    } finally {
-      await context.close();
-    }
-  });
-});
-
-const TITLED = [
-  "/",
-  "/gestures",
-  "/gestures/hond",
-  "/favorites",
-  "/lists",
-  "/account",
-  "/sign-in",
-  "/sign-up",
-  "/forgot-password",
-  "/reset-password?token=e2e",
-  "/verify-email",
-  "/privacy",
-  "/terms",
-  "/sponsor",
-] as const;
-
-test.describe("landmarks, titles and the language", () => {
-  const LOCALES = [
-    { accept: "nl-BE", lang: "nl", skip: "Naar de inhoud" },
-    { accept: "en-GB", lang: "en", skip: "Skip to content" },
-    { accept: "fr-BE", lang: "fr", skip: "Aller au contenu" },
-  ] as const;
-
-  for (const { accept, lang, skip } of LOCALES) {
-    test(`every route has one main, a header, a footer, one h1 and its own ${lang} title`, async ({
-      browser,
-    }) => {
-      test.setTimeout(240_000);
-      const context = await browser.newContext({
-        locale: accept,
-        viewport: { height: 900, width: 1280 },
-      });
-      try {
-        const page = await context.newPage();
-        await stubMux(page);
-        await stubMuxStream(page);
-        const titles = new Map<string, string>();
-        for (const path of TITLED) {
-          // biome-ignore lint/performance/noAwaitInLoops: one route at a time.
-          await openPublic(page, path);
-          await expect(page.locator("html")).toHaveAttribute("lang", lang);
-          await expect(page.getByRole("main")).toHaveCount(1);
-          await expect(page.getByRole("banner")).toHaveCount(1);
-          await expect(page.getByRole("contentinfo")).toHaveCount(1);
-          await expect(
-            page.getByRole("heading", { level: 1 }),
-            path
-          ).toHaveCount(1);
-          await expect(page.getByRole("link", { name: skip })).toHaveCount(1);
-          const title = await page.title();
-          expect(title.trim(), path).not.toBe("");
-          expect(
-            [...titles.values()],
-            `${path}: "${title}" repeats`
-          ).not.toContain(title);
-          titles.set(path, title);
-        }
-        // Localised: a language's titles are not the Dutch ones.
-        if (lang !== "nl") {
-          expect(titles.get("/favorites")).not.toMatch(FAVORIETEN);
-        }
-      } finally {
-        await context.close();
-      }
-    });
-  }
-
-  test("live regions exist for toasts and for the result count", async ({
-    browser,
-  }) => {
-    const { context, page } = await newPublicPage(browser, "light", 1280);
-    try {
-      await openPublic(page, "/gestures?q=hond");
-      const count = page.getByRole("status").filter({ hasText: GEBAAR });
-      await expect(count.first()).toBeVisible();
-      // The toast viewport is a named region, present before any toast.
-      await expect(
-        page.getByRole("region", { name: "Meldingen" })
-      ).toBeAttached();
-      await page
-        .getByRole("searchbox", { name: "Zoek een gebaar" })
-        .fill("zzzzqxj");
-      await expect(
-        page.getByRole("status").filter({ hasText: NO_RESULTS }).first()
-      ).toBeAttached();
-    } finally {
-      await context.close();
-    }
-  });
-
-  test("form errors are tied to their field with aria-describedby", async ({
-    browser,
-  }) => {
-    const { context, page } = await newPublicPage(browser, "light", 1280);
-    try {
-      await openPublic(page, "/sign-up");
-      await page
-        .getByRole("textbox", { name: "E-mailadres" })
-        .fill("geen-adres");
-      await page.getByRole("button", { name: SUBMIT }).first().click();
-      const email = page.getByRole("textbox", { name: "E-mailadres" });
-      await expect(email).toHaveAttribute("aria-invalid", "true");
-      const id = (await email.getAttribute("aria-describedby"))?.split(" ")[0];
-      await expect(page.locator(`[id="${id}"]`)).toHaveAttribute(
-        "role",
-        "alert"
-      );
-      await expect(page.locator(`[id="${id}"]`)).not.toBeEmpty();
     } finally {
       await context.close();
     }
