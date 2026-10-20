@@ -178,6 +178,30 @@ describe("runDeadLetterDigest", () => {
     expect(sent).toHaveLength(4);
   });
 
+  it("keeps a loss counted while the digest was being sent for the next report", async () => {
+    const sent: EmailMessage[] = [];
+    await kv().put("dlq-lost:2026-10-20", "2");
+    // A late DLQ failure: the counter moves after the digest read it.
+    const racing: QueueProducer<EmailMessage> = {
+      send: async (body) => {
+        await kv().put("dlq-lost:2026-10-20", "5");
+        sent.push(body);
+      },
+    };
+
+    await runDeadLetterDigest(deps(sent, { queue: racing }));
+
+    expect(sent[0]).toMatchObject({ props: { lost: 2 } });
+    // 5 counted, 2 reported: the 3 not yet reported stay.
+    expect(await kv().get("dlq-lost:2026-10-20")).toBe("3");
+    const next: EmailMessage[] = [];
+    await runDeadLetterDigest(
+      deps(next, { now: new Date(NOW.getTime() + DAY_MS) })
+    );
+    expect(next[0]).toMatchObject({ props: { lost: 3 } });
+    expect(await kv().get("dlq-lost:2026-10-20")).toBeNull();
+  });
+
   it("reports messages lost while D1 was down, once, and clears the counters", async () => {
     const sent: EmailMessage[] = [];
     await kv().put("dlq-lost:2026-10-19", "2");

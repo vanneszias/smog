@@ -107,6 +107,42 @@ test.describe("reflow at 320 x 256 px", () => {
     }
   });
 
+  test.describe("the header's sign-in link", () => {
+    const shared = useSharedGuestPage(320);
+    const link = (page: Page): Locator =>
+      page.locator('header a[href^="/sign-in"]');
+
+    test("shows its icon and its label at a normal width", async () => {
+      const page = shared.page();
+      await page.setViewportSize({ height: 800, width: 1280 });
+      await openPublic(page, "/");
+      const signIn = link(page);
+      await expect(signIn.locator("svg")).toBeVisible();
+      const label = await signIn.locator("span").boundingBox();
+      expect(label?.width ?? 0).toBeGreaterThan(8);
+    });
+
+    test("drops the icon, not the label, from 360 to 420 px, where the header is full", async () => {
+      const page = shared.page();
+      await page.setViewportSize({ height: 800, width: 390 });
+      await openPublic(page, "/");
+      const signIn = link(page);
+      await expect(signIn.locator("svg")).toBeHidden();
+      const label = await signIn.locator("span").boundingBox();
+      expect(label?.width ?? 0).toBeGreaterThan(8);
+    });
+
+    test("keeps only the icon, with its accessible name, below 360 px", async () => {
+      const page = shared.page();
+      await page.setViewportSize({ height: 256, width: 320 });
+      await openPublic(page, "/");
+      const signIn = link(page);
+      await expect(signIn.locator("svg")).toBeVisible();
+      const label = await signIn.locator("span").boundingBox();
+      expect(label?.width ?? 0).toBeLessThanOrEqual(1);
+    });
+  });
+
   test("the signed-in pages and a list fit too", async ({ browser }) => {
     test.setTimeout(STATES_MS);
     await withFixture(browser, async (page, fixture) => {

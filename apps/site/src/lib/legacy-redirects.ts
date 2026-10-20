@@ -26,7 +26,8 @@ export interface LegacyRedirect {
    * (`/sponsor/edit#token=…`: a fragment in `Location` is not logged by
    * anything downstream) and the other parameters are dropped. A 301
    * would be cached indefinitely for a URL with a token, so the answer is
-   * a 302.
+   * a 302. An entry whose `to` is its own `from` (the emailed
+   * `/sponsor/edit?token=` links) redirects only when a token is present.
    */
   token?: "fragment";
 }
@@ -37,6 +38,10 @@ const SUCCESS_PARAMS = { paymentId: "payment" } as const;
 export const LEGACY_REDIRECTS: readonly LegacyRedirect[] = [
   { from: "/sponsors/re-edit", to: "/sponsor/edit", token: "fragment" },
   { from: "/sponsors/renew", to: "/sponsor/renew", token: "fragment" },
+  // The current paths, for the links emailed before the token moved into the
+  // fragment: only with a `?token=` (see `legacyRedirectResolve`).
+  { from: "/sponsor/edit", to: "/sponsor/edit", token: "fragment" },
+  { from: "/sponsor/renew", to: "/sponsor/renew", token: "fragment" },
   { from: "/sponsors/success", rename: SUCCESS_PARAMS, to: "/sponsor/success" },
   { from: "/sponsors", prefix: true, to: "/sponsor" },
   { from: "/success", rename: SUCCESS_PARAMS, to: "/sponsor/success" },
@@ -233,6 +238,10 @@ function legacyRedirectResolve(
     return null;
   }
   if (match.entry.token === "fragment") {
+    // The token page itself without a token is current, not old.
+    if (pathname === match.path && !url.searchParams.get(TOKEN_PARAM)) {
+      return null;
+    }
     return {
       location: tokenTarget(match.path, url),
       status: url.searchParams.get(TOKEN_PARAM)
@@ -261,7 +270,8 @@ const NO_GESTURES: GestureSlugLookup = () => Promise.resolve(null);
 
 /**
  * The Worker's first step for GET and HEAD: a 301 for an old URL (a 302 for
- * an old token link, whose token moves into the fragment), else
+ * an old token link, whose token moves into the fragment, also on the
+ * current `/sponsor/edit` and `/sponsor/renew` paths), else
  * `null` (the request goes on to the app). `Location` is a path, so the
  * browser stays on this origin. `loadCategories` runs only for an old
  * `?category=<Name>`; when it fails, `slugify(name)` stands in.

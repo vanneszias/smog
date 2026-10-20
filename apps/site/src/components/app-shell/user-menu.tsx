@@ -71,11 +71,14 @@ export function UserMenu(): ReactNode {
         variant="secondary"
       >
         <Link search={redirect ? { redirect } : {}} to="/sign-in">
-          {/* Below 360 px the header cannot fit the label (320 px reflow,
-              WCAG 1.4.10): the icon stands in, the text still names the link. */}
+          {/* The icon shows at every width but one band: below 360 px the
+              label gives way to it (320 px reflow, WCAG 1.4.10; the text
+              still names the link), and from 360 to 420 px the header has
+              no room for both under the text-spacing override (WCAG 1.4.12:
+              405 px needed at 390), so there the label stands alone. */}
           <LogIn
             aria-hidden="true"
-            className="hidden size-5 max-[22.5rem]:block"
+            className="size-5 shrink-0 min-[22.5rem]:max-[26.25rem]:hidden"
           />
           <span className="max-[22.5rem]:sr-only">{t("nav.signIn")}</span>
         </Link>

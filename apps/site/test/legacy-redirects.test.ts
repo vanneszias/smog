@@ -91,6 +91,10 @@ describe("the legacy redirect table (spec §9, inventory §7)", () => {
     ["/success", "/sponsor/success"],
     ["/success?paymentId=tr_1&x=1", "/sponsor/success?payment=tr_1&x=1"],
     ["/sponsors/renew?token=t", "/sponsor/renew#token=t"],
+    // The current paths with an emailed `?token=` link (sent before phase 9).
+    ["/sponsor/edit?token=abc-123&x=1", "/sponsor/edit#token=abc-123"],
+    ["/sponsor/renew?token=t", "/sponsor/renew#token=t"],
+    ["/Sponsor/Renew?token=t", "/sponsor/renew#token=t"],
     ["/login", "/sign-in"],
     ["/login?redirect=%2Faccount", "/sign-in?redirect=%2Faccount"],
     ["/login/", "/sign-in"],
@@ -178,6 +182,18 @@ describe("the legacy redirect table (spec §9, inventory §7)", () => {
     expect(target("/turnstile-bridge")).toBeNull();
   });
 
+  it("leaves the token pages alone without a token (no redirect loop)", () => {
+    for (const path of [
+      "/sponsor/edit",
+      "/sponsor/edit/",
+      "/sponsor/renew",
+      "/sponsor/renew?x=1",
+      "/sponsor/edit?token=",
+    ]) {
+      expect(target(path), path).toBeNull();
+    }
+  });
+
   it("leaves current URLs alone", () => {
     for (const path of [
       "/",
@@ -252,6 +268,23 @@ describe("the Worker applies the table first", () => {
     const bare = await get("/sponsors/re-edit");
     expect(bare.status).toBe(301);
     expect(bare.headers.get("location")).toBe("/sponsor/edit");
+  });
+
+  it("sends a direct /sponsor/edit?token= and /sponsor/renew?token= to the fragment, uncached, before the app (the old emailed links)", async () => {
+    const token = "b".repeat(43);
+    for (const path of ["/sponsor/edit", "/sponsor/renew"]) {
+      // biome-ignore lint/performance/noAwaitInLoops: two requests.
+      const response = await get(`${path}?token=${token}&utm=x`);
+      expect(response.status, path).toBe(302);
+      expect(response.headers.get("location"), path).toBe(
+        `${path}#token=${token}`
+      );
+      expect(response.headers.get("cache-control"), path).toBe("no-store");
+    }
+    // POST (the procedures and logo calls) is not a page hit.
+    expect((await get(`/sponsor/edit?token=${token}`, "POST")).status).not.toBe(
+      302
+    );
   });
 
   it("redirects HEAD too, but not a POST", async () => {

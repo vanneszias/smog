@@ -184,7 +184,10 @@ export default defineConfig({
       url: `${MOLLIE_FAKE_URL}/__fake/health`,
     },
     {
-      command: `bunx vite dev --port ${PORT} --strictPort --host`,
+      // CI runners resolve `localhost` to ::1 first, so the server binds every
+      // address there; a developer machine binds loopback only (the dev-only
+      // seed endpoint must not be reachable from the LAN).
+      command: `bunx vite dev --port ${PORT} --strictPort --host ${process.env.CI ? "0.0.0.0" : "127.0.0.1"}`,
       env: {
         SMOG_DEV_MOLLIE_API_KEY: FAKE_MOLLIE_API_KEY,
         SMOG_DEV_MOLLIE_API_URL: MOLLIE_FAKE_URL,
