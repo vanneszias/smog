@@ -356,7 +356,10 @@ function deadLetterBody(
   return {
     body: JSON.stringify({
       id: crypto.randomUUID(),
-      idempotencyKey: `e2e-dead-letter:${id}`,
+      // Unique per seeding: the email consumer keeps an `email:sent:<key>`
+      // marker in KV for 7 days, so a fixed key made the replay in a second
+      // e2e run on the same local state a silent repeat (no email sent).
+      idempotencyKey: `e2e-dead-letter:${id}:${crypto.randomUUID()}`,
       locale: "nl",
       props: { name: "E2E", url: "http://localhost:5173" },
       template: "transactional/welcome",

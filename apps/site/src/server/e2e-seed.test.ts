@@ -8,6 +8,7 @@ import {
 } from "./e2e-seed";
 
 const STATE_SELECT = /^SELECT id, replayed_at/;
+const DEAD_LETTER_KEY = /^e2e-dead-letter:e2e-dl-email:[0-9a-f-]{36}$/;
 const WRITES = /\b(DELETE|UPDATE|INSERT|DROP|REPLACE|ALTER)\b/i;
 const STATUS_UPDATE = /UPDATE\s+sponsorship/i;
 const SELECT_ONLY =
@@ -293,7 +294,7 @@ describe("the e2e seed endpoint's operations", () => {
     expect(email?.sql).toContain("INSERT INTO dead_letter");
     expect(email?.values[2]).toBe("email");
     expect(JSON.parse(String(email?.values[5]))).toMatchObject({
-      idempotencyKey: "e2e-dead-letter:e2e-dl-email",
+      idempotencyKey: expect.stringMatching(DEAD_LETTER_KEY),
       template: "transactional/welcome",
       to: "e2e-dead-letter@smog.test",
     });
