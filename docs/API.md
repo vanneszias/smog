@@ -389,6 +389,7 @@ The four Workers Rate Limiting bindings (`ratelimits` in `wrangler.jsonc`; stagi
 | `api/logos/$key.ts` | `GET /api/logos/<key>` | none, because an admin session is required and a guest has no cookie, so Better Auth answers without a D1 read | |
 | `api/health.ts` | `/api/health` | none, because it reads the vars only (no D1, KV or session) | |
 | `dev/e2e-seed.ts`, `dev/mail.ts`, `dev/mail[.]json.ts` | `/dev/*` | none, because dev only: 404 in staging and production | |
+| `manifest[.]webmanifest.ts` | `/manifest.webmanifest` | none, because static JSON built from constants, no I/O | |
 | `robots[.]txt.ts` | `/robots.txt` | none, because static text | |
 | `sitemap[.]xml.ts` | `/sitemap.xml` | none, because the answer is cached for an hour in the Cache API | |
 | `turnstile-bridge.ts` | `/turnstile-bridge` | none, because a static page with no I/O | |
