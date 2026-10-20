@@ -671,7 +671,9 @@ describe("requestChanges and regenerateToken", () => {
       targetId: id,
       targetType: "sponsorship",
     });
-    const raw = new URL(link.url).searchParams.get("token") as string;
+    const raw = new URLSearchParams(new URL(link.url).hash.slice(1)).get(
+      "token"
+    ) as string;
     const { results } = await env.DB.prepare(
       "SELECT data FROM audit_log WHERE rowid > ? UNION ALL SELECT data FROM sponsorship_event WHERE sponsorship_id = ?"
     )
@@ -1497,7 +1499,9 @@ describe("lost races, Mollie failures, no Mollie key, renewals (M6)", () => {
       "sponsorships.requestChanges",
       { id }
     );
-    const raw = new URL(link.url).searchParams.get("token") as string;
+    const raw = new URLSearchParams(new URL(link.url).hash.slice(1)).get(
+      "token"
+    ) as string;
     const logged = JSON.stringify(spies.flatMap((spy) => spy.mock.calls));
     for (const spy of spies) {
       spy.mockRestore();
