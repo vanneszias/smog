@@ -8,6 +8,7 @@ export {
   InvalidCursorError,
 } from "./cursor";
 export { escapeHtml } from "./html";
+export { newId, newToken, sha256Hex } from "./ids";
 export {
   type ErrorSummary,
   errorSummary,
@@ -15,7 +16,6 @@ export {
   redactMessage,
   type TopLevelEntry,
 } from "./log";
-export { newId, newToken, sha256Hex } from "./ids";
 export {
   createNearEndTracker,
   type MuxThumbnailOptions,

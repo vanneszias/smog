@@ -248,7 +248,6 @@ const SENSITIVE_WORDS = new Set([
   "token",
   "tokens",
 ]);
-const CONSOLE_ERROR_MESSAGE = /console\.error\([^)]*error\.message/;
 const IDENTIFIER = /[A-Za-z_$][\w$]*/g;
 const WORD_BOUNDARY = /(?<=[a-z0-9])(?=[A-Z])|[_$]+/;
 const REDACTORS = ["redactMessage(", "errorSummary(", "redactReportUrl("];
@@ -458,122 +457,17 @@ describe("the log scan (no secret or personal datum in a console call)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Thrown errors and their logs carry no request headers or bodies
+// 3. The email consumer never logs a send failure's message
+//    (the provider clients' errors are tested in
+//    `apps/site/test/security-errors.test.ts`)
 // ---------------------------------------------------------------------------
 
-describe("provider client errors never carry headers or bodies", () => {
-  const MOLLIE_KEY = "live_SecretMollieKey0000000000000000";
-  const MUX_ID = "mux-token-id-secret";
-  const MUX_SECRET = "mux-token-secret-value";
-  const BODY_SECRET = "RESPONSE-BODY-SECRET-a@example.test";
+const CONSOLE_ERROR_MESSAGE_OF_ERROR = /console\.error\([^)]*error\.message/;
 
-  /** Every string an error or its logs can show. */
-  function everything(error: unknown, logs: unknown[][]): string {
-    const text = error instanceof Error ? `${error.name} ${error.message}` : "";
-    return `${text} ${JSON.stringify(error)} ${JSON.stringify(logs)}`;
-  }
-
-  function capture(): { logs: unknown[][]; stop: () => void } {
-    const logs: unknown[][] = [];
-    const original = console.error;
-    console.error = (...args: unknown[]) => {
-      logs.push(args.map((arg) => (arg instanceof Error ? arg.message : arg)));
-    };
-    return {
-      logs,
-      stop: () => {
-        console.error = original;
-      },
-    };
-  }
-
-  const answers: [string, () => Response][] = [
-    ["a 500 with a body", () => new Response(BODY_SECRET, { status: 500 })],
-    ["a 200 that is not JSON", () => new Response(BODY_SECRET)],
-    [
-      "a 200 with an unexpected payment",
-      () => Response.json({ id: 1, leaked: BODY_SECRET }),
-    ],
-    ["a 429", () => new Response(BODY_SECRET, { status: 429 })],
-  ];
-
-  for (const [name, answer] of answers) {
-    test(`Mollie: ${name}`, async () => {
-      const { createMollie, getPayment } = await import("@smog/payments");
-      const mollie = createMollie(
-        { ENVIRONMENT: "production", MOLLIE_API_KEY: MOLLIE_KEY },
-        { fetch: () => Promise.resolve(answer()) }
-      );
-      const { logs, stop } = capture();
-      let thrown: unknown;
-      try {
-        await getPayment(mollie as NonNullable<typeof mollie>, "tr_abcd1234");
-      } catch (error) {
-        thrown = error;
-      } finally {
-        stop();
-      }
-      expect(thrown).toBeInstanceOf(Error);
-      const text = everything(thrown, logs);
-      for (const secret of [MOLLIE_KEY, "Bearer", BODY_SECRET]) {
-        expect(text).not.toContain(secret);
-      }
-    });
-
-    test(`Mux: ${name}`, async () => {
-      const { createMux, getAsset } = await import("@smog/video");
-      const mux = createMux(
-        {
-          ENVIRONMENT: "production",
-          MUX_TOKEN_ID: MUX_ID,
-          MUX_TOKEN_SECRET: MUX_SECRET,
-        },
-        { fetch: () => Promise.resolve(answer()) }
-      );
-      const { logs, stop } = capture();
-      let thrown: unknown;
-      try {
-        await getAsset(mux as NonNullable<typeof mux>, "asset-1");
-      } catch (error) {
-        thrown = error;
-      } finally {
-        stop();
-      }
-      expect(thrown).toBeInstanceOf(Error);
-      const text = everything(thrown, logs);
-      for (const secret of [
-        MUX_ID,
-        MUX_SECRET,
-        btoa(`${MUX_ID}:${MUX_SECRET}`),
-        BODY_SECRET,
-      ]) {
-        expect(text).not.toContain(secret);
-      }
-    });
-  }
-
-  test("the email sender's own error names the environment, nothing of a message", async () => {
-    const { createEmailSender } = await import("@smog/email");
-    let thrown: unknown;
-    try {
-      createEmailSender({
-        binding: undefined,
-        environment: "production",
-        kv: {} as never,
-      });
-    } catch (error) {
-      thrown = error;
-    }
-    expect((thrown as Error).message).toBe(
-      "[email] Failed to create a sender: the EMAIL binding is missing in production"
-    );
-  });
-
-  test("the email consumer logs a send failure's name and code, never its message", () => {
+describe("the email consumer's logs", () => {
+  test("a send failure is logged by name and code, never its message (it may name the recipient)", () => {
     const consumer = read("packages/jobs/src/email-consumer.ts");
-    // The sender's error may name the recipient: the log line is built from
-    // `name` and `code` only.
     expect(consumer).toContain("error.name");
-    expect(consumer).not.toMatch(CONSOLE_ERROR_MESSAGE);
+    expect(consumer).not.toMatch(CONSOLE_ERROR_MESSAGE_OF_ERROR);
   });
 });

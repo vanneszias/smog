@@ -12,7 +12,11 @@ import { ORIGIN, signedUp } from "./helpers";
  * `edit` share-token rules are in `packages/features/lists/test/sharing.test.ts`.
  */
 
-const db = createTestDb({ DB: env.DB });
+if (!env.DB) {
+  throw new Error("[test] The DB binding is missing");
+}
+const d1: D1Database = env.DB;
+const db = createTestDb({ DB: d1 });
 
 interface RpcAnswer {
   body: { json?: unknown };
@@ -128,7 +132,8 @@ describe("a banned user", () => {
     };
     // The real path: an admin bans her, which also revokes her sessions.
     const boss = await signedUp();
-    await env.DB.prepare("UPDATE user SET role = 'admin' WHERE email = ?")
+    await d1
+      .prepare("UPDATE user SET role = 'admin' WHERE email = ?")
       .bind(boss.email)
       .run();
     const ban = await rpc(
