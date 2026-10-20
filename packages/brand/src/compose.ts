@@ -264,6 +264,12 @@ export function brandPlan(): BrandPlan {
         contents: recolour(logoSource, GREEN),
         path: `${SITE}/brand/logo-green.svg`,
       },
+      // The old site's /assets/logo.svg (inventory R-18): the green logo,
+      // unhashed, at the path outside links and printed material know.
+      {
+        contents: recolour(logoSource, GREEN),
+        path: `${SITE}/assets/logo.svg`,
+      },
       {
         contents: recolour(logoSource, WHITE),
         path: `${SITE}/brand/logo-white.svg`,
