@@ -102,6 +102,9 @@ function customizeWorker(
 }
 
 export default defineConfig({
+  // No source map ships (phase 9 task 6): the deploy guard fails on a `.map`
+  // file or a map comment, and perf-budget.test.ts on this line changing.
+  build: { sourcemap: false },
   // `/dev/*` pages are compiled out of production builds (spec §9: dev and
   // staging only); see src/routes/dev/ui.tsx and scripts/deploy-guard.ts.
   define: {

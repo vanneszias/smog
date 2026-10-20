@@ -1,5 +1,6 @@
 import { type Environment, MUX_DEFAULT_API_URL } from "@smog/config/env/worker";
 import { r2Origin } from "@smog/sponsorships/server";
+import { cacheHeaders } from "./cache";
 
 /**
  * The site's security headers (spec §9, the old Caddy set), added to every
@@ -203,6 +204,7 @@ export function withSecurityHeaders(
   const secured = new Response(response.body, response);
   const { headers } = secured;
   setMissing(headers, BASE_HEADERS);
+  setMissing(headers, cacheHeaders(options.requestUrl, secured));
   if (options.environment !== "dev") {
     setMissing(headers, { "strict-transport-security": HSTS });
   }
@@ -213,11 +215,6 @@ export function withSecurityHeaders(
   const endpoints = reportingEndpoints(options.requestUrl);
   if (endpoints) {
     setMissing(headers, { [REPORTING_ENDPOINTS]: endpoints });
-  }
-  if (headers.get("content-type")?.startsWith("text/html")) {
-    // The page carries this response's nonce: never let a shared cache
-    // (a later Cache Rule, a proxy) serve it to someone else.
-    setMissing(headers, { "cache-control": "private, no-cache" });
   }
   if (!(headers.has(CSP) || headers.has(CSP_REPORT_ONLY))) {
     headers.set(

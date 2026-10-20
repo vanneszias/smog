@@ -1,6 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  checkNoSourceMaps,
+  checkPerfBudget,
+  gzipSize,
+  measureEntries,
+  parsePerfBudget,
+  unbudgetedRoutes,
+} from "./perf-budget";
 
 /** Cloudflare environments that may be deployed. `dev` is local-only. */
 export const DEPLOYABLE_ENVIRONMENTS = ["staging", "production"] as const;
@@ -459,6 +467,63 @@ function readClientManifest(dist: string): unknown {
   return existsSync(path) ? readBuiltConfig(path) : null;
 }
 
+/** `perf-budget.json`, or `--perf-budget <file>` (the guard's fixture tests). */
+function perfBudgetPath(): string {
+  const index = process.argv.indexOf("--perf-budget");
+  const file = index === -1 ? undefined : process.argv[index + 1];
+  return file ?? fileURLToPath(new URL("../perf-budget.json", import.meta.url));
+}
+
+/** Every file under `dir`, for the source-map check. */
+function builtPaths(dir: string): string[] {
+  return readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => join(entry.parentPath, entry.name));
+}
+
+/**
+ * The bundle budgets (`perf-budget.json`, scripts/perf-budget.ts): the
+ * initial JavaScript of each entry from the client manifest, and the
+ * Worker's gzip size (its modules, as `wrangler deploy` uploads them);
+ * and no source map. Hints (a budget to lower) are printed, not fatal.
+ * `--perf-report` prints the measurements as JSON too.
+ */
+function checkPerformance(dist: string, files: readonly BuiltFile[]): void {
+  const budget = parsePerfBudget(
+    JSON.parse(readFileSync(perfBudgetPath(), "utf8"))
+  );
+  checkNoSourceMaps(builtPaths(dist), files);
+  const clientDir = join(dist, "client");
+  const entries = measureEntries(readClientManifest(dist), budget, (file) =>
+    readFileSync(join(clientDir, file), "utf8")
+  );
+  const serverDir = join(dist, "server");
+  const worker = {
+    gzip: files
+      .filter((file) => file.path.startsWith(serverDir))
+      .reduce((sum, file) => sum + gzipSize(file.content), 0),
+  };
+  if (process.argv.includes("--perf-report")) {
+    console.log(
+      JSON.stringify({ entries: Object.fromEntries(entries), worker }, null, 2)
+    );
+  }
+  const { errors, hints } = checkPerfBudget(budget, entries, worker);
+  for (const route of unbudgetedRoutes(readClientManifest(dist), budget)) {
+    errors.push(
+      `src/routes/${route} has a component chunk but no entry of perf-budget.json lists it: add it to an entry (or a new one) and set that budget`
+    );
+  }
+  for (const hint of hints) {
+    console.warn(`[deploy-guard] ${hint}`);
+  }
+  if (errors.length > 0) {
+    throw new Error(
+      `[deploy-guard] the bundle is over its budget (apps/site/perf-budget.json):\n  ${errors.join("\n  ")}`
+    );
+  }
+}
+
 function readBuiltConfig(path: string): unknown {
   try {
     return JSON.parse(readFileSync(path, "utf8"));
@@ -478,6 +543,7 @@ if (import.meta.main && process.argv.includes("--bundle")) {
     checkServerHasNoRenderer(files);
     checkClientRenderIsLazy(readClientManifest(dist), files);
     checkClientHasNoSecrets(files);
+    checkPerformance(dist, files);
     console.log("deploy-guard: bundle ok");
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
@@ -497,6 +563,7 @@ if (import.meta.main && process.argv.includes("--bundle")) {
     checkServerHasNoRenderer(files);
     checkClientRenderIsLazy(readClientManifest(dist), files);
     checkClientHasNoSecrets(files);
+    checkPerformance(dist, files);
     console.log(`deploy-guard: ok (${env})`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

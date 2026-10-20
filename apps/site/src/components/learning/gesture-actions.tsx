@@ -10,7 +10,7 @@ import {
 } from "@smog/ui-web";
 import { Ellipsis, QrCode, Share2 } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
-import { GestureQrDialog } from "@/components/gesture-qr-dialog";
+import { LazyGestureQrDialog } from "@/components/lazy-gesture-qr-dialog";
 import { shareUrl, useSiteUrl } from "@/lib/share";
 import { gestureHref } from "./links";
 import { SaveToList } from "./save-to-list";
@@ -73,7 +73,7 @@ export function GestureActions({
           </MenuItem>
         </MenuContent>
       </Menu>
-      <GestureQrDialog
+      <LazyGestureQrDialog
         gesture={gesture}
         onOpenChange={setQrOpen}
         open={qrOpen}

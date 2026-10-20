@@ -645,7 +645,7 @@ CHECK: `invoice_request_name_length_check`, `invoice_request_email_length_check`
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
 | `legacy_id` | `legacyId` | text | yes | unique |
 
-Indexes: unique `sponsorship_gesture_blocking_uq` (gesture_id) WHERE …; `sponsorship_gesture_status_idx` (gesture_id, status); `sponsorship_status_ends_at_idx` (status, ends_at); `sponsorship_sponsor_id_idx` (sponsor_id); `sponsorship_created_id_idx` (created_at, id), migration 0010: the admin list (newest first) and the CSV export (oldest first) seek it.
+Indexes: unique `sponsorship_gesture_blocking_uq` (gesture_id) WHERE …; `sponsorship_gesture_status_idx` (gesture_id, status); `sponsorship_status_ends_at_idx` (status, ends_at); `sponsorship_sponsor_id_idx` (sponsor_id); `sponsorship_created_id_idx` (created_at, id), migration 0010: the admin list (newest first) and the CSV export (oldest first) seek it; `sponsorship_logo_key_idx` (logo_key), migration 0014: the orphan-logo sweep asks per candidate key whether another sponsorship still uses it (phase 9 task 6).
 
 CHECK: `sponsorship_status_check`, `sponsorship_display_name_length_check`.
 #### `payment`
@@ -754,7 +754,7 @@ CHECK: `sponsorship_token_purpose_check`.
 
 ## Migrations, seed and tests
 
-**Migrations are append-only.** `0000`–`0013` are merged (the next free number is `0014`); never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
+**Migrations are append-only.** `0000`–`0014` are merged (the next free number is `0015`); never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
 
 - **Retention** (phase 6 ruling 9, `packages/db/src/retention.ts`): the daily `15 3 * * *` cron deletes `audit_log` rows older than 3 × 365 days, `dead_letter` rows older than 14 days (phase 9), expired `session` and `verification` rows, and `sponsorship_token` rows used or expired more than 29 days ago (so a daily run removes them within 30 days), in chunks of 500 (`rowid IN (SELECT rowid … LIMIT 500)`, at most 20 per purge per run). Each chunk read seeks an index except the used-token one (`used_at` has no index; the table is small). The same run (`runRetentionPurge`, `@smog/sponsorships/server`) clears `sponsorship.logo_key` on sponsorships that ended (`rejected`, `cancelled`, `expired`) more than 30 days ago and can no longer use the logo (`payment_item.includes_logo` keeps the fact), and deletes R2 `logos/*` objects that no sponsorship references and that were uploaded more than 24 h ago (a KV cursor resumes the listing across runs). `bun run retention --env <env> --dry-run` counts what it would delete.
 - `bun -F @smog/db db:generate` runs `drizzle-kit generate` (generate only; wrangler applies migrations). Hand-written SQL (such as the FTS table) goes in a file made with `drizzle-kit generate --custom --name <name>`, so the drizzle journal stays in step.
