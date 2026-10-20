@@ -35,6 +35,14 @@
   },
   "overrides": [
     {
+      "includes": ["scripts/__fixtures__/**"],
+      "linter": {
+        "rules": {
+          "correctness": { "noUndeclaredDependencies": "off" }
+        }
+      }
+    },
+    {
       "includes": [
         "scripts/**",
         "packages/render/src/server/**/*.ts",

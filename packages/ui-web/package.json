@@ -12,7 +12,7 @@
     "test": "bun ../../scripts/test-deadline.ts -- bun test --timeout=20000"
   },
   "dependencies": {
-    "@mux/mux-player-react": "3.13.4",
+    "@mux/mux-player-react": "3.14.0",
     "@smog/brand": "workspace:*",
     "@smog/i18n": "workspace:*",
     "@smog/styles": "workspace:*",
@@ -20,17 +20,17 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "catalog:",
-    "radix-ui": "1.6.7",
+    "radix-ui": "1.8.1",
     "tailwind-merge": "3.7.0"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "20.14.5",
+    "@happy-dom/global-registrator": "21.0.3",
     "@smog/config": "workspace:*",
     "@tailwindcss/node": "4.3.3",
     "@tailwindcss/oxide": "4.3.3",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",
-    "@testing-library/user-event": "14.6.7",
+    "@testing-library/user-event": "14.6.8",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "19.2.7",
