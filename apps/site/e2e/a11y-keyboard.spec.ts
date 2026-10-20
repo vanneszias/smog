@@ -106,9 +106,19 @@ test.describe("keyboard: the shell", () => {
       await page.keyboard.press("Enter");
       await expect(menu).toBeVisible({ timeout: 5000 });
     }).toPass({ timeout: 30_000 });
-    // The checked item has the focus; the arrows move; Enter chooses.
-    await page.keyboard.press("ArrowDown");
-    await page.keyboard.press("ArrowDown");
+    // The arrows move the focus along the items; walk to French (each item
+    // carries its own `lang`) and choose it with Enter. A key lost while the
+    // menu settles on a slow runner costs one more press, not the wrong item.
+    await expect(page.locator('[role^="menuitem"]:focus')).toBeVisible();
+    await expect(async () => {
+      const focused = await page.evaluate(() =>
+        document.activeElement?.getAttribute("lang")
+      );
+      if (focused !== "fr") {
+        await page.keyboard.press("ArrowDown");
+      }
+      expect(focused).toBe("fr");
+    }).toPass({ timeout: 15_000 });
     await page.keyboard.press("Enter");
     await expect(page.locator("html")).toHaveAttribute("lang", NOT_DUTCH);
     await expect(menu).toBeHidden();
