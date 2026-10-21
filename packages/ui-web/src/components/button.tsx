@@ -31,7 +31,7 @@ export const buttonVariants = cva(
       },
       variant: {
         danger:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/85",
+          "border-transparent bg-destructive text-destructive-foreground hover:bg-danger-strong dark:hover:bg-destructive/90",
         ghost:
           "border-transparent bg-transparent text-foreground hover:bg-muted aria-expanded:bg-muted dark:hover:bg-muted/50",
         primary:

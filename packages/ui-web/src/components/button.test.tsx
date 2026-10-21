@@ -34,6 +34,8 @@ describe("Button", () => {
     );
     const danger = classesOf(screen.getByRole("button", { name: "c" }));
     expect(danger).toContain("bg-destructive");
+    // Hover darkens (white text on a lightened red fails AA; axe caught it).
+    expect(danger).toContain("hover:bg-danger-strong");
     expect(danger).toContain("min-h-12");
     const small = classesOf(screen.getByRole("button", { name: "d" }));
     expect(small).toContain("min-h-8");
