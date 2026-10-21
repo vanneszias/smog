@@ -32,9 +32,9 @@ describe("renderWebThemeCss", () => {
     expect(css).toContain("@custom-variant dark (&:where(.dark, .dark *));");
   });
 
-  it("resets Tailwind's default scales so only tokens exist", () => {
+  it("keeps Tailwind's default scales and resets only the colours", () => {
+    expect(css).toContain("--color-*: initial;");
     for (const namespace of [
-      "color",
       "spacing",
       "radius",
       "text",
@@ -44,7 +44,7 @@ describe("renderWebThemeCss", () => {
       "font-weight",
       "container",
     ]) {
-      expect(css).toContain(`--${namespace}-*: initial;`);
+      expect(css).not.toContain(`--${namespace}-*: initial;`);
     }
   });
 
@@ -53,16 +53,35 @@ describe("renderWebThemeCss", () => {
     expect(theme).toContain("--color-surface-raised: #FFFFFF;");
     expect(theme).toContain("--color-primary: #00805F;");
     expect(dark).toContain("--color-primary: #2BB38A;");
-    expect(dark).toContain("--color-background: #0F1210;");
+    expect(dark).toContain("--color-background: #0C110E;");
     expect(dark).toContain("color-scheme: dark;");
   });
 
-  it("emits the spacing scale on the 4 pt grid, in rem", () => {
-    expect(css).toContain("--spacing-0: 0rem;");
-    expect(css).toContain("--spacing-0_5: 0.125rem;");
-    expect(css).toContain("--spacing-4: 1rem;");
-    expect(css).toContain("--spacing-16: 4rem;");
+  it("adds the touch target to the default spacing scale", () => {
     expect(css).toContain("--spacing-touch: 2.75rem;");
+    expect(css).not.toContain("--spacing-4:");
+  });
+
+  it("emits the shadcn vocabulary in light and overrides it in .dark", () => {
+    const [theme = "", dark = ""] = css.split(".dark {");
+    for (const name of [
+      "card",
+      "popover",
+      "secondary",
+      "muted",
+      "accent",
+      "destructive",
+      "input",
+      "ring",
+      "sidebar",
+      "sidebar-primary",
+      "sidebar-accent",
+      "chart-1",
+      "chart-5",
+    ]) {
+      expect(theme).toContain(`--color-${name}: #`);
+      expect(dark).toContain(`--color-${name}: #`);
+    }
   });
 
   it("emits radius, type, shadow, motion and breakpoints", () => {
@@ -78,6 +97,7 @@ describe("renderWebThemeCss", () => {
     expect(css).toContain("--duration-slow: 320ms;");
     expect(css).toContain("--motion-pop-scale: 1.25;");
     expect(css).toContain("--breakpoint-lg: 64rem;");
+    expect(css).toContain('--font-sans: Figtree, "Figtree Fallback",');
   });
 
   it("grows the display size from md", () => {

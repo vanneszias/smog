@@ -40,7 +40,7 @@ describe("generated theme under Tailwind v4", () => {
       "dark:bg-surface",
     ]);
     expect(rule(css, ".bg-primary")).toContain("var(--color-primary)");
-    expect(rule(css, ".p-0\\.5")).toContain("var(--spacing-0_5)");
+    expect(rule(css, ".p-0\\.5")).toContain("var(--spacing)");
     expect(rule(css, ".min-h-touch")).toContain("var(--spacing-touch)");
     expect(rule(css, ".text-display")).toContain("var(--text-display)");
     expect(rule(css, ".max-w-reading")).toContain("var(--container-reading)");
@@ -48,27 +48,60 @@ describe("generated theme under Tailwind v4", () => {
     expect(css).toContain(".dark\\:bg-surface:where(.dark, .dark *)");
   });
 
-  it("builds nothing for Tailwind's default scales", async () => {
+  it("builds Tailwind's default scales, so registry code compiles", async () => {
     const css = await build([
-      "bg-red-500",
-      "bg-white",
       "p-7",
+      "size-9",
       "text-sm",
       "shadow-sm",
       "rounded-2xl",
       "max-w-3xl",
       "ease-in-out",
       "font-bold",
+      "bg-primary/90",
+      "text-white",
     ]);
+    for (const name of [
+      ".p-7",
+      ".size-9",
+      ".text-sm",
+      ".shadow-sm",
+      ".rounded-2xl",
+      ".max-w-3xl",
+      ".ease-in-out",
+      ".font-bold",
+      ".text-white",
+    ]) {
+      expect(css).toContain(name);
+    }
+    expect(css).toContain(".bg-primary\\/90");
+  });
+
+  it("keeps the raw palette out: only the semantic colours exist", async () => {
+    const css = await build(["bg-red-500", "text-blue-600", "bg-black"]);
     expect(css).not.toContain(".bg-red-500");
-    expect(css).not.toContain(".bg-white");
-    expect(css).not.toContain(".p-7");
-    expect(css).not.toContain(".text-sm");
-    expect(css).not.toContain(".shadow-sm");
-    expect(css).not.toContain(".rounded-2xl");
-    expect(css).not.toContain(".max-w-3xl");
-    expect(css).not.toContain(".ease-in-out");
-    expect(css).not.toContain(".font-bold");
+    expect(css).not.toContain(".text-blue-600");
+    expect(css).not.toContain(".bg-black");
+  });
+
+  it("builds the shadcn colour vocabulary", async () => {
+    const css = await build([
+      "bg-card",
+      "text-card-foreground",
+      "bg-muted",
+      "text-muted-foreground",
+      "bg-accent",
+      "bg-destructive",
+      "border-input",
+      "ring-ring/50",
+      "bg-sidebar",
+      "text-sidebar-foreground",
+      "bg-chart-1",
+      "bg-highlight",
+    ]);
+    expect(rule(css, ".bg-card")).toContain("var(--color-card)");
+    expect(rule(css, ".bg-chart-1")).toContain("var(--color-chart-1)");
+    expect(rule(css, ".bg-sidebar")).toContain("var(--color-sidebar)");
   });
 
   it("routes default transitions through the zeroed reduced-motion durations", async () => {

@@ -82,6 +82,35 @@ describe("kit and app classes", () => {
     ]);
   });
 
+  it("accepts the shadcn colour vocabulary and the alias names", async () => {
+    expect(
+      await missingFrom([
+        "bg-card",
+        "text-card-foreground",
+        "bg-popover",
+        "bg-secondary",
+        "bg-muted",
+        "text-muted-foreground",
+        "bg-accent",
+        "bg-destructive",
+        "border-input",
+        "border-ring",
+        "bg-sidebar",
+        "text-sidebar-foreground",
+        "bg-chart-1",
+        "bg-highlight",
+        "bg-primary/40",
+        // The phase 1 to 9 names, until task 9 removes them.
+        "bg-surface",
+        "bg-surface-raised",
+        "bg-surface-sunken",
+        "text-foreground-muted",
+        "bg-danger",
+        "text-primary-strong",
+      ])
+    ).toEqual([]);
+  });
+
   it("finds no hex colours or arbitrary values in the sources", () => {
     const scanner = new Scanner({
       sources: SOURCES.map((source) => ({ ...source, negated: false })),

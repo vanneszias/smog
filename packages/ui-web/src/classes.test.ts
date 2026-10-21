@@ -77,4 +77,51 @@ describe("kit classes", () => {
     );
     expect(missing).toEqual([]);
   });
+
+  test("the shadcn vocabulary, Tailwind's defaults and the alias names build", async () => {
+    const candidates = [
+      "bg-card",
+      "text-card-foreground",
+      "bg-popover",
+      "bg-muted",
+      "text-muted-foreground",
+      "bg-accent",
+      "bg-destructive/90",
+      "border-input",
+      "ring-ring/50",
+      "bg-sidebar",
+      "text-sidebar-foreground",
+      "bg-chart-1",
+      "bg-highlight",
+      // Tailwind's own scales, as registry code writes them.
+      "size-9",
+      "px-2.5",
+      "text-sm",
+      "rounded-md",
+      "max-w-lg",
+      "font-bold",
+      // The phase 1 to 9 names, until task 9 removes them.
+      "bg-surface",
+      "bg-surface-raised",
+      "bg-surface-sunken",
+      "text-foreground-muted",
+      "bg-danger",
+      "text-primary-strong",
+      "text-body-sm",
+      "min-h-touch",
+    ];
+    const compiler = await compile(
+      [
+        '@import "tailwindcss/theme.css" layer(theme);',
+        '@import "tailwindcss/utilities.css" layer(utilities);',
+        THEME,
+        KIT,
+      ].join("\n"),
+      { base: SRC, onDependency: () => undefined }
+    );
+    const css = compiler.build(candidates);
+    expect(
+      candidates.filter((c) => !css.includes(`.${escapeClass(c)}`))
+    ).toEqual([]);
+  });
 });

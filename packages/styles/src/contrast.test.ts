@@ -7,7 +7,7 @@ import {
   contrastRatio,
   NON_TEXT_ROLES,
 } from "./contrast";
-import { type ColorRole, tokens } from "./tokens";
+import { ALIASES, type ColorRole, tokens } from "./tokens";
 
 const HEX_ERROR = /hex/i;
 
@@ -111,10 +111,52 @@ describe.each(["light", "dark"] as const)("%s theme", (theme) => {
   });
 });
 
+describe("green surfaces", () => {
+  it("hold text on green and green on warm neutral to their minimums", () => {
+    for (const [foreground, background, min] of [
+      ["primaryForeground", "primary", AA_BODY],
+      ["primaryForegroundMuted", "primary", AA_BODY],
+      ["sidebarForeground", "sidebar", AA_BODY],
+      ["sidebarForegroundMuted", "sidebar", AA_BODY],
+      ["sidebarAccentForeground", "sidebarAccent", AA_BODY],
+      ["sidebarRing", "sidebar", AA_LARGE],
+      ["primaryRing", "primary", AA_LARGE],
+      ["primary", "background", AA_LARGE],
+      ["primary", "card", AA_LARGE],
+      ["primaryStrong", "background", AA_BODY],
+      ["primaryStrong", "muted", AA_BODY],
+    ] as const) {
+      expect(CONTRAST_PAIRS).toContainEqual({ background, foreground, min });
+    }
+  });
+
+  it("keeps white on the brand green above AA body text", () => {
+    expect(
+      contrastRatio(
+        tokens.color.light.primaryForeground,
+        tokens.color.brand.green
+      )
+    ).toBeGreaterThanOrEqual(AA_BODY);
+  });
+});
+
+describe("aliases", () => {
+  it.each(Object.entries(ALIASES))(
+    "%s keeps the value of %s in both themes",
+    (oldName, newName) => {
+      for (const theme of ["light", "dark"] as const) {
+        const colours: Record<string, string> = tokens.color[theme];
+        expect(colours[oldName]).toBe(colours[newName]);
+      }
+    }
+  );
+});
+
 describe("brand", () => {
   it("keeps the brand green as the light primary", () => {
     expect(tokens.color.light.primary).toBe("#00805F");
     expect(tokens.color.brand.green).toBe("#00805F");
     expect(tokens.color.brand.orange).toBe("#EE971C");
+    expect(tokens.color.light.highlight).toBe("#EE971C");
   });
 });

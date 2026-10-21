@@ -17,7 +17,7 @@ export const badgeVariants = cva(
         sm: "px-2 py-0.5",
       },
       variant: {
-        accent: "bg-accent",
+        accent: "bg-highlight",
         danger: "bg-danger-subtle",
         neutral: "bg-surface-sunken",
         primary: "bg-primary-subtle",
@@ -33,7 +33,7 @@ const badgeLabelVariants = cva("font-medium", {
   variants: {
     size: { md: "text-body-sm", sm: "text-caption" },
     variant: {
-      accent: "text-accent-foreground",
+      accent: "text-highlight-foreground",
       danger: "text-danger-strong",
       neutral: "text-foreground",
       primary: "text-primary-strong",
@@ -46,7 +46,7 @@ const badgeLabelVariants = cva("font-medium", {
 type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
 
 const LABEL_ROLE: Record<BadgeVariant, ColorRole> = {
-  accent: "accentForeground",
+  accent: "highlightForeground",
   danger: "dangerStrong",
   neutral: "foreground",
   primary: "primaryStrong",
