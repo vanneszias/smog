@@ -8,9 +8,9 @@ import tailwindConfig from "../tailwind.config.cjs";
 
 /**
  * Every utility the kit and the mobile app write must exist in the SMOG
- * preset. The preset replaces Tailwind's default scales (DECISIONS), so an
- * off-token class such as `h-24` or `p-7` silently produces no style on
- * native. Same approach as `packages/ui-web/src/classes.test.ts`: Tailwind's
+ * preset. Tailwind's default scales stay (phase 10a ruling 2) but its raw
+ * palette and the weights without a Figtree file do not, so a class such as
+ * `bg-red-500` or `font-light` silently produces no style on native. Same approach as `packages/ui-web/src/classes.test.ts`: Tailwind's
  * own scanner finds the candidates, the real compiler (Tailwind 3 with the
  * generated preset, as NativeWind) must build a rule for each.
  */
@@ -76,10 +76,15 @@ describe("kit and app classes", () => {
   });
 
   it("catches an off-token class", async () => {
-    expect(await missingFrom(["h-24", "p-7", "min-h-touch"])).toEqual([
-      "h-24",
-      "p-7",
-    ]);
+    expect(
+      await missingFrom(["bg-red-500", "font-light", "min-h-touch", "p-7"])
+    ).toEqual(["bg-red-500", "font-light"]);
+  });
+
+  it("keeps Tailwind's default scales, as registry code writes them", async () => {
+    expect(
+      await missingFrom(["h-24", "size-9", "text-sm", "rounded-2xl", "gap-1.5"])
+    ).toEqual([]);
   });
 
   it("accepts the shadcn colour vocabulary and the alias names", async () => {

@@ -29,6 +29,26 @@ function colours(): Record<string, string> {
   );
 }
 
+/** The weights Figtree is embedded in (`fontFamily.native`); each is a file. */
+const WEIGHTS = {
+  bold: 700,
+  medium: 500,
+  regular: 400,
+  semibold: 600,
+} as const;
+
+function weightUtilities(): Record<string, Record<string, string>> {
+  return Object.fromEntries(
+    (Object.keys(WEIGHTS) as (keyof typeof WEIGHTS)[]).map((name) => [
+      `.font-${name}`,
+      {
+        fontFamily: tokens.fontFamily.native[name],
+        fontWeight: String(WEIGHTS[name]),
+      },
+    ])
+  );
+}
+
 /**
  * The NativeWind (Tailwind 3) preset for the mobile app and
  * `@smog/ui-native`. Its scales replace Tailwind's defaults, so only token
@@ -38,7 +58,7 @@ function colours(): Record<string, string> {
  * `presets: [require("nativewind/preset"), require("@smog/styles/tailwind-preset")]`.
  */
 export function renderNativeTailwindConfig(): string {
-  const { breakpoint, fontSize, fontWeight, motion, radius, spacing } = tokens;
+  const { breakpoint, fontSize, motion, radius, spacing } = tokens;
   const preset = {
     // Tailwind 3 routes colours through `--tw-*-opacity` variables
     // (`bg-primary` sets `--tw-bg-opacity: 1`). css-interop remounts a view
@@ -52,34 +72,41 @@ export function renderNativeTailwindConfig(): string {
       placeholderOpacity: false,
       ringOpacity: false,
       textOpacity: false,
+      // Replaced by the plugin below: a weight also picks the Figtree file.
+      fontWeight: false,
     },
     darkMode: "class",
     theme: {
-      borderRadius: mapValues(radius, px),
       colors: {
         current: "currentColor",
         transparent: "transparent",
+        white: tokens.color.brand.white,
         ...colours(),
       },
+      // Phase 10a (ruling 2, mobile side): Tailwind's default scales stay
+      // (they are rem; the app sets NativeWind's `inlineRem` to 16, as the
+      // web's root size), and the token scales extend them, overriding the
+      // names both define (`rounded-lg`, `text-body`, `p-4`).
       extend: {
+        borderRadius: mapValues(radius, px),
+        fontSize: mapValues(fontSize, (step) => [
+          px(step.size),
+          { lineHeight: px(step.lineHeight) },
+        ]),
+        fontFamily: { sans: [tokens.fontFamily.native.regular] },
+        lineHeight: mapValues(fontSize, (step) => px(step.lineHeight)),
+        // Tailwind 3 emits screens in object order, so they must ascend.
+        screens: Object.fromEntries(
+          Object.entries(breakpoint)
+            .sort(([, a], [, b]) => a - b)
+            .map(([key, value]) => [key, px(value)])
+        ),
+        spacing: mapValues(spacing, px),
         transitionDuration: mapValues(motion.duration, (ms) => `${ms}ms`),
         transitionTimingFunction: {
           standard: `cubic-bezier(${motion.easing.standard.join(", ")})`,
         },
       },
-      fontSize: mapValues(fontSize, (step) => [
-        px(step.size),
-        { lineHeight: px(step.lineHeight) },
-      ]),
-      fontWeight: mapValues(fontWeight, String),
-      lineHeight: mapValues(fontSize, (step) => px(step.lineHeight)),
-      // Tailwind 3 emits screens in object order, so they must ascend.
-      screens: Object.fromEntries(
-        Object.entries(breakpoint)
-          .sort(([, a], [, b]) => a - b)
-          .map(([key, value]) => [key, px(value)])
-      ),
-      spacing: mapValues(spacing, px),
     },
   };
   const header = GENERATED_HEADER("tokens.ts via src/generate-native.ts")
@@ -89,7 +116,21 @@ export function renderNativeTailwindConfig(): string {
     "/**",
     ...header,
     " */",
-    `module.exports = ${JSON.stringify(preset, null, 2)};`,
+    `const preset = ${JSON.stringify(preset, null, 2)};`,
+    "",
+    "// `font-medium` and the other weights set the Figtree file of that weight",
+    "// and `fontWeight` (a custom font ignores `fontWeight` on Android). A bare",
+    "// function is a Tailwind plugin, so this file needs no `require`.",
+    `const weights = ${JSON.stringify(weightUtilities(), null, 2)};`,
+    "",
+    "module.exports = {",
+    "  ...preset,",
+    "  plugins: [",
+    "    ({ addUtilities }) => {",
+    "      addUtilities(weights);",
+    "    },",
+    "  ],",
+    "};",
     "",
   ].join("\n");
 }
