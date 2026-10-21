@@ -205,8 +205,8 @@
   [data-sonner-toaster],
   [data-sonner-toast],
   [data-sonner-toast] * {
-    animation: none !important;
     transition: none !important;
+    animation: none !important;
   }
 }
 
