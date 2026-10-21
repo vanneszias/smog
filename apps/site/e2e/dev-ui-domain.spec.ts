@@ -105,4 +105,26 @@ test.describe("/dev/ui domain sections", () => {
     expect(await blockingViolations(page, '[role="dialog"]')).toEqual([]);
     expect(errors).toEqual([]);
   });
+
+  test("the search palette opens from the gallery and is axe clean", async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    await openGallery(page, 390);
+    await page
+      .locator('[data-theme-column="light"]')
+      .getByRole("button", { name: "Zoek gebaren en categorieën" })
+      .click();
+    const palette = page.getByRole("dialog", { name: "Zoeken" });
+    await expect(palette).toBeVisible();
+    await expect(
+      palette.getByRole("group", { name: "Categorieën" })
+    ).toBeVisible();
+    await page.screenshot({
+      animations: "disabled",
+      path: `${SCREENSHOTS}/dev-ui-domain-palette.png`,
+    });
+    expect(await blockingViolations(page, '[role="dialog"]')).toEqual([]);
+    expect(errors).toEqual([]);
+  });
 });

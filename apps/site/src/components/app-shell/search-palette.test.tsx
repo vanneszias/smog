@@ -11,6 +11,7 @@ import {
   useSearchPalette,
 } from "./search-palette-provider";
 
+const HOND_NAME = /Hond/;
 const HOND = {
   categories: [{ name: "Dieren", slug: "dieren" }],
   id: "g-hond",
@@ -69,13 +70,11 @@ describe("isSearchShortcut", () => {
     expect(isSearchShortcut(new KeyboardEvent("keydown", { key: "a" }))).toBe(
       false
     );
-    const field = document.createElement("input");
-    document.body.append(field);
-    const typed = new KeyboardEvent("keydown", { bubbles: true, key: "/" });
-    field.dispatchEvent(typed);
-    // The event's target is the field once dispatched.
+    const typed = slash({});
+    Object.defineProperty(typed, "target", {
+      value: document.createElement("input"),
+    });
     expect(isSearchShortcut(typed)).toBe(false);
-    field.remove();
   });
 });
 
@@ -95,6 +94,18 @@ describe("the search palette", () => {
       expect(router.state.location.pathname).toBe("/gestures/hond")
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  test("Enter opens the first gesture even when the answer arrives after typing", async () => {
+    const { router } = await renderSite(Page, { api: API });
+    fireEvent.keyDown(document.body, { key: "/" });
+    const dialog = await screen.findByRole("dialog", { name: "Search" });
+    await userEvent.type(within(dialog).getByRole("combobox"), "hond");
+    await within(dialog).findByRole("option", { name: HOND_NAME });
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe("/gestures/hond")
+    );
   });
 
   test("a slash typed in a field does not open it", async () => {

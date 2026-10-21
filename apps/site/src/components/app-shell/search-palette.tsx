@@ -18,7 +18,13 @@ import {
 import { muxThumbnailUrl } from "@smog/utils";
 import { useNavigate } from "@tanstack/react-router";
 import { History, Search, Tag } from "lucide-react";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 /*
  * The global search (`/` or the header's button): a command palette with
@@ -133,8 +139,28 @@ function PaletteBody({
   // The ranked list is the server's: cmdk only moves the highlight.
   const gestures = typed === "" ? [] : (found.data?.items ?? []);
   const showRecent = typed === "" && recent.items.length > 0;
+  // cmdk keeps the highlight where it was when the list changes under it
+  // (the server's answer arrives after the debounce): Enter must open the
+  // first item as it is now, so the highlight is controlled and reset here.
+  let first = "see-all";
+  if (showRecent) {
+    first = `recent:${recent.items[0]}`;
+  } else if (gestures[0]) {
+    first = `gesture:${gestures[0].id}`;
+  } else if (matchingCategories[0]) {
+    first = `category:${matchingCategories[0].slug}`;
+  }
+  const [highlight, setHighlight] = useState(first);
+  useEffect(() => {
+    setHighlight(first);
+  }, [first]);
   return (
-    <CommandRoot loop shouldFilter={false}>
+    <CommandRoot
+      loop
+      onValueChange={setHighlight}
+      shouldFilter={false}
+      value={highlight}
+    >
       <CommandInput
         onValueChange={setQuery}
         placeholder={t("searchPalette.placeholder")}
