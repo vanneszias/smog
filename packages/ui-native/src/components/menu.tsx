@@ -123,7 +123,7 @@ export function MenuItem({
       {renderIcon(icon, color, ICON_SIZE.md)}
       <Text
         className={cn(
-          "flex-1 text-body",
+          "flex-1 font-regular text-body",
           danger ? "text-danger-strong" : "text-foreground"
         )}
       >
@@ -137,7 +137,7 @@ export function MenuLabel({ className, ...props }: TextProps): ReactElement {
   return (
     <Text
       className={cn(
-        "px-4 py-2 font-medium text-caption text-foreground-muted",
+        "px-4 py-2 font-medium text-caption text-muted-foreground",
         className
       )}
       {...props}

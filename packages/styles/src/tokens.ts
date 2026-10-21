@@ -211,6 +211,17 @@ const fontFamily = {
    */
   email: SYSTEM_SANS,
   /**
+   * Figtree on the apps: one embedded font file per weight (a custom font
+   * ignores `fontWeight` on Android), named by its PostScript name, which is
+   * also the file name in `apps/mobile/assets/fonts` (`expo-font` plugin).
+   */
+  native: {
+    bold: "Figtree-Bold",
+    medium: "Figtree-Medium",
+    regular: "Figtree-Regular",
+    semibold: "Figtree-SemiBold",
+  },
+  /**
    * Figtree on web, self-hosted (`apps/site/src/styles.css` declares the
    * face and `Figtree Fallback`, a size-adjusted local font that keeps the
    * layout still while it loads), then the system fonts.

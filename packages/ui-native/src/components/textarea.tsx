@@ -48,7 +48,10 @@ export function Textarea({
         accessibilityLabel={field.accessibilityLabel}
         accessibilityLabelledBy={field.accessibilityLabelledBy}
         accessibilityState={{ disabled }}
-        className={cn("flex-1 py-3 text-body text-foreground", className)}
+        className={cn(
+          "flex-1 py-3 font-regular text-body text-foreground",
+          className
+        )}
         editable={editable ?? !disabled}
         multiline
         numberOfLines={rows}

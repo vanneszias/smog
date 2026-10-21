@@ -124,12 +124,16 @@ describe("renderWebThemeCss", () => {
 interface Preset {
   corePlugins: Record<string, boolean>;
   darkMode: string;
+  plugins: ((api: { addUtilities: (utilities: object) => void }) => void)[];
   theme: {
-    borderRadius: Record<string, string>;
     colors: Record<string, string>;
-    fontSize: Record<string, [string, { lineHeight: string }]>;
-    lineHeight: Record<string, string>;
-    spacing: Record<string, string>;
+    extend: {
+      borderRadius: Record<string, string>;
+      fontFamily: Record<string, string[]>;
+      fontSize: Record<string, [string, { lineHeight: string }]>;
+      lineHeight: Record<string, string>;
+      spacing: Record<string, string>;
+    };
   };
 }
 
@@ -149,6 +153,7 @@ describe("renderNativeTailwindConfig", () => {
       backgroundOpacity: false,
       borderOpacity: false,
       divideOpacity: false,
+      fontWeight: false,
       placeholderOpacity: false,
       ringOpacity: false,
       textOpacity: false,
@@ -173,8 +178,8 @@ describe("renderNativeTailwindConfig", () => {
     ).toEqual([]);
   });
 
-  it("replaces the default line heights with the type scale", () => {
-    expect(preset.theme.lineHeight).toEqual({
+  it("extends the line heights with the type scale", () => {
+    expect(preset.theme.extend.lineHeight).toEqual({
       body: "24px",
       "body-sm": "20px",
       caption: "16px",
@@ -186,12 +191,47 @@ describe("renderNativeTailwindConfig", () => {
   });
 
   it("uses pixel values", () => {
-    expect(preset.theme.spacing["4"]).toBe("16px");
-    expect(preset.theme.spacing.touch).toBe("44px");
-    expect(preset.theme.borderRadius.lg).toBe("14px");
-    expect(preset.theme.fontSize.body).toEqual([
+    expect(preset.theme.extend.spacing["4"]).toBe("16px");
+    expect(preset.theme.extend.spacing.touch).toBe("44px");
+    expect(preset.theme.extend.borderRadius.lg).toBe("14px");
+    expect(preset.theme.extend.fontSize.body).toEqual([
       "16px",
       { lineHeight: "24px" },
+    ]);
+  });
+});
+
+describe("the native weights and Figtree", () => {
+  const preset = createRequire(import.meta.url)(
+    "../generated/tailwind-preset.cjs"
+  ) as Preset;
+
+  it("keeps Tailwind's default scales and white, and no raw palette", () => {
+    expect(preset.theme.colors.white).toBe(tokens.color.brand.white);
+    expect(Object.keys(preset.theme.colors)).not.toContain("red");
+    expect(preset.theme).not.toHaveProperty("spacing");
+  });
+
+  it("makes font-sans the regular Figtree file", () => {
+    expect(preset.theme.extend.fontFamily.sans).toEqual(["Figtree-Regular"]);
+  });
+
+  it("sets the Figtree file with every weight utility", () => {
+    const added: Record<string, Record<string, string>> = {};
+    for (const plugin of preset.plugins) {
+      plugin({
+        addUtilities: (utilities) => Object.assign(added, utilities),
+      });
+    }
+    expect(added[".font-medium"]).toEqual({
+      fontFamily: tokens.fontFamily.native.medium,
+      fontWeight: "500",
+    });
+    expect(Object.keys(added).sort()).toEqual([
+      ".font-bold",
+      ".font-medium",
+      ".font-regular",
+      ".font-semibold",
     ]);
   });
 });

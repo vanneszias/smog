@@ -325,3 +325,20 @@ describe("eas.json profiles", () => {
     expect(eas.cli.version).toBe(">= 24.10.0");
   });
 });
+
+describe("Figtree", () => {
+  it("embeds one font file per family the preset names, and the files exist", () => {
+    const plugin = load().plugins?.find(
+      (entry) => Array.isArray(entry) && entry[0] === "expo-font"
+    ) as [string, { fonts: string[] }] | undefined;
+    const families = Object.values(tokens.fontFamily.native);
+    expect(plugin?.[1].fonts).toEqual(
+      families.map((family) => `./assets/fonts/${family}.ttf`)
+    );
+    for (const family of families) {
+      expect(
+        existsSync(join(process.cwd(), "assets/fonts", `${family}.ttf`))
+      ).toBe(true);
+    }
+  });
+});

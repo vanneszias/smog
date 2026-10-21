@@ -77,7 +77,17 @@ exports[`the production config matches the snapshot with no variant 1`] = `
   "plugins": [
     "expo-router",
     "expo-localization",
-    "expo-font",
+    [
+      "expo-font",
+      {
+        "fonts": [
+          "./assets/fonts/Figtree-Bold.ttf",
+          "./assets/fonts/Figtree-Medium.ttf",
+          "./assets/fonts/Figtree-Regular.ttf",
+          "./assets/fonts/Figtree-SemiBold.ttf",
+        ],
+      },
+    ],
     "expo-secure-store",
     "expo-apple-authentication",
     "expo-video",

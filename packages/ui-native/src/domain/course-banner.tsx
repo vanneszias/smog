@@ -47,7 +47,7 @@ export function CourseBanner({
     <View
       accessibilityLiveRegion="polite"
       className={cn(
-        "flex-row items-start gap-3 rounded-lg border border-border-subtle border-l-4 border-l-warning bg-surface p-4",
+        "flex-row items-start gap-3 rounded-lg border border-border-subtle border-l-4 border-l-warning bg-card p-4",
         className
       )}
       {...props}
@@ -63,7 +63,7 @@ export function CourseBanner({
         <Text className="font-semibold text-body-sm text-foreground">
           {t("gesture.disclaimer.title")}
         </Text>
-        <Text className="text-body-sm text-foreground">
+        <Text className="font-regular text-body-sm text-foreground">
           <Trans
             components={{
               course: (

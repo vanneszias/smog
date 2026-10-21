@@ -18,6 +18,7 @@ import { hapticDanger } from "../lib/haptics";
 import { ICON_SIZE, renderIcon } from "../lib/icon";
 import { hitSlopFor, useColor } from "../lib/theme";
 import { Spinner } from "./spinner";
+import { type SurfaceTone, surfaceRoles, useSurface } from "./surface";
 
 export const buttonVariants = cva(
   "flex-row items-center justify-center gap-2 rounded-md border active:opacity-80",
@@ -31,10 +32,10 @@ export const buttonVariants = cva(
         sm: "min-h-8 px-3",
       },
       variant: {
-        danger: "border-transparent bg-danger",
+        danger: "border-transparent bg-destructive",
         ghost: "border-transparent bg-transparent",
         primary: "border-transparent bg-primary",
-        secondary: "border-foreground-muted bg-surface",
+        secondary: "border-muted-foreground bg-card",
       },
     },
   }
@@ -58,12 +59,60 @@ export type ButtonVariant = NonNullable<ButtonVariantProps["variant"]>;
 export type ButtonSize = NonNullable<ButtonVariantProps["size"]>;
 
 /** The colour of the label, for the icon and spinner next to it. */
-export const LABEL_ROLE: Record<ButtonVariant, ColorRole> = {
+const LABEL_ROLE: Record<ButtonVariant, ColorRole> = {
   danger: "primaryForeground",
   ghost: "foreground",
   primary: "primaryForeground",
   secondary: "foreground",
 };
+
+interface ButtonColours {
+  /** Classes added to the container (they win over the variant's). */
+  container: string;
+  /** Classes added to the label (the variant's own on the page). */
+  label: string;
+  /** The label's colour as a role (icons, spinners). */
+  role: ColorRole;
+}
+
+/**
+ * Buttons on a green `Surface`: the primary action is the orange highlight
+ * (green on green would vanish), the others are white. The danger variant
+ * keeps its own colours.
+ */
+function onSurface(
+  tone: SurfaceTone,
+  variant: ButtonVariant
+): ButtonColours | undefined {
+  if (tone === "default" || variant === "danger") {
+    return;
+  }
+  if (variant === "primary") {
+    return {
+      container: "bg-highlight",
+      label: "text-highlight-foreground",
+      role: "highlightForeground",
+    };
+  }
+  const roles = surfaceRoles(tone);
+  let container = "";
+  if (variant === "secondary") {
+    container =
+      tone === "header"
+        ? "border-sidebar-foreground bg-transparent"
+        : "border-primary-foreground bg-transparent";
+  }
+  return { container, label: roles.foregroundClass, role: roles.foreground };
+}
+
+/**
+ * The container and label classes and the label role of a variant on the
+ * current surface (the variant's own on the page).
+ */
+export function useButtonColours(variant: ButtonVariant): ButtonColours {
+  const surface = onSurface(useSurface(), variant);
+  return surface ?? { container: "", label: "", role: LABEL_ROLE[variant] };
+}
 
 /** Control heights in pt, for the hitSlop of the small size. */
 export const CONTROL_HEIGHT: Record<ButtonSize, number> = {
@@ -99,7 +148,8 @@ export function Button({
 }: ButtonProps): ReactElement {
   const resolvedSize = size ?? "md";
   const resolvedVariant = variant ?? "primary";
-  const labelRole = LABEL_ROLE[resolvedVariant];
+  const colours = useButtonColours(resolvedVariant);
+  const labelRole = colours.role;
   const labelColor = useColor(labelRole);
   const inactive = disabled || loading;
   const handlePress = useCallback(
@@ -129,6 +179,7 @@ export function Button({
       }}
       className={cn(
         buttonVariants({ size: resolvedSize, variant: resolvedVariant }),
+        colours.container,
         inactive && "opacity-50",
         className
       )}
@@ -140,10 +191,13 @@ export function Button({
       {leading}
       {typeof children === "string" || typeof children === "number" ? (
         <Text
-          className={buttonLabelVariants({
-            size: resolvedSize,
-            variant: resolvedVariant,
-          })}
+          className={cn(
+            buttonLabelVariants({
+              size: resolvedSize,
+              variant: resolvedVariant,
+            }),
+            colours.label
+          )}
         >
           {children}
         </Text>

@@ -37,7 +37,7 @@ export function Stepper({
       {...props}
     >
       <View className="flex-col">
-        <Text className="text-caption text-foreground-muted">
+        <Text className="font-regular text-caption text-muted-foreground">
           {t("kit.stepOf", { current: current + 1, total: steps.length })}
         </Text>
         <Text
@@ -73,7 +73,7 @@ export function Stepper({
                   "size-8 items-center justify-center rounded-full border-2",
                   done || active
                     ? "border-primary bg-primary"
-                    : "border-foreground-muted bg-surface"
+                    : "border-muted-foreground bg-card"
                 )}
               >
                 {done ? (
@@ -88,7 +88,7 @@ export function Stepper({
                       "font-semibold text-body-sm",
                       active
                         ? "text-primary-foreground"
-                        : "text-foreground-muted"
+                        : "text-muted-foreground"
                     )}
                   >
                     {index + 1}
