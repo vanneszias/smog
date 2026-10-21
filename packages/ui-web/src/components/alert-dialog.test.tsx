@@ -25,7 +25,7 @@ describe("AlertDialog", () => {
       screen.getByRole("alertdialog", { name: "Delete list?" })
     ).toBeDefined();
     const confirm = screen.getByRole("button", { name: "Confirm" });
-    expect(classesOf(confirm)).toContain("bg-danger");
+    expect(classesOf(confirm)).toContain("bg-destructive");
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDefined();
     await userEvent.click(confirm);
     expect(onConfirm).toHaveBeenCalledTimes(1);

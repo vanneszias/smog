@@ -7,6 +7,7 @@ import {
   useId,
 } from "react";
 import { cn } from "../lib/cn";
+import { Label } from "./label";
 
 interface FieldContextValue {
   /** Ids of the hint, error and counter, for `aria-describedby`. */
@@ -98,9 +99,13 @@ export function Field({
   };
   return (
     <FieldContext.Provider value={value}>
-      <div className={cn("flex flex-col gap-1", className)} {...props}>
-        <label
-          className="flex items-baseline gap-2 font-medium text-body-sm text-foreground"
+      <div
+        className={cn("flex flex-col gap-1", className)}
+        data-slot="field"
+        {...props}
+      >
+        <Label
+          className="items-baseline leading-normal"
           htmlFor={controlId}
           id={value.labelId}
         >
@@ -110,7 +115,7 @@ export function Field({
               {t("kit.optional")}
             </span>
           ) : null}
-        </label>
+        </Label>
         {children}
         {error ? (
           <p

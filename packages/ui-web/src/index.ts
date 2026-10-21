@@ -35,6 +35,7 @@ export {
 } from "./components/field";
 export { IconButton, type IconButtonProps } from "./components/icon-button";
 export { Input, type InputProps } from "./components/input";
+export { Label } from "./components/label";
 export { ListItem, type ListItemProps } from "./components/list-item";
 export { Logo, type LogoProps } from "./components/logo";
 export {

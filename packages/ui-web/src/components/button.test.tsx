@@ -27,13 +27,13 @@ describe("Button", () => {
       </>
     );
     expect(classesOf(screen.getByRole("button", { name: "a" }))).toContain(
-      "border-foreground-muted"
+      "border-input"
     );
     expect(classesOf(screen.getByRole("button", { name: "b" }))).toContain(
       "bg-transparent"
     );
     const danger = classesOf(screen.getByRole("button", { name: "c" }));
-    expect(danger).toContain("bg-danger");
+    expect(danger).toContain("bg-destructive");
     expect(danger).toContain("min-h-12");
     const small = classesOf(screen.getByRole("button", { name: "d" }));
     expect(small).toContain("min-h-8");

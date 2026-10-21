@@ -11,7 +11,7 @@ describe("Input", () => {
     const input = screen.getByRole("textbox", { name: "Name" });
     const classes = classesOf(input);
     expect(classes).toContain("min-h-touch");
-    expect(classes).toContain("border-foreground-muted");
+    expect(classes).toContain("border-input");
     expect(classes).toContain("focus-visible:ring-focus-ring");
   });
 
@@ -26,7 +26,7 @@ describe("Input", () => {
 
   test("a leading icon pads the input and is decorative", () => {
     renderKit(<Input aria-label="Email" leading={<svg data-testid="i" />} />);
-    expect(classesOf(screen.getByRole("textbox"))).toContain("pl-10");
+    expect(classesOf(screen.getByRole("textbox"))).toContain("pl-11");
     expect(
       screen.getByTestId("i").parentElement?.getAttribute("aria-hidden")
     ).toBe("true");

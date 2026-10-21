@@ -15,6 +15,63 @@
 @source "./lib";
 @source not "./**/*.test.tsx";
 
+/*
+ * The registry's state variants (shadcn `tailwind.css`, hand-ported): its
+ * components write `data-open:` / `data-checked:` and the like, which match
+ * Radix's `data-state` and the plain data attribute alike.
+ */
+@custom-variant data-open {
+  &:where([data-state="open"]),
+  &:where([data-open]:not([data-open="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-closed {
+  &:where([data-state="closed"]),
+  &:where([data-closed]:not([data-closed="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-checked {
+  &:where([data-state="checked"]),
+  &:where([data-checked]:not([data-checked="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-unchecked {
+  &:where([data-state="unchecked"]),
+  &:where([data-unchecked]:not([data-unchecked="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-selected {
+  &:where([data-selected="true"]) {
+    @slot;
+  }
+}
+@custom-variant data-disabled {
+  &:where([data-disabled="true"]),
+  &:where([data-disabled]:not([data-disabled="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-active {
+  &:where([data-state="active"]),
+  &:where([data-active]:not([data-active="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-horizontal {
+  &:where([data-orientation="horizontal"]) {
+    @slot;
+  }
+}
+@custom-variant data-vertical {
+  &:where([data-orientation="vertical"]) {
+    @slot;
+  }
+}
+
 @theme {
   --animate-fade-in: fade-in var(--duration-normal) var(--ease-standard);
   --animate-fade-out: fade-out var(--duration-fast) var(--ease-standard);
@@ -36,6 +93,41 @@
   --animate-progress: progress calc(var(--duration-slow) * 4)
     var(--ease-standard) infinite;
 
+  /* Accordion: the content height is measured by Radix. */
+  --animate-accordion-down: accordion-down var(--duration-normal)
+    var(--ease-standard);
+  --animate-accordion-up: accordion-up var(--duration-normal)
+    var(--ease-standard);
+  /* InputOTP caret. */
+  --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  @keyframes caret-blink {
+    0%,
+    70%,
+    100% {
+      opacity: 1;
+    }
+    20%,
+    50% {
+      opacity: 0;
+    }
+  }
   @keyframes fade-in {
     from {
       opacity: 0;
