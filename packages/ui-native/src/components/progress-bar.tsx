@@ -8,7 +8,7 @@ const fillVariants = cva("h-full rounded-full", {
   defaultVariants: { tone: "primary" },
   variants: {
     tone: {
-      danger: "bg-danger",
+      danger: "bg-destructive",
       primary: "bg-primary",
       success: "bg-success",
       warning: "bg-warning",

@@ -50,7 +50,7 @@ export function ListItem({
         </Text>
         {description ? (
           <Text
-            className="font-regular text-body-sm text-foreground-muted"
+            className="font-regular text-body-sm text-muted-foreground"
             numberOfLines={oneLine}
           >
             {description}

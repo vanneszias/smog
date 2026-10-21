@@ -95,7 +95,7 @@ function Radio({
       <View
         className={cn(
           "size-5 items-center justify-center rounded-full border-2",
-          checked ? "border-primary" : "border-foreground-muted"
+          checked ? "border-primary" : "border-muted-foreground"
         )}
       >
         {checked ? <View className="size-2 rounded-full bg-primary" /> : null}
@@ -105,7 +105,7 @@ function Radio({
           {option.label}
         </Text>
         {option.description ? (
-          <Text className="font-regular text-body-sm text-foreground-muted">
+          <Text className="font-regular text-body-sm text-muted-foreground">
             {option.description}
           </Text>
         ) : null}

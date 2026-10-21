@@ -94,7 +94,7 @@ function Segment({
       className={cn(
         "flex-row items-center justify-center gap-2 rounded-sm px-3",
         size === "md" ? "min-h-touch" : "min-h-8",
-        checked ? "bg-surface" : "bg-transparent",
+        checked ? "bg-card" : "bg-transparent",
         disabled && "opacity-50"
       )}
       disabled={disabled}
@@ -107,7 +107,7 @@ function Segment({
         className={cn(
           "font-medium",
           size === "md" ? "text-body-sm" : "text-caption",
-          checked ? "text-foreground" : "text-foreground-muted"
+          checked ? "text-foreground" : "text-muted-foreground"
         )}
       >
         {option.label}

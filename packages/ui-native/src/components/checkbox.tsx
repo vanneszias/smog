@@ -72,9 +72,9 @@ export function Checkbox({
       <View
         className={cn(
           "size-5 items-center justify-center rounded-sm border-2",
-          on || mixed ? "border-primary bg-primary" : "bg-surface",
+          on || mixed ? "border-primary bg-primary" : "bg-card",
           !(on || mixed) &&
-            (invalid ? "border-danger" : "border-foreground-muted")
+            (invalid ? "border-destructive" : "border-muted-foreground")
         )}
       >
         {on ? (
@@ -92,7 +92,7 @@ export function Checkbox({
             </Text>
           ) : null}
           {description ? (
-            <Text className="font-regular text-body-sm text-foreground-muted">
+            <Text className="font-regular text-body-sm text-muted-foreground">
               {description}
             </Text>
           ) : null}

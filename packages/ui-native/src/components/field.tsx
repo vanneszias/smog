@@ -106,7 +106,7 @@ export function Field({
             {label}
           </Text>
           {optional ? (
-            <Text className="font-regular text-caption text-foreground-muted">
+            <Text className="font-regular text-caption text-muted-foreground">
               {t("kit.optional")}
             </Text>
           ) : null}
@@ -124,7 +124,7 @@ export function Field({
         {hint || counter ? (
           <View className="flex-row items-start justify-between gap-4">
             {hint ? (
-              <Text className="flex-1 font-regular text-body-sm text-foreground-muted">
+              <Text className="flex-1 font-regular text-body-sm text-muted-foreground">
                 {hint}
               </Text>
             ) : (
@@ -137,7 +137,7 @@ export function Field({
                   "shrink-0 font-regular text-caption",
                   counter.count > counter.max
                     ? "text-danger-strong"
-                    : "text-foreground-muted"
+                    : "text-muted-foreground"
                 )}
               >
                 {t("kit.characterCount", counter)}

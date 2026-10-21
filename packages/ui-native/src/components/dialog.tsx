@@ -81,7 +81,7 @@ export function ModalCard({
         <View
           accessibilityRole={role}
           className={cn(
-            "w-full flex-col gap-4 rounded-xl border border-border-subtle bg-surface-raised p-6",
+            "w-full flex-col gap-4 rounded-xl border border-border-subtle bg-popover p-6",
             className
           )}
           style={shadow}

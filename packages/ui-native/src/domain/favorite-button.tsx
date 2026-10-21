@@ -24,7 +24,7 @@ const favoriteVariants = cva(
       size: { lg: "size-12", md: "size-touch", sm: "size-8" },
       variant: {
         ghost: "border-transparent bg-transparent",
-        overlay: "border-border-subtle bg-surface",
+        overlay: "border-border-subtle bg-card",
       },
     },
   }

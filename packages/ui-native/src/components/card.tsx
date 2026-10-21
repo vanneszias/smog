@@ -21,7 +21,7 @@ import { useShadow, useThemeName } from "../lib/theme";
 const cardVariants = cva("flex-col gap-2 rounded-lg border p-4", {
   compoundVariants: [
     {
-      className: "border-border bg-surface-raised",
+      className: "border-border bg-popover",
       dark: true,
       variant: "raised",
     },
@@ -30,8 +30,8 @@ const cardVariants = cva("flex-col gap-2 rounded-lg border p-4", {
   variants: {
     dark: { false: "", true: "" },
     variant: {
-      default: "border-border-subtle bg-surface",
-      raised: "border-transparent bg-surface",
+      default: "border-border-subtle bg-card",
+      raised: "border-transparent bg-card",
       sunken: "border-transparent bg-surface-sunken",
     },
   },
@@ -108,7 +108,7 @@ export function CardDescription({
   return (
     <Text
       className={cn(
-        "font-regular text-body-sm text-foreground-muted",
+        "font-regular text-body-sm text-muted-foreground",
         className
       )}
       {...props}

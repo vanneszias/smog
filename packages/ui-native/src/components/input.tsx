@@ -8,13 +8,13 @@ import { useFieldControl } from "./field";
 
 /** Border and fill of text inputs, selects and textareas (as web). */
 export const fieldVariants = cva(
-  "w-full flex-row items-center gap-2 rounded-md border bg-surface",
+  "w-full flex-row items-center gap-2 rounded-md border bg-card",
   {
     defaultVariants: { invalid: false, size: "md" },
     variants: {
       invalid: {
-        false: "border-foreground-muted",
-        true: "border-danger",
+        false: "border-muted-foreground",
+        true: "border-destructive",
       },
       size: {
         lg: "min-h-12 px-4",

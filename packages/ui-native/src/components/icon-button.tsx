@@ -15,7 +15,7 @@ import { cn } from "../lib/cn";
 import { hapticDanger } from "../lib/haptics";
 import { ICON_SIZE, renderIcon } from "../lib/icon";
 import { hitSlopFor, useColor } from "../lib/theme";
-import { buttonVariants, CONTROL_HEIGHT, LABEL_ROLE } from "./button";
+import { buttonVariants, CONTROL_HEIGHT, useButtonColours } from "./button";
 import { Spinner } from "./spinner";
 
 const iconButtonVariants = cva("rounded-full px-0", {
@@ -56,7 +56,8 @@ export function IconButton({
   ...props
 }: IconButtonProps): ReactElement {
   const resolvedSize = size ?? "md";
-  const color = useColor(LABEL_ROLE[variant]);
+  const colours = useButtonColours(variant);
+  const color = useColor(colours.role);
   const inactive = disabled || loading;
   const handlePress = useCallback(
     (event: GestureResponderEvent): void => {
@@ -78,6 +79,7 @@ export function IconButton({
       }}
       className={cn(
         buttonVariants({ variant }),
+        colours.container,
         iconButtonVariants({ size: resolvedSize }),
         "min-h-0",
         inactive && "opacity-50",
@@ -89,7 +91,7 @@ export function IconButton({
       {...props}
     >
       {loading ? (
-        <Spinner size="sm" tone={LABEL_ROLE[variant]} />
+        <Spinner size="sm" tone={colours.role} />
       ) : (
         renderIcon(
           icon,

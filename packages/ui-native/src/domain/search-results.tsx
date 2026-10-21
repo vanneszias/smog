@@ -83,7 +83,7 @@ export function SearchResults<T extends GestureCardData>({
       {state === "results" ? (
         <Text
           accessibilityLiveRegion="polite"
-          className="px-4 font-regular text-body-sm text-foreground-muted"
+          className="px-4 font-regular text-body-sm text-muted-foreground"
         >
           {status}
         </Text>

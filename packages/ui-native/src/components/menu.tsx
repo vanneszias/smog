@@ -137,7 +137,7 @@ export function MenuLabel({ className, ...props }: TextProps): ReactElement {
   return (
     <Text
       className={cn(
-        "px-4 py-2 font-medium text-caption text-foreground-muted",
+        "px-4 py-2 font-medium text-caption text-muted-foreground",
         className
       )}
       {...props}

@@ -65,7 +65,7 @@ export function GestureCard({
   return (
     <View
       className={cn(
-        "relative overflow-hidden rounded-lg border border-border-subtle bg-surface",
+        "relative overflow-hidden rounded-lg border border-border-subtle bg-card",
         className
       )}
       testID={testID}

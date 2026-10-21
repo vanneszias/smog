@@ -85,7 +85,7 @@ export function Switch({
           </Text>
         ) : null}
         {description ? (
-          <Text className="font-regular text-body-sm text-foreground-muted">
+          <Text className="font-regular text-body-sm text-muted-foreground">
             {description}
           </Text>
         ) : null}

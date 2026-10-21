@@ -27,7 +27,7 @@ const chipVariants = cva(
     defaultVariants: { selected: false, size: "md" },
     variants: {
       selected: {
-        false: "border-foreground-muted bg-surface",
+        false: "border-muted-foreground bg-card",
         true: "border-primary bg-primary-subtle",
       },
       size: {

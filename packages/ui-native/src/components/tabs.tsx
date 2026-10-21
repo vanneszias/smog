@@ -108,7 +108,7 @@ export function TabsTrigger({
       <Text
         className={cn(
           "font-medium text-body-sm",
-          selected ? "text-foreground" : "text-foreground-muted"
+          selected ? "text-foreground" : "text-muted-foreground"
         )}
       >
         {children}
