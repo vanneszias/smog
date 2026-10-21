@@ -23,6 +23,12 @@ Status: **requirements agreed with the owner (2026-10-21); specs not written yet
 - Gestures get private fields (fixed fields plus an optional free-form notes field, each translatable), visible to teachers and admins only. The fields and the PDF styling come from the owner's PDFs (**not received yet**; the owner attaches them).
 - Teachers build lessons on the web: pick gestures, order them, export a PDF. A lesson is a language-neutral list; the PDF language is chosen per export. Mobile only views or downloads the PDF.
 
+## What the two PDFs show (read 2026-10-21)
+Both are Word exports headed with the green **SMOG&CO** logo and a title ("Les 1" / "SMOG LES 1"), followed by a bordered table with one gesture per row.
+- **Participants' sheet** (`SMOG-woordenlijst_les1_afbeeldingen_cursisten_2025.pdf`, 11 pages, about 75 words, 7 a page): left column = the word in bold plus a black-and-white line drawing (one or two numbered steps, a copyright mark); right column = short bullets: `A:`/`P:` handshape of the active and passive hand (`A & P` = both), technique notes ("touch", "lettergrepen", "2x", "ogen dicht", "niet tikken"), and a last `C:` line of related meanings the same sign covers.
+- **Teachers' sheet** (`2024_DEFINITIEVE_versie_les_1_lesgevers.pdf`, 16 pages, no drawings): the word plus a labelled block, **HC** (handconfiguratie, bold: `P:`/`A:`/"beide handen"), **PL** (plaats, where the sign is made), **OR** (oriëntatie, palm directions), **BW** (beweging, the full movement description) and **C** (related meanings, upper case, with notes such as "(op lettergrepen)"); extra usage notes in brackets (for example how to sign "sugar to sprinkle", "stack of plates").
+- So the private teacher fields are **HC, PL, OR, BW, C plus a free note**, per language; the participants' sheet is a shorter, illustrated view of the same data (A/P handshape, short technique tags, C, the drawing). One lesson, two PDF templates (participants and teachers).
+
 ## Order and gates
 1. Owner attaches the PDFs; confirm this session can read them.
 2. Spec 1 (brand and design system), approval, plan, build, staging.
@@ -30,5 +36,5 @@ Status: **requirements agreed with the owner (2026-10-21); specs not written yet
 4. Spec 3 (lessons), approval, plan, build, staging.
 
 ## Open items
-- The PDFs (blocks the gesture field list and the PDF template).
+- ~~The PDFs~~ received (two); questions on drawings, `C:` and the technique tags are still open.
 - Brand proposal approval.
