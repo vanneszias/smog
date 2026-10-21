@@ -8,30 +8,25 @@ import {
   Text,
   TextLink,
 } from "@smog/ui-web";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Menu as MenuIcon, Search } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
 import { LanguageControl, LanguageMenu } from "./language-menu";
 import { MainNav, MainNavList } from "./nav";
+import { useSearchPalette } from "./search-palette-provider";
 import { ThemeControl, ThemeMenu } from "./theme-menu";
 import { UserMenu } from "./user-menu";
 
 /**
- * The site header: logo, sections, search, language, theme and the account
- * entry. Below `md` the sections, language and theme move into a sheet.
+ * The site header: logo, sections, search (the command palette, also `/`),
+ * language, theme and the account entry. Below `md` the sections, language and theme move into a sheet.
  */
 export function Header(): ReactNode {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const palette = useSearchPalette();
   // The phone menu closes when a section is chosen: the page changes under it.
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = useCallback((): void => setMenuOpen(false), []);
-  // Search lives on /gestures.
-  const openSearch = useCallback((): void => {
-    navigate({ to: "/gestures" }).catch((error: unknown) => {
-      console.error("[header] Failed to open the search:", error);
-    });
-  }, [navigate]);
   return (
     <header className="sticky top-0 z-40 border-border-subtle border-b bg-background">
       <div className="mx-auto flex h-16 w-full max-w-content items-center gap-2 px-4 md:px-6 lg:px-8">
@@ -67,9 +62,10 @@ export function Header(): ReactNode {
         <MainNav className="ml-4 hidden md:block" />
         <div className="ml-auto flex items-center gap-1">
           <IconButton
+            aria-keyshortcuts="/"
             icon={<Search />}
             label={t("common.search")}
-            onClick={openSearch}
+            onClick={palette.open}
           />
           <div className="hidden items-center gap-1 md:flex">
             <LanguageMenu />

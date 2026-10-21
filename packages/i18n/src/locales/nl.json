@@ -460,6 +460,11 @@
     },
     "description": "De gebaren die je met een hartje hebt bewaard."
   },
+  "searchPalette": {
+    "placeholder": "Zoek gebaren en categorieën",
+    "description": "Typ om een gebaar te vinden. Gebruik de pijltjestoetsen en Enter.",
+    "seeAll": "Toon alle resultaten voor “{{query}}”"
+  },
   "kit": {
     "close": "Sluiten",
     "clear": "Wissen",

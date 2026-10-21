@@ -34,6 +34,7 @@ import {
 import { type ReactNode, useMemo, useState } from "react";
 import { Footer } from "@/components/app-shell/footer";
 import { Header } from "@/components/app-shell/header";
+import { SearchPaletteProvider } from "@/components/app-shell/search-palette-provider";
 import { SiteConsentBanner } from "@/components/consent-banner";
 import { GuestImportSheet } from "@/components/guest-import-sheet";
 import { SiteAnalytics } from "@/lib/analytics";
@@ -294,25 +295,27 @@ function SiteLocaleProvider({
 function Layout({ children }: { children: ReactNode }): ReactNode {
   const { t } = useTranslation();
   return (
-    <div className="flex min-h-screen flex-col">
-      <a
-        className="sr-only z-50 rounded-md bg-surface px-4 py-3 text-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:ring-2 focus:ring-focus-ring"
-        href="#main"
-      >
-        {t("a11y.skipToContent")}
-      </a>
-      <noscript>
-        <p className="bg-surface px-4 py-3 text-center text-foreground text-sm">
-          {t("a11y.noscript")}
-        </p>
-      </noscript>
-      <Header />
-      <main className="flex flex-1 flex-col" id="main" tabIndex={-1}>
-        {children}
-      </main>
-      <Footer />
-      <GuestImportSheet />
-      <SiteConsentBanner />
-    </div>
+    <SearchPaletteProvider>
+      <div className="flex min-h-screen flex-col">
+        <a
+          className="sr-only z-50 rounded-md bg-surface px-4 py-3 text-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:ring-2 focus:ring-focus-ring"
+          href="#main"
+        >
+          {t("a11y.skipToContent")}
+        </a>
+        <noscript>
+          <p className="bg-surface px-4 py-3 text-center text-foreground text-sm">
+            {t("a11y.noscript")}
+          </p>
+        </noscript>
+        <Header />
+        <main className="flex flex-1 flex-col" id="main" tabIndex={-1}>
+          {children}
+        </main>
+        <Footer />
+        <GuestImportSheet />
+        <SiteConsentBanner />
+      </div>
+    </SearchPaletteProvider>
   );
 }

@@ -225,6 +225,10 @@ export {
   type OpenInAppBannerProps,
 } from "./domain/app-banner";
 export {
+  AuthSidePanel,
+  type AuthSidePanelProps,
+} from "./domain/auth-side-panel";
+export {
   CategoryChips,
   type CategoryChipsProps,
 } from "./domain/category-chips";

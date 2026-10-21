@@ -460,6 +460,11 @@
     },
     "description": "The gestures you saved with a heart."
   },
+  "searchPalette": {
+    "placeholder": "Search gestures and categories",
+    "description": "Type to find a gesture. Use the arrow keys and Enter.",
+    "seeAll": "Show all results for “{{query}}”"
+  },
   "kit": {
     "close": "Close",
     "clear": "Clear",
