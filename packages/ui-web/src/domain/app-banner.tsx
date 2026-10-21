@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Badge } from "../components/badge";
 import { buttonVariants } from "../components/button";
+import { HandIllustration } from "../components/hand-illustration";
 import { IconButton } from "../components/icon-button";
 import { TextLink } from "../components/text-link";
 import { cn } from "../lib/cn";
@@ -24,7 +25,7 @@ export interface AppBannerProps
 }
 
 const storeLink = cn(
-  "relative inline-flex min-h-touch items-center gap-3 rounded-md border border-primary-foreground/40 bg-primary-strong px-4 py-2 text-left text-primary-foreground",
+  "relative inline-flex min-h-touch items-center gap-3 rounded-full border border-primary-foreground/40 bg-primary-strong px-5 py-2 text-left text-primary-foreground",
   stateLayer.md,
   focusRing,
   transition
@@ -78,19 +79,24 @@ export function AppBanner({
     <section
       aria-labelledby={titleId}
       className={cn(
-        "relative flex animate-fade-in flex-col gap-4 overflow-hidden rounded-lg bg-primary p-4 pr-16 text-primary-foreground shadow-1 motion-reduce:animate-none md:p-6 md:pr-16",
+        "relative flex animate-fade-in flex-col gap-4 overflow-hidden rounded-2xl bg-primary p-4 pr-16 text-primary-foreground shadow-1 motion-reduce:animate-none md:p-6 md:pr-16",
         className
       )}
       {...props}
     >
-      <div className="flex max-w-reading flex-col gap-2">
+      <HandIllustration
+        className="pointer-events-none absolute right-16 bottom-0 hidden h-24 translate-y-3 text-primary-foreground/20 lg:inline-flex"
+        data-slot="banner-illustration"
+        hand={1}
+      />
+      <div className="relative flex max-w-reading flex-col gap-2">
         <Badge variant="accent">{t("appBanner.badge")}</Badge>
         <p className="font-semibold text-title-3" id={titleId}>
           {t("appBanner.title")}
         </p>
         <p className="text-body">{t("appBanner.description")}</p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="relative flex flex-wrap gap-2">
         <StoreLink
           href={appStoreUrl}
           icon={<Download />}
@@ -142,7 +148,7 @@ export function OpenInAppBanner({
     <section
       aria-labelledby={titleId}
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-border-subtle bg-surface-raised p-3 text-foreground",
+        "flex items-center gap-3 rounded-2xl bg-accent p-3 text-accent-foreground ring-1 ring-foreground/10",
         className
       )}
       {...props}
@@ -155,9 +161,7 @@ export function OpenInAppBanner({
         <p className="font-semibold text-body-sm" id={titleId}>
           {t("openInApp.title")}
         </p>
-        <p className="text-body-sm text-foreground-muted">
-          {t("openInApp.description")}
-        </p>
+        <p className="text-body-sm">{t("openInApp.description")}</p>
         {storeUrl ? (
           <TextLink
             className="self-start text-body-sm underline"

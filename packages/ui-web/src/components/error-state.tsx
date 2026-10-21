@@ -1,8 +1,17 @@
 import { useTranslation } from "@smog/i18n/react";
-import { CircleAlert, RotateCw } from "lucide-react";
+import { RotateCw } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../lib/cn";
 import { Button } from "./button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "./empty";
+import { HandIllustration } from "./hand-illustration";
 
 export interface ErrorStateProps
   extends Omit<ComponentProps<"section">, "title"> {
@@ -15,7 +24,10 @@ export interface ErrorStateProps
   title?: ReactNode;
 }
 
-/** A data view failed to load: title, description and retry (`states.error.*` by default). */
+/**
+ * A data view failed to load: the registry `empty` parts with a brand hand,
+ * title, description and retry (`states.error.*` by default).
+ */
 export function ErrorState({
   className,
   description,
@@ -26,44 +38,42 @@ export function ErrorState({
   ...props
 }: ErrorStateProps): ReactNode {
   const { t } = useTranslation();
-  const Heading = `h${level}` as const;
   return (
     <section
-      className={cn(
-        "mx-auto flex max-w-reading flex-col items-center gap-3 px-4 py-10 text-center",
-        className
-      )}
+      className={cn("mx-auto flex w-full max-w-reading", className)}
+      data-slot="error-state"
       role="alert"
       {...props}
     >
-      <span
-        aria-hidden="true"
-        className="mb-1 inline-flex size-12 items-center justify-center rounded-full bg-danger-subtle text-danger-strong"
-      >
-        <CircleAlert className="size-6" />
-      </span>
-      <Heading
-        className={cn(
-          "font-semibold text-foreground",
-          level === 1 ? "text-title-1" : "text-title-3"
-        )}
-      >
-        {title ?? t("states.error.title")}
-      </Heading>
-      <p className="text-body text-foreground-muted">
-        {description ?? t("states.error.description")}
-      </p>
-      {onRetry ? (
-        <Button
-          className="mt-2"
-          icon={<RotateCw />}
-          loading={retrying}
-          onClick={onRetry}
-          variant="secondary"
-        >
-          {t("states.retry")}
-        </Button>
-      ) : null}
+      <Empty className="py-10">
+        <EmptyHeader>
+          <EmptyMedia>
+            <HandIllustration
+              className="h-20 text-danger-strong"
+              data-slot="error-illustration"
+              hand={2}
+            />
+          </EmptyMedia>
+          <EmptyTitle level={level}>
+            {title ?? t("states.error.title")}
+          </EmptyTitle>
+          <EmptyDescription>
+            {description ?? t("states.error.description")}
+          </EmptyDescription>
+        </EmptyHeader>
+        {onRetry ? (
+          <EmptyContent>
+            <Button
+              icon={<RotateCw />}
+              loading={retrying}
+              onClick={onRetry}
+              variant="secondary"
+            >
+              {t("states.retry")}
+            </Button>
+          </EmptyContent>
+        ) : null}
+      </Empty>
     </section>
   );
 }

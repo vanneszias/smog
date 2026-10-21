@@ -139,6 +139,15 @@ const WEB_KIT = [
 const WEB_ONLY: Record<string, string> = {
   AppBanner: "a web page banner (the app has its own screens)",
   DataTable: "admin is web only",
+  Empty:
+    "registry empty parts compose EmptyState on web; native keeps EmptyState",
+  EmptyContent: "registry empty part (web composition of EmptyState)",
+  EmptyDescription: "registry empty part (web composition of EmptyState)",
+  EmptyHeader: "registry empty part (web composition of EmptyState)",
+  EmptyMedia: "registry empty part (web composition of EmptyState)",
+  EmptyTitle: "registry empty part (web composition of EmptyState)",
+  HandIllustration:
+    "web draws the brand hands inline; native EmptyState renders its own",
   KitLinkComponent: "router links: native navigates in onPress",
   OpenInAppBanner: "opens the app from the web",
   Pagination: "lists load more on scroll",
