@@ -138,6 +138,8 @@ const WEB_KIT = [
 
 const WEB_ONLY: Record<string, string> = {
   AppBanner: "a web page banner (the app has its own screens)",
+  AuthSidePanel:
+    "a web auth page decoration (the app's sign-in is its own screen)",
   DataTable: "admin is web only",
   Empty:
     "registry empty parts compose EmptyState on web; native keeps EmptyState",
