@@ -1,6 +1,12 @@
 # Phase 10, spec 1: brand and design system (draft for approval)
 
-Status: **draft, awaiting the owner's approval.** Part of `docs/superpowers/plans/2026-10-21-phase-10-roadmap.md`; i18n (spec 2) and lessons (spec 3) build on this.
+Status: **owner decisions recorded below (2026-10-21); the remaining sections are still a draft for approval.** Part of `docs/superpowers/plans/2026-10-21-phase-10-roadmap.md`; i18n (spec 2) and lessons (spec 3) build on this.
+
+## 0. Owner decisions
+- **Shadcn is adopted properly** (D1, D2): the CLI generates the components and our tokens map onto shadcn's variable names.
+- **Colour: bolder.** Green is used as a surface, not only as an accent: the hero, the header and the auth screens get green backgrounds (white or reversed-logo text on `#00805F` / the deeper green; contrast-tested), orange stays the accent. Neutral surfaces remain light and warm.
+- **Typeface: Figtree**, self-hosted, for UI, body and headings.
+- **Navigation: Favorites and Lists merge into one "My space" page on the web; Sponsor leaves the main nav** (footer and menu). Mobile keeps its four tabs.
 
 ## 1. Goal
 The app feels unbranded and sad. Give it a recognisable SMOG identity and rebuild every screen on shadcn/ui (web) and React Native Reusables (mobile), using an existing component or block before writing one. The redesign includes the information architecture (what is where), not only the skin.
