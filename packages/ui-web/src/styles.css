@@ -195,6 +195,21 @@
   }
 }
 
+/*
+ * Sonner (the toast queue) switches off its own motion for the toast and its
+ * children under `prefers-reduced-motion`, but not for the list that slides
+ * the stack (`ol[data-sonner-toaster]`, a 0.4 s transform): the kit's
+ * "no motion under reduced motion" contract covers it too.
+ */
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toaster],
+  [data-sonner-toast],
+  [data-sonner-toast] * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 /* SearchField draws its own clear button. */
 [data-slot="search-field"]::-webkit-search-cancel-button {
   appearance: none;
