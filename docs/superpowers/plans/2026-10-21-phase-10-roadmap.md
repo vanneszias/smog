@@ -29,12 +29,19 @@ Both are Word exports headed with the green **SMOG&CO** logo and a title ("Les 1
 - **Teachers' sheet** (`2024_DEFINITIEVE_versie_les_1_lesgevers.pdf`, 16 pages, no drawings): the word plus a labelled block, **HC** (handconfiguratie, bold: `P:`/`A:`/"beide handen"), **PL** (plaats, where the sign is made), **OR** (oriëntatie, palm directions), **BW** (beweging, the full movement description) and **C** (related meanings, upper case, with notes such as "(op lettergrepen)"); extra usage notes in brackets (for example how to sign "sugar to sprinkle", "stack of plates").
 - So the private teacher fields are **HC, PL, OR, BW, C plus a free note**, per language; the participants' sheet is a shorter, illustrated view of the same data (A/P handshape, short technique tags, C, the drawing). One lesson, two PDF templates (participants and teachers).
 
+## Lesson data decisions (owner, 2026-10-21)
+- Private gesture fields per language: **HC, PL, OR, BW, C and a free note**, plus an optional short **summary** text for the participants' sheet (no automatic summarising).
+- A teacher picks the PDF template per export: **for teachers** (HC, PL, OR, BW, C, note; no drawings) or **for participants** (word, drawing, summary or HC, C). Both come from the same data; the lesson stays a language-neutral list of gestures, the language is chosen per export.
+- **Drawings** are uploaded per gesture in the admin: one image, optionally two numbered steps, with a credit line; private to teachers and PDFs.
+- **C (related meanings)** is a per-language list that also feeds public search keywords; the PDF notes around it (for example "op lettergrepen") stay private.
+- Technique tags (touch, syllables, repeat) were not chosen: they live in the free note and the summary for now.
+
 ## Order and gates
-1. Owner attaches the PDFs; confirm this session can read them.
+1. ~~Owner attaches the PDFs~~ done (both read).
 2. Spec 1 (brand and design system), approval, plan, build, staging.
 3. Spec 2 (i18n), approval, plan, build, staging.
 4. Spec 3 (lessons), approval, plan, build, staging.
 
 ## Open items
-- ~~The PDFs~~ received (two); questions on drawings, `C:` and the technique tags are still open.
+- ~~The PDFs~~ received and decided (above).
 - Brand proposal approval.
