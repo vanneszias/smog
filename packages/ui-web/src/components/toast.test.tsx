@@ -58,4 +58,25 @@ describe("Toast", () => {
   test("useToast outside the provider throws", () => {
     expect(() => renderKit(<Trigger />)).toThrow();
   });
+
+  test("a toast does not outlive its provider (sonner's store is global)", async () => {
+    const first = renderKit(
+      <ToastProvider>
+        <Trigger />
+      </ToastProvider>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByText("Saved")).toBeDefined();
+    first.unmount();
+    renderKit(
+      <ToastProvider>
+        <Trigger />
+      </ToastProvider>
+    );
+    // The replay (if any) lands in an effect of the new Toaster.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(screen.queryByText("Saved")).toBeNull();
+  });
 });

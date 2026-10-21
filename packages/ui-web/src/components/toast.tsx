@@ -7,6 +7,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
 } from "react";
 import { toast as sonner, Toaster } from "sonner";
 import { cn } from "../lib/cn";
@@ -102,6 +103,15 @@ export function ToastProvider({
   children: ReactNode;
 }): ReactNode {
   const { t } = useTranslation();
+  // Sonner's store is module-wide and replays every active toast to a Toaster
+  // that mounts later. A provider that goes away takes its toasts with it, so
+  // a remount (a test, a new root) does not show the last one's leftovers.
+  useEffect(
+    () => () => {
+      sonner.dismiss();
+    },
+    []
+  );
   return (
     <ToastContext.Provider value={api}>
       {children}
