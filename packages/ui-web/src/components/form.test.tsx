@@ -1,7 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
+import type { ControllerRenderProps } from "react-hook-form";
 import { z } from "zod";
 import { renderKit } from "../test/render";
 import { Button } from "./button";
@@ -22,6 +23,23 @@ const schema = z.object({
   name: z.string().min(2, "Enter at least 2 characters"),
 });
 
+function renderName({
+  field,
+}: {
+  field: ControllerRenderProps<{ name: string }, "name">;
+}): ReactElement {
+  return (
+    <FormItem>
+      <FormLabel>Name</FormLabel>
+      <FormControl>
+        <Input {...field} />
+      </FormControl>
+      <FormDescription>Your display name.</FormDescription>
+      <FormMessage />
+    </FormItem>
+  );
+}
+
 function NameForm({
   onSubmit,
 }: {
@@ -31,20 +49,7 @@ function NameForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormDescription>Your display name.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <FormField control={form.control} name="name" render={renderName} />
         <Button type="submit">Save</Button>
       </form>
     </Form>

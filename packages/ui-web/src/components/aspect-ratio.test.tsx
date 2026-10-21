@@ -6,7 +6,7 @@ describe("AspectRatio", () => {
   test("keeps its content in a box with the ratio", () => {
     const { container } = renderKit(
       <AspectRatio ratio={3 / 4}>
-        <img alt="" src="data:," />
+        <img alt="" height={4} src="data:," width={3} />
       </AspectRatio>
     );
     const box = container.querySelector('[data-slot="aspect-ratio"]');
