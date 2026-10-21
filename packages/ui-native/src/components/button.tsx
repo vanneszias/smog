@@ -59,7 +59,7 @@ export type ButtonVariant = NonNullable<ButtonVariantProps["variant"]>;
 export type ButtonSize = NonNullable<ButtonVariantProps["size"]>;
 
 /** The colour of the label, for the icon and spinner next to it. */
-export const LABEL_ROLE: Record<ButtonVariant, ColorRole> = {
+const LABEL_ROLE: Record<ButtonVariant, ColorRole> = {
   danger: "primaryForeground",
   ghost: "foreground",
   primary: "primaryForeground",
