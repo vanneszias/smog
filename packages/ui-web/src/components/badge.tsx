@@ -13,7 +13,7 @@ export const badgeVariants = cva(
         sm: "px-2 py-0.5 text-caption",
       },
       variant: {
-        accent: "bg-accent text-accent-foreground",
+        accent: "bg-highlight text-highlight-foreground",
         danger: "bg-danger-subtle text-danger-strong",
         neutral: "bg-surface-sunken text-foreground",
         primary: "bg-primary-subtle text-primary-strong",

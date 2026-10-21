@@ -13,7 +13,7 @@ const color = tokens.color.light;
 const px = (value: number): string => `${value}px`;
 
 const EMAIL_WIDTH = 560;
-const FONT = fontFamily.web.join(", ");
+const FONT = fontFamily.email.join(", ");
 
 /**
  * The header logo (`@smog/brand` renders `/brand/email-logo.png` at 2x,

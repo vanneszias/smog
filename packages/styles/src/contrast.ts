@@ -37,11 +37,22 @@ export interface ContrastPair {
   min: typeof AA_BODY | typeof AA_LARGE;
 }
 
+/** Every neutral the page, a card or a quiet control is drawn on. */
 const PAGE_BACKGROUNDS = [
   "background",
   "surface",
   "surfaceRaised",
   "surfaceSunken",
+  "card",
+  "popover",
+  "muted",
+  "secondary",
+] as const satisfies readonly ColorRole[];
+
+/** Neutral backgrounds plus the quiet green hover/selected tint. */
+const TEXT_BACKGROUNDS = [
+  ...PAGE_BACKGROUNDS,
+  "accent",
 ] as const satisfies readonly ColorRole[];
 
 const SUBTLE_BACKGROUNDS = [
@@ -65,40 +76,73 @@ function on(
  * `NON_TEXT_ROLES`.
  *
  * - Body text (4.5:1):
- *   - `foreground` and `foregroundMuted` on every page background, and
- *     `foreground` on each `*Subtle` tint;
- *   - `primaryForeground` on `primary` and `danger` (filled buttons);
- *     `accentForeground` on `accent` (the accent badge);
+ *   - `foreground`, `foregroundMuted`, `mutedForeground` on every neutral
+ *     background and the `accent` tint; `foreground` on each `*Subtle` tint;
+ *   - each `*Foreground` on the fill it belongs to (`cardForeground` on
+ *     `card`, `destructiveForeground` on `destructive`, ...);
+ *   - **text on green**: `primaryForeground` and `primaryForegroundMuted`
+ *     (secondary text) on `primary`; `sidebarForeground` and
+ *     `sidebarForegroundMuted` on `sidebar`; `sidebarForeground` on
+ *     `sidebarAccent`;
  *   - `primaryStrong`, `successStrong`, `warningStrong`, `dangerStrong` on
- *     their own `*Subtle` tint (badges, banners, StatusBadge) and on every
- *     page background (inline status text);
- *   - `danger` on every page background and `primarySubtle` (field errors).
- * - Large text and UI (3:1): `primary` on page backgrounds and
- *   `primarySubtle` (links, icons, selected outlines); `success` and
- *   `warning` on page backgrounds (status icons only, never text);
- *   `focusRing` on every background it can sit on.
+ *     their own `*Subtle` tint and on every neutral background (inline status
+ *     text; `primaryStrong` is the green for text on warm neutrals);
+ *   - `danger` on the page backgrounds and `primarySubtle` (field errors).
+ * - Large text and UI (3:1):
+ *   - **green on warm neutral**: `primary` on every neutral background,
+ *     `accent` and `primarySubtle` (links, icons, outlines); `success` and
+ *     `warning` on the page backgrounds (status icons only, never text);
+ *   - `input` (the form-control border) on every neutral background;
+ *   - `ring`/`focusRing` on every neutral background and the tints;
+ *     `sidebarRing` on `sidebar` and `sidebarAccent`, `primaryRing` on `primary`;
+ *   - `sidebarPrimary` (the active-item mark) on `sidebar`; `chart1` to
+ *     `chart5` on the page backgrounds `background`, `card`, `popover`.
  *
- * Not allowed: `success`/`warning` as fills under `primaryForeground`
- * (4.38 and 3.64:1 in light); use the `*Subtle` + `*Strong` pair instead.
+ * Not allowed: `success`/`warning` as fills under white text (4.38 and
+ * 3.64:1 in light); use the `*Subtle` + `*Strong` pair instead.
  */
 export const CONTRAST_PAIRS: readonly ContrastPair[] = [
-  ...on("foreground", [...PAGE_BACKGROUNDS, ...SUBTLE_BACKGROUNDS], AA_BODY),
-  ...on("foregroundMuted", PAGE_BACKGROUNDS, AA_BODY),
-  ...on("primaryForeground", ["primary", "danger"], AA_BODY),
+  ...on("foreground", [...TEXT_BACKGROUNDS, ...SUBTLE_BACKGROUNDS], AA_BODY),
+  ...on("foregroundMuted", TEXT_BACKGROUNDS, AA_BODY),
+  ...on("mutedForeground", TEXT_BACKGROUNDS, AA_BODY),
+  ...on("cardForeground", ["card"], AA_BODY),
+  ...on("popoverForeground", ["popover"], AA_BODY),
+  ...on("secondaryForeground", ["secondary"], AA_BODY),
   ...on("accentForeground", ["accent"], AA_BODY),
-  ...on("primaryStrong", [...PAGE_BACKGROUNDS, "primarySubtle"], AA_BODY),
-  ...on("successStrong", [...PAGE_BACKGROUNDS, "successSubtle"], AA_BODY),
-  ...on("warningStrong", [...PAGE_BACKGROUNDS, "warningSubtle"], AA_BODY),
+  ...on("highlightForeground", ["highlight"], AA_BODY),
+  ...on("destructiveForeground", ["destructive"], AA_BODY),
+  ...on("primaryForeground", ["primary", "danger"], AA_BODY),
+  ...on("primaryForegroundMuted", ["primary"], AA_BODY),
+  ...on("sidebarForegroundMuted", ["sidebar"], AA_BODY),
+  ...on("sidebarForeground", ["sidebar", "sidebarAccent"], AA_BODY),
+  ...on("sidebarAccentForeground", ["sidebarAccent"], AA_BODY),
+  ...on("sidebarPrimaryForeground", ["sidebarPrimary"], AA_BODY),
+  ...on("primaryStrong", [...TEXT_BACKGROUNDS, "primarySubtle"], AA_BODY),
+  ...on("successStrong", [...TEXT_BACKGROUNDS, "successSubtle"], AA_BODY),
+  ...on("warningStrong", [...TEXT_BACKGROUNDS, "warningSubtle"], AA_BODY),
   ...on("dangerStrong", [...PAGE_BACKGROUNDS, "dangerSubtle"], AA_BODY),
   ...on("danger", [...PAGE_BACKGROUNDS, "primarySubtle"], AA_BODY),
-  ...on("primary", [...PAGE_BACKGROUNDS, "primarySubtle"], AA_LARGE),
+  ...on("primary", [...TEXT_BACKGROUNDS, "primarySubtle"], AA_LARGE),
   ...on("success", PAGE_BACKGROUNDS.slice(0, 3), AA_LARGE),
   ...on("warning", PAGE_BACKGROUNDS.slice(0, 3), AA_LARGE),
-  ...on("focusRing", [...PAGE_BACKGROUNDS, "primarySubtle"], AA_LARGE),
+  ...on("input", PAGE_BACKGROUNDS, AA_LARGE),
+  ...on("focusRing", [...TEXT_BACKGROUNDS, "primarySubtle"], AA_LARGE),
+  ...on("ring", [...TEXT_BACKGROUNDS, "primarySubtle"], AA_LARGE),
+  ...on("sidebarRing", ["sidebar", "sidebarAccent"], AA_LARGE),
+  ...on("primaryRing", ["primary"], AA_LARGE),
+  ...on("sidebarPrimary", ["sidebar"], AA_LARGE),
+  ...on("destructive", [...TEXT_BACKGROUNDS], AA_LARGE),
+  ...["chart1", "chart2", "chart3", "chart4", "chart5"].flatMap((chart) =>
+    on(chart as ColorRole, ["background", "card", "popover"], AA_LARGE)
+  ),
 ];
 
 /**
  * Roles that never carry text or a UI boundary that must meet 3:1: the
- * decorative borders (functional edges use `foregroundMuted`).
+ * decorative borders (functional edges use `input`).
  */
-export const NON_TEXT_ROLES: readonly ColorRole[] = ["border", "borderSubtle"];
+export const NON_TEXT_ROLES: readonly ColorRole[] = [
+  "border",
+  "borderSubtle",
+  "sidebarBorder",
+];
