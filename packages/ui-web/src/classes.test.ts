@@ -120,8 +120,8 @@ describe("kit classes", () => {
       { base: SRC, onDependency: () => undefined }
     );
     const css = compiler.build(candidates);
-    expect(candidates.filter((c) => !css.includes(`.${escapeClass(c)}`))).toEqual(
-      []
-    );
+    expect(
+      candidates.filter((c) => !css.includes(`.${escapeClass(c)}`))
+    ).toEqual([]);
   });
 });

@@ -3,10 +3,12 @@ import { type ClassValue, clsx } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
 /**
- * tailwind-merge only knows Tailwind's default scales. The SMOG theme
- * replaces them (`text-body` is a font size, `shadow-1` an elevation), so
- * without this `cn("text-body", "text-primary")` would drop the size as a
- * colour conflict.
+ * tailwind-merge only knows Tailwind's default scales. The SMOG theme adds
+ * to them (`text-body` is a font size, `shadow-1` an elevation, `size-touch`
+ * a spacing), so without this `cn("text-body", "text-primary")` would drop
+ * the size as a colour conflict. The defaults themselves (`text-sm`,
+ * `shadow-md`) are back, so registry code and kit code merge in one group.
+ * This is the `utils` alias of `components.json` (`@/lib/cn`).
  */
 const merge = extendTailwindMerge({
   extend: {
