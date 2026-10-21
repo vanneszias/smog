@@ -1,4 +1,5 @@
 import { exports } from "cloudflare:workers";
+import { tokens } from "@smog/styles/tokens";
 import { describe, expect, it } from "vitest";
 import { signedUp } from "./helpers";
 
@@ -92,7 +93,7 @@ describe("app shell (SSR)", () => {
     // A chosen theme has its own colour only.
     const dark = await page("/", { cookie: "theme=dark" });
     expect(dark.match(THEME_COLOR_META)).toEqual([
-      expect.stringContaining('content="#0F1210"'),
+      expect.stringContaining(`content="${tokens.color.dark.background}"`),
     ]);
   });
 
