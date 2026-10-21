@@ -9,6 +9,7 @@ export {
 } from "./components/button";
 export {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -105,6 +106,7 @@ export {
   Tabs,
   TabsContent,
   TabsList,
+  type TabsListProps,
   TabsTrigger,
 } from "./components/tabs";
 export {

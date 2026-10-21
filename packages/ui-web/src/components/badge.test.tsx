@@ -12,9 +12,7 @@ describe("Badge", () => {
         <Badge variant="accent">New</Badge>
       </>
     );
-    expect(classesOf(screen.getByText("Neutral"))).toContain(
-      "bg-surface-sunken"
-    );
+    expect(classesOf(screen.getByText("Neutral"))).toContain("bg-secondary");
     const success = classesOf(screen.getByText("Paid"));
     expect(success).toContain("bg-success-subtle");
     expect(success).toContain("text-success-strong");

@@ -4,7 +4,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../lib/cn";
 
 const avatarVariants = cva(
-  "relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-primary-subtle font-medium text-primary-strong",
+  "group/avatar relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-primary-subtle font-medium text-primary-strong after:absolute after:inset-0 after:rounded-full after:border after:border-border after:mix-blend-darken dark:after:mix-blend-lighten",
   {
     defaultVariants: { size: "md" },
     variants: {
@@ -48,13 +48,16 @@ export function Avatar({
     <AvatarPrimitive.Root
       aria-label={name}
       className={cn(avatarVariants({ size }), className)}
+      data-size={size ?? "md"}
+      data-slot="avatar"
       role="img"
       {...props}
     >
       {src ? (
         <AvatarPrimitive.Image
           alt=""
-          className="size-full object-cover"
+          className="aspect-square size-full object-cover"
+          data-slot="avatar-image"
           src={src}
         />
       ) : null}
@@ -66,6 +69,7 @@ export function Avatar({
         aria-hidden="true"
         className="before:content-[attr(data-initials)]"
         data-initials={initialsOf(name)}
+        data-slot="avatar-fallback"
       />
     </AvatarPrimitive.Root>
   );
