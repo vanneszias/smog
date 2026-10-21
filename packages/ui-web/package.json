@@ -2,10 +2,13 @@
   "name": "@smog/ui-web",
   "version": "0.0.0",
   "private": true,
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./command": "./src/components/command.tsx",
+    "./carousel": "./src/components/carousel.tsx"
   },
   "scripts": {
     "check-types": "tsc -b",

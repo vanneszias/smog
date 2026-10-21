@@ -46,7 +46,13 @@ describe("Toast", () => {
       );
     });
     // Sonner unmounts a toast once its exit transition is over.
-    await waitFor(() => expect(screen.queryByText("Saved")).toBeNull());
+    // (A cheap throw: a failed `expect` on a DOM node makes bun format the
+    // whole node, which takes seconds per poll.)
+    await waitFor(() => {
+      if (screen.queryByText("Saved")) {
+        throw new Error("the toast is still shown");
+      }
+    });
   });
 
   test("useToast outside the provider throws", () => {
