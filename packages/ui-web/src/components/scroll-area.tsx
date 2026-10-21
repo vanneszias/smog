@@ -14,8 +14,11 @@ function ScrollArea({
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
-        className="size-full rounded-[inherit] outline-none transition-[color,box-shadow] focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-inset"
+        className="size-full rounded-[inherit] outline-none transition-[color,box-shadow] focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-inset motion-reduce:transition-none"
         data-slot="scroll-area-viewport"
+        // A scrollable region must be reachable by keyboard (axe
+        // scrollable-region-focusable, WCAG 2.1.1): the arrow keys scroll it.
+        tabIndex={0}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

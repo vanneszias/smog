@@ -166,7 +166,7 @@ function GreenSurfaces(): ReactNode {
             {t("common.continue")}
           </Button>
           <Button
-            className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10"
+            className="border-primary-foreground bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
             variant="secondary"
           >
             {t("common.learnMore")}
