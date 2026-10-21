@@ -467,6 +467,7 @@
     "searchPlaceholder": "Zoeken…",
     "selectPlaceholder": "Maak een keuze",
     "commandPlaceholder": "Typ een opdracht of zoek…",
+    "commandSuggestions": "Suggesties",
     "noOptions": "Geen opties",
     "noResults": "Geen resultaten",
     "showPassword": "Tonen",

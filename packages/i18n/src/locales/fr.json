@@ -473,6 +473,7 @@
     "searchPlaceholder": "Rechercher…",
     "selectPlaceholder": "Faites un choix",
     "commandPlaceholder": "Saisissez une commande ou recherchez…",
+    "commandSuggestions": "Suggestions",
     "noOptions": "Aucune option",
     "noResults": "Aucun résultat",
     "showPassword": "Afficher",

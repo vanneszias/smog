@@ -13,8 +13,10 @@ import { Dialog, DialogContent } from "./dialog";
  */
 export function Command({
   className,
+  label,
   ...props
 }: ComponentProps<typeof CommandPrimitive>): ReactNode {
+  const { t } = useTranslation();
   return (
     <CommandPrimitive
       className={cn(
@@ -22,6 +24,7 @@ export function Command({
         className
       )}
       data-slot="command"
+      label={label ?? t("common.search")}
       {...props}
     />
   );
@@ -89,8 +92,10 @@ export function CommandInput({
 
 export function CommandList({
   className,
+  label,
   ...props
 }: ComponentProps<typeof CommandPrimitive.List>): ReactNode {
+  const { t } = useTranslation();
   return (
     <CommandPrimitive.List
       className={cn(
@@ -98,6 +103,7 @@ export function CommandList({
         className
       )}
       data-slot="command-list"
+      label={label ?? t("kit.commandSuggestions")}
       {...props}
     />
   );
@@ -144,7 +150,9 @@ export function CommandSeparator({
   ...props
 }: ComponentProps<typeof CommandPrimitive.Separator>): ReactNode {
   return (
+    // A listbox may only own options and groups: the divider is for the eye.
     <CommandPrimitive.Separator
+      aria-hidden="true"
       className={cn("my-1 h-px bg-border-subtle", className)}
       data-slot="command-separator"
       {...props}

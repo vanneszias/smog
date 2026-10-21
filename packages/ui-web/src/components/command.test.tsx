@@ -58,6 +58,8 @@ describe("Command", () => {
     );
     const input = screen.getByRole("combobox");
     expect(input.getAttribute("placeholder")).toBe("Type a command or search…");
+    // cmdk's own English labels ("Suggestions", "Command Menu") come from i18n.
+    expect(screen.getByRole("listbox", { name: "Suggestions" })).toBeDefined();
     await userEvent.type(input, "hel");
     expect(screen.queryByText("Thank you")).toBeNull();
     await userEvent.click(screen.getByRole("option", { name: "Hello" }));

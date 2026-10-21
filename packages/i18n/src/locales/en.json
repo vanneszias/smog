@@ -467,6 +467,7 @@
     "searchPlaceholder": "Search…",
     "selectPlaceholder": "Choose an option",
     "commandPlaceholder": "Type a command or search…",
+    "commandSuggestions": "Suggestions",
     "noOptions": "No options",
     "noResults": "No results",
     "showPassword": "Show",
