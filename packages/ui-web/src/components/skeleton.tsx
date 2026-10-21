@@ -3,13 +3,13 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../lib/cn";
 
 const skeletonVariants = cva(
-  "animate-pulse bg-surface-sunken motion-reduce:animate-none dark:bg-border-subtle",
+  "animate-pulse bg-muted motion-reduce:animate-none dark:bg-border-subtle",
   {
     defaultVariants: { shape: "text" },
     variants: {
       shape: {
         circle: "size-10 rounded-full",
-        rect: "h-16 w-full rounded-lg",
+        rect: "h-16 w-full rounded-xl",
         text: "h-4 w-full rounded-sm",
       },
     },
@@ -33,6 +33,7 @@ export function Skeleton({
     <div
       aria-hidden="true"
       className={cn(skeletonVariants({ shape }), className)}
+      data-slot="skeleton"
       {...props}
     />
   );

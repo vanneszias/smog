@@ -29,6 +29,6 @@ describe("Checkbox", () => {
     renderKit(<Checkbox checked label="On" />);
     const box = screen.getByRole("checkbox", { name: "On" });
     expect(box.getAttribute("aria-checked")).toBe("true");
-    expect(classesOf(box)).toContain("data-[state=checked]:bg-primary");
+    expect(classesOf(box)).toContain("data-checked:bg-primary");
   });
 });

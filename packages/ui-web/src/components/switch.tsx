@@ -28,17 +28,18 @@ export function Switch({
   const control = (
     <SwitchPrimitive.Root
       className={cn(
-        "inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent bg-foreground-muted data-[state=checked]:bg-primary",
+        "peer group/switch inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent bg-input data-checked:bg-primary",
         hitArea,
         focusRing,
         transition,
         disabled,
         className
       )}
+      data-slot="switch"
       {...props}
     >
       <SwitchPrimitive.Thumb
-        className="pointer-events-none block size-5 rounded-full bg-surface shadow-1 transition-transform duration-fast ease-standard data-[state=checked]:translate-x-4 motion-reduce:transition-none"
+        className="pointer-events-none block size-5 rounded-full bg-background shadow-1 ring-0 transition-transform duration-fast ease-standard data-checked:translate-x-4 motion-reduce:transition-none dark:data-checked:bg-primary-foreground"
         data-slot="switch-thumb"
       />
     </SwitchPrimitive.Root>

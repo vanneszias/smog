@@ -45,9 +45,10 @@ export function ProgressBar({
     <Progress.Root
       aria-label={label}
       className={cn(
-        "relative h-2 w-full overflow-hidden rounded-full bg-surface-sunken dark:bg-border-subtle",
+        "relative h-2 w-full overflow-hidden rounded-full bg-muted dark:bg-border-subtle",
         className
       )}
+      data-slot="progress"
       max={max}
       value={determinate ? value : null}
       {...props}
@@ -57,6 +58,7 @@ export function ProgressBar({
           fillVariants({ tone }),
           !determinate && "w-2/5 animate-progress motion-reduce:animate-none"
         )}
+        data-slot="progress-indicator"
         style={
           determinate
             ? { transform: `translateX(-${100 - percent}%)` }

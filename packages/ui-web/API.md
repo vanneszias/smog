@@ -8,6 +8,8 @@ The web kit's public surface, for `@smog/ui-native` to mirror (spec §16: same n
 - is at least 44 × 44 px at `md` and `lg`; `sm` (dense admin UI) keeps a 44 px hit area through an invisible pseudo-element;
 - takes its copy and accessible names from `@smog/i18n` (`kit.*`, `a11y.*`, `states.*`) unless the caller passes them.
 
+Registry: the components are the shadcn `radix-maia` components, hand-ported into this package (`docs/DECISIONS.md`, phase 10a task 2: the commit pinned, the procedure) and edited once for the kit's contracts. Each root element carries `data-slot="<component>"`; the registry's state variants (`data-open:`, `data-checked:`, `data-active:`, `data-horizontal:` ...) are declared in `styles.css`. `command` and `carousel` are separate entry points, `@smog/ui-web/command` and `@smog/ui-web/carousel`, so a screen loads them with `lazy(() => import(...))` and cmdk and embla stay out of the main bundle.
+
 Styles: import `@smog/ui-web/styles.css` after `tailwindcss` and `@smog/styles/theme.css` (it registers the kit as a Tailwind source and adds the overlay animations).
 
 Spacing of `sm` controls: the 44 × 44 hit areas of neighbouring `sm` Buttons, IconButtons and Chips overlap when they are closer than 6 px apart (`gap-2` or more is safe). SegmentedControl `sm` uses a vertical-only hit area, so its segments 4 px apart never share one. The Chip remove button sits inside the chip's hit area and comes after it in the DOM, so it wins where they overlap.
@@ -22,7 +24,7 @@ Native mapping: `onClick` → `onPress`, `className` → NativeWind `className`,
 
 | Component | Props | Variants | Sizes | Notes |
 |---|---|---|---|---|
-| `Button` | `variant`, `size`, `loading`, `icon` (leading, decorative), `disabled`, `type` (defaults to `button`), `asChild` (web) | `primary` · `secondary` · `ghost` · `danger` | `sm` (32 px, 44 px hit area) · `md` (44) · `lg` (48) | `loading` shows a Spinner, sets `aria-busy` and disables. |
+| `Button` | `variant`, `size`, `loading`, `icon` (leading, decorative), `disabled`, `type` (defaults to `button`), `asChild` (web) | `primary` (registry `default`) · `secondary` (`outline`) · `ghost` · `danger` (`destructive`, filled: white on red, AA) | `sm` (32 px, 44 px hit area) · `md` (44) · `lg` (48) | `loading` shows a Spinner, sets `aria-busy` and disables. |
 | `IconButton` | `icon`, `label` (required accessible name), `variant`, `size`, `loading`, `disabled` | `primary` · `secondary` · `ghost` (default) · `danger` | `sm` (32, 44 hit area) · `md` (44) · `lg` (48) | Round. |
 | `Chip` | `selected` (makes it a toggle, `aria-pressed`), `onSelectedChange(next)`, `onRemove` (adds a remove button named `a11y.remove`), `icon`, `size`, `disabled` | selected / unselected | `sm` (32, 44 hit area) · `md` (44) | A check replaces the icon while selected. |
 
@@ -39,6 +41,7 @@ Native mapping: `onClick` → `onPress`, `className` → NativeWind `className`,
 
 | Component | Props | Sizes | Notes |
 |---|---|---|---|
+| `Label` | Radix Label props | | The registry label; `Field` and `FormLabel` use it. |
 | `Field` | `label`, `hint`, `error`, `required`, `optional` (shows `kit.optional`), `counter: { count, max }` (`kit.characterCount`, spoken as `a11y.characterCount`), `id` | | Wires `id`, `aria-describedby`, `aria-invalid` and `required` into the control inside it (`useFieldControl`). The error is `role="alert"`. |
 | `Input` | HTML input props, `size`, `invalid`, `leading` (icon), `trailing` (e.g. an IconButton) | `md` (44) · `lg` (48) | |
 | `Textarea` | HTML textarea props, `invalid`, `rows` (4) | | |
@@ -46,22 +49,31 @@ Native mapping: `onClick` → `onPress`, `className` → NativeWind `className`,
 | `Select` | `options: { value, label, disabled? }[]`, `value` / `defaultValue`, `onValueChange(value)`, `placeholder` (`kit.selectPlaceholder`), `invalid`, `disabled`, `required`, `name`, `open` / `defaultOpen` / `onOpenChange`, `size` | `md` · `lg` | Radix Select (combobox + listbox). Native: a picker sheet with the same props. |
 | `Checkbox` | `checked` (`true` · `false` · `"indeterminate"`), `defaultChecked`, `onCheckedChange(checked)`, `label`, `description`, `invalid`, `disabled` | | 20 px box, 44 px hit area; the label toggles it. |
 | `Switch` | `checked`, `defaultChecked`, `onCheckedChange(checked)`, `label`, `description`, `disabled` | | For settings that apply at once. Label first, switch trailing. |
+| `InputOTP`, `InputOTPGroup`, `InputOTPSlot` (`index`), `InputOTPSeparator` | `maxLength`, `onComplete(value)`, `value` / `onChange`, `autoComplete` (`one-time-code`), `aria-label` | | A one-time code: one real input (paste and autofill work), one 44 px box per character; name it with `aria-label` or a Field label. |
+| `Form`, `FormField`, `FormItem`, `FormLabel`, `FormControl`, `FormDescription`, `FormMessage`, `useFormField()`, `useZodForm(schema, options)` | react-hook-form (`Form` is its provider) with the zod resolver | | `FormControl` wires `id`, `aria-describedby` and `aria-invalid` into the kit control inside it (the same wiring `Field` gives through `useFieldControl`); `FormMessage` shows the resolver's message as `role="alert"`. Use `Field` for a control with no form library. |
 | `RadioGroup` | `options: { value, label, description?, disabled? }[]`, `value` / `defaultValue`, `onValueChange(value)`, `orientation` (`vertical` · `horizontal`), `aria-label` | | Inside a Field it is labelled by the Field label. |
 
 ## Layout and lists
 
 | Component | Props | Variants | Notes |
 |---|---|---|---|
-| `Card` (+ `CardHeader`, `CardTitle` (`level` 2–4, default 3), `CardDescription`, `CardContent`, `CardFooter`) | `variant`, `interactive` | `default` (flat, subtle border) · `raised` (elevation 1: shadow in light, border + `surface-raised` in dark) · `sunken` | `interactive` adds the elevation-1 hover. |
+| `Card` (+ `CardHeader`, `CardAction`, `CardTitle` (`level` 2–4, default 3), `CardDescription`, `CardContent`, `CardFooter`) | `variant`, `interactive` | `default` (flat, subtle border) · `raised` (elevation 1: shadow in light, border + `surface-raised` in dark) · `sunken` | `interactive` adds the elevation-1 hover. |
+| `Separator`, `ScrollArea` (+ `ScrollBar`), `AspectRatio` | Radix props (`orientation` / `decorative`, `ratio`) | | Registry parts, unchanged in behaviour. `ScrollArea`'s viewport takes the 2 px focus ring. |
 | `ListItem` | `title`, `description`, `leading`, `trailing`, `onClick` (the row becomes a button), `disabled`, `asChild` (web: a link row) | | Min height 44. |
 | `Badge` | `variant`, `size`, `icon` | `neutral` · `primary` · `accent` · `success` · `warning` · `danger` (`*-strong` on `*-subtle`; `accent` is filled) | `sm` (caption) · `md` (body-sm). Not interactive. |
+| `Accordion`, `AccordionItem`, `AccordionTrigger`, `AccordionContent` | Radix Accordion (`type`, `collapsible`, `value`) | | The trigger is 44 px and takes the focus ring; the panel animates open and is static under reduced motion. |
+| `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` | Radix Collapsible | | One show/hide region. |
+| `HoverCard`, `HoverCardTrigger`, `HoverCardContent` | Radix HoverCard | | A preview on hover and focus; never the only way to reach its content. |
 | `Avatar` | `name` (accessible name + initials), `src`, `size` | | `sm` (32) · `md` (40) · `lg` (48). |
 
 ## Navigation
 
 | Component | Props | Variants | Notes |
 |---|---|---|---|
-| `Tabs`, `TabsList` (`aria-label`), `TabsTrigger` (`value`, `disabled`), `TabsContent` (`value`) | `value` / `defaultValue`, `onValueChange` | | Radix Tabs; underline style, triggers 44 px. |
+| `Tabs`, `TabsList` (`aria-label`, `variant`: `line` (default) · `pill`), `TabsTrigger` (`value`, `disabled`), `TabsContent` (`value`) | `value` / `defaultValue`, `onValueChange` | | Radix Tabs; underline style (`line`) or the registry's muted track (`pill`), triggers 44 px. |
+| `Breadcrumb`, `BreadcrumbList`, `BreadcrumbItem`, `BreadcrumbLink` (`asChild`), `BreadcrumbPage`, `BreadcrumbSeparator`, `BreadcrumbEllipsis` | | | A `nav` named `a11y.breadcrumb`; the page is `aria-current="page"`; links get a 44 px hit area. |
+| `Toggle` (`size`, `variant`), `ToggleGroup` (`type`, `variant`, `size`, `spacing`), `ToggleGroupItem` | Radix Toggle / ToggleGroup | `default` · `outline` | `aria-pressed` toggles; sizes as Button (`sm` 32 with a 44 px hit area · `md` 44 · `lg` 48). |
+| `SidebarProvider` (`open`, `onOpenChange`, `defaultOpen`), `Sidebar` (`side`, `variant`, `collapsible`), `SidebarTrigger`, `SidebarInset`, `SidebarHeader` / `Content` / `Footer`, `SidebarGroup` / `GroupLabel` / `GroupContent`, `SidebarMenu` / `MenuItem` / `MenuButton` (`isActive`, `asChild`, `tooltip`), `SidebarSeparator`, `useSidebar()` | | | The registry sidebar on the green `sidebar` surface: a fixed panel from `md`, a Sheet below it; `Ctrl/Cmd + B` toggles. Trimmed to what the shells use (no rail, sub-menus, badge or action; no cookie: the state is the caller's). The trigger is named `a11y.toggleSidebar`. |
 | `SegmentedControl` | `options: { value, label, icon?, disabled? }[]`, `value`, `onValueChange(value)`, `aria-label`, `disabled`, `size` | | `sm` (32, 44 hit area) · `md` (44). Always has a value (a radiogroup). |
 | `Stepper` | `steps: { label }[]`, `current` (zero-based) | done · current · upcoming | A `nav` named `a11y.steps`; the current step has `aria-current="step"`. Below `sm` only markers show, with `kit.stepOf` and the current label. |
 | `Pagination` **(web only)** | `page` (one-based), `pageCount`, `onPageChange(page)` | | `a11y.pagination`, `a11y.previousPage` / `nextPage` / `goToPage` / `currentPage`, `kit.pageOf`. Below `sm`: text + prev/next. Native lists load more on scroll. |
@@ -75,7 +87,7 @@ Native mapping: `onClick` → `onPress`, `className` → NativeWind `className`,
 | `Sheet`, `SheetTrigger`, `SheetClose`, `SheetContent`, `SheetFooter` | Content: `title` (required), `description`, `side`, `hideClose` | side `auto` (bottom on mobile, right from `md`) · `bottom` · `right` · `left` | Native: a bottom sheet for every side. |
 | `Menu`, `MenuTrigger`, `MenuContent` (`align`, `sideOffset`), `MenuItem` (`variant`, `icon`, `onSelect`, `disabled`), `MenuLabel`, `MenuSeparator`, `MenuGroup` | Root: `open` / `defaultOpen` / `onOpenChange` | item `default` · `danger` | Radix DropdownMenu. Native: an action sheet. Items 44 px. |
 | `Tooltip`, `TooltipProvider` **(web only)** | `content`, `side`, `align`, `open` / `defaultOpen` / `onOpenChange`; `children` is the trigger | | A hint on hover and focus; never the only accessible name (native has no hover). |
-| `ToastProvider`, `useToast()` → `{ toast(options) → id, dismiss(id) }` | options: `title`, `description`, `variant`, `action: { label, onClick }`, `duration` (5000 ms) | `neutral` · `success` · `warning` · `danger` | Own implementation on Radix Toast (no sonner). Region `a11y.notifications`, dismiss `a11y.dismiss`; `danger` is assertive, the rest polite. |
+| `ToastProvider`, `useToast()` → `{ toast(options) → id, dismiss(id) }` | options: `title`, `description`, `variant`, `action: { label, onClick }`, `duration` (5000 ms) | `neutral` · `success` · `warning` · `danger` | The queue is **sonner** (registry `sonner`); each toast is `toast.custom`, so the kit owns its markup. Region `a11y.notifications` (sonner's `aria-live="polite"` section), dismiss `a11y.dismiss`; a `danger` toast carries `role="alert"` (assertive). Swipe to dismiss, stacking and the hover pause are sonner's. |
 | `PortalContainerProvider` | `container` | | Where overlays portal to (default `document.body`). Web: themed subtrees that differ from the page theme; native: the modal root that re-applies `themeVars`. |
 
 ## States and feedback
@@ -87,14 +99,22 @@ Native mapping: `onClick` → `onPress`, `className` → NativeWind `className`,
 | `ErrorState` | `title` / `description` (`states.error.*`), `onRetry` (`states.retry`), `retrying`, `level` | | `role="alert"`. |
 | `OfflineBanner` | `online` (controlled; browser events when omitted) | | `role="status"`, `states.offline.*`. `useOnline()` is the web hook; native passes NetInfo. |
 | `Spinner` | `size` | | `sm` · `md` · `lg`. Reserved for button loading (spec §16); decorative. |
+| `Alert` (`AlertTitle`, `AlertDescription`, `AlertAction`) | `variant`, `role` | `default` · `success` · `warning` · `danger` (`*-strong` text on its `*-subtle` tint) | An inline message. `danger` is `role="alert"` (assertive), the others `role="status"`. |
 | `ProgressBar` | `label` (required), `value` (omit for indeterminate), `max` (100), `tone` | `primary` · `success` · `warning` · `danger` | `role="progressbar"`. |
 
 ## Tables (web only)
 
 | Component | Props | Notes |
 |---|---|---|
-| `Table` (`containerClassName`), `TableHeader` (`sticky`), `TableBody`, `TableRow`, `TableHead`, `TableCell`, `TableCaption` | HTML table props | Admin only; dense rows are allowed here. |
+| `Table` (`containerClassName`), `TableHeader` (`sticky`), `TableBody`, `TableFooter`, `TableRow`, `TableHead`, `TableCell`, `TableCaption` | HTML table props | Admin only; dense rows are allowed here. |
 | `DataTable<Row>` | `columns: { id, header, cell(row), sortValue?(row), align? ("start" · "end") }[]`, `rows`, `getRowId(row)`, `sort` / `defaultSort` / `onSortChange` (`{ id, direction: "asc" · "desc" } \| null`), `onRowClick(row)`, `stickyHeader`, `empty`, `selectedRowIds` (`ReadonlySet`, `data-state="selected"`), `rowProps(row)` (`{ className?, data-* }`, `RowExtraProps`) | Sort cycles none → ascending → descending; `aria-sort` on the header. Clickable rows take focus and open on Enter/Space. Controlled `sort` is for URL-synced admin filters. Native shows the same data as a list of ListItems. |
+
+## Lazy entry points
+
+| Import | Exports | Notes |
+|---|---|---|
+| `@smog/ui-web/command` | `Command`, `CommandDialog` (`title` defaults to `common.search`), `CommandInput` (placeholder `kit.commandPlaceholder`), `CommandList`, `CommandEmpty` (`kit.noResults`), `CommandGroup`, `CommandItem`, `CommandSeparator`, `CommandShortcut` | cmdk. A search palette; items are 44 px. |
+| `@smog/ui-web/carousel` | `Carousel` (`opts`, `plugins`, `orientation`, `setApi`), `CarouselContent`, `CarouselItem`, `CarouselPrevious`, `CarouselNext`, `useCarousel` | embla. A `section` with `aria-roledescription` `a11y.carousel` (give it an `aria-label`), slides `a11y.slide`, arrow keys scroll, the buttons are named `a11y.previousSlide` / `a11y.nextSlide`. |
 
 ## Domain (learning)
 

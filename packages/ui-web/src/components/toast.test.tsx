@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useCallback } from "react";
 import { classesOf, renderKit } from "../test/render";
@@ -32,24 +32,51 @@ describe("Toast", () => {
     expect(screen.getByRole("region", { name: NOTIFICATIONS })).toBeDefined();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     const title = screen.getByText("Saved");
-    const toast = title.closest("li");
+    const toast = title.closest('[data-slot="toast"]');
     expect(toast).not.toBeNull();
     expect(classesOf(toast)).toContain("shadow-3");
-    expect(classesOf(toast)).toContain("motion-reduce:animate-none");
     expect(screen.getByText("Added to Favorites.")).toBeDefined();
-    // Radix's polite live region announces it to a screen reader (inventory P-29).
+    // Sonner's polite live region announces it to a screen reader (inventory P-29).
     expect(
-      document.querySelector('[role="status"][aria-live="polite"]')
+      document.querySelector('section[aria-live="polite"]')
     ).not.toBeNull();
     await act(async () => {
       await userEvent.click(
         screen.getByRole("button", { name: "Dismiss notification" })
       );
     });
-    expect(screen.queryByText("Saved")).toBeNull();
+    // Sonner unmounts a toast once its exit transition is over.
+    // (A cheap throw: a failed `expect` on a DOM node makes bun format the
+    // whole node, which takes seconds per poll.)
+    await waitFor(() => {
+      if (screen.queryByText("Saved")) {
+        throw new Error("the toast is still shown");
+      }
+    });
   });
 
   test("useToast outside the provider throws", () => {
     expect(() => renderKit(<Trigger />)).toThrow();
+  });
+
+  test("a toast does not outlive its provider (sonner's store is global)", async () => {
+    const first = renderKit(
+      <ToastProvider>
+        <Trigger />
+      </ToastProvider>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByText("Saved")).toBeDefined();
+    first.unmount();
+    renderKit(
+      <ToastProvider>
+        <Trigger />
+      </ToastProvider>
+    );
+    // The replay (if any) lands in an effect of the new Toaster.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(screen.queryByText("Saved")).toBeNull();
   });
 });

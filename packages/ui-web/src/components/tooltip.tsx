@@ -40,7 +40,7 @@ export function Tooltip({
         <TooltipPrimitive.Content
           align={align}
           className={cn(
-            "z-50 max-w-reading rounded-sm bg-foreground px-2 py-1 text-background text-caption shadow-2",
+            "z-50 max-w-reading rounded-2xl bg-foreground px-3 py-1.5 text-background text-caption shadow-2",
             "data-[state=closed]:animate-fade-out data-[state=delayed-open]:animate-fade-in data-[state=instant-open]:animate-fade-in motion-reduce:animate-none",
             className
           )}
@@ -49,6 +49,7 @@ export function Tooltip({
           sideOffset={tokens.spacing["1"]}
         >
           {content}
+          <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%-2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground" />
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

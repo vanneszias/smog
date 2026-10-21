@@ -27,10 +27,11 @@ export function Input({
     <input
       className={cn(
         fieldVariants({ size }),
-        leading && "pl-10",
+        leading && "pl-11",
         trailing && "pr-12",
         className
       )}
+      data-slot="input"
       type={type ?? "text"}
       {...props}
     />

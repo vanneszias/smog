@@ -34,6 +34,7 @@ export function RadioGroup({
         orientation === "horizontal" ? "flex-row flex-wrap" : "flex-col",
         className
       )}
+      data-slot="radio-group"
       orientation={orientation}
       {...props}
     >
@@ -47,17 +48,21 @@ export function RadioGroup({
             <span className="flex h-6 items-center">
               <RadioGroupPrimitive.Item
                 className={cn(
-                  "inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-foreground-muted bg-surface hover:border-foreground data-[state=checked]:border-primary",
+                  "peer inline-flex size-5 shrink-0 items-center justify-center rounded-full border border-input bg-card hover:border-foreground aria-invalid:border-destructive data-checked:border-primary data-checked:bg-primary",
                   hitArea,
                   focusRing,
                   transition,
                   disabled
                 )}
+                data-slot="radio-group-item"
                 disabled={option.disabled}
                 id={id}
                 value={option.value}
               >
-                <RadioGroupPrimitive.Indicator className="block size-2 rounded-full bg-primary" />
+                <RadioGroupPrimitive.Indicator
+                  className="block size-2 rounded-full bg-primary-foreground"
+                  data-slot="radio-group-indicator"
+                />
               </RadioGroupPrimitive.Item>
             </span>
             <span className="flex flex-col">
