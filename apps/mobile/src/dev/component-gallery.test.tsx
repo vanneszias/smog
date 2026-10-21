@@ -59,6 +59,13 @@ describe("ComponentGallery", () => {
       "Skeleton / EmptyState / ErrorState / OfflineBanner",
       "Spinner / ProgressBar / Stepper",
       "Logo",
+      "Surface",
+      "Figtree",
+      "Accordion",
+      "Alert",
+      "Label / Separator",
+      "Toggle / ToggleGroup",
+      "Popover",
     ]) {
       expect(screen.getByRole("header", { name: section })).toBeOnTheScreen();
     }
