@@ -13,7 +13,7 @@ export const DialogClose = DialogPrimitive.Close;
 
 /** The dimmed backdrop shared by Dialog, AlertDialog and Sheet. */
 export const overlayClasses =
-  "fixed inset-0 z-50 bg-foreground/40 data-[state=closed]:animate-fade-out data-[state=open]:animate-fade-in motion-reduce:animate-none dark:bg-background/80";
+  "fixed inset-0 z-50 bg-foreground/40 supports-backdrop-filter:backdrop-blur-xs data-closed:animate-fade-out data-open:animate-fade-in motion-reduce:animate-none dark:bg-background/80";
 
 export interface DialogContentProps
   extends Omit<ComponentProps<typeof DialogPrimitive.Content>, "title"> {
@@ -40,23 +40,33 @@ export function DialogContent({
   const focus = useReturnFocus({ onCloseAutoFocus, onOpenAutoFocus });
   return (
     <DialogPrimitive.Portal container={container}>
-      <DialogPrimitive.Overlay className={overlayClasses} />
+      <DialogPrimitive.Overlay
+        className={overlayClasses}
+        data-slot="dialog-overlay"
+      />
       <DialogPrimitive.Content
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 flex max-h-5/6 w-11/12 max-w-reading -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-xl border border-border-subtle bg-surface-raised p-6 text-foreground shadow-2 outline-none",
-          "data-[state=closed]:animate-pop-out data-[state=open]:animate-pop-in motion-reduce:animate-none",
+          "fixed top-1/2 left-1/2 z-50 flex max-h-5/6 w-11/12 max-w-reading -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-4xl bg-popover p-6 text-popover-foreground shadow-2 outline-none ring-1 ring-foreground/10",
+          "data-closed:animate-pop-out data-open:animate-pop-in motion-reduce:animate-none",
           className
         )}
+        data-slot="dialog-content"
         {...(description ? {} : { "aria-describedby": undefined })}
         {...props}
         {...focus}
       >
         <div className="flex flex-col gap-1 pr-10">
-          <DialogPrimitive.Title className="font-semibold text-title-2">
+          <DialogPrimitive.Title
+            className="font-semibold text-title-2"
+            data-slot="dialog-title"
+          >
             {title}
           </DialogPrimitive.Title>
           {description ? (
-            <DialogPrimitive.Description className="text-body text-foreground-muted">
+            <DialogPrimitive.Description
+              className="text-body text-muted-foreground"
+              data-slot="dialog-description"
+            >
               {description}
             </DialogPrimitive.Description>
           ) : null}
@@ -87,6 +97,7 @@ export function DialogFooter({
         "mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
         className
       )}
+      data-slot="dialog-footer"
       {...props}
     />
   );

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useCallback } from "react";
 import { classesOf, renderKit } from "../test/render";
@@ -32,21 +32,21 @@ describe("Toast", () => {
     expect(screen.getByRole("region", { name: NOTIFICATIONS })).toBeDefined();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     const title = screen.getByText("Saved");
-    const toast = title.closest("li");
+    const toast = title.closest('[data-slot="toast"]');
     expect(toast).not.toBeNull();
     expect(classesOf(toast)).toContain("shadow-3");
-    expect(classesOf(toast)).toContain("motion-reduce:animate-none");
     expect(screen.getByText("Added to Favorites.")).toBeDefined();
-    // Radix's polite live region announces it to a screen reader (inventory P-29).
+    // Sonner's polite live region announces it to a screen reader (inventory P-29).
     expect(
-      document.querySelector('[role="status"][aria-live="polite"]')
+      document.querySelector('section[aria-live="polite"]')
     ).not.toBeNull();
     await act(async () => {
       await userEvent.click(
         screen.getByRole("button", { name: "Dismiss notification" })
       );
     });
-    expect(screen.queryByText("Saved")).toBeNull();
+    // Sonner unmounts a toast once its exit transition is over.
+    await waitFor(() => expect(screen.queryByText("Saved")).toBeNull());
   });
 
   test("useToast outside the provider throws", () => {

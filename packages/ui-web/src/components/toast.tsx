@@ -1,15 +1,14 @@
 import { useTranslation } from "@smog/i18n/react";
 import { cva } from "class-variance-authority";
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from "lucide-react";
-import { Toast as ToastPrimitive } from "radix-ui";
 import {
+  type CSSProperties,
   createContext,
   type ReactNode,
   useCallback,
   useContext,
-  useMemo,
-  useState,
 } from "react";
+import { toast as sonner, Toaster } from "sonner";
 import { cn } from "../lib/cn";
 import { focusRing, transition } from "../lib/variants";
 import { IconButton } from "./icon-button";
@@ -26,26 +25,10 @@ export interface ToastOptions {
   variant?: ToastVariant;
 }
 
-interface ToastEntry extends ToastOptions {
-  id: number;
-  open: boolean;
-}
-
 interface ToastApi {
   dismiss: (id: number) => void;
   /** Shows a toast and returns its id. */
   toast: (options: ToastOptions) => number;
-}
-
-const ToastContext = createContext<ToastApi | null>(null);
-
-/** Queue toasts from anywhere under ToastProvider. */
-export function useToast(): ToastApi {
-  const api = useContext(ToastContext);
-  if (!api) {
-    throw new Error("[ui-web] useToast must be used inside <ToastProvider>");
-  }
-  return api;
 }
 
 const ICONS = {
@@ -66,115 +49,130 @@ const toastIconVariants = cva("mt-0.5 size-5 shrink-0", {
   },
 });
 
-/** How long a toast stays, in ms (the Radix default). */
+/** How long a toast stays, in ms. */
 const DEFAULT_DURATION = 5000;
 
 let nextId = 0;
 
-/** Holds the toast queue and renders the `aria-live` viewport (bottom right; bottom on mobile). */
+/**
+ * The queue is sonner's (registry `sonner`): one module-level store, so the
+ * API object never changes and `useToast` is stable. A toast is rendered with
+ * `toast.custom` so the kit owns its markup: the variant icon and tone, an
+ * action, the dismiss button named from i18n, and `role="alert"` (assertive)
+ * for `danger` inside sonner's polite live region.
+ */
+const api: ToastApi = {
+  dismiss: (id) => {
+    sonner.dismiss(id);
+  },
+  toast: (options) => {
+    nextId += 1;
+    const id = nextId;
+    sonner.custom(() => <ToastCard id={id} options={options} />, {
+      duration: options.duration ?? DEFAULT_DURATION,
+      id,
+    });
+    return id;
+  },
+};
+
+const ToastContext = createContext<ToastApi | null>(null);
+
+/** Queue toasts from anywhere under ToastProvider. */
+export function useToast(): ToastApi {
+  const value = useContext(ToastContext);
+  if (!value) {
+    throw new Error("[ui-web] useToast must be used inside <ToastProvider>");
+  }
+  return value;
+}
+
+/** Sonner takes its colours from these; they follow the page theme. */
+const TOASTER_STYLE = {
+  "--border-radius": "var(--radius-2xl)",
+  "--normal-bg": "var(--color-popover)",
+  "--normal-border": "var(--color-border)",
+  "--normal-text": "var(--color-popover-foreground)",
+} as CSSProperties;
+
+/** Renders sonner's `aria-live` region (bottom right; full width on mobile). */
 export function ToastProvider({
   children,
 }: {
   children: ReactNode;
 }): ReactNode {
   const { t } = useTranslation();
-  const [toasts, setToasts] = useState<ToastEntry[]>([]);
-
-  const dismiss = useCallback((id: number) => {
-    setToasts((all) =>
-      all.map((entry) => (entry.id === id ? { ...entry, open: false } : entry))
-    );
-  }, []);
-  const toast = useCallback((options: ToastOptions) => {
-    nextId += 1;
-    const id = nextId;
-    // Closed toasts have finished their exit animation by now.
-    setToasts((all) => [
-      ...all.filter((entry) => entry.open),
-      { ...options, id, open: true },
-    ]);
-    return id;
-  }, []);
-  const api = useMemo(() => ({ dismiss, toast }), [dismiss, toast]);
-
   return (
     <ToastContext.Provider value={api}>
-      <ToastPrimitive.Provider label={t("a11y.notification")}>
-        {children}
-        {toasts.map((entry) => (
-          <ToastItem entry={entry} key={entry.id} onDismiss={dismiss} />
-        ))}
-        <ToastPrimitive.Viewport
-          className="fixed inset-x-0 bottom-0 z-50 m-0 flex list-none flex-col gap-2 p-4 outline-none sm:right-0 sm:left-auto sm:w-full sm:max-w-reading sm:p-6"
-          label={t("a11y.notifications")}
-        />
-      </ToastPrimitive.Provider>
+      {children}
+      <Toaster
+        customAriaLabel={t("a11y.notifications")}
+        mobileOffset={16}
+        offset={24}
+        position="bottom-right"
+        style={TOASTER_STYLE}
+        theme="system"
+        visibleToasts={3}
+      />
     </ToastContext.Provider>
   );
 }
 
-function ToastItem({
-  entry,
-  onDismiss,
+function ToastCard({
+  id,
+  options,
 }: {
-  entry: ToastEntry;
-  onDismiss: (id: number) => void;
+  id: number;
+  options: ToastOptions;
 }): ReactNode {
   const { t } = useTranslation();
-  const variant = entry.variant ?? "neutral";
+  const variant = options.variant ?? "neutral";
   const Icon = ICONS[variant];
-  const handleOpenChange = useCallback(
-    (open: boolean): void => {
-      if (!open) {
-        onDismiss(entry.id);
-      }
-    },
-    [entry.id, onDismiss]
-  );
+  const { action } = options;
+  const handleDismiss = useCallback(() => {
+    sonner.dismiss(id);
+  }, [id]);
+  const handleAction = useCallback(() => {
+    action?.onClick();
+    sonner.dismiss(id);
+  }, [action, id]);
   return (
-    <ToastPrimitive.Root
+    <div
       className={cn(
-        "flex w-full items-start gap-3 rounded-lg border border-border bg-surface-raised p-4 text-foreground shadow-3",
-        "data-[state=closed]:animate-fade-out data-[state=open]:animate-slide-up motion-reduce:animate-none sm:data-[state=open]:animate-slide-in-right",
-        "data-[swipe=cancel]:translate-x-0 data-[swipe=move]:translate-x-(--radix-toast-swipe-move-x) data-[swipe=end]:animate-slide-out-right"
+        "flex w-full items-start gap-3 rounded-2xl bg-popover p-4 text-popover-foreground shadow-3 ring-1 ring-foreground/10"
       )}
+      data-slot="toast"
       data-variant={variant}
-      duration={entry.duration ?? DEFAULT_DURATION}
-      onOpenChange={handleOpenChange}
-      open={entry.open}
-      type={variant === "danger" ? "foreground" : "background"}
+      role={variant === "danger" ? "alert" : undefined}
     >
       <Icon aria-hidden="true" className={toastIconVariants({ variant })} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <ToastPrimitive.Title className="font-semibold text-body">
-          {entry.title}
-        </ToastPrimitive.Title>
-        {entry.description ? (
-          <ToastPrimitive.Description className="text-body-sm text-foreground-muted">
-            {entry.description}
-          </ToastPrimitive.Description>
+        <p className="font-semibold text-body">{options.title}</p>
+        {options.description ? (
+          <p className="text-body-sm text-muted-foreground">
+            {options.description}
+          </p>
         ) : null}
       </div>
-      {entry.action ? (
-        <ToastPrimitive.Action
-          altText={entry.action.label}
+      {action ? (
+        <button
           className={cn(
-            "inline-flex min-h-touch shrink-0 items-center rounded-md px-3 font-medium text-body-sm text-primary-strong hover:bg-primary-subtle",
+            "inline-flex min-h-touch shrink-0 items-center rounded-4xl px-3 font-medium text-body-sm text-primary-strong hover:bg-primary-subtle",
             focusRing,
             transition
           )}
-          onClick={entry.action.onClick}
+          onClick={handleAction}
+          type="button"
         >
-          {entry.action.label}
-        </ToastPrimitive.Action>
+          {action.label}
+        </button>
       ) : null}
-      <ToastPrimitive.Close asChild>
-        <IconButton
-          className="-my-2 -mr-2"
-          icon={<X />}
-          label={t("a11y.dismiss")}
-        />
-      </ToastPrimitive.Close>
-    </ToastPrimitive.Root>
+      <IconButton
+        className="-my-2 -mr-2"
+        icon={<X />}
+        label={t("a11y.dismiss")}
+        onClick={handleDismiss}
+      />
+    </div>
   );
 }

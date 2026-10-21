@@ -24,7 +24,7 @@ const UTILITY =
   /^-?(p[xytrbl]?|m[xytrbl]?|gap(-[xy])?|size|[wh]|min-[wh]|max-[wh]|inset(-[xy])?|top|right|bottom|left|translate-[xy]|text|bg|border(-[xytrbl])?|rounded(-[a-z]+)?|shadow|ring(-offset)?|font|z|opacity|duration|ease|animate|divide(-[xy])?|grid-cols|col-span)-/;
 
 /** Scanned words that are not classes (a config key, prose in a comment). */
-const NOT_CLASSES = new Set(["font-weight", "right-aligned"]);
+const NOT_CLASSES = new Set(["bottom-right", "font-weight", "right-aligned"]);
 
 function baseUtility(candidate: string): string {
   // Strip variants (`md:`, `data-[state=open]:`, `*:`); brackets never hold `:` here.
