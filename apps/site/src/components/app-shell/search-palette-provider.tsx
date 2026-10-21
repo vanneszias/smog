@@ -36,7 +36,7 @@ export function useSearchPalette(): SearchPaletteApi {
 }
 
 /** Whether a keystroke is for a text field (or other editor), not for a shortcut. */
-export function isEditingTarget(target: EventTarget | null): boolean {
+function isEditingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false;
   }
