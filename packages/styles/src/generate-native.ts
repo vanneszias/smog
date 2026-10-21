@@ -69,11 +69,11 @@ export function renderNativeTailwindConfig(): string {
       backgroundOpacity: false,
       borderOpacity: false,
       divideOpacity: false,
+      // Replaced by the plugin below: a weight also picks the Figtree file.
+      fontWeight: false,
       placeholderOpacity: false,
       ringOpacity: false,
       textOpacity: false,
-      // Replaced by the plugin below: a weight also picks the Figtree file.
-      fontWeight: false,
     },
     darkMode: "class",
     theme: {
@@ -89,11 +89,11 @@ export function renderNativeTailwindConfig(): string {
       // names both define (`rounded-lg`, `text-body`, `p-4`).
       extend: {
         borderRadius: mapValues(radius, px),
+        fontFamily: { sans: [tokens.fontFamily.native.regular] },
         fontSize: mapValues(fontSize, (step) => [
           px(step.size),
           { lineHeight: px(step.lineHeight) },
         ]),
-        fontFamily: { sans: [tokens.fontFamily.native.regular] },
         lineHeight: mapValues(fontSize, (step) => px(step.lineHeight)),
         // Tailwind 3 emits screens in object order, so they must ascend.
         screens: Object.fromEntries(

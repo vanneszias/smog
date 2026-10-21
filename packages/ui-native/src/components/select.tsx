@@ -116,7 +116,7 @@ export function Select({
       >
         <Text
           className={cn(
-            "flex-1 text-body",
+            "flex-1 font-regular text-body",
             current ? "text-foreground" : "text-foreground-muted"
           )}
           numberOfLines={oneLine}
@@ -172,7 +172,7 @@ function SelectItem({
     >
       <Text
         className={cn(
-          "flex-1 text-body text-foreground",
+          "flex-1 font-regular text-body text-foreground",
           checked && "font-semibold"
         )}
       >

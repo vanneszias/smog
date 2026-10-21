@@ -63,7 +63,7 @@ export function CourseBanner({
         <Text className="font-semibold text-body-sm text-foreground">
           {t("gesture.disclaimer.title")}
         </Text>
-        <Text className="text-body-sm text-foreground">
+        <Text className="font-regular text-body-sm text-foreground">
           <Trans
             components={{
               course: (

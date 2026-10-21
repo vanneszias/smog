@@ -153,10 +153,10 @@ describe("renderNativeTailwindConfig", () => {
       backgroundOpacity: false,
       borderOpacity: false,
       divideOpacity: false,
+      fontWeight: false,
       placeholderOpacity: false,
       ringOpacity: false,
       textOpacity: false,
-      fontWeight: false,
     });
   });
 

@@ -258,7 +258,7 @@ function ToastItem({
             {entry.title}
           </Text>
           {entry.description ? (
-            <Text className="text-body-sm text-foreground-muted">
+            <Text className="font-regular text-body-sm text-foreground-muted">
               {entry.description}
             </Text>
           ) : null}

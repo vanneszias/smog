@@ -87,10 +87,12 @@ export function Checkbox({
       {label || description ? (
         <View className="flex-1 flex-col">
           {label ? (
-            <Text className="text-body text-foreground">{label}</Text>
+            <Text className="font-regular text-body text-foreground">
+              {label}
+            </Text>
           ) : null}
           {description ? (
-            <Text className="text-body-sm text-foreground-muted">
+            <Text className="font-regular text-body-sm text-foreground-muted">
               {description}
             </Text>
           ) : null}

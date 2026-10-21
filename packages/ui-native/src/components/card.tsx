@@ -107,7 +107,10 @@ export function CardDescription({
 }: TextProps): ReactElement {
   return (
     <Text
-      className={cn("text-body-sm text-foreground-muted", className)}
+      className={cn(
+        "font-regular text-body-sm text-foreground-muted",
+        className
+      )}
       {...props}
     />
   );

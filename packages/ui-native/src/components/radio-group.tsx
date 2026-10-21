@@ -101,9 +101,11 @@ function Radio({
         {checked ? <View className="size-2 rounded-full bg-primary" /> : null}
       </View>
       <View className="flex-col">
-        <Text className="text-body text-foreground">{option.label}</Text>
+        <Text className="font-regular text-body text-foreground">
+          {option.label}
+        </Text>
         {option.description ? (
-          <Text className="text-body-sm text-foreground-muted">
+          <Text className="font-regular text-body-sm text-foreground-muted">
             {option.description}
           </Text>
         ) : null}

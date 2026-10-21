@@ -116,7 +116,7 @@ export function Field({
           <Text
             accessibilityLiveRegion="polite"
             accessibilityRole="alert"
-            className="text-body-sm text-danger-strong"
+            className="font-regular text-body-sm text-danger-strong"
           >
             {error}
           </Text>
@@ -124,7 +124,7 @@ export function Field({
         {hint || counter ? (
           <View className="flex-row items-start justify-between gap-4">
             {hint ? (
-              <Text className="flex-1 text-body-sm text-foreground-muted">
+              <Text className="flex-1 font-regular text-body-sm text-foreground-muted">
                 {hint}
               </Text>
             ) : (
@@ -134,7 +134,7 @@ export function Field({
               <Text
                 accessibilityLabel={counterText}
                 className={cn(
-                  "shrink-0 text-caption",
+                  "shrink-0 font-regular text-caption",
                   counter.count > counter.max
                     ? "text-danger-strong"
                     : "text-foreground-muted"

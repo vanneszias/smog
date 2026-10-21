@@ -135,7 +135,9 @@ export function TabsContent({
   return (
     <View className={cn("pt-4", className)} {...props}>
       {typeof children === "string" ? (
-        <Text className="text-body text-foreground">{children}</Text>
+        <Text className="font-regular text-body text-foreground">
+          {children}
+        </Text>
       ) : (
         children
       )}

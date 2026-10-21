@@ -37,7 +37,7 @@ export function Stepper({
       {...props}
     >
       <View className="flex-col">
-        <Text className="text-caption text-foreground-muted">
+        <Text className="font-regular text-caption text-foreground-muted">
           {t("kit.stepOf", { current: current + 1, total: steps.length })}
         </Text>
         <Text

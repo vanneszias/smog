@@ -7,10 +7,10 @@ const preset = {
     "backgroundOpacity": false,
     "borderOpacity": false,
     "divideOpacity": false,
+    "fontWeight": false,
     "placeholderOpacity": false,
     "ringOpacity": false,
-    "textOpacity": false,
-    "fontWeight": false
+    "textOpacity": false
   },
   "darkMode": "class",
   "theme": {
@@ -81,6 +81,11 @@ const preset = {
         "sm": "6px",
         "xl": "20px"
       },
+      "fontFamily": {
+        "sans": [
+          "Figtree-Regular"
+        ]
+      },
       "fontSize": {
         "body": [
           "16px",
@@ -123,11 +128,6 @@ const preset = {
           {
             "lineHeight": "24px"
           }
-        ]
-      },
-      "fontFamily": {
-        "sans": [
-          "Figtree-Regular"
         ]
       },
       "lineHeight": {

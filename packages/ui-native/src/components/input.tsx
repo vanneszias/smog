@@ -24,7 +24,8 @@ export const fieldVariants = cva(
   }
 );
 
-const inputTextClasses = "min-h-touch flex-1 py-2 text-body text-foreground";
+const inputTextClasses =
+  "min-h-touch flex-1 py-2 font-regular text-body text-foreground";
 
 export interface InputProps
   extends TextInputProps,

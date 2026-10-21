@@ -123,7 +123,7 @@ export function MenuItem({
       {renderIcon(icon, color, ICON_SIZE.md)}
       <Text
         className={cn(
-          "flex-1 text-body",
+          "flex-1 font-regular text-body",
           danger ? "text-danger-strong" : "text-foreground"
         )}
       >
