@@ -87,17 +87,17 @@ function SourceText({
   language,
 }: {
   gesture: TranslatableGesture;
-  language: string;
+  language: LanguageInfo;
 }): ReactNode {
   const { t } = useTranslation();
   const { source } = gesture;
   return (
     <div
       className="flex min-w-0 flex-col gap-3 rounded-md bg-surface-sunken p-4"
-      lang={language}
+      lang={language.code}
     >
       <Text size="body-sm" tone="muted" weight="medium">
-        {t("admin.catalogTranslation.sourceLabel", { language })}
+        {t("admin.catalogTranslation.sourceLabel", { language: language.name })}
       </Text>
       <Text weight="medium">{source.name}</Text>
       {source.description ? (
@@ -207,7 +207,7 @@ function LanguageForm({
       noValidate
       onSubmit={submit}
     >
-      <SourceText gesture={gesture} language={defaultLanguage.name} />
+      <SourceText gesture={gesture} language={defaultLanguage} />
       <div className="flex min-w-0 flex-col gap-4">
         <Field
           counter={{ count: draft.name.trim().length, max: GESTURE_NAME_MAX }}
