@@ -1,5 +1,13 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
 import { createMobileApiClient } from "./api";
+import { setRequestedLocale } from "./request-locale";
 
 const SESSION_COOKIE = "smog.session_token=abc";
 
@@ -53,5 +61,21 @@ describe("mobile api client", () => {
     const guest = { getCookie: () => Promise.resolve("") };
     await createMobileApiClient(guest).system.whoami();
     expect(sent[0]?.headers.has("cookie")).toBe(false);
+  });
+
+  describe("the language", () => {
+    afterEach(() => setRequestedLocale(null));
+
+    it("asks for the stored or device language through Accept-Language", async () => {
+      setRequestedLocale("fr");
+      await createMobileApiClient(authClient).system.whoami();
+      expect(sent[0]?.headers.get("accept-language")).toBe("fr");
+      expect(sent[0]?.headers.get("cookie")).toBe(SESSION_COOKIE);
+    });
+
+    it("sends none before a language is known", async () => {
+      await createMobileApiClient(authClient).system.whoami();
+      expect(sent[0]?.headers.has("accept-language")).toBe(false);
+    });
   });
 });

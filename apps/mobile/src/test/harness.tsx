@@ -24,6 +24,7 @@ import { type AppClients, AppProviders, sessionHook } from "@/providers";
 
 export const HOND = {
   categories: [{ name: "Dieren", slug: "dieren" }],
+  fallbackUsed: false,
   id: "g-hond",
   name: "Hond",
   playbackId: "playback-hond",
@@ -31,6 +32,7 @@ export const HOND = {
 };
 export const KAT = {
   categories: [{ name: "Dieren", slug: "dieren" }],
+  fallbackUsed: false,
   id: "g-kat",
   name: "Kat",
   playbackId: "playback-kat",

@@ -1,6 +1,7 @@
 import { type ApiClient, createApiClient } from "@smog/api/client";
 import type { ExpoAuthClient } from "@smog/auth/expo";
 import { mobileEnv } from "./env";
+import { languageHeaders } from "./request-locale";
 
 /**
  * What the api client needs from the app's Better Auth Expo client
@@ -23,7 +24,7 @@ export function createMobileApiClient(auth: SessionCookieSource): ApiClient {
     fetch: (request, init) => fetch(request, { ...init, credentials: "omit" }),
     headers: async (): Promise<Record<string, string>> => {
       const cookie = await auth.getCookie();
-      return cookie ? { cookie } : {};
+      return { ...languageHeaders(), ...(cookie ? { cookie } : {}) };
     },
   });
 }

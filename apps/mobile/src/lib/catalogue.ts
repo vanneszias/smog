@@ -28,7 +28,7 @@ const SHIPPED: RuntimeCatalogue = { languages: SHIPPED_LANGUAGES, overlay: {} };
  * device's first well-formed tag (the server answers with the closest
  * enabled language).
  */
-function wantedLocale(
+export function wantedLocale(
   preference: string | null,
   device: readonly string[]
 ): string | null {

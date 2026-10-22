@@ -5,6 +5,7 @@ import {
   useAuthState,
 } from "@smog/auth/react";
 import { createWebAuthClient, type WebAuthClient } from "@smog/auth/web";
+import { isLocalizedQuery } from "@smog/gestures/client";
 import {
   createI18n,
   type LanguageInfo,
@@ -289,7 +290,7 @@ function SiteLocaleProvider({
   locale: Locale;
 }): ReactNode {
   const router = useRouter();
-  const { api } = Route.useRouteContext();
+  const { api, queryClient } = Route.useRouteContext();
   const signedIn = useAuthState().status === "signedIn";
   const value = useMemo(
     () => ({
@@ -298,7 +299,12 @@ function SiteLocaleProvider({
       setLocale: (next: Locale): void => {
         const save = async (): Promise<void> => {
           await Promise.all([
-            saveLocale({ data: next }).then(() => router.invalidate()),
+            saveLocale({ data: next }).then(async () => {
+              // Cached gestures are in the old language: drop them (active
+              // ones refetch), then run the loaders again with the new cookie.
+              await queryClient.resetQueries({ predicate: isLocalizedQuery });
+              await router.invalidate();
+            }),
             signedIn ? api.account.updateProfile({ locale: next }) : null,
           ]);
         };
@@ -307,7 +313,7 @@ function SiteLocaleProvider({
         });
       },
     }),
-    [api, languages, locale, router, signedIn]
+    [api, languages, locale, queryClient, router, signedIn]
   );
   return <LocaleProvider value={value}>{children}</LocaleProvider>;
 }

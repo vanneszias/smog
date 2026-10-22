@@ -29,6 +29,7 @@ const { renderSite } = await import("@/test/render");
 const HOND: GestureDetail = {
   categories: [{ name: "Dieren", slug: "dieren" }],
   description: "Het gebaar voor hond.",
+  fallbackUsed: false,
   id: "g-hond",
   keywords: ["huisdier"],
   name: "Hond",
@@ -39,6 +40,7 @@ const HOND: GestureDetail = {
 const KAT_NAME = /Kat/;
 const KAT = {
   categories: [],
+  fallbackUsed: false,
   id: "g-kat",
   name: "Kat",
   playbackId: "pb-kat",

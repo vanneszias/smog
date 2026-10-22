@@ -20,6 +20,7 @@ export {
   type UseCourseBannerOptions,
   useCourseBanner,
 } from "./course-banner";
+export { isLocalizedQuery } from "./locale-queries";
 export {
   categoriesOptions,
   type GestureSearchInput,
