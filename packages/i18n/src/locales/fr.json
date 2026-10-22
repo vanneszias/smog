@@ -2103,7 +2103,9 @@
           "fileSize": "Taille\u00a0: 2 Mo maximum",
           "style": "Style\u00a0: les logos simples et contrastés fonctionnent le mieux",
           "avoid": "À éviter\u00a0: logos très détaillés ou traits fins"
-        }
+        },
+        "choice": "Logo dans la vidéo",
+        "without": "Sans logo"
       },
       "contact": {
         "title": "Coordonnées",

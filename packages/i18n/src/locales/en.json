@@ -2061,7 +2061,9 @@
           "fileSize": "File size: at most 2 MB",
           "style": "Style: simple, high-contrast logos work best",
           "avoid": "Avoid: very detailed logos or thin lines"
-        }
+        },
+        "choice": "Logo in the video",
+        "without": "Without a logo"
       },
       "contact": {
         "title": "Contact details",

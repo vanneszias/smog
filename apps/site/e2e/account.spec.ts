@@ -22,7 +22,7 @@ const BANNER = "Help SMOG verbeteren";
 const ALLOW = "Statistieken toestaan";
 const DECLINE = "Alleen noodzakelijke";
 const LANGUAGE_URL = /\/account\?section=language$/;
-const PASSWORD ="e2e-password-1234";
+const PASSWORD = "e2e-password-1234";
 const HEADERS = { origin: ORIGIN };
 
 /** Every request to the analytics relay. */

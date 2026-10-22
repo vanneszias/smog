@@ -9,6 +9,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { getGlobalStartContext } from "@tanstack/react-start";
+import { RouteError } from "@/components/learning/page";
 import { createAppApiClient } from "@/lib/api";
 import { routeTree } from "./routeTree.gen";
 
@@ -45,6 +46,7 @@ function createAppRouter() {
   const queryClient = new QueryClient();
   const router = createRouter({
     context: { api, queryClient, queryUtils: createApiQueryUtils(api) },
+    defaultErrorComponent: RouteError,
     defaultPreload: "intent",
     // The loaders' data lives in the QueryClient, which has its own staleness.
     defaultPreloadStaleTime: 0,

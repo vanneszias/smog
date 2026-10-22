@@ -171,18 +171,24 @@ export function LegalPage({
   const updated = formatDate(Date.parse(LEGAL_EFFECTIVE_DATE), textLocale);
   const contentsId = `${kind}-contents`;
   return (
-    <Page className="max-w-reading gap-8">
+    <Page className="gap-8">
       {locale === LEGAL_CANONICAL_LOCALE ? null : (
         <TranslationNotice dutch={dutch} kind={kind} />
       )}
-      <article className="flex flex-col gap-8" lang={textLocale}>
-        <header className="flex flex-col gap-2">
+      <article
+        className="grid gap-8 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-x-12"
+        lang={textLocale}
+      >
+        <header className="flex max-w-reading flex-col gap-2 lg:col-start-2">
           <Heading level={1}>{doc.title}</Heading>
           <Text size="body-sm" tone="muted">
             {t("legal.lastUpdated", { date: updated, lng: textLocale })}
           </Text>
         </header>
-        <nav aria-labelledby={contentsId} className="flex flex-col gap-2">
+        <nav
+          aria-labelledby={contentsId}
+          className="flex flex-col gap-2 lg:sticky lg:top-24 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start"
+        >
           <Heading id={contentsId} level={2} size="title-3">
             {t("legal.contents", { lng: textLocale })}
           </Heading>
@@ -194,23 +200,25 @@ export function LegalPage({
             ))}
           </ol>
         </nav>
-        {doc.sections.map((section, index) => (
-          <section
-            aria-labelledby={`${section.id}-title`}
-            className="flex scroll-mt-20 flex-col gap-3"
-            id={section.id}
-            key={section.id}
-          >
-            <Heading id={`${section.id}-title`} level={2} size="title-3">
-              {index + 1}. {section.title}
-            </Heading>
-            {section.blocks.map((block, blockIndex) => (
-              // The blocks are static text: their order is their identity.
-              // biome-ignore lint/suspicious/noArrayIndexKey: see above
-              <Block block={block} key={blockIndex} />
-            ))}
-          </section>
-        ))}
+        <div className="flex max-w-reading flex-col gap-8 lg:col-start-2">
+          {doc.sections.map((section, index) => (
+            <section
+              aria-labelledby={`${section.id}-title`}
+              className="flex scroll-mt-20 flex-col gap-3"
+              id={section.id}
+              key={section.id}
+            >
+              <Heading id={`${section.id}-title`} level={2} size="title-3">
+                {index + 1}. {section.title}
+              </Heading>
+              {section.blocks.map((block, blockIndex) => (
+                // The blocks are static text: their order is their identity.
+                // biome-ignore lint/suspicious/noArrayIndexKey: see above
+                <Block block={block} key={blockIndex} />
+              ))}
+            </section>
+          ))}
+        </div>
       </article>
     </Page>
   );
