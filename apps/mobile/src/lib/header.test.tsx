@@ -28,6 +28,8 @@ describe("useStackHeaderOptions", () => {
     expect(options.headerTintColor).toBe(light.sidebarForeground);
     expect(options.headerTitleStyle.color).toBe(light.sidebarForeground);
     expect(options.headerLargeTitleStyle.color).toBe(light.sidebarForeground);
+    // iOS paints the expanded large title on its own background.
+    expect(options.headerLargeStyle.backgroundColor).toBe(light.sidebar);
   });
 
   it("keeps the page below on the page background", () => {
