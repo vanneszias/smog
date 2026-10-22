@@ -356,7 +356,7 @@ test.describe("keyboard: signed in", () => {
     const { context, page } = await newPublicPage(browser, "light", 1280);
     try {
       await signInWithApi(page);
-      await openPublic(page, "/account");
+      await openPublic(page, "/account?section=privacy");
       await dialogRun(
         page,
         page.getByRole("button", { name: "Mijn account verwijderen" }),

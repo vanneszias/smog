@@ -65,7 +65,10 @@ test.describe("my space", () => {
       page.getByRole("tab", { name: "Gedeeld door mij" })
     ).toHaveAttribute("aria-selected", "true");
     await expect(
-      page.getByRole("heading", { level: 2, name: "Deel lijsten met een account" })
+      page.getByRole("heading", {
+        level: 2,
+        name: "Deel lijsten met een account",
+      })
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "Aanmelden" })).toBeVisible();
     expect(await blockingViolations(page)).toEqual([]);

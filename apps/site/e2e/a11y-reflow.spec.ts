@@ -149,6 +149,8 @@ test.describe("reflow at 320 x 256 px", () => {
         "/my?tab=lists",
         `/my?tab=lists&id=${fixture.listId}`,
         "/account",
+        "/account?section=sign-in",
+        "/account?section=privacy",
       ]) {
         // biome-ignore lint/performance/noAwaitInLoops: one route at a time.
         await openPublic(page, path);
@@ -186,7 +188,7 @@ test.describe("reflow at 320 x 256 px", () => {
       await expectNoHorizontalScroll(page, "share sheet");
       await page.keyboard.press("Escape");
       await expect(page.locator(`div[role="dialog"]`)).toBeHidden();
-      await openPublic(page, "/account");
+      await openPublic(page, "/account?section=privacy");
       await page
         .getByRole("button", { name: "Mijn account verwijderen" })
         .click();
@@ -442,7 +444,7 @@ test.describe("reduced motion", () => {
     // A toast: the analytics switch on the account page says it saved.
     test("the toast does not move", async () => {
       const page = shared.page();
-      await openPublic(page, "/account");
+      await openPublic(page, "/account?section=privacy");
       await page.getByRole("switch", { name: "Gebruiksstatistieken" }).click();
       const toast = page
         .getByRole("region", { name: "Meldingen" })
@@ -474,7 +476,7 @@ test.describe("reduced motion", () => {
       await expect(sheet).toBeVisible();
       expect(await longestMotion(sheet)).toBeGreaterThan(0);
       await page.keyboard.press("Escape");
-      await openPublic(page, "/account");
+      await openPublic(page, "/account?section=privacy");
       await page.getByRole("switch", { name: "Gebruiksstatistieken" }).click();
       const toasts = page.getByRole("region", { name: "Meldingen" });
       await expect(toasts.getByText("Je keuze is bewaard.")).toBeVisible();

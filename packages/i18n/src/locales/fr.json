@@ -854,6 +854,14 @@
     },
     "preferences": {
       "languageHint": "Si vous êtes connecté, c'est aussi la langue des e-mails que nous vous envoyons."
+    },
+    "nav": {
+      "label": "Paramètres du compte",
+      "profile": "Profil",
+      "signIn": "Méthodes de connexion",
+      "preferences": "Préférences",
+      "language": "Langue",
+      "privacy": "Confidentialité et données"
     }
   },
   "settings": {

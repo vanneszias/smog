@@ -21,7 +21,8 @@ const EXPORT_FILE = /^smog-export-\d{4}-\d{2}-\d{2}\.json$/;
 const BANNER = "Help SMOG verbeteren";
 const ALLOW = "Statistieken toestaan";
 const DECLINE = "Alleen noodzakelijke";
-const PASSWORD = "e2e-password-1234";
+const LANGUAGE_URL = /\/account\?section=language$/;
+const PASSWORD ="e2e-password-1234";
 const HEADERS = { origin: ORIGIN };
 
 /** Every request to the analytics relay. */
@@ -163,6 +164,10 @@ test.describe("screenshots", () => {
           fullPage: true,
           path: `${SCREENSHOTS}/account-${width}-${theme}.png`,
         });
+        await page.goto("/account?section=privacy");
+        await expect(
+          page.getByRole("region", { name: "Privacy" })
+        ).toBeVisible();
         await page
           .getByRole("button", { name: "Mijn account verwijderen" })
           .click();
@@ -222,8 +227,8 @@ test.describe("consent banner", () => {
       .getByRole("button", { name: ALLOW })
       .click();
     await signUpWithPassword(page);
-    await page.goto("/account");
-    await expect(page.getByRole("region", { name: "Profiel" })).toBeVisible();
+    await page.goto("/account?section=privacy");
+    await expect(page.getByRole("region", { name: "Privacy" })).toBeVisible();
     await page.waitForLoadState("networkidle");
     await expect(page.getByRole("region", { name: BANNER })).toHaveCount(0);
     await expect(
@@ -291,7 +296,7 @@ test.describe("consent banner", () => {
   }) => {
     const errors = watchErrors(page);
     const relay = recordRelay(page);
-    await page.goto("/account");
+    await page.goto("/account?section=privacy");
     await page
       .getByRole("region", { name: BANNER })
       .getByRole("button", { name: ALLOW })
@@ -326,8 +331,25 @@ test("a guest's account page: a sign-in prompt and the device preferences", asyn
   ).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Voorkeuren" }).getByRole("radiogroup")
-  ).toHaveCount(2);
+  ).toHaveCount(1);
   await expect(page.getByRole("region", { name: "Profiel" })).toHaveCount(0);
+  // The side navigation holds the device's three sections; one shows at a time.
+  const nav = page.getByRole("navigation", { name: "Accountinstellingen" });
+  await expect(nav.getByRole("link")).toHaveText([
+    "Voorkeuren",
+    "Taal",
+    "Privacy en gegevens",
+  ]);
+  await expect(nav.getByRole("link", { name: "Voorkeuren" })).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
+  await nav.getByRole("link", { name: "Taal" }).click();
+  await expect(page).toHaveURL(LANGUAGE_URL);
+  await expect(
+    page.getByRole("region", { name: "Taal" }).getByRole("radiogroup")
+  ).toHaveCount(1);
+  await expect(page.getByRole("region", { name: "Voorkeuren" })).toHaveCount(0);
   expect(await blockingViolations(page)).toEqual([]);
   expect(errors).toEqual([]);
 });
@@ -336,8 +358,8 @@ test("the export downloads valid JSON (version 2)", async ({ page }) => {
   const errors = watchErrors(page);
   await decideConsent(page);
   const email = await signUpWithPassword(page);
-  await page.goto("/account");
-  await expect(page.getByRole("region", { name: "Profiel" })).toBeVisible();
+  await page.goto("/account?section=privacy");
+  await expect(page.getByRole("region", { name: "Privacy" })).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
 
   const downloading = page.waitForEvent("download");
@@ -378,7 +400,7 @@ test("deleting the account: its sessions end, sign-in fails, favorites are gone"
     storageState: await page.context().storageState(),
   });
 
-  await page.goto("/account");
+  await page.goto("/account?section=privacy");
   await page.getByRole("button", { name: "Mijn account verwijderen" }).click();
   const dialog = page.getByRole("alertdialog", {
     name: "Je account definitief verwijderen?",
@@ -448,7 +470,7 @@ test("changing the password: the old one stops working, the new one signs in", a
   const errors = watchErrors(page);
   await decideConsent(page);
   const email = await signUpWithPassword(page);
-  await page.goto("/account");
+  await page.goto("/account?section=sign-in");
   await page.getByRole("button", { name: "Wachtwoord wijzigen" }).click();
   const dialog = page.getByRole("dialog", { name: "Wachtwoord wijzigen" });
   const next = "e2e-new-password-5678";
@@ -514,7 +536,7 @@ test("passkeys: add one with a virtual authenticator, then remove it", async ({
   });
   await decideConsent(page);
   await signUpWithPassword(page);
-  await page.goto("/account");
+  await page.goto("/account?section=sign-in");
   await expect(
     page.getByText("Je hebt nog geen passkey toegevoegd.")
   ).toBeVisible();

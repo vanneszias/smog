@@ -846,6 +846,14 @@
     },
     "preferences": {
       "languageHint": "Als je aangemeld bent, is dit ook de taal van de e-mails die we je sturen."
+    },
+    "nav": {
+      "label": "Accountinstellingen",
+      "profile": "Profiel",
+      "signIn": "Aanmeldmethodes",
+      "preferences": "Voorkeuren",
+      "language": "Taal",
+      "privacy": "Privacy en gegevens"
     }
   },
   "settings": {

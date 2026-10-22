@@ -846,6 +846,14 @@
     },
     "preferences": {
       "languageHint": "When you're signed in, this is also the language of the emails we send you."
+    },
+    "nav": {
+      "label": "Account settings",
+      "profile": "Profile",
+      "signIn": "Sign-in methods",
+      "preferences": "Preferences",
+      "language": "Language",
+      "privacy": "Privacy and data"
     }
   },
   "settings": {
