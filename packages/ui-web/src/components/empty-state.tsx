@@ -1,7 +1,15 @@
-import { handSvgs } from "@smog/brand/svg";
 import { useTranslation } from "@smog/i18n/react";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../lib/cn";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "./empty";
+import { HandIllustration } from "./hand-illustration";
 
 export interface EmptyStateProps
   extends Omit<ComponentProps<"section">, "title"> {
@@ -17,7 +25,10 @@ export interface EmptyStateProps
   title?: ReactNode;
 }
 
-/** No data yet: title, description and the next action (`states.empty.*` by default). */
+/**
+ * No data yet: the registry `empty` parts with the brand hand (or an icon),
+ * title, description and the next action (`states.empty.*` by default).
+ */
 export function EmptyState({
   action,
   className,
@@ -29,50 +40,45 @@ export function EmptyState({
   ...props
 }: EmptyStateProps): ReactNode {
   const { t } = useTranslation();
-  const Heading = `h${level}` as const;
-  const hand =
-    illustration === undefined || illustration === false
-      ? null
-      : handSvgs[illustration === true ? 0 : illustration];
+  let hand: 0 | 1 | 2 | null = null;
+  if (illustration === true) {
+    hand = 0;
+  } else if (illustration !== undefined && illustration !== false) {
+    hand = illustration;
+  }
   return (
     <section
-      className={cn(
-        "mx-auto flex max-w-reading flex-col items-center gap-3 px-4 py-10 text-center",
-        className
-      )}
+      className={cn("mx-auto flex w-full max-w-reading", className)}
+      data-slot="empty-state"
       {...props}
     >
-      {hand ? (
-        <span
-          aria-hidden="true"
-          className="mb-2 inline-flex h-16 text-primary *:h-full *:w-auto"
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: generated, trusted artwork from @smog/brand
-          dangerouslySetInnerHTML={{ __html: hand }}
-          data-slot="empty-illustration"
-        />
-      ) : null}
-      {icon && !hand ? (
-        <span
-          aria-hidden="true"
-          className="mb-1 inline-flex size-12 items-center justify-center rounded-full bg-primary-subtle text-primary-strong *:size-6"
-        >
-          {icon}
-        </span>
-      ) : null}
-      <Heading
-        className={cn(
-          "font-semibold text-foreground",
-          level === 1 ? "text-title-1" : "text-title-3"
-        )}
-      >
-        {title ?? t("states.empty.title")}
-      </Heading>
-      <p className="text-body text-foreground-muted">
-        {description ?? t("states.empty.description")}
-      </p>
-      {action ? (
-        <div className="mt-2 flex flex-wrap justify-center gap-2">{action}</div>
-      ) : null}
+      <Empty className="py-10">
+        <EmptyHeader>
+          {hand === null ? null : (
+            <EmptyMedia>
+              <HandIllustration
+                className="h-20"
+                data-slot="empty-illustration"
+                hand={hand}
+              />
+            </EmptyMedia>
+          )}
+          {icon && hand === null ? (
+            <EmptyMedia variant="icon">
+              <span aria-hidden="true" className="inline-flex">
+                {icon}
+              </span>
+            </EmptyMedia>
+          ) : null}
+          <EmptyTitle level={level}>
+            {title ?? t("states.empty.title")}
+          </EmptyTitle>
+          <EmptyDescription>
+            {description ?? t("states.empty.description")}
+          </EmptyDescription>
+        </EmptyHeader>
+        {action ? <EmptyContent>{action}</EmptyContent> : null}
+      </Empty>
     </section>
   );
 }

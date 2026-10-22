@@ -13,6 +13,7 @@ import { cn } from "../lib/cn";
 import { createOverlay } from "../lib/overlay";
 import { useShadow, useThemeVars } from "../lib/theme";
 import { IconButton } from "./icon-button";
+import { SurfaceReset } from "./surface";
 import { Heading, Text } from "./text";
 import { ToastViewport } from "./toast";
 
@@ -65,33 +66,35 @@ export function ModalCard({
       {/* `accessibilityViewIsModal` is on the root that holds the card, the
           backdrop and the toasts: it hides what is *behind* the modal from
           VoiceOver (iOS), and does not hide the toasts drawn inside it. */}
-      <View
-        accessibilityViewIsModal
-        className="flex-1 items-center justify-center p-4"
-        style={themeVars}
-        testID="overlay-theme-root"
-      >
-        <Pressable
-          accessibilityElementsHidden
-          className="absolute inset-0 bg-foreground/40"
-          disabled={!dismissable}
-          importantForAccessibility="no-hide-descendants"
-          onPress={onClose}
-        />
+      <SurfaceReset>
         <View
-          accessibilityRole={role}
-          className={cn(
-            "w-full flex-col gap-4 rounded-xl border border-border-subtle bg-surface-raised p-6",
-            className
-          )}
-          style={shadow}
-          testID={testID}
+          accessibilityViewIsModal
+          className="flex-1 items-center justify-center p-4"
+          style={themeVars}
+          testID="overlay-theme-root"
         >
-          {children}
+          <Pressable
+            accessibilityElementsHidden
+            className="absolute inset-0 bg-foreground/40"
+            disabled={!dismissable}
+            importantForAccessibility="no-hide-descendants"
+            onPress={onClose}
+          />
+          <View
+            accessibilityRole={role}
+            className={cn(
+              "w-full flex-col gap-4 rounded-xl border border-border-subtle bg-popover p-6",
+              className
+            )}
+            style={shadow}
+            testID={testID}
+          >
+            {children}
+          </View>
+          {/* The Modal covers the app's toasts; they draw here while open. */}
+          <ToastViewport />
         </View>
-        {/* The Modal covers the app's toasts; they draw here while open. */}
-        <ToastViewport />
-      </View>
+      </SurfaceReset>
     </Modal>
   );
 }

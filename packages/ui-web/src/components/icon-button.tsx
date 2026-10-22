@@ -28,10 +28,10 @@ const iconButtonVariants = cva(
         sm: cn("size-8", hitArea),
       },
       variant: {
-        danger: "border-transparent bg-danger text-primary-foreground",
+        danger: "border-transparent bg-destructive text-primary-foreground",
         ghost: "border-transparent bg-transparent text-foreground",
         primary: "border-transparent bg-primary text-primary-foreground",
-        secondary: "border-foreground-muted bg-surface text-foreground",
+        secondary: "border-muted-foreground bg-card text-foreground",
       },
     },
   }

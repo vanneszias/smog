@@ -1,7 +1,30 @@
 // biome-ignore lint/performance/noBarrelFile: the kit's public entry point (API.md lists every export).
+export {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "./components/accordion";
+export {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  type AlertProps,
+  AlertTitle,
+} from "./components/alert";
 export { AlertDialog, type AlertDialogProps } from "./components/alert-dialog";
+export { AspectRatio } from "./components/aspect-ratio";
 export { Avatar, type AvatarProps } from "./components/avatar";
 export { Badge, type BadgeProps, badgeVariants } from "./components/badge";
+export {
+  Breadcrumb,
+  BreadcrumbEllipsis,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "./components/breadcrumb";
 export {
   Button,
   type ButtonProps,
@@ -9,6 +32,7 @@ export {
 } from "./components/button";
 export {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -19,6 +43,11 @@ export {
 export { Checkbox, type CheckboxProps } from "./components/checkbox";
 export { Chip, type ChipProps } from "./components/chip";
 export {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./components/collapsible";
+export {
   Dialog,
   DialogClose,
   DialogContent,
@@ -26,6 +55,15 @@ export {
   DialogFooter,
   DialogTrigger,
 } from "./components/dialog";
+export {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  type EmptyTitleProps,
+} from "./components/empty";
 export { EmptyState, type EmptyStateProps } from "./components/empty-state";
 export { ErrorState, type ErrorStateProps } from "./components/error-state";
 export {
@@ -33,8 +71,36 @@ export {
   type FieldProps,
   useFieldControl,
 } from "./components/field";
+export {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  useFormField,
+  useZodForm,
+} from "./components/form";
+export {
+  HandIllustration,
+  type HandIllustrationProps,
+  type HandIndex,
+} from "./components/hand-illustration";
+export {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "./components/hover-card";
 export { IconButton, type IconButtonProps } from "./components/icon-button";
 export { Input, type InputProps } from "./components/input";
+export {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "./components/input-otp";
+export { Label } from "./components/label";
 export { ListItem, type ListItemProps } from "./components/list-item";
 export { Logo, type LogoProps } from "./components/logo";
 export {
@@ -59,6 +125,7 @@ export {
   type RadioGroupProps,
   type RadioOption,
 } from "./components/radio-group";
+export { ScrollArea, ScrollBar } from "./components/scroll-area";
 export { SearchField, type SearchFieldProps } from "./components/search-field";
 export {
   SegmentedControl,
@@ -70,6 +137,7 @@ export {
   type SelectOption,
   type SelectProps,
 } from "./components/select";
+export { Separator } from "./components/separator";
 export {
   Sheet,
   SheetClose,
@@ -78,6 +146,23 @@ export {
   SheetFooter,
   SheetTrigger,
 } from "./components/sheet";
+export {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+} from "./components/sidebar";
 export { Skeleton, type SkeletonProps } from "./components/skeleton";
 export { Spinner, type SpinnerProps } from "./components/spinner";
 export {
@@ -96,6 +181,7 @@ export {
   TableBody,
   TableCaption,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -104,6 +190,7 @@ export {
   Tabs,
   TabsContent,
   TabsList,
+  type TabsListProps,
   TabsTrigger,
 } from "./components/tabs";
 export {
@@ -124,6 +211,8 @@ export {
   type ToastVariant,
   useToast,
 } from "./components/toast";
+export { Toggle, toggleVariants } from "./components/toggle";
+export { ToggleGroup, ToggleGroupItem } from "./components/toggle-group";
 export {
   Tooltip,
   type TooltipProps,
@@ -135,6 +224,10 @@ export {
   OpenInAppBanner,
   type OpenInAppBannerProps,
 } from "./domain/app-banner";
+export {
+  AuthSidePanel,
+  type AuthSidePanelProps,
+} from "./domain/auth-side-panel";
 export {
   CategoryChips,
   type CategoryChipsProps,
@@ -191,4 +284,5 @@ export {
   type VideoPlayerProps,
 } from "./domain/video-player";
 export { cn } from "./lib/cn";
+export { isEditingTarget } from "./lib/editing-target";
 export { PortalContainerProvider } from "./lib/portal";

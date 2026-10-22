@@ -543,7 +543,7 @@ test.describe("CSP (enforced in dev)", () => {
       ).toHaveAttribute("aria-pressed", "true");
       await page.getByRole("button", { exact: true, name: "Doorgaan" }).click();
       await page.getByLabel(NAAM_IN_DE_VIDEO).fill("CSP Proef");
-      await page.getByRole("checkbox", { name: LOGO_TOEVOEGEN }).click();
+      await page.getByRole("radio", { name: LOGO_TOEVOEGEN }).click();
       await page.locator("input#logo-upload").setInputFiles({
         buffer: PNG,
         mimeType: "image/png",

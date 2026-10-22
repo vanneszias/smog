@@ -1,6 +1,8 @@
 import { COURSE_URL } from "@smog/config/constants";
 import { useTranslation } from "@smog/i18n/react";
 import {
+  AppBanner,
+  AuthSidePanel,
   Button,
   Card,
   CategoryChips,
@@ -12,18 +14,29 @@ import {
   type GestureCardData,
   GestureGrid,
   GestureRow,
+  HandIllustration,
   Heading,
   IconButton,
   ListItemsEmptyState,
   ListPicker,
   type ListPickerList,
   ListsEmptyState,
+  OpenInAppBanner,
   SearchResults,
   ShareLink,
   VideoPlayer,
 } from "@smog/ui-web";
-import { GripVertical, ListPlus, Plus, Search } from "lucide-react";
+import {
+  GripVertical,
+  Hand,
+  ListPlus,
+  MessageCircle,
+  Plus,
+  Search,
+  Utensils,
+} from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { useSearchPalette } from "@/components/app-shell/search-palette-provider";
 
 /*
  * `/dev/ui` domain sections (spec §16 "Domain"): the learning components
@@ -124,7 +137,10 @@ export function DomainShowcase(): ReactNode {
       <RowsSection />
       <FiltersSection />
       <VideoSection />
+      <BannersSection />
       <ConsentSection />
+      <BrandSection />
+      <PaletteSection />
       <ListsSection />
       <SearchSection />
       <EmptySection />
@@ -193,9 +209,17 @@ function FiltersSection(): ReactNode {
   const [active, setActive] = useState(true);
   const categories = useMemo(
     () => [
-      { name: t("devTools.gallery.rowGreetings"), slug: "greetings" },
-      { name: t("devTools.gallery.rowFood"), slug: "food" },
-      { name: t("devTools.gallery.rowFeelings"), slug: "feelings" },
+      {
+        icon: <Hand />,
+        name: t("devTools.gallery.rowGreetings"),
+        slug: "greetings",
+      },
+      { icon: <Utensils />, name: t("devTools.gallery.rowFood"), slug: "food" },
+      {
+        icon: <MessageCircle />,
+        name: t("devTools.gallery.rowFeelings"),
+        slug: "feelings",
+      },
     ],
     [t]
   );
@@ -249,6 +273,57 @@ function VideoSection(): ReactNode {
   );
 }
 
+function BannersSection(): ReactNode {
+  return (
+    <Section name="AppBanner / OpenInAppBanner">
+      <div className="flex flex-col gap-3">
+        <AppBanner
+          appStoreUrl="https://apps.apple.com/app/smog"
+          googlePlayUrl="https://play.google.com/store/apps/details?id=smog"
+          onDismiss={noop}
+        />
+        <OpenInAppBanner
+          href="https://smog.example/gestures/hello"
+          storeUrl="https://apps.apple.com/app/smog"
+        />
+      </div>
+    </Section>
+  );
+}
+
+/** The brand motif: the three hands, and the green side of the auth card. */
+function BrandSection(): ReactNode {
+  const { t } = useTranslation();
+  return (
+    <Section name="HandIllustration / AuthSidePanel">
+      <div className="flex flex-wrap items-end gap-6">
+        <HandIllustration className="h-20" hand={0} />
+        <HandIllustration className="h-20" hand={1} />
+        <HandIllustration className="h-20 text-danger-strong" hand={2} />
+      </div>
+      <AuthSidePanel
+        className="flex max-w-reading rounded-2xl"
+        tagline={t("home.tagline")}
+      />
+    </Section>
+  );
+}
+
+/** The global search: the real palette, opened here as from the header (or with `/`). */
+function PaletteSection(): ReactNode {
+  const { t } = useTranslation();
+  const palette = useSearchPalette();
+  return (
+    <Section name="Search palette (command)">
+      <div>
+        <Button icon={<Search />} onClick={palette.open} variant="secondary">
+          {t("searchPalette.placeholder")}
+        </Button>
+      </div>
+    </Section>
+  );
+}
+
 function ConsentSection(): ReactNode {
   return (
     <Section name="ConsentBanner">
@@ -278,7 +353,7 @@ function VideoSample({ title }: { title: string }): ReactNode {
   }, []);
   if (!show) {
     return (
-      <div className="flex aspect-3/4 w-full items-center justify-center rounded-lg bg-surface-sunken">
+      <div className="flex aspect-3/4 w-full items-center justify-center rounded-2xl bg-muted ring-1 ring-foreground/10">
         <Button onClick={start} variant="secondary">
           {t("a11y.playVideo")}
         </Button>
@@ -294,7 +369,7 @@ function VideoSample({ title }: { title: string }): ReactNode {
         playbackId={SAMPLE_PLAYBACK_ID}
         title={title}
       />
-      <p className="text-caption text-foreground-muted">
+      <p className="text-caption text-muted-foreground">
         onNearEnd × {nearEnd}
       </p>
     </div>

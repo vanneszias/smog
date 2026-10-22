@@ -80,7 +80,15 @@ test.describe("axe: signed in", () => {
         browser,
         width,
         async (page, found) => {
-          for (const path of ["/favorites", "/lists", "/account"]) {
+          for (const path of [
+            "/my?tab=favorites",
+            "/my?tab=lists",
+            "/account",
+            "/account?section=sign-in",
+            "/account?section=preferences",
+            "/account?section=language",
+            "/account?section=privacy",
+          ]) {
             // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
             await openPublic(page, path);
             found.push(...(await scanThemes(page, `${path} (empty)`)));
@@ -98,7 +106,7 @@ test.describe("axe: signed in", () => {
         browser,
         width,
         async (page, found) => {
-          await openPublic(page, "/account");
+          await openPublic(page, "/account?section=privacy");
           await overlay(
             page,
             found,
@@ -127,9 +135,9 @@ test.describe("axe: signed in", () => {
       test.setTimeout(STATES_MS);
       await signedIn(browser, width, async (page, found, fixture) => {
         for (const [name, path] of [
-          ["favorites", "/favorites"],
-          ["lists", "/lists"],
-          ["list", `/lists?id=${fixture.listId}`],
+          ["favorites", "/my?tab=favorites"],
+          ["lists", "/my?tab=lists"],
+          ["list", `/my?tab=lists&id=${fixture.listId}`],
         ] as const) {
           // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
           await openPublic(page, path);

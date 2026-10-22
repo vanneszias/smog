@@ -115,8 +115,8 @@ const DOCUMENTS = [
   ["R-01", "/"],
   ["R-02", "/gestures"],
   ["R-02", "/gestures?q=hallo&category=begroetingen"],
-  ["R-04", "/lists"],
-  ["R-06", "/favorites"],
+  ["R-04", "/my?tab=lists"],
+  ["R-06", "/my?tab=favorites"],
   ["R-07", "/account"],
   ["R-12", "/sponsor"],
   ["R-16", "/privacy"],
@@ -124,6 +124,19 @@ const DOCUMENTS = [
 ] as const;
 
 test.describe("canonical pages (R-01 to R-16)", () => {
+  // Phase 10a task 4: both moved into My space, a 302 with the query kept.
+  for (const [id, from, location] of [
+    ["R-04", "/lists", "/my?tab=lists"],
+    ["R-04", "/lists?id=abc", "/my?tab=lists&id=abc"],
+    ["R-06", "/favorites", "/my?tab=favorites"],
+  ] as const) {
+    test(`${id} ${from} moved into My space (302)`, async ({ request }) => {
+      const response = await request.get(from, NO_FOLLOW);
+      expect(response.status()).toBe(302);
+      expect(response.headers().location).toBe(location);
+    });
+  }
+
   for (const [id, path] of DOCUMENTS) {
     test(`${id} ${path} is a document`, async ({ request }) => {
       const response = await request.get(path, NO_FOLLOW);

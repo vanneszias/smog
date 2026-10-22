@@ -11,6 +11,7 @@ const SCREENSHOTS = "e2e/__screenshots__";
 const WIDTHS = [390, 1280] as const;
 const THEMES = ["light", "dark"] as const;
 const DARK = /\bdark\b/;
+const MY_URL = /\/my$/;
 
 const PAGES = [
   {
@@ -85,7 +86,7 @@ test.describe("app shell", () => {
     ).toBe(true);
   });
 
-  test("the theme and language menus save a cookie and apply at once", async ({
+  test("the settings menu's theme and language save a cookie and apply at once", async ({
     page,
   }) => {
     const errors = watchErrors(page);
@@ -93,11 +94,12 @@ test.describe("app shell", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: "Thema wijzigen" }).click();
+    // One settings menu holds the language and the theme (phase 10a).
+    await page.getByRole("button", { name: "Instellingen" }).click();
     await page.getByRole("menuitemradio", { name: "Donker" }).click();
     await expect(page.locator("html")).toHaveClass(DARK);
 
-    await page.getByRole("button", { name: "Taal wijzigen" }).click();
+    await page.getByRole("button", { name: "Instellingen" }).click();
     await page.getByRole("menuitemradio", { name: "English" }).click();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(
@@ -114,7 +116,7 @@ test.describe("app shell", () => {
     expect(errors).toEqual([]);
   });
 
-  test("signed in, the language menu also saves the account's language (account.updateProfile)", async ({
+  test("signed in, the user menu's language also saves the account's language (account.updateProfile)", async ({
     page,
   }) => {
     const errors = watchErrors(page);
@@ -135,7 +137,7 @@ test.describe("app shell", () => {
         response.url().includes("/api/rpc/account/updateProfile") &&
         response.ok()
     );
-    await page.getByRole("button", { name: "Taal wijzigen" }).click();
+    await page.getByRole("button", { name: "Accountmenu" }).click();
     await page.getByRole("menuitemradio", { name: "Français" }).click();
     await saved;
     await expect(page.locator("html")).toHaveAttribute("lang", "fr");
@@ -155,8 +157,53 @@ test.describe("app shell", () => {
     await page.getByRole("button", { name: "Menu openen" }).click();
     const sheet = page.getByRole("dialog", { name: "SMOG & Co" });
     await expect(sheet).toBeVisible();
-    await expect(sheet.getByRole("link", { name: "Favorieten" })).toBeVisible();
-    await sheet.getByRole("radio", { name: "Donker" }).click();
+    await expect(sheet.getByRole("link", { name: "Gebaren" })).toBeVisible();
+    await expect(
+      sheet.getByRole("link", { name: "Mijn ruimte" })
+    ).toBeVisible();
+    // Sponsor left the header: it is in the footer and the settings menu.
+    await expect(sheet.getByRole("link", { name: "Sponsor" })).toHaveCount(0);
+    await sheet.getByRole("link", { name: "Mijn ruimte" }).click();
+    await expect(page).toHaveURL(MY_URL);
+    await expect(sheet).toBeHidden();
+  });
+
+  test("the settings menu works on a phone: theme, language, Sponsor, Sign in", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 800, width: 390 });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Instellingen" }).click();
+    const menu = page.getByRole("menu");
+    await expect(
+      menu.getByRole("menuitem", { name: "Aanmelden" })
+    ).toBeVisible();
+    await expect(menu.getByRole("menuitem", { name: "Sponsor" })).toBeVisible();
+    await menu.getByRole("menuitemradio", { name: "Donker" }).click();
     await expect(page.locator("html")).toHaveClass(DARK);
+  });
+
+  test("the header (green) holds Gestures, My space and search; Sponsor is in the footer", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 900, width: 1280 });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    const nav = page.getByRole("navigation", { name: "Hoofdnavigatie" });
+    await expect(nav.getByRole("link", { name: "Gebaren" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Mijn ruimte" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Sponsor" })).toHaveCount(0);
+    await expect(
+      page.getByRole("banner").getByRole("link", { name: "Aanmelden" })
+    ).toBeVisible();
+    const footer = page.getByRole("contentinfo");
+    await expect(footer.getByRole("link", { name: "Sponsor" })).toBeVisible();
+    await expect(footer.getByRole("link", { name: "Privacy" })).toBeVisible();
+    // The header is the green surface (sidebar role), the logo reversed on it.
+    const background = await page
+      .getByRole("banner")
+      .evaluate((header) => getComputedStyle(header).backgroundColor);
+    expect(background).toBe("rgb(0, 107, 80)");
   });
 });

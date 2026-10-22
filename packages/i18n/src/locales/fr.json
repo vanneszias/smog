@@ -35,6 +35,14 @@
     "moreActions": "Plus d'actions",
     "close": "Fermer",
     "dismiss": "Fermer la notification",
+    "breadcrumb": "Fil d'Ariane",
+    "more": "Plus",
+    "carousel": "Carrousel",
+    "slide": "Diapositive",
+    "previousSlide": "Diapositive précédente",
+    "nextSlide": "Diapositive suivante",
+    "toggleSidebar": "Afficher ou masquer la barre latérale",
+    "sidebar": "Barre latérale",
     "loading": "Chargement en cours",
     "logo": "Logo de SMOG & Co",
     "clearSearch": "Effacer la recherche",
@@ -458,12 +466,54 @@
     },
     "description": "Les gestes que vous avez gardés avec un cœur."
   },
+  "searchPalette": {
+    "placeholder": "Rechercher des gestes et des catégories",
+    "description": "Saisissez pour trouver un geste. Utilisez les flèches et Entrée.",
+    "seeAll": "Afficher tous les résultats pour « {{query}} »",
+    "loadFailed": "La recherche n’a pas pu s’ouvrir. Vérifiez votre connexion et réessayez.",
+    "error": "La recherche a échoué. Réessayez."
+  },
+  "shell": {
+    "explore": "Explorer",
+    "supportTitle": "Soutenir SMOG",
+    "supportText": "Montrez votre nom ou logo avec un geste."
+  },
+  "mySpace": {
+    "title": "Mon espace",
+    "description": "Vos favoris et listes, sur cet appareil ou dans votre compte.",
+    "sections": "Sections de Mon espace",
+    "shared": {
+      "tab": "Partagé par moi",
+      "view": "Lien de lecture",
+      "edit": "Lien de modification",
+      "guestTitle": "Partagez des listes avec un compte",
+      "guestDescription": "Le partage de listes nécessite un compte. Connectez-vous pour créer un lien de lecture ou de modification.",
+      "emptyTitle": "Vous ne partagez encore aucune liste",
+      "emptyDescription": "Créez un lien de lecture ou de modification dans une liste pour la partager. Les listes que vous partagez apparaissent ici.",
+      "toLists": "Aller à mes listes"
+    }
+  },
+  "landing": {
+    "continue": "Reprenez où vous en étiez",
+    "clearRecent": "Effacer les gestes récemment consultés",
+    "clear": "Effacer",
+    "categoriesIntro": "Parcourir par thème"
+  },
+  "browse": {
+    "filters": "Filtres",
+    "selected_one": "{{count}} choisie",
+    "selected_many": "{{count}} choisies",
+    "selected_other": "{{count}} choisies",
+    "sheetDescription": "Choisissez une ou plusieurs catégories. Les résultats se mettent à jour."
+  },
   "kit": {
     "close": "Fermer",
     "clear": "Effacer",
     "clearSearch": "Effacer",
     "searchPlaceholder": "Rechercher…",
     "selectPlaceholder": "Faites un choix",
+    "commandPlaceholder": "Saisissez une commande ou recherchez…",
+    "commandSuggestions": "Suggestions",
     "noOptions": "Aucune option",
     "noResults": "Aucun résultat",
     "showPassword": "Afficher",
@@ -806,6 +856,14 @@
     },
     "preferences": {
       "languageHint": "Si vous êtes connecté, c'est aussi la langue des e-mails que nous vous envoyons."
+    },
+    "nav": {
+      "label": "Paramètres du compte",
+      "profile": "Profil",
+      "signIn": "Méthodes de connexion",
+      "preferences": "Préférences",
+      "language": "Langue",
+      "privacy": "Confidentialité et données"
     }
   },
   "settings": {
@@ -874,7 +932,12 @@
       "audit": "Journal",
       "emails": "E-mails",
       "settings": "Paramètres",
-      "deadLetters": "Dead letters"
+      "deadLetters": "Dead letters",
+      "groups": {
+        "content": "Contenu",
+        "community": "Communauté",
+        "operations": "Exploitation"
+      }
     },
     "comingSoon": {
       "title": "Prévu dans cette phase",
@@ -946,6 +1009,18 @@
         "renderFailed_one": "{{count}} vidéo en échec",
         "renderFailed_many": "{{count}} vidéos en échec",
         "renderFailed_other": "{{count}} vidéos en échec"
+      },
+      "chart": {
+        "title": "En un coup d’œil",
+        "description": "Le parcours des parrainages et l’état du catalogue.",
+        "sponsorships": "Parrainages par étape",
+        "catalogue": "Gestes",
+        "awaitingPayment": "En attente de paiement",
+        "inReview": "En révision",
+        "rendering": "En cours de création",
+        "live": "En ligne",
+        "published": "Publiés",
+        "hidden": "Masqués"
       }
     },
     "audit": {
@@ -1926,6 +2001,17 @@
       "empty": "Aucune dead letter.",
       "nextPage": "Messages plus anciens",
       "firstPage": "Messages les plus récents"
+    },
+    "crumb": {
+      "detail": "Détails"
+    },
+    "table": {
+      "columns": "Colonnes",
+      "columnsLabel": "Afficher les colonnes",
+      "showAll": "Afficher toutes les colonnes",
+      "rowActions": "Actions pour {{name}}",
+      "open": "Ouvrir",
+      "actions": "Actions"
     }
   },
   "sponsorship": {
@@ -2047,7 +2133,9 @@
           "fileSize": "Taille\u00a0: 2 Mo maximum",
           "style": "Style\u00a0: les logos simples et contrastés fonctionnent le mieux",
           "avoid": "À éviter\u00a0: logos très détaillés ou traits fins"
-        }
+        },
+        "choice": "Logo dans la vidéo",
+        "without": "Sans logo"
       },
       "contact": {
         "title": "Coordonnées",

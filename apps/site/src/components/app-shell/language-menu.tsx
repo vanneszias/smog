@@ -1,15 +1,7 @@
 import { isLocale, LOCALES, type Locale } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
-import {
-  IconButton,
-  Menu,
-  MenuContent,
-  MenuItem,
-  MenuLabel,
-  MenuTrigger,
-  SegmentedControl,
-} from "@smog/ui-web";
-import { Check, Languages } from "lucide-react";
+import { MenuGroup, MenuItem, MenuLabel, SegmentedControl } from "@smog/ui-web";
+import { Check } from "lucide-react";
 import { type ReactNode, useCallback } from "react";
 import { useLocale } from "@/lib/locale";
 
@@ -31,21 +23,16 @@ function LanguageItem({ option }: { option: Locale }): ReactNode {
   );
 }
 
-/** The header's language picker. Each language is named in itself. */
-export function LanguageMenu(): ReactNode {
+/** The language radio items for a menu (each language is named in itself). */
+export function LanguageMenuItems(): ReactNode {
   const { t } = useTranslation();
   return (
-    <Menu>
-      <MenuTrigger asChild>
-        <IconButton icon={<Languages />} label={t("language.toggle")} />
-      </MenuTrigger>
-      <MenuContent>
-        <MenuLabel>{t("language.label")}</MenuLabel>
-        {LOCALES.map((option) => (
-          <LanguageItem key={option} option={option} />
-        ))}
-      </MenuContent>
-    </Menu>
+    <MenuGroup>
+      <MenuLabel>{t("language.label")}</MenuLabel>
+      {LOCALES.map((option) => (
+        <LanguageItem key={option} option={option} />
+      ))}
+    </MenuGroup>
   );
 }
 

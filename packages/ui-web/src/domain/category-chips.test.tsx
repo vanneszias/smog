@@ -64,4 +64,34 @@ describe("CategoryChips", () => {
     const group = screen.getByRole("group", { name: "Filter" });
     expect(within(group).queryByRole("button", { name: "All" })).toBeNull();
   });
+
+  test("a category's icon leads its chip and is hidden from the name", () => {
+    const { container } = renderKit(
+      <CategoryChips
+        categories={[
+          {
+            icon: (
+              <img
+                alt=""
+                data-testid="icon"
+                height={16}
+                src="/food.svg"
+                width={16}
+              />
+            ),
+            name: "Food",
+            slug: "food",
+          },
+          { name: "Feelings", slug: "feelings" },
+        ]}
+        onChange={noop}
+        selected={[]}
+        showAll={false}
+      />
+    );
+    const food = screen.getByRole("button", { name: "Food" });
+    expect(within(food).getByTestId("icon")).toBeDefined();
+    expect(food.querySelector('[aria-hidden="true"]')).not.toBeNull();
+    expect(container.querySelectorAll("img")).toHaveLength(1);
+  });
 });

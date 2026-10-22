@@ -26,15 +26,17 @@ export function Table({
   return (
     <div
       className={cn(
-        "relative w-full overflow-auto rounded-lg border border-border-subtle bg-surface",
+        "relative w-full overflow-auto rounded-2xl bg-card ring-1 ring-foreground/10",
         containerClassName
       )}
+      data-slot="table-container"
     >
       <table
         className={cn(
           "w-full caption-bottom border-collapse text-body-sm",
           className
         )}
+        data-slot="table"
         {...props}
       />
     </div>
@@ -53,11 +55,8 @@ export function TableHeader({
 }: TableHeaderProps): ReactNode {
   return (
     <thead
-      className={cn(
-        "bg-surface-sunken",
-        sticky && "sticky top-0 z-10",
-        className
-      )}
+      className={cn("bg-muted", sticky && "sticky top-0 z-10", className)}
+      data-slot="table-header"
       {...props}
     />
   );
@@ -67,7 +66,29 @@ export function TableBody({
   className,
   ...props
 }: ComponentProps<"tbody">): ReactNode {
-  return <tbody className={cn("*:last:border-b-0", className)} {...props} />;
+  return (
+    <tbody
+      className={cn("*:last:border-b-0", className)}
+      data-slot="table-body"
+      {...props}
+    />
+  );
+}
+
+export function TableFooter({
+  className,
+  ...props
+}: ComponentProps<"tfoot">): ReactNode {
+  return (
+    <tfoot
+      className={cn(
+        "border-border-subtle border-t bg-muted/50 font-medium *:last:border-b-0",
+        className
+      )}
+      data-slot="table-footer"
+      {...props}
+    />
+  );
 }
 
 export function TableRow({
@@ -77,9 +98,10 @@ export function TableRow({
   return (
     <tr
       className={cn(
-        "border-border-subtle border-b data-[state=selected]:bg-primary-subtle",
+        "border-border-subtle border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-primary-subtle",
         className
       )}
+      data-slot="table-row"
       {...props}
     />
   );
@@ -92,9 +114,10 @@ export function TableHead({
   return (
     <th
       className={cn(
-        "h-touch whitespace-nowrap px-3 text-left align-middle font-semibold text-caption text-foreground-muted",
+        "h-touch whitespace-nowrap px-3 text-left align-middle font-semibold text-caption text-muted-foreground",
         className
       )}
+      data-slot="table-head"
       scope="col"
       {...props}
     />
@@ -108,6 +131,7 @@ export function TableCell({
   return (
     <td
       className={cn("px-3 py-2 align-middle text-foreground", className)}
+      data-slot="table-cell"
       {...props}
     />
   );
@@ -119,7 +143,8 @@ export function TableCaption({
 }: ComponentProps<"caption">): ReactNode {
   return (
     <caption
-      className={cn("px-3 py-2 text-caption text-foreground-muted", className)}
+      className={cn("px-3 py-2 text-caption text-muted-foreground", className)}
+      data-slot="table-caption"
       {...props}
     />
   );
@@ -250,7 +275,7 @@ export function DataTable<Row>({
         {sorted.length === 0 && empty ? (
           <TableRow>
             <TableCell
-              className="py-6 text-center text-foreground-muted"
+              className="py-6 text-center text-muted-foreground"
               colSpan={columns.length}
             >
               {empty}

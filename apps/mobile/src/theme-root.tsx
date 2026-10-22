@@ -5,7 +5,7 @@ import { View } from "react-native";
 
 /**
  * Sets the token colour variables for the current scheme, so every class
- * below (`bg-surface`, `text-foreground`, …) follows light or dark mode.
+ * below (`bg-card`, `text-foreground`, …) follows light or dark mode.
  */
 export function ThemeRoot({ children }: { children: ReactNode }): ReactElement {
   const { colorScheme } = useColorScheme();

@@ -27,7 +27,7 @@ const chipVariants = cva(
     defaultVariants: { selected: false, size: "md" },
     variants: {
       selected: {
-        false: "border-foreground-muted bg-surface",
+        false: "border-muted-foreground bg-card",
         true: "border-primary bg-primary-subtle",
       },
       size: {
@@ -87,7 +87,7 @@ export function Chip({
   const isToggle = selected !== undefined;
   const isSelected = selected ?? false;
   const labelColor = useColor(isSelected ? "primaryStrong" : "foreground");
-  const mutedColor = useColor("foregroundMuted");
+  const mutedColor = useColor("mutedForeground");
   const handlePress = useCallback(
     (event: GestureResponderEvent): void => {
       onPress?.(event);

@@ -18,6 +18,7 @@ import Plus from "lucide-react-native/icons/plus";
 import { type ReactElement, useCallback, useState } from "react";
 import { FlatList, type ListRenderItemInfo, View } from "react-native";
 import { ConnectionBanner } from "@/components/connection-banner";
+import { HeaderActions } from "@/components/header-actions";
 import { ListNameSheet } from "@/components/list-name-sheet";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 
@@ -31,7 +32,7 @@ function ListRow({
   onOpen: (id: string) => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const muted = useColor("foregroundMuted");
+  const muted = useColor("mutedForeground");
   const shared = list.shares.view || list.shares.edit;
   const { id } = list;
   const open = useCallback(() => onOpen(id), [id, onOpen]);
@@ -81,12 +82,14 @@ export default function ListsScreen(): ReactElement {
   );
   const headerRight = useCallback(
     () => (
-      <IconButton
-        icon={<Plus />}
-        label={t("lists.newList")}
-        onPress={startCreate}
-        variant="ghost"
-      />
+      <HeaderActions>
+        <IconButton
+          icon={<Plus />}
+          label={t("lists.newList")}
+          onPress={startCreate}
+          variant="ghost"
+        />
+      </HeaderActions>
     ),
     [startCreate, t]
   );

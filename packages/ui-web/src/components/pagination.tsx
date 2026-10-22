@@ -2,7 +2,7 @@ import { useTranslation } from "@smog/i18n/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { type ComponentProps, type ReactNode, useCallback } from "react";
 import { cn } from "../lib/cn";
-import { disabled, focusRing, stateLayer, transition } from "../lib/variants";
+import { buttonVariants } from "./button";
 import { IconButton } from "./icon-button";
 
 type PageItem = number | "…";
@@ -64,12 +64,13 @@ export function Pagination({
         "flex flex-wrap items-center justify-between gap-2",
         className
       )}
+      data-slot="pagination"
       {...props}
     >
-      <p className="text-body-sm text-foreground-muted">
+      <p className="text-body-sm text-muted-foreground">
         {t("kit.pageOf", { page, total: pageCount })}
       </p>
-      <ul className="flex items-center gap-1">
+      <ul className="flex items-center gap-1" data-slot="pagination-content">
         <li>
           <IconButton
             disabled={page <= 1}
@@ -82,7 +83,7 @@ export function Pagination({
           item === "…" ? (
             <li
               aria-label={t("a11y.morePages")}
-              className="inline-flex size-touch items-center justify-center text-foreground-muted max-sm:hidden"
+              className="inline-flex size-touch items-center justify-center text-muted-foreground max-sm:hidden"
               // biome-ignore lint/suspicious/noArrayIndexKey: ellipses have no identity
               key={`gap-${index}`}
             >
@@ -132,13 +133,10 @@ function PageButton({
         current ? t("a11y.currentPage", { page }) : t("a11y.goToPage", { page })
       }
       className={cn(
-        "relative inline-flex size-touch items-center justify-center rounded-full font-medium text-body-sm tabular-nums",
-        current ? "bg-primary text-primary-foreground" : "text-foreground",
-        stateLayer.full,
-        focusRing,
-        transition,
-        disabled
+        buttonVariants({ variant: current ? "primary" : "ghost" }),
+        "size-touch px-0 tabular-nums"
       )}
+      data-slot="pagination-link"
       onClick={handleClick}
       type="button"
     >

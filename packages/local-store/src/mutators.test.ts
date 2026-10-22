@@ -1,8 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { RECENT_SEARCHES_MAX } from "@smog/config/constants";
 import {
+  RECENT_GESTURES_MAX,
+  RECENT_SEARCHES_MAX,
+} from "@smog/config/constants";
+import {
+  addRecentGesture,
   addRecentSearch,
   addToList,
+  clearRecentGestures,
   clearRecentSearches,
   createList,
   deleteList,
@@ -188,5 +193,37 @@ describe("consent and preferences", () => {
       guestDataSchema.parse(dismissed).preferences.appBannerDismissedAt
     ).toBe(42);
     expect(guestDataSchema.safeParse(fresh).success).toBe(true);
+  });
+});
+
+describe("recent gestures", () => {
+  test("adds newest first, moves a repeat to the front and keeps the last few", () => {
+    let data = defaultGuestData();
+    expect(data.preferences.recentGestureIds).toBeUndefined();
+    data = addRecentGesture("a")(data);
+    data = addRecentGesture("b")(data);
+    data = addRecentGesture("a")(data);
+    expect(data.preferences.recentGestureIds).toEqual(["a", "b"]);
+    for (let index = 0; index < RECENT_GESTURES_MAX + 3; index += 1) {
+      data = addRecentGesture(`g${index}`)(data);
+    }
+    expect(data.preferences.recentGestureIds).toHaveLength(RECENT_GESTURES_MAX);
+    expect(data.preferences.recentGestureIds?.[0]).toBe(
+      `g${RECENT_GESTURES_MAX + 2}`
+    );
+    expect(guestDataSchema.safeParse(data).success).toBe(true);
+  });
+
+  test("an unchanged front keeps the same object (no store write)", () => {
+    const data = addRecentGesture("a")(defaultGuestData());
+    expect(addRecentGesture("a")(data)).toBe(data);
+    expect(addRecentGesture("")(data)).toBe(data);
+  });
+
+  test("clearing empties the list and leaves other preferences alone", () => {
+    const data = addRecentGesture("a")(defaultGuestData());
+    const cleared = clearRecentGestures()(data);
+    expect(cleared.preferences.recentGestureIds).toEqual([]);
+    expect(cleared.preferences.theme).toBe("system");
   });
 });

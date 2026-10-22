@@ -22,6 +22,8 @@ import {
   Field,
   Heading,
   Input,
+  Logo,
+  Surface,
   Text,
   TextLink,
   useLineLimit,
@@ -524,10 +526,14 @@ export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
       className="flex-1 bg-background"
     >
       <ScrollView
-        contentContainerClassName="gap-6 px-4 py-6"
+        contentContainerClassName="pb-6"
         keyboardShouldPersistTaps="handled"
       >
-        <View className="gap-2">
+        {/* The green band: the logo, the title and what this step asks;
+            the form below stays on the page, where errors keep their
+            contrast. */}
+        <Surface className="gap-3 rounded-b-3xl px-4 pt-2 pb-8" tone="primary">
+          <Logo color="primaryForeground" decorative size="lg" tone="current" />
           <Heading level={1}>{useTitle(flow)}</Heading>
           {flow.state.step === "email" && mode === "signIn" ? (
             <Text tone="muted">{t("auth.subtitle")}</Text>
@@ -535,31 +541,35 @@ export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
           {mode === "forgotPassword" && flow.state.step === "email" ? (
             <Text tone="muted">{t("auth.forgotPassword.description")}</Text>
           ) : null}
-        </View>
-        {flow.state.step === "email" || flow.state.step === "done" ? null : (
-          <View className="flex-row items-center justify-between gap-2 rounded-md bg-surface-sunken px-3 py-2">
-            <EmailEcho email={flow.state.email} />
-            <Button onPress={flow.changeEmail} size="sm" variant="ghost">
-              {t("auth.email.change")}
-            </Button>
-          </View>
-        )}
-        <StepBody flow={flow} methods={methods} />
-        {flow.state.step === "email" && mode !== "forgotPassword" ? (
-          <View className="items-center">
-            <Text size="body-sm" tone="muted">
-              {mode === "signIn" ? t("auth.noAccount") : t("auth.haveAccount")}
+        </Surface>
+        <View className="gap-6 px-4 pt-6">
+          {flow.state.step === "email" || flow.state.step === "done" ? null : (
+            <View className="flex-row items-center justify-between gap-2 rounded-md bg-surface-sunken px-3 py-2">
+              <EmailEcho email={flow.state.email} />
+              <Button onPress={flow.changeEmail} size="sm" variant="ghost">
+                {t("auth.email.change")}
+              </Button>
+            </View>
+          )}
+          <StepBody flow={flow} methods={methods} />
+          {flow.state.step === "email" && mode !== "forgotPassword" ? (
+            <View className="items-center">
+              <Text size="body-sm" tone="muted">
+                {mode === "signIn"
+                  ? t("auth.noAccount")
+                  : t("auth.haveAccount")}
+              </Text>
+              <TextLink onPress={switchMode}>
+                {mode === "signIn" ? t("auth.signUpLink") : t("nav.signIn")}
+              </TextLink>
+            </View>
+          ) : null}
+          {mode === "forgotPassword" ? null : (
+            <Text className="text-center" size="caption" tone="muted">
+              {t("auth.legal")}
             </Text>
-            <TextLink onPress={switchMode}>
-              {mode === "signIn" ? t("auth.signUpLink") : t("nav.signIn")}
-            </TextLink>
-          </View>
-        ) : null}
-        {mode === "forgotPassword" ? null : (
-          <Text className="text-center" size="caption" tone="muted">
-            {t("auth.legal")}
-          </Text>
-        )}
+          )}
+        </View>
       </ScrollView>
       <TurnstileSheet {...captcha.sheet} />
     </KeyboardAvoidingView>

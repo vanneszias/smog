@@ -35,9 +35,11 @@ test("opens a gesture: the video, the related gestures and the SEO head", async 
     .textContent();
   expect(jsonLd).toContain('"@type":"VideoObject"');
 
-  // Share and QR live in the overflow menu.
-  await page.getByRole("button", { name: "Acties voor Hond" }).click();
-  await page.getByRole("menuitem", { name: "QR-code" }).click();
+  // Favorite, save, share and the QR code are all in view (phase 10a).
+  await expect(
+    page.getByRole("main").getByRole("button", { name: "Delen" })
+  ).toBeVisible();
+  await page.getByRole("button", { name: "QR-code" }).click();
   const qr = page.getByRole("dialog", { name: "QR-code voor Hond" });
   await expect(qr).toContainText(`${ORIGIN}/gestures/hond`);
   await qr.getByRole("button", { name: "Sluiten" }).click();

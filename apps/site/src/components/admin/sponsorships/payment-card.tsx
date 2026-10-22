@@ -105,7 +105,7 @@ export function PaymentCard({
   return (
     <section
       aria-labelledby={headingId}
-      className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-surface p-3 sm:p-4"
+      className="flex flex-col gap-3 rounded-lg border border-border-subtle bg-card p-3 sm:p-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3

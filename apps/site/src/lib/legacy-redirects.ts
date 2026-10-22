@@ -5,8 +5,9 @@ import { slugify } from "@smog/utils";
  * 301 with its query string, except the token links (below). Destinations are fixed paths on this site, so
  * no input can turn a redirect into an open one.
  *
- * `/favorites` is a real page again and `/lists/<token>` keeps its tokens,
- * so neither is here. An old `/gestures/<convexId>` is resolved by the
+ * `/lists/<token>` keeps its tokens, so it is not here. `/favorites` and
+ * `/lists` moved into My space (`/my`, phase 10a task 4): a 302, not a 301,
+ * because the destination is a product decision, not an old URL. An old `/gestures/<convexId>` is resolved by the
  * gesture route itself (`gesture.legacy_id`, it needs D1).
  */
 export interface LegacyRedirect {
@@ -18,6 +19,13 @@ export interface LegacyRedirect {
   query?: "drop";
   /** Query params that were renamed: `{ old: "new" }`. */
   rename?: Readonly<Record<string, string>>;
+  /**
+   * Query parameters the new page needs, placed before the old query
+   * (`/favorites` becomes `/my?tab=favorites`; an old `?id=` is kept).
+   */
+  search?: Readonly<Record<string, string>>;
+  /** The status when it is not 301 (`302`: a page that moved on purpose). */
+  status?: 302;
   /** The new path. */
   to: string;
   /**
@@ -45,6 +53,8 @@ export const LEGACY_REDIRECTS: readonly LegacyRedirect[] = [
   { from: "/sponsors/success", rename: SUCCESS_PARAMS, to: "/sponsor/success" },
   { from: "/sponsors", prefix: true, to: "/sponsor" },
   { from: "/success", rename: SUCCESS_PARAMS, to: "/sponsor/success" },
+  { from: "/favorites", search: { tab: "favorites" }, status: 302, to: "/my" },
+  { from: "/lists", search: { tab: "lists" }, status: 302, to: "/my" },
   { from: "/login", to: "/sign-in" },
   { from: "/callback", query: "drop", to: "/" },
 ];
@@ -53,6 +63,7 @@ export const LEGACY_REDIRECTS: readonly LegacyRedirect[] = [
 const TOKEN_PARAM = "token";
 const TOKEN_REDIRECT_STATUS = 302;
 const MOVED_PERMANENTLY = 301;
+const FOUND = 302;
 
 const TRAILING_SLASHES = /\/+$/;
 /** The wizard, old and new path (R-11). */
@@ -88,6 +99,21 @@ function renamed(
     next.append(rename[name] ?? name, value);
   }
   return search(next);
+}
+
+/** `query` with `extra` first (a parameter the old query also has keeps the old value). */
+function withSearch(
+  query: string,
+  extra: Readonly<Record<string, string>> | undefined
+): string {
+  if (!extra) {
+    return query;
+  }
+  const params = new URLSearchParams(extra);
+  for (const [name, value] of new URLSearchParams(query)) {
+    params.set(name, value);
+  }
+  return search(params);
 }
 
 function tablePath(
@@ -251,7 +277,10 @@ function legacyRedirectResolve(
   }
   const query =
     match.entry.query === "drop" ? "" : renamed(url.search, match.entry.rename);
-  return { location: `${match.path}${query}`, status: MOVED_PERMANENTLY };
+  return {
+    location: `${match.path}${withSearch(query, match.entry.search)}`,
+    status: match.entry.status === FOUND ? FOUND : MOVED_PERMANENTLY,
+  };
 }
 
 /** The `Location` of {@link legacyRedirectResolve}, or `null` when current. */

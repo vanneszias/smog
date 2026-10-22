@@ -75,10 +75,8 @@ export function LogoDropzone({ file, onChange }: LogoDropzoneProps): ReactNode {
       <div
         className={cn(
           "flex flex-col items-center gap-3 rounded-lg border-2 border-dashed p-6 text-center",
-          over
-            ? "border-primary bg-primary-subtle"
-            : "border-border bg-surface",
-          control.invalid && "border-danger"
+          over ? "border-primary bg-primary-subtle" : "border-border bg-card",
+          control.invalid && "border-destructive"
         )}
         data-testid="logo-dropzone"
         onDragLeave={dragLeave}
@@ -117,7 +115,7 @@ export function LogoDropzone({ file, onChange }: LogoDropzoneProps): ReactNode {
           <>
             <ImageUp
               aria-hidden="true"
-              className="size-8 text-foreground-muted"
+              className="size-8 text-muted-foreground"
             />
             <Text>
               {t("sponsor.details.logo.drop")}{" "}
@@ -159,7 +157,7 @@ export function LogoGuidelines(): ReactNode {
       <Text className="font-semibold" size="body-sm">
         {t("sponsor.details.logo.guidelines.title")}
       </Text>
-      <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-body-sm text-foreground-muted">
+      <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-body-sm text-muted-foreground">
         <li>{t("sponsor.details.logo.guidelines.format")}</li>
         <li>{t("sponsor.details.logo.guidelines.dimensions")}</li>
         <li>{t("sponsor.details.logo.guidelines.aspectRatio")}</li>

@@ -34,7 +34,13 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  ColumnsMenu,
+  RowActions,
+  useColumnVisibility,
+} from "../data-table-parts";
 
+const PINNED_COLUMNS = ["name", "actions"] as const;
 const ROLES = ["user", "admin"] as const satisfies readonly AdminRole[];
 const BANNED = ["yes", "no"] as const;
 type BannedFilter = (typeof BANNED)[number];
@@ -290,7 +296,7 @@ export function UserTable({
     }
   }, [nextCursor, onSearchChange, search]);
 
-  const columns = useMemo<DataTableColumn<AdminUser>[]>(
+  const allColumns = useMemo<DataTableColumn<AdminUser>[]>(
     () => [
       {
         cell: (row) => (
@@ -340,9 +346,17 @@ export function UserTable({
         header: t("admin.users.columns.created"),
         id: "created",
       },
+      {
+        cell: (row) => (
+          <RowActions name={row.name || row.email} onOpen={open} row={row} />
+        ),
+        header: <span className="sr-only">{t("admin.table.actions")}</span>,
+        id: "actions",
+      },
     ],
-    [actorId, date, t]
+    [actorId, date, open, t]
   );
+  const visibility = useColumnVisibility("users", allColumns, PINNED_COLUMNS);
 
   let body: ReactNode;
   if (users.data) {
@@ -356,7 +370,7 @@ export function UserTable({
       >
         <DataTable
           aria-label={t("admin.users.title")}
-          columns={columns}
+          columns={visibility.columns}
           empty={t("admin.users.empty")}
           getRowId={userId}
           onRowClick={open}
@@ -374,6 +388,13 @@ export function UserTable({
   return (
     <div className="flex flex-col gap-4">
       <UserFilters onSearchChange={onSearchChange} search={search} />
+      <div className="flex justify-end">
+        <ColumnsMenu
+          all={allColumns}
+          pinned={PINNED_COLUMNS}
+          visibility={visibility}
+        />
+      </div>
       {body}
       {search.cursor || nextCursor ? (
         <div className="flex flex-wrap justify-end gap-2">

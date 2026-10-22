@@ -145,13 +145,33 @@ export async function signInWithApi(page: Page): Promise<string> {
   return email;
 }
 
-/** Collects console errors and uncaught exceptions for the whole test. */
+/**
+ * Collects console errors and uncaught exceptions for the whole test. A
+ * `Failed to fetch` raised while the main frame is navigating away (from the
+ * request of the next document to its DOMContentLoaded) is the dying page's
+ * in-flight request being aborted, not a product error, and is dropped;
+ * the same error at any other time still counts.
+ */
 export function watchErrors(page: Page): string[] {
   const errors: string[] = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") {
-      errors.push(message.text());
+  let leaving = false;
+  page.on("request", (request) => {
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
+      leaving = true;
     }
+  });
+  page.on("domcontentloaded", () => {
+    leaving = false;
+  });
+  page.on("console", (message) => {
+    if (message.type() !== "error") {
+      return;
+    }
+    const text = message.text();
+    if (leaving && text.includes("TypeError: Failed to fetch")) {
+      return;
+    }
+    errors.push(text);
   });
   page.on("pageerror", (error) => {
     errors.push(error.message);

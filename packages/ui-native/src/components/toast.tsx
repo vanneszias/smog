@@ -242,7 +242,7 @@ function ToastItem({
       <View
         accessibilityLiveRegion={assertive ? "assertive" : "polite"}
         accessibilityRole={assertive ? "alert" : undefined}
-        className="w-full flex-row items-start gap-3 rounded-lg border border-border bg-surface-raised p-4"
+        className="w-full flex-row items-start gap-3 rounded-lg border border-border bg-popover p-4"
         style={shadow}
         testID="toast"
       >
@@ -258,7 +258,7 @@ function ToastItem({
             {entry.title}
           </Text>
           {entry.description ? (
-            <Text className="text-body-sm text-foreground-muted">
+            <Text className="font-regular text-body-sm text-muted-foreground">
               {entry.description}
             </Text>
           ) : null}

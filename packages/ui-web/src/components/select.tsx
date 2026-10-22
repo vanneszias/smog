@@ -73,28 +73,34 @@ export function Select({
       <SelectPrimitive.Trigger
         className={cn(
           fieldVariants({ size }),
-          "flex items-center justify-between gap-2 text-left data-placeholder:text-foreground-muted",
+          "flex items-center justify-between gap-2 text-left data-placeholder:text-muted-foreground",
           className
         )}
+        data-slot="select-trigger"
         {...trigger}
       >
         <SelectPrimitive.Value
           placeholder={placeholder ?? t("kit.selectPlaceholder")}
         />
-        <SelectPrimitive.Icon className="shrink-0 text-foreground-muted">
+        <SelectPrimitive.Icon className="shrink-0 text-muted-foreground">
           <ChevronDown aria-hidden="true" className="size-5" />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal container={container}>
         <SelectPrimitive.Content
-          className="relative z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-md border border-border bg-surface-raised text-foreground shadow-2 data-[state=open]:animate-fade-in motion-reduce:animate-none"
+          className="relative z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-2xl bg-popover text-popover-foreground shadow-2 ring-1 ring-foreground/10 data-open:animate-fade-in motion-reduce:animate-none"
+          data-slot="select-content"
           position="popper"
           sideOffset={tokens.spacing["1"]}
         >
-          <SelectPrimitive.Viewport className="p-1">
+          <SelectPrimitive.Viewport
+            className="p-1.5"
+            data-slot="select-viewport"
+          >
             {options.map((option) => (
               <SelectPrimitive.Item
-                className="relative flex min-h-touch cursor-default select-none items-center gap-2 rounded-sm py-2 pr-3 pl-8 text-body outline-none data-disabled:pointer-events-none data-highlighted:bg-surface-sunken data-disabled:opacity-50"
+                className="relative flex min-h-touch cursor-default select-none items-center gap-2 rounded-xl py-2 pr-3 pl-8 text-body outline-none data-disabled:pointer-events-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:opacity-50"
+                data-slot="select-item"
                 disabled={option.disabled}
                 key={option.value}
                 value={option.value}

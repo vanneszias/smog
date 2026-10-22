@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { ART_DIR, GREEN, REPO_ROOT, WHITE } from "./compose";
+import { ART_DIR, GREEN, INK, REPO_ROOT, WHITE } from "./compose";
 import { renderSvgModule } from "./svg-module";
 import {
   PNG_COLOUR_TYPE,
@@ -78,6 +78,15 @@ const FIXED_COLOUR_SVGS = [
   { colours: [GREEN], path: "apps/site/public/assets/logo.svg" },
   { colours: [WHITE], path: "apps/site/public/brand/logo-white.svg" },
   { colours: [WHITE], path: "apps/site/public/brand/logo-stacked-white.svg" },
+  // The reversed lockups: white artwork on a green panel.
+  { colours: [GREEN, WHITE], path: "apps/site/public/brand/logo-reversed.svg" },
+  {
+    colours: [GREEN, WHITE],
+    path: "apps/site/public/brand/logo-stacked-reversed.svg",
+  },
+  // The monochrome lockups: the ink colour only.
+  { colours: [INK], path: "apps/site/public/brand/logo-mono.svg" },
+  { colours: [INK], path: "apps/site/public/brand/logo-stacked-mono.svg" },
 ];
 
 function filesUnder(directory: string): string[] {

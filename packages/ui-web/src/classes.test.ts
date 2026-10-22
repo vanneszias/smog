@@ -24,7 +24,7 @@ const UTILITY =
   /^-?(p[xytrbl]?|m[xytrbl]?|gap(-[xy])?|size|[wh]|min-[wh]|max-[wh]|inset(-[xy])?|top|right|bottom|left|translate-[xy]|text|bg|border(-[xytrbl])?|rounded(-[a-z]+)?|shadow|ring(-offset)?|font|z|opacity|duration|ease|animate|divide(-[xy])?|grid-cols|col-span)-/;
 
 /** Scanned words that are not classes (a config key, prose in a comment). */
-const NOT_CLASSES = new Set(["font-weight", "right-aligned"]);
+const NOT_CLASSES = new Set(["bottom-right", "font-weight", "right-aligned"]);
 
 function baseUtility(candidate: string): string {
   // Strip variants (`md:`, `data-[state=open]:`, `*:`); brackets never hold `:` here.
@@ -76,5 +76,60 @@ describe("kit classes", () => {
       (c) => !css.includes(`.${escapeClass(c)}`)
     );
     expect(missing).toEqual([]);
+  });
+
+  test("the shadcn vocabulary, Tailwind's defaults build and the retired alias names do not", async () => {
+    const candidates = [
+      "bg-card",
+      "text-card-foreground",
+      "bg-popover",
+      "bg-muted",
+      "text-muted-foreground",
+      "bg-accent",
+      "bg-destructive/90",
+      "border-input",
+      "ring-ring/50",
+      "bg-sidebar",
+      "text-sidebar-foreground",
+      "bg-chart-1",
+      "bg-highlight",
+      // Tailwind's own scales, as registry code writes them.
+      "size-9",
+      "px-2.5",
+      "text-sm",
+      "rounded-md",
+      "max-w-lg",
+      "font-bold",
+      "bg-surface-sunken",
+      "text-primary-strong",
+      "text-body-sm",
+      "min-h-touch",
+    ];
+    const compiler = await compile(
+      [
+        '@import "tailwindcss/theme.css" layer(theme);',
+        '@import "tailwindcss/utilities.css" layer(utilities);',
+        THEME,
+        KIT,
+      ].join("\n"),
+      { base: SRC, onDependency: () => undefined }
+    );
+    const css = compiler.build(candidates);
+    expect(
+      candidates.filter((c) => !css.includes(`.${escapeClass(c)}`))
+    ).toEqual([]);
+    const retired = [
+      "bg-surface",
+      "bg-surface-raised",
+      "text-foreground-muted",
+      "bg-danger",
+      "ring-focus-ring",
+    ];
+    const retiredCss = compiler.build(retired);
+    expect(
+      retired.filter((c) =>
+        new RegExp(`\\.${escapeClass(c)}(?![\\w-])`).test(retiredCss)
+      )
+    ).toEqual([]);
   });
 });

@@ -58,6 +58,6 @@ describe("FavoriteButton", () => {
       />
     );
     const button = screen.getByRole("button", { name: "Favorite Hello" });
-    expect(classesOf(button)).toContain("bg-surface");
+    expect(classesOf(button)).toContain("bg-card");
   });
 });

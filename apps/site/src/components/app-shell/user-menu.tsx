@@ -3,6 +3,8 @@ import { useTranslation } from "@smog/i18n/react";
 import {
   Avatar,
   Button,
+  cn,
+  IconButton,
   Menu,
   MenuContent,
   MenuItem,
@@ -19,10 +21,20 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { LogIn, LogOut, ShieldCheck, UserRound } from "lucide-react";
+import {
+  HeartHandshake,
+  LogIn,
+  LogOut,
+  Settings,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import { type ReactNode, useCallback } from "react";
 import { useAuthClient } from "@/lib/auth-client";
 import { signInReturnPath } from "@/lib/redirect";
+import { LanguageMenuItems } from "./language-menu";
+import { GREEN_BUTTON, GREEN_ICON_BUTTON } from "./on-green";
+import { ThemeMenuItems } from "./theme-menu";
 
 /** Signs out, refreshes the route data and says so. */
 export function useSignOut(): () => Promise<void> {
@@ -45,7 +57,36 @@ export function useSignOut(): () => Promise<void> {
   }, [client, router, t, toast]);
 }
 
-/** The header's account entry: the user menu, or "Sign in". */
+/** What a guest and a signed-in user share: the sponsor entry, language, theme. */
+function SharedItems(): ReactNode {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const openSponsor = useCallback(() => {
+    navigate({ to: "/sponsor" });
+  }, [navigate]);
+  return (
+    <>
+      <MenuItem icon={<HeartHandshake />} onSelect={openSponsor}>
+        {t("nav.sponsor")}
+      </MenuItem>
+      <MenuSeparator />
+      <LanguageMenuItems />
+      <MenuSeparator />
+      <ThemeMenuItems />
+    </>
+  );
+}
+
+/** Tall menus (language and theme) scroll inside the viewport on short screens. */
+const MENU_CLASS =
+  "max-h-(--radix-dropdown-menu-content-available-height) min-w-60 overflow-y-auto";
+
+/**
+ * The header's one user and settings menu (phase 10a). Signed in, it is the
+ * avatar (account, admin, sign out); as a guest, a settings button (sign
+ * in) with a "Sign in" button beside it from `md`. Both end with Sponsor,
+ * the language and the theme.
+ */
 export function UserMenu(): ReactNode {
   const { t } = useTranslation();
   const auth = useAuthState();
@@ -58,31 +99,44 @@ export function UserMenu(): ReactNode {
   const openAdmin = useCallback(() => {
     navigate({ to: "/admin" });
   }, [navigate]);
+  const redirect = signInReturnPath(href);
+  const openSignIn = useCallback(() => {
+    navigate({ search: redirect ? { redirect } : {}, to: "/sign-in" });
+  }, [navigate, redirect]);
 
   if (auth.status === "loading") {
     return <Skeleton className="size-10" shape="circle" />;
   }
   if (!auth.user) {
-    const redirect = signInReturnPath(href);
     return (
-      <Button
-        asChild
-        className="max-[22.5rem]:size-touch max-[22.5rem]:px-0"
-        variant="secondary"
-      >
-        <Link search={redirect ? { redirect } : {}} to="/sign-in">
-          {/* The icon shows at every width but one band: below 360 px the
-              label gives way to it (320 px reflow, WCAG 1.4.10; the text
-              still names the link), and from 360 to 420 px the header has
-              no room for both under the text-spacing override (WCAG 1.4.12:
-              405 px needed at 390), so there the label stands alone. */}
-          <LogIn
-            aria-hidden="true"
-            className="size-5 shrink-0 min-[22.5rem]:max-[26.25rem]:hidden"
-          />
-          <span className="max-[22.5rem]:sr-only">{t("nav.signIn")}</span>
-        </Link>
-      </Button>
+      <>
+        <Button
+          asChild
+          className="hidden border-transparent bg-sidebar-foreground text-sidebar hover:bg-sidebar-foreground/90 focus-visible:ring-sidebar-ring focus-visible:ring-offset-sidebar md:inline-flex dark:hover:bg-sidebar-foreground/90"
+          variant="secondary"
+        >
+          <Link search={redirect ? { redirect } : {}} to="/sign-in">
+            <LogIn aria-hidden="true" className="size-5 shrink-0" />
+            {t("nav.signIn")}
+          </Link>
+        </Button>
+        <Menu>
+          <MenuTrigger asChild>
+            <IconButton
+              className={GREEN_ICON_BUTTON}
+              icon={<Settings />}
+              label={t("nav.settings")}
+            />
+          </MenuTrigger>
+          <MenuContent className={MENU_CLASS}>
+            <MenuItem icon={<LogIn />} onSelect={openSignIn}>
+              {t("nav.signIn")}
+            </MenuItem>
+            <MenuSeparator />
+            <SharedItems />
+          </MenuContent>
+        </Menu>
+      </>
     );
   }
   const { user } = auth;
@@ -91,13 +145,13 @@ export function UserMenu(): ReactNode {
       <MenuTrigger asChild>
         <Button
           aria-label={t("a11y.userMenu")}
-          className="px-1"
+          className={cn("px-1", GREEN_BUTTON)}
           variant="ghost"
         >
           <Avatar name={user.name} size="md" src={user.image ?? undefined} />
         </Button>
       </MenuTrigger>
-      <MenuContent>
+      <MenuContent className={MENU_CLASS}>
         <MenuLabel>
           <Text as="span" className="block" weight="semibold">
             {user.name}
@@ -116,6 +170,9 @@ export function UserMenu(): ReactNode {
             {t("nav.admin")}
           </MenuItem>
         ) : null}
+        <MenuSeparator />
+        <SharedItems />
+        <MenuSeparator />
         <MenuItem icon={<LogOut />} onSelect={signOut}>
           {t("nav.signOut")}
         </MenuItem>

@@ -53,6 +53,11 @@ export {
   useGestureSearch,
 } from "./use-gesture-search";
 export { type UseGesturesOptions, useGestures } from "./use-gestures";
+export {
+  type RecentGestures,
+  useRecentGestures,
+  useRememberGesture,
+} from "./use-recent-gestures";
 export { type RecentSearches, useRecentSearches } from "./use-recent-searches";
 export { useRelated } from "./use-related";
 export { useVideoEnd, type VideoEnd } from "./video-end";

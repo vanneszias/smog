@@ -24,7 +24,10 @@ export interface GestureCardProps
   sponsored?: boolean;
 }
 
-/** A gesture in a grid: its still (3:4), name and categories, and the heart. */
+/**
+ * A gesture in a grid, video first: a large still (3:4) with a play glyph,
+ * the name, the category badge and the heart.
+ */
 export function GestureCard({
   className,
   favorite = false,
@@ -42,27 +45,28 @@ export function GestureCard({
   return (
     <article
       className={cn(
-        "relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface text-foreground",
+        "group/card relative flex min-w-0 flex-col overflow-hidden rounded-2xl bg-card text-card-foreground shadow-0 ring-1 ring-foreground/10",
         href !== undefined &&
-          cn(
-            "hover:shadow-1 dark:hover:border-border dark:hover:bg-surface-raised",
-            transition
-          ),
+          cn("hover:shadow-2 dark:hover:ring-border", transition),
         className
       )}
       {...props}
     >
-      <GestureThumbnail playbackId={gesture.playbackId} width={480} />
-      <div className="flex min-w-0 flex-col gap-0.5 p-3">
-        <Heading className="truncate font-semibold text-title-3">
+      <GestureThumbnail playbackId={gesture.playbackId} showPlay width={480} />
+      <div className="flex min-w-0 flex-col items-start gap-1.5 p-3">
+        <Heading className="w-full truncate font-semibold text-body">
           <GestureLink href={href} linkComponent={linkComponent}>
             {gesture.name}
           </GestureLink>
         </Heading>
         {categories ? (
-          <p className="truncate text-body-sm text-foreground-muted">
-            {categories}
-          </p>
+          <Badge
+            className="max-w-full"
+            data-slot="gesture-category"
+            variant="primary"
+          >
+            <span className="truncate">{categories}</span>
+          </Badge>
         ) : null}
       </div>
       {sponsored ? (

@@ -56,7 +56,7 @@ function CategoryChip({
       >
         {category.name}
         {category.published ? null : (
-          <span className="font-regular text-foreground-muted">
+          <span className="font-regular text-muted-foreground">
             {" "}
             ({t("admin.categories.hiddenMark")})
           </span>

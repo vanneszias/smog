@@ -16,41 +16,79 @@ const brand = {
 } as const;
 
 /**
- * Colour roles, light and dark, as spec §16 lists them. Two amendments are
- * recorded in docs/DECISIONS.md:
+ * Colour roles, light and dark. Phase 10a (docs/DECISIONS.md, "phase 10a
+ * task 1") opens the vocabulary to shadcn's semantic names (`card`,
+ * `popover`, `secondary`, `muted`, `accent`, `destructive`, `input`, `ring`,
+ * `sidebar-*`, `chart-*`) so registry components compile unchanged. The
+ * phase 1 to 9 names that duplicated one (`surface`, `surfaceRaised`,
+ * `danger`, `focusRing`, `foregroundMuted`) are gone (task 9).
  *
- * - The light `focusRing` is a darker shade of the brand orange, because
- *   `#EE971C` measures 2.19:1 on `background` and a focus indicator needs
- *   3:1 (WCAG 1.4.11).
- * - Text roles for the status hues. `*Subtle` is a tinted background
- *   (badges, banners), `*Strong` is the shade of the hue that passes as body
- *   text on its subtle tint and on every page background, and
- *   `accentForeground` is text on an `accent` fill (like
- *   `primaryForeground` on `primary`). The base `success`/`warning`/`danger`
- *   stay the §16 hues, for icons and fills.
+ * - **Green is a surface.** `primary` with `primaryForeground` (white) is
+ *   the filled green: buttons, the hero, the auth screens. `sidebar` with
+ *   `sidebarForeground` is the deeper green of the header and the admin
+ *   sidebar; its hover, active and ring roles are tuned for text and focus on
+ *   green. `primaryStrong` is the deeper green for text on warm neutrals and
+ *   for pressed states.
+ * - **Orange is the accent**, as `highlight` (+ `highlightForeground`). It is
+ *   never text on a light surface. shadcn's own `accent` is a quiet green
+ *   tint for hover and selected rows, so registry code looks right.
+ * - **Neutrals are warm** with a faint green tint; dark mode is a deep
+ *   green-black.
+ * - The light `ring` is a darker orange than the brand orange: `#EE971C`
+ *   measures 2.19:1 on white and a focus indicator needs 3:1 (WCAG 1.4.11).
+ *   On green surfaces the focus ring is `sidebarRing` (white).
+ * - Text roles for the status hues: `*Subtle` is a tinted background,
+ *   `*Strong` the shade that passes as body text on it and on every page
+ *   background. The base `success`/`warning` stay for icons and fills; they
+ *   are not fills under white text (4.38 and 3.64:1).
  */
 const light = {
-  accent: brand.orange,
+  accent: "#E4F1EA",
   accentForeground: "#17211A",
-  background: "#F7F9F7",
-  border: "#D2DAD3",
-  borderSubtle: "#E4EAE4",
-  danger: "#C62828",
+  background: "#FAF9F4",
+  border: "#DCD8CB",
+  borderSubtle: "#EBE8DE",
+  card: "#FFFFFF",
+  cardForeground: "#17211A",
+  chart1: "#00805F",
+  chart2: "#B36B0B",
+  chart3: "#2F6DB5",
+  chart4: "#8250B5",
+  chart5: "#C0392B",
   dangerStrong: "#A61F1F",
   dangerSubtle: "#FBE9E9",
-  focusRing: "#C3780F",
+  destructive: "#C62828",
+  destructiveForeground: "#FFFFFF",
   foreground: "#17211A",
-  foregroundMuted: "#55635A",
+  highlight: brand.orange,
+  highlightForeground: "#17211A",
+  input: "#6E7B72",
+  muted: "#F2F0E8",
+  mutedForeground: "#56635A",
+  popover: "#FFFFFF",
+  popoverForeground: "#17211A",
   primary: brand.green,
   primaryForeground: "#FFFFFF",
-  primaryStrong: "#00694E",
-  primarySubtle: "#E3F2EC",
+  primaryForegroundMuted: "#F0F9F5",
+  primaryRing: "#FFFFFF",
+  primaryStrong: "#006B50",
+  primarySubtle: "#E4F1EA",
+  ring: "#B36B0B",
+  secondary: "#EFEDE3",
+  secondaryForeground: "#17211A",
+  sidebar: "#006B50",
+  sidebarAccent: "#00805F",
+  sidebarAccentForeground: "#FFFFFF",
+  sidebarBorder: "#2F8F77",
+  sidebarForeground: "#FFFFFF",
+  sidebarForegroundMuted: "#E3F3EC",
+  sidebarPrimary: "#F5AB45",
+  sidebarPrimaryForeground: "#17211A",
+  sidebarRing: "#FFFFFF",
   success: "#1F8A4C",
   successStrong: "#166B3A",
   successSubtle: "#E3F3EA",
-  surface: "#FFFFFF",
-  surfaceRaised: "#FFFFFF",
-  surfaceSunken: "#EEF3EE",
+  surfaceSunken: "#F2F0E8",
   warning: "#B7791F",
   warningStrong: "#7A4D06",
   warningSubtle: "#FBF0DA",
@@ -59,27 +97,52 @@ const light = {
 export type ColorRole = keyof typeof light;
 
 const dark: { readonly [Role in ColorRole]: string } = {
-  accent: "#F5AB45",
-  accentForeground: "#04140E",
-  background: "#0F1210",
-  border: "#343B36",
-  borderSubtle: "#262C28",
-  danger: "#F16B6B",
+  accent: "#17352A",
+  accentForeground: "#EAF1EC",
+  background: "#0C110E",
+  border: "#2B352E",
+  borderSubtle: "#1F2722",
+  card: "#131914",
+  cardForeground: "#EAF1EC",
+  chart1: "#2BB38A",
+  chart2: "#F5AB45",
+  chart3: "#6FA8F0",
+  chart4: "#B994E8",
+  chart5: "#F08A7E",
   dangerStrong: "#F16B6B",
   dangerSubtle: "#3A1717",
-  focusRing: "#F5AB45",
-  foreground: "#EEF3EF",
-  foregroundMuted: "#A5B2A9",
+  destructive: "#F16B6B",
+  destructiveForeground: "#1C0707",
+  foreground: "#EAF1EC",
+  highlight: "#F5AB45",
+  highlightForeground: "#04140E",
+  input: "#6F8076",
+  muted: "#1B231E",
+  mutedForeground: "#9DB0A4",
+  popover: "#1A211C",
+  popoverForeground: "#EAF1EC",
   primary: "#2BB38A",
   primaryForeground: "#04140E",
+  primaryForegroundMuted: "#0A3526",
+  primaryRing: "#04140E",
   primaryStrong: "#2BB38A",
   primarySubtle: "#0F2A21",
+  ring: "#F5AB45",
+  secondary: "#1F2823",
+  secondaryForeground: "#EAF1EC",
+  sidebar: "#0F2A21",
+  sidebarAccent: "#17402F",
+  sidebarAccentForeground: "#EAF1EC",
+  sidebarBorder: "#1F4A39",
+  sidebarForeground: "#EAF1EC",
+  sidebarForegroundMuted: "#9DB0A4",
+  sidebarPrimary: "#F5AB45",
+  sidebarPrimaryForeground: "#04140E",
+  sidebarRing: "#F5AB45",
   success: "#4CC27E",
   successStrong: "#4CC27E",
   successSubtle: "#123021",
-  surface: "#171B18",
-  surfaceRaised: "#1E2320",
-  surfaceSunken: "#0B0D0C",
+  surfaceSunken: "#080B09",
   warning: "#E9B24A",
   warningStrong: "#E9B24A",
   warningSubtle: "#33260B",
@@ -108,17 +171,38 @@ const fontWeight = {
   semibold: 600,
 } as const;
 
+const SYSTEM_SANS = [
+  "ui-sans-serif",
+  "system-ui",
+  "-apple-system",
+  '"Segoe UI"',
+  "Roboto",
+  "sans-serif",
+] as const;
+
 const fontFamily = {
-  /** Inter on web (Google Fonts), the system font elsewhere. */
-  web: [
-    "Inter",
-    "ui-sans-serif",
-    "system-ui",
-    "-apple-system",
-    '"Segoe UI"',
-    "Roboto",
-    "sans-serif",
-  ],
+  /**
+   * Email clients have no web fonts: the system stack, resolved to literals
+   * by `@smog/email`.
+   */
+  email: SYSTEM_SANS,
+  /**
+   * Figtree on the apps: one embedded font file per weight (a custom font
+   * ignores `fontWeight` on Android), named by its PostScript name, which is
+   * also the file name in `apps/mobile/assets/fonts` (`expo-font` plugin).
+   */
+  native: {
+    bold: "Figtree-Bold",
+    medium: "Figtree-Medium",
+    regular: "Figtree-Regular",
+    semibold: "Figtree-SemiBold",
+  },
+  /**
+   * Figtree on web, self-hosted (`apps/site/src/styles.css` declares the
+   * face and `Figtree Fallback`, a size-adjusted local font that keeps the
+   * layout still while it loads), then the system fonts.
+   */
+  web: ["Figtree", '"Figtree Fallback"', ...SYSTEM_SANS],
 } as const;
 
 /**

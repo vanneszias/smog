@@ -1,4 +1,8 @@
-import { LOCALES, RECENT_SEARCHES_MAX } from "@smog/config/constants";
+import {
+  LOCALES,
+  RECENT_GESTURES_MAX,
+  RECENT_SEARCHES_MAX,
+} from "@smog/config/constants";
 import { z } from "zod";
 
 /** 2 added `preferences.importDismissedFor` (`MIGRATIONS[1]`). */
@@ -43,6 +47,16 @@ export const guestDataSchema = z.object({
     importDismissedFor: z.array(z.string()),
     /** `null` follows the device or browser language. */
     locale: z.enum(LOCALES).nullable(),
+    /**
+     * Gestures this device opened lately, newest first (at most
+     * `RECENT_GESTURES_MAX`): Home's "continue where you left off". Like
+     * recent searches they never leave the device. Optional and additive,
+     * so stored v2 data still parses.
+     */
+    recentGestureIds: z
+      .array(z.string().min(1))
+      .max(RECENT_GESTURES_MAX)
+      .optional(),
     theme: z.enum(THEMES),
   }),
   recentSearches: z.array(z.string()).max(RECENT_SEARCHES_MAX),

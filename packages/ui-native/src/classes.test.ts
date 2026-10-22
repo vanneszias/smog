@@ -8,9 +8,9 @@ import tailwindConfig from "../tailwind.config.cjs";
 
 /**
  * Every utility the kit and the mobile app write must exist in the SMOG
- * preset. The preset replaces Tailwind's default scales (DECISIONS), so an
- * off-token class such as `h-24` or `p-7` silently produces no style on
- * native. Same approach as `packages/ui-web/src/classes.test.ts`: Tailwind's
+ * preset. Tailwind's default scales stay (phase 10a ruling 2) but its raw
+ * palette and the weights without a Figtree file do not, so a class such as
+ * `bg-red-500` or `font-light` silently produces no style on native. Same approach as `packages/ui-web/src/classes.test.ts`: Tailwind's
  * own scanner finds the candidates, the real compiler (Tailwind 3 with the
  * generated preset, as NativeWind) must build a rule for each.
  */
@@ -76,10 +76,51 @@ describe("kit and app classes", () => {
   });
 
   it("catches an off-token class", async () => {
-    expect(await missingFrom(["h-24", "p-7", "min-h-touch"])).toEqual([
-      "h-24",
-      "p-7",
-    ]);
+    expect(
+      await missingFrom(["bg-red-500", "font-light", "min-h-touch", "p-7"])
+    ).toEqual(["bg-red-500", "font-light"]);
+  });
+
+  it("keeps Tailwind's default scales, as registry code writes them", async () => {
+    expect(
+      await missingFrom(["h-24", "size-9", "text-sm", "rounded-2xl", "gap-1.5"])
+    ).toEqual([]);
+  });
+
+  it("accepts the shadcn colour vocabulary", async () => {
+    expect(
+      await missingFrom([
+        "bg-card",
+        "text-card-foreground",
+        "bg-popover",
+        "bg-secondary",
+        "bg-muted",
+        "text-muted-foreground",
+        "bg-accent",
+        "bg-destructive",
+        "border-input",
+        "border-ring",
+        "bg-sidebar",
+        "text-sidebar-foreground",
+        "bg-chart-1",
+        "bg-highlight",
+        "bg-primary/40",
+        "bg-surface-sunken",
+        "text-primary-strong",
+      ])
+    ).toEqual([]);
+  });
+
+  it("no longer knows the retired alias names", async () => {
+    expect(
+      await missingFrom([
+        "bg-surface",
+        "bg-surface-raised",
+        "text-foreground-muted",
+        "bg-danger",
+        "border-focus-ring",
+      ])
+    ).toHaveLength(5);
   });
 
   it("finds no hex colours or arbitrary values in the sources", () => {

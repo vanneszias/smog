@@ -36,7 +36,7 @@ export function StatusTimeline(): ReactNode {
                   "inline-flex size-6 shrink-0 items-center justify-center rounded-full border-2 font-semibold text-caption",
                   step.done
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-primary-strong bg-surface text-primary-strong"
+                    : "border-primary-strong bg-card text-primary-strong"
                 )}
               >
                 {step.done ? (

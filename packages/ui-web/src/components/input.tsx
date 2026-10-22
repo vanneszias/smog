@@ -27,10 +27,11 @@ export function Input({
     <input
       className={cn(
         fieldVariants({ size }),
-        leading && "pl-10",
+        leading && "pl-11",
         trailing && "pr-12",
         className
       )}
+      data-slot="input"
       type={type ?? "text"}
       {...props}
     />
@@ -43,7 +44,7 @@ export function Input({
       {leading ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 inline-flex text-foreground-muted *:size-5"
+          className="pointer-events-none absolute left-3 inline-flex text-muted-foreground *:size-5"
         >
           {leading}
         </span>

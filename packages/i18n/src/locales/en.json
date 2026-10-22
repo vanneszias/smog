@@ -35,6 +35,14 @@
     "moreActions": "More actions",
     "close": "Close",
     "dismiss": "Dismiss notification",
+    "breadcrumb": "Breadcrumb",
+    "more": "More",
+    "carousel": "Carousel",
+    "slide": "Slide",
+    "previousSlide": "Previous slide",
+    "nextSlide": "Next slide",
+    "toggleSidebar": "Toggle sidebar",
+    "sidebar": "Sidebar",
     "loading": "Loading",
     "logo": "SMOG & Co logo",
     "clearSearch": "Clear search",
@@ -452,12 +460,53 @@
     },
     "description": "The gestures you saved with a heart."
   },
+  "searchPalette": {
+    "placeholder": "Search gestures and categories",
+    "description": "Type to find a gesture. Use the arrow keys and Enter.",
+    "seeAll": "Show all results for “{{query}}”",
+    "loadFailed": "The search could not be opened. Check your connection and try again.",
+    "error": "The search failed. Try again."
+  },
+  "shell": {
+    "explore": "Explore",
+    "supportTitle": "Support SMOG",
+    "supportText": "Show your name or logo with a gesture."
+  },
+  "mySpace": {
+    "title": "My space",
+    "description": "Your favorites and lists, on this device or in your account.",
+    "sections": "My space sections",
+    "shared": {
+      "tab": "Shared by me",
+      "view": "View link",
+      "edit": "Edit link",
+      "guestTitle": "Share lists with an account",
+      "guestDescription": "Sharing lists needs an account. Sign in to create a view or edit link.",
+      "emptyTitle": "You are not sharing any lists yet",
+      "emptyDescription": "Create a view or edit link in a list to share it. The lists you share show up here.",
+      "toLists": "Go to my lists"
+    }
+  },
+  "landing": {
+    "continue": "Continue where you left off",
+    "clearRecent": "Clear recently viewed gestures",
+    "clear": "Clear",
+    "categoriesIntro": "Browse by theme"
+  },
+  "browse": {
+    "filters": "Filters",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "sheetDescription": "Choose one or more categories. The results update as you choose."
+  },
   "kit": {
     "close": "Close",
     "clear": "Clear",
     "clearSearch": "Clear",
     "searchPlaceholder": "Search…",
     "selectPlaceholder": "Choose an option",
+    "commandPlaceholder": "Type a command or search…",
+    "commandSuggestions": "Suggestions",
     "noOptions": "No options",
     "noResults": "No results",
     "showPassword": "Show",
@@ -799,6 +848,14 @@
     },
     "preferences": {
       "languageHint": "When you're signed in, this is also the language of the emails we send you."
+    },
+    "nav": {
+      "label": "Account settings",
+      "profile": "Profile",
+      "signIn": "Sign-in methods",
+      "preferences": "Preferences",
+      "language": "Language",
+      "privacy": "Privacy and data"
     }
   },
   "settings": {
@@ -867,7 +924,12 @@
       "audit": "Audit log",
       "emails": "Emails",
       "settings": "Settings",
-      "deadLetters": "Dead letters"
+      "deadLetters": "Dead letters",
+      "groups": {
+        "content": "Content",
+        "community": "Community",
+        "operations": "Operations"
+      }
     },
     "comingSoon": {
       "title": "Coming in this phase",
@@ -924,6 +986,18 @@
         "none": "Nothing waiting",
         "renderFailed_one": "{{count}} video failed",
         "renderFailed_other": "{{count}} videos failed"
+      },
+      "chart": {
+        "title": "At a glance",
+        "description": "The sponsorship pipeline and the state of the catalogue.",
+        "sponsorships": "Sponsorships by stage",
+        "catalogue": "Gestures",
+        "awaitingPayment": "Awaiting payment",
+        "inReview": "In review",
+        "rendering": "Rendering",
+        "live": "Live",
+        "published": "Published",
+        "hidden": "Hidden"
       }
     },
     "audit": {
@@ -1889,6 +1963,17 @@
       "empty": "No dead letters.",
       "nextPage": "Older messages",
       "firstPage": "Newest messages"
+    },
+    "crumb": {
+      "detail": "Details"
+    },
+    "table": {
+      "columns": "Columns",
+      "columnsLabel": "Show columns",
+      "showAll": "Show all columns",
+      "rowActions": "Actions for {{name}}",
+      "open": "Open",
+      "actions": "Actions"
     }
   },
   "sponsorship": {
@@ -2006,7 +2091,9 @@
           "fileSize": "File size: at most 2 MB",
           "style": "Style: simple, high-contrast logos work best",
           "avoid": "Avoid: very detailed logos or thin lines"
-        }
+        },
+        "choice": "Logo in the video",
+        "without": "Without a logo"
       },
       "contact": {
         "title": "Contact details",

@@ -43,20 +43,20 @@ export function ListItem({
   const content = (
     <>
       {leading ? (
-        <span className="relative flex shrink-0 items-center text-foreground-muted">
+        <span className="relative flex shrink-0 items-center text-muted-foreground">
           {leading}
         </span>
       ) : null}
       <span className="relative flex min-w-0 flex-1 flex-col">
         <span className="truncate font-medium text-body">{title}</span>
         {description ? (
-          <span className="truncate text-body-sm text-foreground-muted">
+          <span className="truncate text-body-sm text-muted-foreground">
             {description}
           </span>
         ) : null}
       </span>
       {trailing ? (
-        <span className="relative flex shrink-0 items-center gap-2 text-foreground-muted">
+        <span className="relative flex shrink-0 items-center gap-2 text-muted-foreground">
           {trailing}
         </span>
       ) : null}

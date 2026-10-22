@@ -8,13 +8,13 @@ import { useFieldControl } from "./field";
 
 /** Border and fill of text inputs, selects and textareas (as web). */
 export const fieldVariants = cva(
-  "w-full flex-row items-center gap-2 rounded-md border bg-surface",
+  "w-full flex-row items-center gap-2 rounded-md border bg-card",
   {
     defaultVariants: { invalid: false, size: "md" },
     variants: {
       invalid: {
-        false: "border-foreground-muted",
-        true: "border-danger",
+        false: "border-muted-foreground",
+        true: "border-destructive",
       },
       size: {
         lg: "min-h-12 px-4",
@@ -24,7 +24,8 @@ export const fieldVariants = cva(
   }
 );
 
-const inputTextClasses = "min-h-touch flex-1 py-2 text-body text-foreground";
+const inputTextClasses =
+  "min-h-touch flex-1 py-2 font-regular text-body text-foreground";
 
 export interface InputProps
   extends TextInputProps,
@@ -56,8 +57,8 @@ export function Input({
   ...props
 }: InputProps): ReactElement {
   const field = useFieldControl({ ...props, invalid: invalidProp, required });
-  const placeholderColor = useColor("foregroundMuted");
-  const iconColor = useColor("foregroundMuted");
+  const placeholderColor = useColor("mutedForeground");
+  const iconColor = useColor("mutedForeground");
   return (
     <View
       className={cn(

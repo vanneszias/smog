@@ -78,6 +78,10 @@ export function variantIdentity(variant: AppVariant): VariantIdentity {
   return IDENTITIES[variant];
 }
 
+const FIGTREE_FILES = Object.values(tokens.fontFamily.native).map(
+  (family) => `./assets/fonts/${family}.ttf`
+);
+
 const EAS_PROJECT_ID = "9fa68b63-dfa5-498a-9196-5eba93ecac29";
 const BRAND_GREEN = tokens.color.brand.green;
 /**
@@ -163,7 +167,9 @@ export default function createConfig({ config }: ConfigContext): ExpoConfig {
     plugins: [
       "expo-router",
       "expo-localization",
-      "expo-font",
+      // Figtree, embedded at build time: no flash of the system font, and
+      // the file names are the family names `tokens.fontFamily.native` uses.
+      ["expo-font", { fonts: FIGTREE_FILES }],
       "expo-secure-store",
       "expo-apple-authentication",
       "expo-video",

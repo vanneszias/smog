@@ -7,7 +7,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 /** The 2 px `focus-ring` ring with a 2 px offset (spec §16). */
 export const focusRing =
-  "outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 /** Colour and shadow changes on hover/press; none under reduced motion. */
 export const transition =
@@ -51,22 +51,26 @@ export const hitAreaY =
 export const disabled =
   "disabled:pointer-events-none disabled:opacity-50 data-disabled:pointer-events-none data-disabled:opacity-50";
 
-/** Border and fill of text inputs, selects and textareas. */
+/**
+ * Border and fill of text inputs, selects and textareas: the registry's
+ * pill field (`rounded-4xl`, a `bg-input/30` wash) with the kit's contracts on
+ * top (44 px, the 2 px `focus-ring`, a 3:1 `border-input`).
+ */
 export const fieldVariants = cva(
   [
-    "w-full rounded-md border bg-surface text-body text-foreground placeholder:text-foreground-muted",
-    "border-foreground-muted hover:border-foreground",
-    "aria-invalid:border-danger",
+    "w-full min-w-0 rounded-4xl border border-input bg-card text-body text-foreground placeholder:text-muted-foreground",
+    "hover:border-foreground aria-invalid:border-destructive",
     focusRing,
     transition,
     disabled,
+    "disabled:cursor-not-allowed",
   ],
   {
     defaultVariants: { size: "md" },
     variants: {
       size: {
-        lg: "min-h-12 px-4",
-        md: "min-h-touch px-3",
+        lg: "min-h-12 px-5",
+        md: "min-h-touch px-4",
       },
     },
   }
@@ -78,7 +82,7 @@ export type FieldVariantProps = VariantProps<typeof fieldVariants>;
 export const toneText = {
   danger: "text-danger-strong",
   default: "text-foreground",
-  muted: "text-foreground-muted",
+  muted: "text-muted-foreground",
   primary: "text-primary-strong",
   success: "text-success-strong",
   warning: "text-warning-strong",

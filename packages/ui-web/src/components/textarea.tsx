@@ -16,7 +16,12 @@ export function Textarea({
   const { invalid: _invalid, ...props } = useFieldControl(rest);
   return (
     <textarea
-      className={cn(fieldVariants({ size: "md" }), "py-3", className)}
+      className={cn(
+        fieldVariants({ size: "md" }),
+        "rounded-2xl py-3",
+        className
+      )}
+      data-slot="textarea"
       rows={rows ?? 4}
       {...props}
     />

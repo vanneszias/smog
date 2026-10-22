@@ -17,7 +17,8 @@ export interface CategoryChipsProps
 
 /**
  * The category filter: a labelled group (`search.categories`) of toggle
- * chips that scrolls sideways on narrow screens and wraps from `md`.
+ * chips that scrolls sideways on narrow screens and wraps from `md`. A
+ * category with an `icon` (an image or glyph) leads its chip with it.
  */
 export function CategoryChips({
   "aria-label": ariaLabel,
@@ -65,6 +66,7 @@ export function CategoryChips({
       ) : null}
       {categories.map((category) => (
         <CategoryChip
+          icon={category.icon}
           key={category.slug}
           name={category.name}
           onToggle={toggle}
@@ -77,11 +79,13 @@ export function CategoryChips({
 }
 
 function CategoryChip({
+  icon,
   name,
   onToggle,
   selected,
   slug,
 }: {
+  icon?: ReactNode;
   name: string;
   onToggle: (slug: string, on: boolean) => void;
   selected: boolean;
@@ -94,7 +98,7 @@ function CategoryChip({
     [onToggle, slug]
   );
   return (
-    <Chip onSelectedChange={change} selected={selected}>
+    <Chip icon={icon} onSelectedChange={change} selected={selected}>
       {name}
     </Chip>
   );

@@ -39,6 +39,7 @@ const FIXED_HEIGHT_ALLOWED: Record<string, string> = {
   "components/logo.tsx": "an image: the logo's own size",
   "components/menu.tsx": "a hairline separator",
   "components/progress-bar.tsx": "the track and its fill: no text",
+  "components/separator.tsx": "a hairline: no text",
   "components/sheet-panel.tsx": "the drag handle: no text",
   "components/skeleton.tsx": "a placeholder: no text",
   "components/stepper.tsx": "the connector line between steps: no text",
@@ -99,6 +100,7 @@ describe("reduced motion", () => {
       .sort();
     expect(animating).toEqual([
       "components/dialog.tsx",
+      "components/popover.tsx",
       "components/progress-bar.tsx",
       "components/sheet-panel.tsx",
       "components/skeleton.tsx",

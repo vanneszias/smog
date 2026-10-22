@@ -37,6 +37,13 @@ import {
   targetTypeLabel,
   useAuditTime,
 } from "./audit-data";
+import {
+  ColumnsMenu,
+  RowActions,
+  useColumnVisibility,
+} from "./data-table-parts";
+
+const PINNED_COLUMNS = ["when", "actions"] as const;
 
 /**
  * The audit filters as they live in the URL (`/admin/audit?…`). The days
@@ -232,16 +239,19 @@ function AuditFilters({ onSearchChange, search }: AuditTableProps): ReactNode {
  * entry (the audit page and the dashboard's recent actions).
  */
 export function AuditEntries({
+  columnsMenu = false,
   entries,
   label,
 }: {
+  /** Shows the "Columns" menu (the audit page; the dashboard's list has none). */
+  columnsMenu?: boolean;
   entries: readonly AuditEntry[];
   label: string;
 }): ReactNode {
   const { t } = useTranslation();
   const time = useAuditTime();
   const [selected, setSelected] = useState<AuditEntry | null>(null);
-  const columns = useMemo<DataTableColumn<AuditEntry>[]>(
+  const allColumns = useMemo<DataTableColumn<AuditEntry>[]>(
     () => [
       {
         cell: (entry) => (
@@ -270,9 +280,21 @@ export function AuditEntries({
         header: t("admin.audit.columns.actor"),
         id: "actor",
       },
+      {
+        cell: (entry) => (
+          <RowActions
+            name={actionLabel(t, entry.action)}
+            onOpen={setSelected}
+            row={entry}
+          />
+        ),
+        header: <span className="sr-only">{t("admin.table.actions")}</span>,
+        id: "actions",
+      },
     ],
     [t, time]
   );
+  const visibility = useColumnVisibility("audit", allColumns, PINNED_COLUMNS);
   const closeDetail = useCallback((open: boolean) => {
     if (!open) {
       setSelected(null);
@@ -280,9 +302,18 @@ export function AuditEntries({
   }, []);
   return (
     <>
+      {columnsMenu ? (
+        <div className="mb-3 flex justify-end">
+          <ColumnsMenu
+            all={allColumns}
+            pinned={PINNED_COLUMNS}
+            visibility={visibility}
+          />
+        </div>
+      ) : null}
       <DataTable
         aria-label={label}
-        columns={columns}
+        columns={visibility.columns}
         empty={t("admin.audit.empty")}
         getRowId={entryId}
         onRowClick={setSelected}
@@ -339,6 +370,7 @@ export function AuditTable({
         }
       >
         <AuditEntries
+          columnsMenu
           entries={audit.data.items}
           label={t("admin.audit.title")}
         />

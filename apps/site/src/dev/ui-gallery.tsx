@@ -81,6 +81,7 @@ import {
   useState,
 } from "react";
 import { DomainShowcase } from "./ui-gallery-domain";
+import { RegistryShowcase } from "./ui-gallery-registry";
 
 /*
  * `/dev/ui`: every kit component in every variant and size, light and dark
@@ -195,6 +196,7 @@ function Showcase(): ReactNode {
       <ProgressSection />
       <DataSection />
       <BrandSection />
+      <RegistryShowcase />
       <DomainShowcase />
     </>
   );
@@ -498,7 +500,7 @@ function SurfacesSection(): ReactNode {
         </div>
       </Section>
       <Section name="ListItem">
-        <div className="divide-y divide-border-subtle overflow-hidden rounded-lg border border-border-subtle bg-surface">
+        <div className="divide-y divide-border-subtle overflow-hidden rounded-lg border border-border-subtle bg-card">
           <ListItem
             description={t("devTools.gallery.sampleText")}
             leading={<Heart className="size-5" />}

@@ -11,7 +11,7 @@ describe("Textarea", () => {
     const textarea = screen.getByRole("textbox", { name: "Message" });
     expect(textarea.tagName).toBe("TEXTAREA");
     expect(textarea.getAttribute("aria-invalid")).toBe("true");
-    expect(classesOf(textarea)).toContain("border-foreground-muted");
+    expect(classesOf(textarea)).toContain("border-input");
     expect(classesOf(textarea)).toContain("py-3");
     expect(ref.current).toBe(textarea as HTMLTextAreaElement);
   });

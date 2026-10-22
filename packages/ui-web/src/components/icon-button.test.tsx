@@ -32,7 +32,7 @@ describe("IconButton", () => {
     const small = classesOf(screen.getByRole("button", { name: "b" }));
     expect(small).toContain("size-8");
     expect(small).toContain("after:size-touch");
-    expect(small).toContain("border-foreground-muted");
+    expect(small).toContain("border-muted-foreground");
   });
 
   test("forwards the ref", () => {

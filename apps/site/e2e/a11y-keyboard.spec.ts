@@ -11,9 +11,9 @@ import {
 
 const MAIN_HASH = /#main$/;
 const NOT_DUTCH = /^(en|fr)$/;
-const LANGUAGE_BUTTON = /^(Change language|Changer de langue)$/;
-const THEME_BUTTON = /^(Change theme|Changer de thème)$/;
-const FAVORITES_URL = /\/favorites$/;
+const DARK_ITEM = /^(Dark|Sombre)$/;
+const SETTINGS_BUTTON = /^(Settings|Paramètres)$/;
+const MY_SPACE_URL = /\/my$/;
 const KOFFIE_URL = /q=koffie$/;
 const KOFFIE = /Koffie/;
 const ANYTHING = /.+/;
@@ -88,12 +88,12 @@ test.describe("keyboard: the shell", () => {
     expect(await focusIsIn(main)).toBe(true);
   });
 
-  test("the language and theme menus work with the keyboard alone", async ({
+  test("the settings menu (language and theme) works with the keyboard alone", async ({
     page,
   }) => {
     await page.setViewportSize({ height: 800, width: 1280 });
     await openPublic(page, "/");
-    const language = page.getByRole("button", { name: "Taal wijzigen" });
+    const language = page.getByRole("button", { name: "Instellingen" });
     const menu = page.getByRole("menu");
     // The first menu of a cold dev server can lose the key (Vite optimising a
     // dependency reloads the page): focus and press again until it is open,
@@ -122,21 +122,19 @@ test.describe("keyboard: the shell", () => {
     await page.keyboard.press("Enter");
     await expect(page.locator("html")).toHaveAttribute("lang", NOT_DUTCH);
     await expect(menu).toBeHidden();
-    await expect(
-      page.getByRole("button", {
-        name: LANGUAGE_BUTTON,
-      })
-    ).toBeFocused();
+    const settings = page.getByRole("button", { name: SETTINGS_BUTTON });
+    await expect(settings).toBeFocused();
 
-    const theme = page.getByRole("button", {
-      name: THEME_BUTTON,
-    });
-    await theme.focus();
+    // The theme radios are in the same menu: Space opens it, Escape closes
+    // it and returns the focus.
     await page.keyboard.press("Space");
     await expect(page.getByRole("menu")).toBeVisible();
+    await expect(
+      page.getByRole("menuitemradio", { name: DARK_ITEM })
+    ).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("menu")).toBeHidden();
-    await expect(theme).toBeFocused();
+    await expect(settings).toBeFocused();
   });
 
   test("the phone menu sheet opens with Enter, traps focus, and Escape returns it", async ({
@@ -154,9 +152,9 @@ test.describe("keyboard: the shell", () => {
       await page.getByRole("button", { name: "Menu openen" }).focus();
       await page.keyboard.press("Enter");
       const sheet = page.getByRole("dialog");
-      await sheet.getByRole("link", { name: "Favorieten" }).focus();
+      await sheet.getByRole("link", { name: "Mijn ruimte" }).focus();
       await page.keyboard.press("Enter");
-      await expect(page).toHaveURL(FAVORITES_URL);
+      await expect(page).toHaveURL(MY_SPACE_URL);
       await expect(sheet).toBeHidden();
     } finally {
       await context.close();
@@ -358,7 +356,7 @@ test.describe("keyboard: signed in", () => {
     const { context, page } = await newPublicPage(browser, "light", 1280);
     try {
       await signInWithApi(page);
-      await openPublic(page, "/account");
+      await openPublic(page, "/account?section=privacy");
       await dialogRun(
         page,
         page.getByRole("button", { name: "Mijn account verwijderen" }),
@@ -391,10 +389,8 @@ test.describe("keyboard: guests", () => {
         // Not the Mux player's own (error) dialog.
         page.locator('div[role="dialog"]')
       );
-      const actions = page.getByRole("button", { name: "Acties voor Hond" });
+      const actions = page.getByRole("button", { name: "QR-code" });
       await actions.focus();
-      await page.keyboard.press("Enter");
-      await page.getByRole("menuitem", { name: "QR-code" }).focus();
       await page.keyboard.press("Enter");
       const qr = page.locator('div[role="dialog"]');
       await expect(qr).toBeVisible();
@@ -491,15 +487,22 @@ test.describe("keyboard: the sponsor cards", () => {
 });
 
 test.describe("keyboard: focus is always visible", () => {
-  /** The ring: a 2 px `focus-ring` shadow (offset 2 px) on the focused control. */
-  async function expectRing(page: Page, control: Locator): Promise<void> {
+  /**
+   * The ring: a 2 px shadow (offset 2 px) on the focused control, in the
+   * `ring` colour, or in `sidebar-ring` (white) on the green header.
+   */
+  async function expectRing(
+    page: Page,
+    control: Locator,
+    tokenName = "ring"
+  ): Promise<void> {
     await control.focus();
     await page.keyboard.press("Shift+Tab");
     await page.keyboard.press("Tab");
     await expect(control).toBeFocused();
-    const ring = await control.evaluate((node) => {
+    const ring = await control.evaluate((node, name) => {
       const probe = document.createElement("span");
-      probe.style.color = "var(--color-focus-ring)";
+      probe.style.color = `var(--color-${name})`;
       document.body.append(probe);
       const token = getComputedStyle(probe).color;
       probe.remove();
@@ -509,7 +512,7 @@ test.describe("keyboard: focus is always visible", () => {
         shadow: style.boxShadow,
         token,
       };
-    });
+    }, tokenName);
     const ringed =
       ring.shadow.includes(ring.token) &&
       ring.shadow.includes("0px 0px 0px 4px");
@@ -530,9 +533,15 @@ test.describe("keyboard: focus is always visible", () => {
         await page.evaluate((dark) => {
           document.documentElement.classList.toggle("dark", dark);
         }, theme === "dark");
+        // The header is the green surface: its controls ring in `sidebar-ring`.
         for (const control of [
           page.getByRole("link", { name: "Gebaren" }).first(),
           page.getByRole("button", { name: "Zoeken" }).first(),
+        ]) {
+          // biome-ignore lint/performance/noAwaitInLoops: one control at a time.
+          await expectRing(page, control, "sidebar-ring");
+        }
+        for (const control of [
           page.getByRole("textbox", { name: "E-mailadres" }),
           page.getByRole("button", { name: "Doorgaan" }).first(),
         ]) {

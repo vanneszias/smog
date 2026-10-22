@@ -300,7 +300,7 @@ describe("SponsorPreview (phase 7 ruling 8)", () => {
     expect(screen.queryByRole("button", { name: "Play" })).toBeNull();
     // The focused note shows its focus (WCAG 2.4.7, review M-7).
     expect(note.className).not.toContain("outline-none");
-    expect(note.className).toContain("focus:outline-focus-ring");
+    expect(note.className).toContain("focus:outline-ring");
   });
 
   test("Play replays from the start, Pause pauses, the label follows the Player", async () => {

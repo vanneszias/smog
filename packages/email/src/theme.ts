@@ -13,7 +13,7 @@ const color = tokens.color.light;
 const px = (value: number): string => `${value}px`;
 
 const EMAIL_WIDTH = 560;
-const FONT = fontFamily.web.join(", ");
+const FONT = fontFamily.email.join(", ");
 
 /**
  * The header logo (`@smog/brand` renders `/brand/email-logo.png` at 2x,
@@ -78,7 +78,7 @@ export const styles = {
     textAlign: "center",
   },
   container: {
-    backgroundColor: color.surface,
+    backgroundColor: color.card,
     border: `1px solid ${color.border}`,
     borderRadius: px(radius.lg),
     margin: `${px(spacing["8"])} auto ${px(spacing["4"])}`,
@@ -87,7 +87,7 @@ export const styles = {
   },
   content: { padding: px(spacing["8"]) },
   footer: {
-    color: color.foregroundMuted,
+    color: color.mutedForeground,
     fontSize: px(fontSize["body-sm"].size),
     lineHeight: px(fontSize["body-sm"].lineHeight),
   },
@@ -105,7 +105,7 @@ export const styles = {
   hr: { borderColor: color.border, margin: `${px(spacing["6"])} 0` },
   /** The organisation's footer under the card. */
   legal: {
-    color: color.foregroundMuted,
+    color: color.mutedForeground,
     fontSize: px(fontSize.caption.size),
     lineHeight: px(fontSize.caption.lineHeight),
     margin: `${px(spacing["1"])} 0`,
@@ -147,7 +147,7 @@ export const styles = {
   },
   /** A label / value row in a box. */
   rowLabel: {
-    color: color.foregroundMuted,
+    color: color.mutedForeground,
     fontSize: px(fontSize["body-sm"].size),
     lineHeight: px(fontSize["body-sm"].lineHeight),
     margin: `${px(spacing["1"])} 0`,

@@ -13,14 +13,11 @@ function rem(px: number): string {
   return `${Number((px / ROOT_FONT_SIZE).toFixed(4))}rem`;
 }
 
-/** `surfaceRaised` → `surface-raised`. */
+/** `surfaceRaised` → `surface-raised`, `chart1` → `chart-1`. */
 export function kebab(name: string): string {
-  return name.replaceAll(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-}
-
-/** Tailwind v4 theme keys write a `.` in a key as `_` (`--spacing-0_5`). */
-function themeKey(key: string): string {
-  return key.replaceAll(".", "_");
+  return name
+    .replaceAll(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+    .replaceAll(/([a-z])(\d)/g, "$1-$2");
 }
 
 function declarations(entries: [string, string][], indent = "  "): string[] {
@@ -50,23 +47,24 @@ function durations(): [string, string][] {
   ]);
 }
 
+/**
+ * Tailwind's default scales (spacing, radius, type, shadow, easing,
+ * breakpoints, containers, font weights) stay, so registry code compiles
+ * unchanged (phase 10a ruling 2). The tokens add to them or override a
+ * default of the same name (`rounded-lg` is 14 px). Only the colour
+ * namespace is reset: the palette is the semantic roles, never `red-500`.
+ */
 function themeBlock(): string[] {
   const { fontSize, fontWeight, spacing, radius, breakpoint, layout } = tokens;
   const easing = tokens.motion.easing.standard.join(", ");
   return [
     "@theme {",
     "  --color-*: initial;",
+    `  --color-white: ${tokens.color.brand.white};`,
     ...declarations(colours("light")),
     "",
-    "  --spacing-*: initial;",
-    ...declarations(
-      Object.entries(spacing).map(([key, px]) => [
-        `spacing-${themeKey(key)}`,
-        rem(px),
-      ])
-    ),
+    `  --spacing-touch: ${rem(spacing.touch)};`,
     "",
-    "  --radius-*: initial;",
     ...declarations(
       Object.entries(radius).map(([key, px]) => [
         `radius-${key}`,
@@ -75,14 +73,12 @@ function themeBlock(): string[] {
     ),
     "",
     `  --font-sans: ${tokens.fontFamily.web.join(", ")};`,
-    "  --font-weight-*: initial;",
     ...declarations(
       Object.entries(fontWeight).map(([key, weight]) => [
         `font-weight-${key}`,
         String(weight),
       ])
     ),
-    "  --text-*: initial;",
     ...declarations(
       Object.entries(fontSize).flatMap(([key, step]) => [
         [`text-${key}`, rem(step.size)],
@@ -90,17 +86,14 @@ function themeBlock(): string[] {
       ])
     ),
     "",
-    "  --shadow-*: initial;",
     ...declarations(shadows("light")),
     "",
-    "  --ease-*: initial;",
     `  --ease-standard: cubic-bezier(${easing});`,
     ...declarations(durations()),
     `  --motion-pop-scale: ${tokens.motion.popScale};`,
     "  --default-transition-duration: var(--duration-normal);",
     "  --default-transition-timing-function: var(--ease-standard);",
     "",
-    "  --breakpoint-*: initial;",
     ...declarations(
       Object.entries(breakpoint).map(([key, px]) => [
         `breakpoint-${key}`,
@@ -108,7 +101,6 @@ function themeBlock(): string[] {
       ])
     ),
     "",
-    "  --container-*: initial;",
     `  --container-content: ${rem(layout.contentMaxWidth)};`,
     `  --container-reading: ${layout.readingMaxWidthCh}ch;`,
     "}",

@@ -10,6 +10,8 @@ import type { ComponentType, ReactNode } from "react";
 
 /** A category as the chips and cards show it. */
 export interface CategoryRef {
+  /** Web only: a decorative icon or image the category chip leads with. */
+  icon?: ReactNode;
   name: string;
   slug: string;
 }

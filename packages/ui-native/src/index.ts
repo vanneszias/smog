@@ -1,4 +1,20 @@
 // biome-ignore lint/performance/noBarrelFile: the kit's public entry point (API.md lists every export).
+export {
+  Accordion,
+  AccordionContent,
+  type AccordionContentProps,
+  AccordionItem,
+  type AccordionItemProps,
+  type AccordionProps,
+  AccordionTrigger,
+  type AccordionTriggerProps,
+} from "./components/accordion";
+export {
+  Alert,
+  AlertDescription,
+  type AlertProps,
+  AlertTitle,
+} from "./components/alert";
 export { AlertDialog, type AlertDialogProps } from "./components/alert-dialog";
 export { Avatar, type AvatarProps } from "./components/avatar";
 export { Badge, type BadgeProps, badgeVariants } from "./components/badge";
@@ -36,6 +52,7 @@ export {
 export { IconButton, type IconButtonProps } from "./components/icon-button";
 export { Input, type InputProps } from "./components/input";
 export { KitProvider } from "./components/kit-provider";
+export { Label, type LabelProps } from "./components/label";
 export { ListItem, type ListItemProps } from "./components/list-item";
 export { Logo, type LogoProps } from "./components/logo";
 export {
@@ -52,6 +69,13 @@ export {
   OfflineBanner,
   type OfflineBannerProps,
 } from "./components/offline-banner";
+export {
+  Popover,
+  PopoverClose,
+  PopoverContent,
+  type PopoverContentProps,
+  PopoverTrigger,
+} from "./components/popover";
 export { ProgressBar, type ProgressBarProps } from "./components/progress-bar";
 export {
   RadioGroup,
@@ -69,6 +93,7 @@ export {
   type SelectOption,
   type SelectProps,
 } from "./components/select";
+export { Separator, type SeparatorProps } from "./components/separator";
 export {
   Sheet,
   SheetClose,
@@ -84,6 +109,12 @@ export {
   type StepperProps,
   type StepperStep,
 } from "./components/stepper";
+export {
+  Surface,
+  type SurfaceProps,
+  type SurfaceTone,
+  useSurface,
+} from "./components/surface";
 export { Switch, type SwitchProps } from "./components/switch";
 export {
   Tabs,
@@ -105,6 +136,14 @@ export {
   type ToastVariant,
   useToast,
 } from "./components/toast";
+export {
+  Toggle,
+  ToggleGroup,
+  ToggleGroupItem,
+  type ToggleGroupItemProps,
+  type ToggleGroupProps,
+  type ToggleProps,
+} from "./components/toggle";
 export {
   CategoryChips,
   type CategoryChipsProps,

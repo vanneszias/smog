@@ -167,7 +167,7 @@ function CellShell({
       ) : null}
       {state.changed && counter ? (
         <span
-          className="text-caption text-foreground-muted tabular-nums"
+          className="text-caption text-muted-foreground tabular-nums"
           id={state.ids.counter}
         >
           {t("kit.characterCount", counter)}
@@ -295,9 +295,9 @@ function ListCell({
         aria-describedby={state.describedBy}
         aria-label={summary ? `${summary}: ${title}` : title}
         className={cn(
-          "flex min-h-touch w-full min-w-[10rem] max-w-[16rem] items-center gap-2 rounded-md border border-border bg-surface px-3 text-left text-body-sm hover:border-foreground-muted",
-          "outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          state.invalid && "border-danger",
+          "flex min-h-touch w-full min-w-[10rem] max-w-[16rem] items-center gap-2 rounded-md border border-border bg-card px-3 text-left text-body-sm hover:border-muted-foreground",
+          "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          state.invalid && "border-destructive",
           changedControl
         )}
         data-changed={state.changed || undefined}
@@ -306,14 +306,14 @@ function ListCell({
       >
         <span className="min-w-0 flex-1 truncate">
           {summary || (
-            <span className="text-foreground-muted">
+            <span className="text-muted-foreground">
               {t("admin.gestures.changes.empty")}
             </span>
           )}
         </span>
         <Pencil
           aria-hidden="true"
-          className="size-4 shrink-0 text-foreground-muted"
+          className="size-4 shrink-0 text-muted-foreground"
         />
       </button>
       <Dialog onOpenChange={setOpen} open={open}>
@@ -623,7 +623,7 @@ export function GestureTableEditor({
       aria-labelledby="table-editor-heading"
       className="flex flex-col gap-3"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface-raised p-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-subtle bg-popover p-2">
         <div className="flex min-w-0 flex-col px-2">
           <h2
             className="font-semibold text-body-sm text-foreground outline-none focus-visible:underline"

@@ -80,7 +80,7 @@ function Summary({ view }: { view: PaymentStatusView }): ReactNode {
             className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4"
             key={row.label}
           >
-            <dt className="text-foreground-muted">{row.label}</dt>
+            <dt className="text-muted-foreground">{row.label}</dt>
             <dd className="min-w-0 break-words tabular-nums sm:text-right">
               {row.value}
             </dd>

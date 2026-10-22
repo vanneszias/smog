@@ -20,7 +20,7 @@ describe("Tabs", () => {
     const profile = screen.getByRole("tab", { name: "Profile" });
     expect(profile.getAttribute("aria-selected")).toBe("true");
     expect(classesOf(profile)).toContain("min-h-touch");
-    expect(classesOf(profile)).toContain("focus-visible:ring-focus-ring");
+    expect(classesOf(profile)).toContain("focus-visible:ring-ring");
     expect(screen.getByRole("tabpanel").textContent).toBe("Profile panel");
     // Radix activates tabs on mousedown.
     await userEvent.pointer({

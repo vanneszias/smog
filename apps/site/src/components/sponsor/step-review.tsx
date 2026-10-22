@@ -1,6 +1,17 @@
 import { useTranslation } from "@smog/i18n/react";
 import { type WizardState, wizardPrice } from "@smog/sponsorships/client";
-import { Button, Card, Heading, Text } from "@smog/ui-web";
+import {
+  Button,
+  Card,
+  Heading,
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableRow,
+  Text,
+} from "@smog/ui-web";
 import { formatMoney } from "@smog/utils";
 import { ArrowLeft, Lock } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -28,10 +39,17 @@ export interface StepReviewProps {
 
 function Row({ label, value }: { label: string; value: ReactNode }): ReactNode {
   return (
-    <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4">
-      <dt className="text-foreground-muted">{label}</dt>
-      <dd className="min-w-0 break-words sm:text-right">{value}</dd>
-    </div>
+    <TableRow className="flex flex-col gap-0.5 px-3 py-2 sm:table-row sm:px-0 sm:py-0">
+      <TableHead
+        className="h-auto whitespace-normal p-0 font-normal text-body-sm text-muted-foreground sm:h-touch sm:px-3"
+        scope="row"
+      >
+        {label}
+      </TableHead>
+      <TableCell className="break-words p-0 sm:px-3 sm:py-2 sm:text-right">
+        {value}
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -120,37 +138,52 @@ export function StepReview({
         <Heading level={2} size="title-3">
           {t("sponsor.review.summary")}
         </Heading>
-        <dl className="flex flex-col gap-3 text-body-sm">
-          <Row
-            label={t("sponsor.review.gestures")}
-            value={state.selected.map((gesture) => gesture.name).join(", ")}
-          />
-          <Row
-            label={t("sponsor.review.duration")}
-            value={t("sponsor.review.durationValue")}
-          />
-          <Row
-            label={t("sponsor.review.nameInVideo")}
-            value={details.displayName.trim()}
-          />
-          <Row
-            label={t("sponsor.review.logo")}
-            value={logo ? t("sponsor.review.yes") : t("sponsor.review.no")}
-          />
-          <Row label={t("sponsor.review.contact")} value={contact} />
-          {details.wantsInvoice ? (
+        <Table
+          aria-label={t("sponsor.review.summary")}
+          containerClassName="bg-transparent ring-0"
+        >
+          <TableBody>
             <Row
-              label={t("sponsor.review.invoice")}
-              value={`${details.invoiceName.trim()} · ${details.vatNumber.trim()}`}
+              label={t("sponsor.review.gestures")}
+              value={state.selected.map((gesture) => gesture.name).join(", ")}
             />
-          ) : null}
-          <div className="flex justify-between gap-4 border-border-subtle border-t pt-3 font-semibold text-body">
-            <dt>{t("sponsor.review.total")}</dt>
-            <dd className="tabular-nums" data-testid="review-total">
-              {formatMoney(total, locale)}
-            </dd>
-          </div>
-        </dl>
+            <Row
+              label={t("sponsor.review.duration")}
+              value={t("sponsor.review.durationValue")}
+            />
+            <Row
+              label={t("sponsor.review.nameInVideo")}
+              value={details.displayName.trim()}
+            />
+            <Row
+              label={t("sponsor.review.logo")}
+              value={logo ? t("sponsor.review.yes") : t("sponsor.review.no")}
+            />
+            <Row label={t("sponsor.review.contact")} value={contact} />
+            {details.wantsInvoice ? (
+              <Row
+                label={t("sponsor.review.invoice")}
+                value={`${details.invoiceName.trim()} · ${details.vatNumber.trim()}`}
+              />
+            ) : null}
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableHead
+                className="h-touch whitespace-normal px-3 font-semibold text-body text-foreground"
+                scope="row"
+              >
+                {t("sponsor.review.total")}
+              </TableHead>
+              <TableCell
+                className="px-3 text-right font-semibold text-body tabular-nums"
+                data-testid="review-total"
+              >
+                {formatMoney(total, locale)}
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
       </Card>
       <div className="flex max-w-reading flex-col gap-4">
         {turnstileSiteKey ? (

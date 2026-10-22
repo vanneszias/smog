@@ -181,7 +181,7 @@ async function fillDetails(
   await page.getByLabel(NAAM_IN_DE_VIDEO).fill("Bakkerij Jansen");
   await expect(page.getByText("15/35")).toBeVisible();
   if (logo) {
-    await page.getByRole("checkbox", { name: LOGO_TOEVOEGEN }).click();
+    await page.getByRole("radio", { name: LOGO_TOEVOEGEN }).click();
     await page.locator("input#logo-upload").setInputFiles({
       buffer: PNG,
       mimeType: "image/png",
@@ -342,8 +342,13 @@ test("keyboard only: the cards, the selection bar, the dropzone's button and the
   await expect(current).toContainText("Jouw gegevens");
   await tabTo(page, page.getByLabel(NAAM_IN_DE_VIDEO));
   await page.keyboard.type("Bakkerij Toets");
-  await tabTo(page, page.getByRole("checkbox", { name: LOGO_TOEVOEGEN }));
-  await page.keyboard.press("Space");
+  await tabTo(page, page.getByRole("radio", { name: "Zonder logo" }));
+  // Radix checks a radio when the arrow key is still down as the focus
+  // arrives (it moves the focus in a timeout): hold the key until it has.
+  await page.keyboard.down("ArrowDown");
+  await expect(page.getByRole("radio", { name: LOGO_TOEVOEGEN })).toBeFocused();
+  await page.keyboard.up("ArrowDown");
+  await expect(page.getByRole("radio", { name: LOGO_TOEVOEGEN })).toBeChecked();
   // The dropzone's keyboard path is its button, which opens the file picker.
   // The chooser listener goes first: Playwright turns file chooser
   // interception on when the listener is added, and Enter must not beat it
@@ -853,7 +858,7 @@ test("review screenshots", async () => {
         await page
           .getByRole("button", { exact: true, name: "Doorgaan" })
           .click();
-        await page.getByRole("checkbox", { name: LOGO_TOEVOEGEN }).click();
+        await page.getByRole("radio", { name: LOGO_TOEVOEGEN }).click();
         await page
           .getByRole("checkbox", { name: "Ik wens een factuur" })
           .click();

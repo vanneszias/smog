@@ -14,6 +14,8 @@ import { recolour } from "./recolour";
 
 export const GREEN = tokens.color.brand.green;
 export const WHITE = tokens.color.brand.white;
+/** The monochrome lockups: the ink the app draws text in (light theme). */
+export const INK = tokens.color.light.foreground;
 
 export const ART_DIR = fileURLToPath(new URL("./art/", import.meta.url));
 export const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
@@ -48,6 +50,12 @@ const APP_LOGO_HEIGHT = 32;
  * flattened onto the header green.
  */
 const EMAIL_LOGO_HEIGHT = 80;
+
+/**
+ * Clear space around a reversed lockup, as a fraction of the artwork's
+ * height, on every side: the panel for banners and the PDF header.
+ */
+const REVERSED_PADDING = 0.6;
 
 const ICO_SIZES = [16, 32, 48] as const;
 
@@ -209,6 +217,32 @@ export function brandPlan(): BrandPlan {
     width: Math.round((EMAIL_LOGO_HEIGHT * logo.width) / logo.height),
   };
 
+  // The lockups for banners and print: white on a green panel (reversed)
+  // and one flat ink colour on transparent (monochrome).
+  const lockups = [
+    { artwork: logo, name: "logo" },
+    { artwork: stacked, name: "logo-stacked" },
+  ].flatMap(({ artwork, name }) => {
+    const pad = artwork.height * REVERSED_PADDING;
+    const panel = {
+      height: artwork.height + 2 * pad,
+      width: artwork.width + 2 * pad,
+    };
+    return [
+      {
+        contents: compose(panel, artwork, WHITE, artwork.width, {
+          colour: GREEN,
+          radius: 0,
+        }),
+        path: `${SITE}/brand/${name}-reversed.svg`,
+      },
+      {
+        contents: compose(artwork, artwork, INK, artwork.width),
+        path: `${SITE}/brand/${name}-mono.svg`,
+      },
+    ];
+  });
+
   const logoSource = readArt("logo.svg");
   return {
     favicon: {
@@ -278,6 +312,7 @@ export function brandPlan(): BrandPlan {
         contents: recolour(readArt("logo-stacked.svg"), WHITE),
         path: `${SITE}/brand/logo-stacked-white.svg`,
       },
+      ...lockups,
       ...["hand-1.svg", "hand-2.svg", "hand-3.svg"].map((hand) => ({
         contents: readArt(hand),
         path: `${SITE}/brand/${hand}`,

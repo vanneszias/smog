@@ -1,6 +1,14 @@
 import { MAGIC_LINK_TOKEN_PATTERN, useAuthState } from "@smog/auth/react";
 import { useTranslation } from "@smog/i18n/react";
-import { Button, Heading, Spinner, Text, useToast } from "@smog/ui-native";
+import {
+  Button,
+  Heading,
+  Logo,
+  Spinner,
+  Surface,
+  Text,
+  useToast,
+} from "@smog/ui-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   type ReactElement,
@@ -64,9 +72,12 @@ function Screen({
   title: string;
 }): ReactElement {
   return (
-    <View className="flex-1 gap-6 bg-background px-4 py-6">
-      <Heading level={1}>{title}</Heading>
-      {children}
+    <View className="flex-1 bg-background">
+      <Surface className="gap-3 rounded-b-3xl px-4 pt-2 pb-8" tone="primary">
+        <Logo color="primaryForeground" decorative size="lg" tone="current" />
+        <Heading level={1}>{title}</Heading>
+      </Surface>
+      <View className="gap-6 px-4 py-6">{children}</View>
     </View>
   );
 }

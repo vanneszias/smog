@@ -12,10 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
-import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as MagicLinkRouteImport } from './routes/magic-link'
 import { Route as ManifestDotwebmanifestRouteImport } from './routes/manifest[.]webmanifest'
+import { Route as MyRouteImport } from './routes/my'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
@@ -41,7 +41,6 @@ import { Route as DevMailDotjsonRouteImport } from './routes/dev/mail[.]json'
 import { Route as DevUiRouteImport } from './routes/dev/ui'
 import { Route as GesturesIndexRouteImport } from './routes/gestures/index'
 import { Route as GesturesSlugRouteImport } from './routes/gestures/$slug'
-import { Route as ListsIndexRouteImport } from './routes/lists/index'
 import { Route as ListsShareTokenRouteImport } from './routes/lists/$shareToken'
 import { Route as MagicLinkAppRouteImport } from './routes/magic-link_.app'
 import { Route as SponsorIndexRouteImport } from './routes/sponsor/index'
@@ -78,11 +77,6 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FavoritesRoute = FavoritesRouteImport.update({
-  id: '/favorites',
-  path: '/favorites',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
@@ -96,6 +90,11 @@ const MagicLinkRoute = MagicLinkRouteImport.update({
 const ManifestDotwebmanifestRoute = ManifestDotwebmanifestRouteImport.update({
   id: '/manifest.webmanifest',
   path: '/manifest.webmanifest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyRoute = MyRouteImport.update({
+  id: '/my',
+  path: '/my',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -223,11 +222,6 @@ const GesturesSlugRoute = GesturesSlugRouteImport.update({
   path: '/gestures/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ListsIndexRoute = ListsIndexRouteImport.update({
-  id: '/lists/',
-  path: '/lists/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ListsShareTokenRoute = ListsShareTokenRouteImport.update({
   id: '/lists/$shareToken',
   path: '/lists/$shareToken',
@@ -333,10 +327,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
-  '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/my': typeof MyRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -368,7 +362,6 @@ export interface FileRoutesByFullPath {
   '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
-  '/lists/': typeof ListsIndexRoute
   '/sponsor/': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
@@ -387,10 +380,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
-  '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/my': typeof MyRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -422,7 +415,6 @@ export interface FileRoutesByTo {
   '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin': typeof AdminIndexRoute
   '/gestures': typeof GesturesIndexRoute
-  '/lists': typeof ListsIndexRoute
   '/sponsor': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
@@ -443,10 +435,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
-  '/favorites': typeof FavoritesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/magic-link': typeof MagicLinkRoute
   '/manifest.webmanifest': typeof ManifestDotwebmanifestRoute
+  '/my': typeof MyRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -478,7 +470,6 @@ export interface FileRoutesById {
   '/webhooks/mollie': typeof WebhooksMollieRoute
   '/admin/': typeof AdminIndexRoute
   '/gestures/': typeof GesturesIndexRoute
-  '/lists/': typeof ListsIndexRoute
   '/sponsor/': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
@@ -500,10 +491,10 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/admin'
-    | '/favorites'
     | '/forgot-password'
     | '/magic-link'
     | '/manifest.webmanifest'
+    | '/my'
     | '/privacy'
     | '/reset-password'
     | '/robots.txt'
@@ -535,7 +526,6 @@ export interface FileRouteTypes {
     | '/webhooks/mollie'
     | '/admin/'
     | '/gestures/'
-    | '/lists/'
     | '/sponsor/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
@@ -554,10 +544,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
-    | '/favorites'
     | '/forgot-password'
     | '/magic-link'
     | '/manifest.webmanifest'
+    | '/my'
     | '/privacy'
     | '/reset-password'
     | '/robots.txt'
@@ -589,7 +579,6 @@ export interface FileRouteTypes {
     | '/webhooks/mollie'
     | '/admin'
     | '/gestures'
-    | '/lists'
     | '/sponsor'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
@@ -609,10 +598,10 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/admin'
-    | '/favorites'
     | '/forgot-password'
     | '/magic-link'
     | '/manifest.webmanifest'
+    | '/my'
     | '/privacy'
     | '/reset-password'
     | '/robots.txt'
@@ -644,7 +633,6 @@ export interface FileRouteTypes {
     | '/webhooks/mollie'
     | '/admin/'
     | '/gestures/'
-    | '/lists/'
     | '/sponsor/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
@@ -665,10 +653,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRouteWithChildren
-  FavoritesRoute: typeof FavoritesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   MagicLinkRoute: typeof MagicLinkRoute
   ManifestDotwebmanifestRoute: typeof ManifestDotwebmanifestRoute
+  MyRoute: typeof MyRoute
   PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -693,7 +681,6 @@ export interface RootRouteChildren {
   SponsorSuccessRoute: typeof SponsorSuccessRoute
   WebhooksMollieRoute: typeof WebhooksMollieRoute
   GesturesIndexRoute: typeof GesturesIndexRoute
-  ListsIndexRoute: typeof ListsIndexRoute
   SponsorIndexRoute: typeof SponsorIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiLogosKeyRoute: typeof ApiLogosKeyRoute
@@ -728,13 +715,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/favorites': {
-      id: '/favorites'
-      path: '/favorites'
-      fullPath: '/favorites'
-      preLoaderRoute: typeof FavoritesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/forgot-password': {
       id: '/forgot-password'
       path: '/forgot-password'
@@ -754,6 +734,13 @@ declare module '@tanstack/react-router' {
       path: '/manifest.webmanifest'
       fullPath: '/manifest.webmanifest'
       preLoaderRoute: typeof ManifestDotwebmanifestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my': {
+      id: '/my'
+      path: '/my'
+      fullPath: '/my'
+      preLoaderRoute: typeof MyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -929,13 +916,6 @@ declare module '@tanstack/react-router' {
       path: '/gestures/$slug'
       fullPath: '/gestures/$slug'
       preLoaderRoute: typeof GesturesSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lists/': {
-      id: '/lists/'
-      path: '/lists'
-      fullPath: '/lists/'
-      preLoaderRoute: typeof ListsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lists/$shareToken': {
@@ -1117,10 +1097,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
   AdminRoute: AdminRouteWithChildren,
-  FavoritesRoute: FavoritesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   MagicLinkRoute: MagicLinkRoute,
   ManifestDotwebmanifestRoute: ManifestDotwebmanifestRoute,
+  MyRoute: MyRoute,
   PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
@@ -1145,7 +1125,6 @@ const rootRouteChildren: RootRouteChildren = {
   SponsorSuccessRoute: SponsorSuccessRoute,
   WebhooksMollieRoute: WebhooksMollieRoute,
   GesturesIndexRoute: GesturesIndexRoute,
-  ListsIndexRoute: ListsIndexRoute,
   SponsorIndexRoute: SponsorIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiLogosKeyRoute: ApiLogosKeyRoute,

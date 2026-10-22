@@ -11,7 +11,7 @@ describe("Button", () => {
     const button = screen.getByRole("button", { name: "Save" });
     expect(classesOf(button)).toContain("bg-primary");
     expect(classesOf(button)).toContain("min-h-touch");
-    expect(classesOf(button)).toContain("focus-visible:ring-focus-ring");
+    expect(classesOf(button)).toContain("focus-visible:ring-ring");
     expect(button.getAttribute("type")).toBe("button");
   });
 
@@ -27,13 +27,15 @@ describe("Button", () => {
       </>
     );
     expect(classesOf(screen.getByRole("button", { name: "a" }))).toContain(
-      "border-foreground-muted"
+      "border-input"
     );
     expect(classesOf(screen.getByRole("button", { name: "b" }))).toContain(
       "bg-transparent"
     );
     const danger = classesOf(screen.getByRole("button", { name: "c" }));
-    expect(danger).toContain("bg-danger");
+    expect(danger).toContain("bg-destructive");
+    // Hover darkens (white text on a lightened red fails AA; axe caught it).
+    expect(danger).toContain("hover:bg-danger-strong");
     expect(danger).toContain("min-h-12");
     const small = classesOf(screen.getByRole("button", { name: "d" }));
     expect(small).toContain("min-h-8");

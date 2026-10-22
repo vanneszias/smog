@@ -18,9 +18,9 @@ function QueueCard({ row }: { row: AdminSponsorshipRow }): ReactNode {
     <li className="min-w-0">
       <Link
         className={cn(
-          "group flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface text-foreground",
-          "hover:shadow-1 dark:hover:border-border dark:hover:bg-surface-raised",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          "group flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-border-subtle bg-card text-foreground",
+          "hover:shadow-1 dark:hover:border-border dark:hover:bg-popover",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         )}
         params={{ id: row.id }}
         to="/admin/sponsorships/$id"

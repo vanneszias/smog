@@ -37,6 +37,11 @@ import {
   useState,
 } from "react";
 import {
+  ColumnsMenu,
+  RowActions,
+  useColumnVisibility,
+} from "../data-table-parts";
+import {
   PAYMENT_STATUS_TONES,
   paymentStatusLabel,
   useDay,
@@ -204,6 +209,8 @@ function SponsorshipFilters({
   );
 }
 
+const PINNED_COLUMNS = ["gesture", "actions"] as const;
+
 function rowId(row: AdminSponsorshipRow): string {
   return row.id;
 }
@@ -229,7 +236,7 @@ function SponsorshipRows({
     },
     [navigate]
   );
-  const columns = useMemo<DataTableColumn<AdminSponsorshipRow>[]>(
+  const allColumns = useMemo<DataTableColumn<AdminSponsorshipRow>[]>(
     () => [
       {
         cell: (row) => (
@@ -309,8 +316,20 @@ function SponsorshipRows({
         header: t("admin.sponsorships.columns.created"),
         id: "created",
       },
+      {
+        cell: (row) => (
+          <RowActions name={row.gesture.name} onOpen={open} row={row} />
+        ),
+        header: <span className="sr-only">{t("admin.table.actions")}</span>,
+        id: "actions",
+      },
     ],
-    [day, money, t]
+    [day, money, open, t]
+  );
+  const visibility = useColumnVisibility(
+    "sponsorships",
+    allColumns,
+    PINNED_COLUMNS
   );
   if (rows.length === 0) {
     // No empty table: on a phone it scrolls sideways with nothing to focus.
@@ -324,15 +343,24 @@ function SponsorshipRows({
     );
   }
   return (
-    <DataTable
-      aria-label={t("admin.sponsorships.title")}
-      columns={columns}
-      empty={t("admin.sponsorships.empty")}
-      getRowId={rowId}
-      onRowClick={open}
-      rows={rows}
-      stickyHeader
-    />
+    <div className="flex flex-col gap-3">
+      <div className="flex justify-end">
+        <ColumnsMenu
+          all={allColumns}
+          pinned={PINNED_COLUMNS}
+          visibility={visibility}
+        />
+      </div>
+      <DataTable
+        aria-label={t("admin.sponsorships.title")}
+        columns={visibility.columns}
+        empty={t("admin.sponsorships.empty")}
+        getRowId={rowId}
+        onRowClick={open}
+        rows={rows}
+        stickyHeader
+      />
+    </div>
   );
 }
 

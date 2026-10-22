@@ -47,7 +47,7 @@ export function OfflineBanner({
         <Text className="font-semibold text-body-sm text-warning-strong">
           {t("states.offline.title")}
         </Text>
-        <Text className="text-body-sm text-foreground">
+        <Text className="font-regular text-body-sm text-foreground">
           {t("states.offline.description")}
         </Text>
       </View>

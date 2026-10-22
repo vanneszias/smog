@@ -7,6 +7,7 @@ import {
   useId,
 } from "react";
 import { cn } from "../lib/cn";
+import { Label } from "./label";
 
 interface FieldContextValue {
   /** Ids of the hint, error and counter, for `aria-describedby`. */
@@ -98,19 +99,23 @@ export function Field({
   };
   return (
     <FieldContext.Provider value={value}>
-      <div className={cn("flex flex-col gap-1", className)} {...props}>
-        <label
-          className="flex items-baseline gap-2 font-medium text-body-sm text-foreground"
+      <div
+        className={cn("flex flex-col gap-1", className)}
+        data-slot="field"
+        {...props}
+      >
+        <Label
+          className="items-baseline leading-normal"
           htmlFor={controlId}
           id={value.labelId}
         >
           <span>{label}</span>
           {optional ? (
-            <span className="font-regular text-caption text-foreground-muted">
+            <span className="font-regular text-caption text-muted-foreground">
               {t("kit.optional")}
             </span>
           ) : null}
-        </label>
+        </Label>
         {children}
         {error ? (
           <p
@@ -124,7 +129,7 @@ export function Field({
         {hint || counter ? (
           <div className="flex items-start justify-between gap-4">
             {hint ? (
-              <p className="text-body-sm text-foreground-muted" id={hintId}>
+              <p className="text-body-sm text-muted-foreground" id={hintId}>
                 {hint}
               </p>
             ) : (
@@ -136,7 +141,7 @@ export function Field({
                   "shrink-0 text-caption tabular-nums",
                   counter.count > counter.max
                     ? "text-danger-strong"
-                    : "text-foreground-muted"
+                    : "text-muted-foreground"
                 )}
                 id={counterId}
               >

@@ -52,7 +52,7 @@ export function Switch({
   );
   const trackOn = useColor("primary");
   const trackOff = useColor("border");
-  const thumb = useColor("surface");
+  const thumb = useColor("card");
   const toggle = useCallback(
     (next: boolean): void => {
       hapticToggle();
@@ -80,10 +80,12 @@ export function Switch({
     >
       <View className="flex-1 flex-col">
         {label ? (
-          <Text className="text-body text-foreground">{label}</Text>
+          <Text className="font-regular text-body text-foreground">
+            {label}
+          </Text>
         ) : null}
         {description ? (
-          <Text className="text-body-sm text-foreground-muted">
+          <Text className="font-regular text-body-sm text-muted-foreground">
             {description}
           </Text>
         ) : null}

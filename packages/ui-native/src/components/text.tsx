@@ -3,6 +3,7 @@ import type { ReactElement, Ref } from "react";
 import { Text as RNText, type TextProps as RNTextProps } from "react-native";
 import { cn } from "../lib/cn";
 import { toneText } from "../lib/theme";
+import { surfaceRoles, useSurface } from "./surface";
 
 const textVariants = cva("", {
   defaultVariants: { size: "body", tone: "default", weight: "regular" },
@@ -35,12 +36,27 @@ export function Text({
   weight,
   ...props
 }: TextProps): ReactElement {
+  const onSurface = useSurfaceText(tone);
   return (
     <RNText
-      className={cn(textVariants({ size, tone, weight }), className)}
+      className={cn(textVariants({ size, tone, weight }), onSurface, className)}
       {...props}
     />
   );
+}
+
+/**
+ * On a green surface the default and muted tones are the surface's text
+ * colours; the status tones keep theirs (they are not AA on green).
+ */
+function useSurfaceText(tone: string | null | undefined): string | undefined {
+  const roles = surfaceRoles(useSurface());
+  if (tone === "muted") {
+    return roles.mutedClass;
+  }
+  return tone === undefined || tone === null || tone === "default"
+    ? roles.foregroundClass
+    : undefined;
 }
 
 const headingVariants = cva("font-semibold", {
@@ -83,6 +99,7 @@ export function Heading({
   tone,
   ...props
 }: HeadingProps): ReactElement {
+  const onSurface = useSurfaceText(tone);
   return (
     <RNText
       accessibilityRole="header"
@@ -91,6 +108,7 @@ export function Heading({
           size: size ?? SIZE_FOR_LEVEL[level],
           tone: tone ?? "default",
         }),
+        onSurface,
         className
       )}
       {...props}

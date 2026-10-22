@@ -31,19 +31,28 @@ function Preference({
   );
 }
 
-/**
- * Theme and language: this browser's (cookies), for guests and users
- * alike. Signed in, the language is also the account's (`user.locale`,
- * the language of our emails): the root's `setLocale` writes it.
- */
+/** The theme: this browser's (a cookie), for guests and users alike. */
 export function PreferencesSection(): ReactNode {
   const { t } = useTranslation();
-  const auth = useAuthState();
   return (
     <AccountSection title={t("settings.preferences")}>
       <Preference label={t("theme.label")}>
         <ThemeControl />
       </Preference>
+    </AccountSection>
+  );
+}
+
+/**
+ * The language: this browser's (a cookie). Signed in, it is also the
+ * account's (`user.locale`, the language of our emails): the root's
+ * `setLocale` writes it.
+ */
+export function LanguageSection(): ReactNode {
+  const { t } = useTranslation();
+  const auth = useAuthState();
+  return (
+    <AccountSection title={t("language.label")}>
       <Preference
         hint={
           auth.status === "signedIn"

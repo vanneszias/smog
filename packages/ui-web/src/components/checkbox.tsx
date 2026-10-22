@@ -29,18 +29,22 @@ export function Checkbox({
   const box = (
     <CheckboxPrimitive.Root
       className={cn(
-        "inline-flex size-5 shrink-0 items-center justify-center rounded-sm border-2 border-foreground-muted bg-surface text-primary-foreground",
-        "hover:border-foreground data-[state=checked]:border-primary data-[state=indeterminate]:border-primary data-[state=checked]:bg-primary data-[state=indeterminate]:bg-primary",
-        "aria-invalid:border-danger",
+        "peer inline-flex size-5 shrink-0 items-center justify-center rounded-[6px] border border-input bg-card text-primary-foreground",
+        "hover:border-foreground data-[state=indeterminate]:border-primary data-checked:border-primary data-[state=indeterminate]:bg-primary data-checked:bg-primary",
+        "aria-invalid:border-destructive",
         hitArea,
         focusRing,
         transition,
         disabled,
         className
       )}
+      data-slot="checkbox"
       {...props}
     >
-      <CheckboxPrimitive.Indicator className="inline-flex">
+      <CheckboxPrimitive.Indicator
+        className="inline-flex"
+        data-slot="checkbox-indicator"
+      >
         {props.checked === "indeterminate" ? (
           <Minus aria-hidden="true" className="size-4" strokeWidth={3} />
         ) : (
@@ -66,7 +70,7 @@ export function Checkbox({
           {label}
         </label>
         {description ? (
-          <span className="text-body-sm text-foreground-muted">
+          <span className="text-body-sm text-muted-foreground">
             {description}
           </span>
         ) : null}

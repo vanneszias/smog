@@ -2,26 +2,19 @@ import { useFavorites } from "@smog/favorites/client";
 import { useTranslation } from "@smog/i18n/react";
 import { Button, ErrorState, FavoritesEmptyState } from "@smog/ui-web";
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { type ReactNode, useCallback } from "react";
 import {
   GestureGridSkeleton,
   LinkedGestureGrid,
 } from "@/components/learning/gesture-cards";
-import { Page, PageHeader } from "@/components/learning/page";
 import { useHearts } from "@/components/learning/use-hearts";
-import { pageMeta } from "@/lib/head";
-
-export const Route = createFileRoute("/favorites")({
-  component: Favorites,
-  head: ({ matches }) => pageMeta(matches, "nav.favorites"),
-});
 
 /**
  * Favorites (spec §16 flow 2): the device's for guests, the account's
  * when signed in (`useFavorites` picks; the screen does not).
  */
-function Favorites(): ReactNode {
+export function FavoritesPanel(): ReactNode {
   const { t } = useTranslation();
   const favorites = useFavorites();
   const hearts = useHearts();
@@ -76,13 +69,5 @@ function Favorites(): ReactNode {
       </div>
     );
   }
-  return (
-    <Page>
-      <PageHeader
-        description={t("favorites.description")}
-        title={t("nav.favorites")}
-      />
-      {body}
-    </Page>
-  );
+  return body;
 }

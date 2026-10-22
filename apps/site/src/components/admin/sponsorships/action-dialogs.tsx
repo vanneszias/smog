@@ -550,7 +550,7 @@ export function RetryRender({
           className={
             failed
               ? "sr-only"
-              : "rounded-sm text-body-sm text-foreground-muted focus:outline-2 focus:outline-focus-ring focus:outline-offset-2"
+              : "rounded-sm text-body-sm text-muted-foreground focus:outline-2 focus:outline-ring focus:outline-offset-2"
           }
           ref={region}
           role="status"

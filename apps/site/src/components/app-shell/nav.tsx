@@ -2,8 +2,9 @@ import type { TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import { Button, cn, ListItem } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
-import { Hand, Heart, HeartHandshake, List } from "lucide-react";
+import { Hand, UserRound } from "lucide-react";
 import { type MouseEvent, type ReactNode, useCallback } from "react";
+import { GREEN_BUTTON } from "./on-green";
 
 interface NavItem {
   href: string;
@@ -12,17 +13,15 @@ interface NavItem {
 }
 
 /**
- * The main sections, as router links. Sponsor arrives in phase 5 (until
- * then it is the not-found page).
+ * The two main sections (phase 10a): the gestures and My space (favorites
+ * and lists). Sponsor lives in the footer and the user menu.
  */
 const NAV_ITEMS: readonly NavItem[] = [
   { href: "/gestures", icon: <Hand />, label: "nav.gestures" },
-  { href: "/favorites", icon: <Heart />, label: "nav.favorites" },
-  { href: "/lists", icon: <List />, label: "nav.lists" },
-  { href: "/sponsor", icon: <HeartHandshake />, label: "nav.sponsor" },
+  { href: "/my", icon: <UserRound />, label: "mySpace.title" },
 ];
 
-/** The header's section links (inline from `md`). */
+/** The header's section links, on the green surface (inline from `md`). */
 export function MainNav({ className }: { className?: string }): ReactNode {
   const { t } = useTranslation();
   return (
@@ -30,7 +29,7 @@ export function MainNav({ className }: { className?: string }): ReactNode {
       <ul className="flex items-center gap-1">
         {NAV_ITEMS.map((item) => (
           <li key={item.href}>
-            <Button asChild variant="ghost">
+            <Button asChild className={GREEN_BUTTON} variant="ghost">
               <Link to={item.href}>{t(item.label)}</Link>
             </Button>
           </li>

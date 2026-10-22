@@ -10,7 +10,7 @@ import { ScrollView } from "react-native";
 export default function DeveloperToolsScreen(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const muted = useColor("foregroundMuted");
+  const muted = useColor("mutedForeground");
   const openGallery = useCallback((): void => {
     router.push("/settings/developer-tools/gallery");
   }, [router]);

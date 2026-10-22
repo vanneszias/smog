@@ -32,7 +32,7 @@ export function Textarea({
   ...props
 }: TextareaProps): ReactElement {
   const field = useFieldControl({ ...props, invalid: invalidProp, required });
-  const placeholderColor = useColor("foregroundMuted");
+  const placeholderColor = useColor("mutedForeground");
   const minHeight = rows * tokens.fontSize.body.lineHeight + PADDING_Y * 2;
   return (
     <View
@@ -48,7 +48,10 @@ export function Textarea({
         accessibilityLabel={field.accessibilityLabel}
         accessibilityLabelledBy={field.accessibilityLabelledBy}
         accessibilityState={{ disabled }}
-        className={cn("flex-1 py-3 text-body text-foreground", className)}
+        className={cn(
+          "flex-1 py-3 font-regular text-body text-foreground",
+          className
+        )}
         editable={editable ?? !disabled}
         multiline
         numberOfLines={rows}

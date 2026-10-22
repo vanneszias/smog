@@ -18,9 +18,34 @@ const OPTIONS = [
  * rendered open; their id is on the content.
  */
 export const CASES: Record<string, ReactElement> = {
+  Accordion: <kit.Accordion testID={ID} />,
+  AccordionContent: (
+    <kit.Accordion defaultValue="a">
+      <kit.AccordionItem value="a">
+        <kit.AccordionContent testID={ID}>Body</kit.AccordionContent>
+      </kit.AccordionItem>
+    </kit.Accordion>
+  ),
+  AccordionItem: (
+    <kit.Accordion>
+      <kit.AccordionItem testID={ID} value="a" />
+    </kit.Accordion>
+  ),
+  AccordionTrigger: (
+    <kit.Accordion>
+      <kit.AccordionItem value="a">
+        <kit.AccordionTrigger testID={ID}>Question</kit.AccordionTrigger>
+      </kit.AccordionItem>
+    </kit.Accordion>
+  ),
+  Alert: <kit.Alert testID={ID} />,
+  AlertDescription: (
+    <kit.AlertDescription testID={ID}>Text</kit.AlertDescription>
+  ),
   AlertDialog: (
     <kit.AlertDialog onConfirm={noop} open testID={ID} title="Delete?" />
   ),
+  AlertTitle: <kit.AlertTitle testID={ID}>Title</kit.AlertTitle>,
   Avatar: <kit.Avatar name="Zias" testID={ID} />,
   Badge: <kit.Badge testID={ID}>New</kit.Badge>,
   Button: <kit.Button testID={ID}>Save</kit.Button>,
@@ -81,6 +106,7 @@ export const CASES: Record<string, ReactElement> = {
     <kit.IconButton icon={<RNText>x</RNText>} label="Close" testID={ID} />
   ),
   Input: <kit.Input testID={ID} />,
+  Label: <kit.Label testID={ID}>Label</kit.Label>,
   ListItem: <kit.ListItem testID={ID} title="Row" />,
   ListItemsEmptyState: <kit.ListItemsEmptyState testID={ID} />,
   ListPicker: (
@@ -131,6 +157,11 @@ export const CASES: Record<string, ReactElement> = {
   ),
   NoResultsEmptyState: <kit.NoResultsEmptyState testID={ID} />,
   OfflineBanner: <kit.OfflineBanner online={false} testID={ID} />,
+  PopoverContent: (
+    <kit.Popover open>
+      <kit.PopoverContent testID={ID} />
+    </kit.Popover>
+  ),
   ProgressBar: <kit.ProgressBar label="Progress" testID={ID} value={10} />,
   RadioGroup: <kit.RadioGroup options={OPTIONS} testID={ID} />,
   SearchField: <kit.SearchField testID={ID} />,
@@ -147,6 +178,7 @@ export const CASES: Record<string, ReactElement> = {
     />
   ),
   Select: <kit.Select options={OPTIONS} testID={ID} />,
+  Separator: <kit.Separator testID={ID} />,
   ShareLink: (
     <kit.ShareLink
       access="view"
@@ -165,6 +197,7 @@ export const CASES: Record<string, ReactElement> = {
   Skeleton: <kit.Skeleton testID={ID} />,
   Spinner: <kit.Spinner testID={ID} />,
   Stepper: <kit.Stepper current={0} steps={[{ label: "One" }]} testID={ID} />,
+  Surface: <kit.Surface testID={ID} />,
   Switch: <kit.Switch label="Switch" testID={ID} />,
   TabsContent: (
     <kit.Tabs defaultValue="a">
@@ -189,6 +222,15 @@ export const CASES: Record<string, ReactElement> = {
     <kit.TextLink onPress={noop} testID={ID}>
       Link
     </kit.TextLink>
+  ),
+  Toggle: <kit.Toggle testID={ID}>Bold</kit.Toggle>,
+  ToggleGroup: <kit.ToggleGroup testID={ID} />,
+  ToggleGroupItem: (
+    <kit.ToggleGroup>
+      <kit.ToggleGroupItem testID={ID} value="a">
+        A
+      </kit.ToggleGroupItem>
+    </kit.ToggleGroup>
   ),
   VideoPlayer: <kit.VideoPlayer playbackId="pb" testID={ID} />,
 };

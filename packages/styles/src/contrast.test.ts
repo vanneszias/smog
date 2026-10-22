@@ -71,11 +71,11 @@ describe("contrast pairs", () => {
 
   it("cover every text colour role on every background role", () => {
     const bodyText = CONTRAST_PAIRS.filter((pair) => pair.min === AA_BODY);
-    for (const foreground of ["foreground", "foregroundMuted"] as const) {
+    for (const foreground of ["foreground", "mutedForeground"] as const) {
       for (const background of [
         "background",
-        "surface",
-        "surfaceRaised",
+        "card",
+        "popover",
         "surfaceSunken",
       ] as const) {
         expect(bodyText).toContainEqual({
@@ -111,10 +111,40 @@ describe.each(["light", "dark"] as const)("%s theme", (theme) => {
   });
 });
 
+describe("green surfaces", () => {
+  it("hold text on green and green on warm neutral to their minimums", () => {
+    for (const [foreground, background, min] of [
+      ["primaryForeground", "primary", AA_BODY],
+      ["primaryForegroundMuted", "primary", AA_BODY],
+      ["sidebarForeground", "sidebar", AA_BODY],
+      ["sidebarForegroundMuted", "sidebar", AA_BODY],
+      ["sidebarAccentForeground", "sidebarAccent", AA_BODY],
+      ["sidebarRing", "sidebar", AA_LARGE],
+      ["primaryRing", "primary", AA_LARGE],
+      ["primary", "background", AA_LARGE],
+      ["primary", "card", AA_LARGE],
+      ["primaryStrong", "background", AA_BODY],
+      ["primaryStrong", "muted", AA_BODY],
+    ] as const) {
+      expect(CONTRAST_PAIRS).toContainEqual({ background, foreground, min });
+    }
+  });
+
+  it("keeps white on the brand green above AA body text", () => {
+    expect(
+      contrastRatio(
+        tokens.color.light.primaryForeground,
+        tokens.color.brand.green
+      )
+    ).toBeGreaterThanOrEqual(AA_BODY);
+  });
+});
+
 describe("brand", () => {
   it("keeps the brand green as the light primary", () => {
     expect(tokens.color.light.primary).toBe("#00805F");
     expect(tokens.color.brand.green).toBe("#00805F");
     expect(tokens.color.brand.orange).toBe("#EE971C");
+    expect(tokens.color.light.highlight).toBe("#EE971C");
   });
 });

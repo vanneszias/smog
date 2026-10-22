@@ -45,7 +45,7 @@ export function hitSlopFor(size: number): number {
 export const toneText = {
   danger: "text-danger-strong",
   default: "text-foreground",
-  muted: "text-foreground-muted",
+  muted: "text-muted-foreground",
   primary: "text-primary-strong",
   success: "text-success-strong",
   warning: "text-warning-strong",

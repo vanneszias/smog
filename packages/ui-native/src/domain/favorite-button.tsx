@@ -11,6 +11,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { surfaceRoles, useSurface } from "../components/surface";
 import { cn } from "../lib/cn";
 import { hapticToggle } from "../lib/haptics";
 import { ICON_SIZE } from "../lib/icon";
@@ -24,7 +25,7 @@ const favoriteVariants = cva(
       size: { lg: "size-12", md: "size-touch", sm: "size-8" },
       variant: {
         ghost: "border-transparent bg-transparent",
-        overlay: "border-border-subtle bg-surface",
+        overlay: "border-border-subtle bg-card",
       },
     },
   }
@@ -64,7 +65,10 @@ export function FavoriteButton({
   const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
   const primary = useColor("primary");
-  const foreground = useColor("foreground");
+  const highlight = useColor("highlight");
+  const surface = useSurface();
+  const onGreen = surface !== "default";
+  const foreground = useColor(surfaceRoles(surface).foreground);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
@@ -79,7 +83,10 @@ export function FavoriteButton({
     }
     onToggle(!active);
   }, [active, onToggle, reducedMotion, scale]);
-  const color = active ? primary : foreground;
+  // On a green surface the heart is white, and orange when set (green on
+  // green would vanish).
+  const activeColor = onGreen ? highlight : primary;
+  const color = active ? activeColor : foreground;
   return (
     <Pressable
       accessibilityLabel={label ?? t("a11y.favorite")}

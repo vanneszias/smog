@@ -107,50 +107,50 @@ test.describe("reflow at 320 x 256 px", () => {
     }
   });
 
-  test.describe("the header's sign-in link", () => {
+  test.describe("the header's sign-in link and settings menu", () => {
     const shared = useSharedGuestPage(320);
     const link = (page: Page): Locator =>
       page.locator('header a[href^="/sign-in"]');
+    const settings = (page: Page): Locator =>
+      page.getByRole("banner").getByRole("button", { name: "Instellingen" });
 
-    test("shows its icon and its label at a normal width", async () => {
+    test("shows its icon and its label from md, beside the settings menu", async () => {
       const page = shared.page();
       await page.setViewportSize({ height: 800, width: 1280 });
       await openPublic(page, "/");
       const signIn = link(page);
       await expect(signIn.locator("svg")).toBeVisible();
-      const label = await signIn.locator("span").boundingBox();
-      expect(label?.width ?? 0).toBeGreaterThan(8);
+      await expect(signIn).toHaveText("Aanmelden");
+      await expect(settings(page)).toBeVisible();
     });
 
-    test("drops the icon, not the label, from 360 to 420 px, where the header is full", async () => {
-      const page = shared.page();
-      await page.setViewportSize({ height: 800, width: 390 });
-      await openPublic(page, "/");
-      const signIn = link(page);
-      await expect(signIn.locator("svg")).toBeHidden();
-      const label = await signIn.locator("span").boundingBox();
-      expect(label?.width ?? 0).toBeGreaterThan(8);
-    });
-
-    test("keeps only the icon, with its accessible name, below 360 px", async () => {
-      const page = shared.page();
-      await page.setViewportSize({ height: 256, width: 320 });
-      await openPublic(page, "/");
-      const signIn = link(page);
-      await expect(signIn.locator("svg")).toBeVisible();
-      const label = await signIn.locator("span").boundingBox();
-      expect(label?.width ?? 0).toBeLessThanOrEqual(1);
-    });
+    for (const width of [390, 320] as const) {
+      test(`on a phone (${width} px) the link gives way to the settings menu, which holds Sign in`, async () => {
+        const page = shared.page();
+        await page.setViewportSize({ height: 800, width });
+        await openPublic(page, "/");
+        await expect(link(page)).toBeHidden();
+        await expect(settings(page)).toBeVisible();
+        // Logo, menu, search and settings fit the header without sideways scroll.
+        await expectNoHorizontalScroll(page, `header at ${width}`);
+        await settings(page).click();
+        await expect(
+          page.getByRole("menuitem", { name: "Aanmelden" })
+        ).toBeVisible();
+      });
+    }
   });
 
   test("the signed-in pages and a list fit too", async ({ browser }) => {
     test.setTimeout(STATES_MS);
     await withFixture(browser, async (page, fixture) => {
       for (const path of [
-        "/favorites",
-        "/lists",
-        `/lists?id=${fixture.listId}`,
+        "/my?tab=favorites",
+        "/my?tab=lists",
+        `/my?tab=lists&id=${fixture.listId}`,
         "/account",
+        "/account?section=sign-in",
+        "/account?section=privacy",
       ]) {
         // biome-ignore lint/performance/noAwaitInLoops: one route at a time.
         await openPublic(page, path);
@@ -188,7 +188,7 @@ test.describe("reflow at 320 x 256 px", () => {
       await expectNoHorizontalScroll(page, "share sheet");
       await page.keyboard.press("Escape");
       await expect(page.locator(`div[role="dialog"]`)).toBeHidden();
-      await openPublic(page, "/account");
+      await openPublic(page, "/account?section=privacy");
       await page
         .getByRole("button", { name: "Mijn account verwijderen" })
         .click();
@@ -426,7 +426,7 @@ test.describe("reduced motion", () => {
       expect(await longestMotion(dialog), "the dialog").toBe(0);
       await page.keyboard.press("Escape");
       await expect(dialog).toBeHidden();
-      await page.getByRole("button", { name: "Acties voor Hond" }).click();
+      await page.getByRole("button", { name: "Instellingen" }).click();
       const menu = page.getByRole("menu");
       await expect(menu).toBeVisible();
       expect(await longestMotion(menu), "the menu").toBe(0);
@@ -444,7 +444,7 @@ test.describe("reduced motion", () => {
     // A toast: the analytics switch on the account page says it saved.
     test("the toast does not move", async () => {
       const page = shared.page();
-      await openPublic(page, "/account");
+      await openPublic(page, "/account?section=privacy");
       await page.getByRole("switch", { name: "Gebruiksstatistieken" }).click();
       const toast = page
         .getByRole("region", { name: "Meldingen" })
@@ -476,7 +476,7 @@ test.describe("reduced motion", () => {
       await expect(sheet).toBeVisible();
       expect(await longestMotion(sheet)).toBeGreaterThan(0);
       await page.keyboard.press("Escape");
-      await openPublic(page, "/account");
+      await openPublic(page, "/account?section=privacy");
       await page.getByRole("switch", { name: "Gebruiksstatistieken" }).click();
       const toasts = page.getByRole("region", { name: "Meldingen" });
       await expect(toasts.getByText("Je keuze is bewaard.")).toBeVisible();

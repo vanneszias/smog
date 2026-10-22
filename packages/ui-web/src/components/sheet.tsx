@@ -14,14 +14,14 @@ export const SheetTrigger = DialogPrimitive.Trigger;
 export const SheetClose = DialogPrimitive.Close;
 
 const bottom =
-  "inset-x-0 bottom-0 max-h-5/6 rounded-t-xl border-t data-[state=closed]:animate-slide-down data-[state=open]:animate-slide-up";
+  "inset-x-0 bottom-0 max-h-5/6 rounded-t-4xl border-t data-closed:animate-slide-down data-open:animate-slide-up";
 const right =
-  "inset-y-0 right-0 h-full w-11/12 max-w-reading border-l data-[state=closed]:animate-slide-out-right data-[state=open]:animate-slide-in-right";
+  "inset-y-0 right-0 h-full w-11/12 max-w-reading border-l data-closed:animate-slide-out-right data-open:animate-slide-in-right";
 const left =
-  "inset-y-0 left-0 h-full w-11/12 max-w-reading border-r data-[state=closed]:animate-slide-out-left data-[state=open]:animate-slide-in-left";
+  "inset-y-0 left-0 h-full w-11/12 max-w-reading border-r data-closed:animate-slide-out-left data-open:animate-slide-in-left";
 
 const sheetVariants = cva(
-  "fixed z-50 flex flex-col gap-4 overflow-y-auto border-border-subtle bg-surface-raised p-6 text-foreground shadow-2 outline-none motion-reduce:animate-none",
+  "fixed z-50 flex flex-col gap-4 overflow-y-auto border-border-subtle bg-popover p-6 text-popover-foreground shadow-2 outline-none motion-reduce:animate-none",
   {
     defaultVariants: { side: "auto" },
     variants: {
@@ -29,7 +29,7 @@ const sheetVariants = cva(
         // Bottom sheet on mobile, side panel from md (spec §16).
         auto: cn(
           bottom,
-          "md:inset-x-auto md:inset-y-0 md:right-0 md:left-auto md:h-full md:max-h-none md:w-11/12 md:max-w-reading md:rounded-none md:border-t-0 md:border-l md:data-[state=closed]:animate-slide-out-right md:data-[state=open]:animate-slide-in-right"
+          "md:inset-x-auto md:inset-y-0 md:right-0 md:left-auto md:h-full md:max-h-none md:w-11/12 md:max-w-reading md:rounded-none md:border-t-0 md:border-l md:data-closed:animate-slide-out-right md:data-open:animate-slide-in-right"
         ),
         bottom,
         left,
@@ -77,7 +77,7 @@ export function SheetContent({
             {title}
           </DialogPrimitive.Title>
           {description ? (
-            <DialogPrimitive.Description className="text-body text-foreground-muted">
+            <DialogPrimitive.Description className="text-body text-muted-foreground">
               {description}
             </DialogPrimitive.Description>
           ) : null}
@@ -107,6 +107,7 @@ export function SheetFooter({
         "mt-auto flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end",
         className
       )}
+      data-slot="sheet-footer"
       {...props}
     />
   );

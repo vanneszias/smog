@@ -9,7 +9,11 @@ Every component:
 - is at least 44 × 44 pt: `md`/`lg` by size, `sm` (and small inline targets such as a Chip's remove button) through `hitSlop`. `hitSlop` has limits: Android does not extend a touch area beyond a parent that clips (`overflow-hidden`), and two `sm` controls closer than 12 pt share the overlap (which one gets the tap there is not defined), so give `sm` controls a `gap-3` and no clipping parent;
 - drops its animation when the system asks for reduced motion (`useReducedMotion` from Reanimated).
 
-Colours are CSS variables (`themeVars` from `@smog/styles/native`), so the same class set follows light and dark mode. Overlays (Dialog, AlertDialog, Sheet, Select, Menu) re-apply the variables at their own root.
+Colours are CSS variables (`themeVars` from `@smog/styles/native`), so the same class set follows light and dark mode. Overlays (Dialog, AlertDialog, Sheet, Select, Menu, Popover) re-apply the variables at their own root.
+
+Vocabulary (phase 10a): the kit's classes use the shadcn names (`bg-card`, `bg-popover`, `text-muted-foreground`, `bg-destructive`, `border-input`, ...). Tailwind's default scales are back next to the token scales (the app sets NativeWind's `inlineRem` to 16), so registry code such as `size-9` or `gap-1.5` compiles; its raw palette (`bg-red-500`) and the weights without a font file (`font-light`) do not. Avoid Tailwind's transform utilities (`rotate-*`, `scale-*`, `translate-*`): they go through variables, and css-interop remounts a view that starts setting one; use a `transform` style.
+
+Figtree: the apps embed four static weights (`Figtree-Regular`, `-Medium`, `-SemiBold`, `-Bold`, `apps/mobile/assets/fonts`, the `expo-font` config plugin). `font-regular | font-medium | font-semibold | font-bold` set the file and `fontWeight` together (a custom font ignores `fontWeight` on Android), `font-sans` is the regular file. A `Text` or `TextInput` with no weight class has the system font, so give every one a `font-*` (the kit's do; `Text` and `Heading` default to regular and semibold).
 
 ## Setup
 
@@ -28,7 +32,10 @@ Wrap the navigator, inside the app's `ThemeRoot`:
 | `KitProvider` **(native only)** | `GestureHandlerRootView` + `@gorhom/bottom-sheet`'s `BottomSheetModalProvider`. Sheet, Select and Menu need it. |
 | `ToastProvider`, `useToast()` | As web. |
 | `useColor(role)`, `useThemeName()`, `useThemeVars()` **(native only)** | A colour role as a value for props that take a colour instead of a class (icons, a screen header), the active scheme, and the `vars()` style of that scheme. |
+| `Surface` **(native only)** | `tone`: `primary` (default; the filled green of a hero or auth screen), `header` (the deeper green) or `default` (the page). Inside it `Text` and `Heading` take the surface's text colours (`muted` its secondary text; the status tones keep theirs), `Button` and `IconButton` switch (`primary` becomes the orange highlight, `secondary` a white outline, `ghost` white; `danger` is unchanged), and `FavoriteButton` draws white (orange when set), overlays (Dialog, AlertDialog, Popover, Sheet, Select, Menu) put the page back inside themselves, and `useSurface()` returns the tone. Every pair is in `@smog/styles/contrast`. |
 | `@smog/ui-native/jest-setup` **(native only)** | The kit's Jest mocks for Reanimated (with `useReducedMotion`), Worklets, Gesture Handler, the bottom sheet, safe area and haptics. Apps list it in `setupFiles`. |
+
+Added with the Reusables set (phase 10a; the web kit has them from its own task): `Accordion` (`AccordionItem`, `AccordionTrigger`, `AccordionContent`), `Alert` (`AlertTitle`, `AlertDescription`), `Label`, `Popover` (`PopoverTrigger`, `PopoverContent`, `PopoverClose`), `Separator`, `Toggle` and `ToggleGroup` (`ToggleGroupItem`). The parity test (`contract.test.tsx`) lists the web exports and why a missing one is web only.
 
 Not ported: `Tooltip`/`TooltipProvider` (no hover), `Pagination` (lists load more on scroll), `Table`/`DataTable` (admin is web only; show rows as `ListItem`s), `PortalContainerProvider` (overlays re-apply the theme themselves), `buttonVariants`-styled links (`asChild`), `useOnline` (the app passes NetInfo). `badgeVariants` and `buttonVariants` are exported and style a `View`.
 
@@ -48,10 +55,16 @@ Not ported: `Tooltip`/`TooltipProvider` (no hover), `Pagination` (lists load mor
 | `SearchField` | `accessibilityRole="search"`, `returnKeyType="search"`. |
 | `Select` | A field-styled `combobox` that opens a picker sheet of `radio` options (the Field label is its heading). `name` is accepted and ignored (no forms). |
 | `Checkbox`, `Switch`, `RadioGroup` | The whole row is the control (`checkbox` / `switch` / `radio` with `accessibilityState.checked`; `"mixed"` for indeterminate). `Switch` is the platform switch inside that row and plays the selection haptic. `description` is the `accessibilityHint`. |
-| `Card` | `onPress` makes the card a button (name it with `accessibilityLabel`); `interactive` (web hover) is accepted and has no effect. Elevation 1 is the token shadow in light mode, a border and `surface-raised` in dark. |
+| `Card` | `onPress` makes the card a button (name it with `accessibilityLabel`); `interactive` (web hover) is accepted and has no effect. Elevation 1 is the token shadow in light mode, a border and `popover` in dark. |
 | `ListItem` | `onPress` (web `onClick`) makes the row a button; no `asChild` (navigate in `onPress`). |
 | `Avatar` | `accessibilityRole="image"`, named by `name`. |
 | `Tabs`, `SegmentedControl`, `RadioGroup` | The containers (`tablist`, `radiogroup`) are named by `aria-label` but are not accessibility elements themselves, so their tabs and radios stay individually focusable. `SegmentedControl` `sm` extends the target vertically only. |
+| `Accordion` | `type="single"` (default; `collapsible` default true; `onValueChange("")` when closed) or `"multiple"` (`string[]`), `value` / `defaultValue` as Radix. The trigger is a 44 pt `button` with `accessibilityState.expanded`; a closed item's content is not rendered. |
+| `Alert` | `icon` (decorative) and `variant` `default` / `destructive`. `accessibilityRole="alert"`; a polite live region, assertive when destructive. |
+| `Label` | A `Text`; it does not focus a control (name the control with `accessibilityLabel`, or use `Field`). |
+| `Popover` | A floating panel in a native `Modal`, under its trigger (`align`, `sideOffset`; 288 pt wide, kept inside the screen). The trigger is measured when pressed (`measureInWindow`). Pressing outside or Android back closes it. `PopoverContent` takes `accessibilityLabel` for its name. For long content use a `Sheet`. |
+| `Separator` | A decorative hairline (hidden from assistive tech). |
+| `Toggle`, `ToggleGroup` | Radix names: `pressed` / `defaultPressed` / `onPressedChange`; the group has `type` `single` (`""` is none) or `multiple`, `value` / `defaultValue` / `onValueChange`, and its `size` and `variant` (`default` / `outline`) reach the items. A toggle is a `togglebutton` with `accessibilityState.checked` and plays the selection haptic. The group is a `toolbar`. |
 | `Stepper` | Always web's small-screen layout ("Step n of m" and the current label above the markers). Each marker is named by its step (done ones add `a11y.stepCompleted`); the current one has `accessibilityState.selected` (web: `aria-current="step"`). |
 | `Dialog`, `AlertDialog` | A native `Modal` (its own window, so VoiceOver/TalkBack focus stays inside; Android back closes it): fades in, or appears at once under reduced motion. Footers stack their buttons (primary first). AlertDialog's card has `accessibilityRole="alert"`; its backdrop does not close it; confirming closes it (as Radix's Action). `body` and `confirmDisabled` as web. |
 | `Sheet` | A `@gorhom/bottom-sheet` modal sized to its content, for every `side` (`side` is accepted and ignored). Swipe down, the backdrop and the close button (`a11y.close`) close it. The content sets `accessibilityViewIsModal`, but the sheet is not a native window (it renders in the provider's portal host), so VoiceOver may still reach the screen behind it; to verify on a device. |

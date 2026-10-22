@@ -8,7 +8,7 @@ const textLinkVariants = cva("font-medium", {
   variants: {
     tone: {
       default: "text-foreground",
-      muted: "text-foreground-muted",
+      muted: "text-muted-foreground",
       primary: "text-primary-strong",
     },
   },

@@ -121,7 +121,7 @@ function ResultRows({
   }
   return (
     <section className="flex flex-col gap-2">
-      <p className="text-body-sm text-foreground-muted" role="status">
+      <p className="text-body-sm text-muted-foreground" role="status">
         {t("search.resultCount", { count: items.length })}
       </p>
       <ul className="flex flex-col gap-1">

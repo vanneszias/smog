@@ -119,7 +119,7 @@ function Videos({ detail }: { detail: AdminSponsorshipDetail }): ReactNode {
               })}
             />
           ) : (
-            <div className="flex aspect-3/4 w-full flex-col items-center justify-center gap-2 rounded-lg bg-surface-sunken p-4 text-center text-foreground-muted">
+            <div className="flex aspect-3/4 w-full flex-col items-center justify-center gap-2 rounded-lg bg-surface-sunken p-4 text-center text-muted-foreground">
               <VideoOff aria-hidden="true" className="size-6" />
               <Text as="span" size="body-sm" tone="muted">
                 {t("admin.sponsorships.detail.noVideo")}
