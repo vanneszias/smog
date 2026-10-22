@@ -490,6 +490,7 @@
   "browse": {
     "filters": "Filtres",
     "selected_one": "{{count}} choisie",
+    "selected_many": "{{count}} choisies",
     "selected_other": "{{count}} choisies",
     "sheetDescription": "Choisissez une ou plusieurs catégories. Les résultats se mettent à jour."
   },
