@@ -23,6 +23,7 @@ import {
   gesture,
   inList,
   invoiceRequest,
+  isEnabledLanguage,
   payment,
   paymentItem,
   type Statement,
@@ -431,9 +432,15 @@ export function checkoutProcedures(
   deps: SponsorshipsDeps
 ) {
   return {
-    checkout: os.checkout.handler(
-      async ({ context, input }) =>
-        await runCheckout(context.db, context.env, deps, input)
-    ),
+    checkout: os.checkout.handler(async ({ context, errors, input }) => {
+      // Languages are data: the sponsor's language is an enabled `language`
+      // row (the foreign key alone would also take a disabled one).
+      if (!(await isEnabledLanguage(context.db, input.locale))) {
+        throw errors.VALIDATION({
+          data: { fieldErrors: { locale: ["unknown"] }, formErrors: [] },
+        });
+      }
+      return await runCheckout(context.db, context.env, deps, input);
+    }),
   };
 }

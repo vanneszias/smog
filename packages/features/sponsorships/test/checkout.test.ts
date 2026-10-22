@@ -340,6 +340,13 @@ describe("sponsorships.checkout (ruling 5)", () => {
     await nothingWritten(input.checkoutId, [gesture.id]);
   });
 
+  it("answers VALIDATION for a language that is not enabled, and writes nothing", async () => {
+    const gesture = await makeGesture(db);
+    const input = checkoutInput([gesture.id], { locale: "de" });
+    expect((await codeOf(checkout(input))).code).toBe("VALIDATION");
+    await nothingWritten(input.checkoutId, [gesture.id]);
+  });
+
   it("compensates when Mollie is down: the payment failed, the gestures free again", async () => {
     const gesture = await makeGesture(db);
     const input = checkoutInput([gesture.id]);

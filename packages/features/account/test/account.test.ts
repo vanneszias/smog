@@ -223,7 +223,7 @@ describe("account.updateProfile", () => {
   it.each([
     ["an empty name", { name: "   " }],
     ["a name over 80 characters", { name: "x".repeat(81) }],
-    ["an unknown locale", { locale: "de" }],
+    ["a malformed locale", { locale: "not a locale!" }],
   ])("rejects %s", async (_label, input) => {
     const owner = await addUser("Anna");
     await expect(
@@ -234,6 +234,40 @@ describe("account.updateProfile", () => {
       )
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect((await getMe(testDb(), owner.id)).name).toBe("Anna");
+  });
+});
+
+describe("account.updateProfile, languages as data", () => {
+  async function setLanguage(code: string, enabled: boolean): Promise<void> {
+    await env.DB.prepare(
+      "INSERT INTO language (code, name, intl_tag, enabled, is_default, sort_order) VALUES (?, ?, ?, ?, 0, 9) ON CONFLICT (code) DO UPDATE SET enabled = excluded.enabled"
+    )
+      .bind(code, "Deutsch", "de-BE", enabled ? 1 : 0)
+      .run();
+  }
+
+  it("takes any enabled language, a disabled or unknown one is VALIDATION", async () => {
+    const owner = await addUser("Anna");
+    await expect(
+      call(accountRouter.updateProfile, { locale: "de" }, contextFor(owner))
+    ).rejects.toMatchObject({ code: "VALIDATION" });
+    try {
+      await setLanguage("de", true);
+      expect(
+        await call(
+          accountRouter.updateProfile,
+          { locale: "de" },
+          contextFor(owner)
+        )
+      ).toMatchObject({ locale: "de" });
+      await setLanguage("de", false);
+      await expect(
+        call(accountRouter.updateProfile, { locale: "de" }, contextFor(owner))
+      ).rejects.toMatchObject({ code: "VALIDATION" });
+    } finally {
+      await updateProfile(testDb(), owner.id, { locale: null });
+      await env.DB.prepare("DELETE FROM language WHERE code = 'de'").run();
+    }
   });
 });
 

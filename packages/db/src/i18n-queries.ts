@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { Db } from "./client";
 import { language, uiString } from "./schema";
 
@@ -40,4 +40,20 @@ export function uiCatalogueSource(db: Db): {
       return Object.fromEntries(rows.map((row) => [row.key, row.value]));
     },
   };
+}
+
+/**
+ * Whether `code` is an enabled language: what a profile or a checkout may
+ * name as its language (the foreign key alone would also accept a disabled one).
+ */
+export async function isEnabledLanguage(
+  db: Db,
+  code: string
+): Promise<boolean> {
+  const rows = await db
+    .select({ code: language.code })
+    .from(language)
+    .where(and(eq(language.code, code), eq(language.enabled, true)))
+    .limit(1);
+  return rows.length > 0;
 }
