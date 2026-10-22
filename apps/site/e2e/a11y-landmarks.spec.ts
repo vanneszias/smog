@@ -8,7 +8,7 @@ import {
 } from "./a11y-support";
 import { stubMux, stubMuxStream } from "./helpers";
 
-const FAVORIETEN = /Favorieten/;
+const MIJN_RUIMTE = /Mijn ruimte/;
 const GEBAAR = /gebaar/;
 const NO_RESULTS = /geen|Geen/;
 const SUBMIT = /Doorgaan|Account maken/;
@@ -24,8 +24,7 @@ const TITLED = [
   "/",
   "/gestures",
   "/gestures/hond",
-  "/favorites",
-  "/lists",
+  "/my",
   "/account",
   "/sign-in",
   "/sign-up",
@@ -73,8 +72,8 @@ test.describe("landmarks, titles and the language", () => {
           await expect(page.getByRole("link", { name: skip })).toHaveCount(1);
           expect((await page.title()).trim(), path).not.toBe("");
           // Localised: a language's titles are not the Dutch ones.
-          if (lang !== "nl" && path === "/favorites") {
-            expect(await page.title()).not.toMatch(FAVORIETEN);
+          if (lang !== "nl" && path === "/my") {
+            expect(await page.title()).not.toMatch(MIJN_RUIMTE);
           }
         });
       }

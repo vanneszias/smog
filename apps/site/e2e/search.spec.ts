@@ -76,6 +76,36 @@ test("filters by a category chip, synced to ?category=", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Koffie" })).toHaveCount(0);
 });
 
+test.describe("the filters on a phone (phase 10a)", () => {
+  test("the categories live in a bottom sheet; choosing one filters at once", async ({
+    page,
+  }) => {
+    await stubMux(page);
+    await page.setViewportSize({ height: 800, width: 390 });
+    await page.goto("/gestures");
+    await waitForApp(page);
+    // The inline chips are for md and up.
+    await expect(page.getByRole("button", { name: "Dieren" })).toBeHidden();
+    const open = page.getByRole("button", { name: "Filters" });
+    await open.click();
+    const sheet = page.getByRole("dialog", { name: "Filteren op categorie" });
+    await expect(sheet).toBeVisible();
+    expect(await blockingViolations(page)).toEqual([]);
+    await sheet.getByRole("button", { name: "Dieren" }).click();
+    await expect(page).toHaveURL(CATEGORY_DIEREN);
+    await sheet.getByRole("button", { name: "Resultaten tonen" }).click();
+    await expect(sheet).toBeHidden();
+    // The button counts what is chosen, and the grid shows the filtered cards.
+    await expect(
+      page.getByRole("button", { name: "Filters 1 gekozen" })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Paard" }).first()
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Koffie" })).toHaveCount(0);
+  });
+});
+
 test.describe("the global search palette", () => {
   test("/ opens it from any page; results are grouped, Enter opens a gesture", async ({
     page,

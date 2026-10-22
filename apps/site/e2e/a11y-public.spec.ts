@@ -78,8 +78,6 @@ test.describe("axe: guest overlays and banners", () => {
       // One page for the gesture-page states of this width (each test opens
       // the path again, so none depends on the one before).
       const shared = useSharedGuestPage(width);
-      const actions = (page: Page) =>
-        page.getByRole("button", { name: "Acties voor Hond" });
 
       if (width < 768) {
         test(`the phone's menu sheet at ${width} px`, async () => {
@@ -94,43 +92,17 @@ test.describe("axe: guest overlays and banners", () => {
             );
           });
         });
-      } else {
-        test(`the language menu at ${width} px`, async () => {
-          test.setTimeout(STATES_MS);
-          await onGuestPage(shared, gesture, async (page, found) => {
-            await overlay(
-              page,
-              found,
-              "header:language-menu",
-              () => page.getByRole("button", { name: "Taal wijzigen" }).click(),
-              () => expect(page.getByRole("menu")).toBeVisible()
-            );
-          });
-        });
-
-        test(`the theme menu at ${width} px`, async () => {
-          test.setTimeout(STATES_MS);
-          await onGuestPage(shared, gesture, async (page, found) => {
-            await overlay(
-              page,
-              found,
-              "header:theme-menu",
-              () =>
-                page.getByRole("button", { name: "Thema wijzigen" }).click(),
-              () => expect(page.getByRole("menu")).toBeVisible()
-            );
-          });
-        });
       }
 
-      test(`a gesture's actions menu at ${width} px`, async () => {
+      // The one settings menu (phase 10a): Sign in, Sponsor, language, theme.
+      test(`the settings menu at ${width} px`, async () => {
         test.setTimeout(STATES_MS);
         await onGuestPage(shared, gesture, async (page, found) => {
           await overlay(
             page,
             found,
-            "gesture:actions-menu",
-            () => actions(page).click(),
+            "header:settings-menu",
+            () => page.getByRole("button", { name: "Instellingen" }).click(),
             () => expect(page.getByRole("menu")).toBeVisible()
           );
         });
@@ -154,12 +126,11 @@ test.describe("axe: guest overlays and banners", () => {
       test(`the QR dialog at ${width} px`, async () => {
         test.setTimeout(STATES_MS);
         await onGuestPage(shared, gesture, async (page, found) => {
-          await actions(page).click();
           await overlay(
             page,
             found,
             "gesture:qr-dialog",
-            () => page.getByRole("menuitem", { name: "QR-code" }).click(),
+            () => page.getByRole("button", { name: "QR-code" }).click(),
             () => expect(page.getByRole("dialog")).toBeVisible()
           );
         });
@@ -369,7 +340,7 @@ test.describe("axe: sampled hover, focus and disabled states", () => {
       const primary = page.getByRole("button", { name: "Doorgaan" }).first();
       await primary.hover();
       found.push(...(await scanThemes(page, "hover:primary-button")));
-      await page.getByRole("link", { name: "Favorieten" }).first().hover();
+      await page.getByRole("link", { name: "Mijn ruimte" }).first().hover();
       found.push(...(await scanThemes(page, "hover:nav-link")));
       await page.getByRole("link", { name: "Gebaren" }).first().focus();
       found.push(...(await scanThemes(page, "focus:nav-link")));
