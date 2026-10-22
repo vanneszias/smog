@@ -466,6 +466,11 @@
     },
     "description": "Les gestes que vous avez gardés avec un cœur."
   },
+  "searchPalette": {
+    "placeholder": "Rechercher des gestes et des catégories",
+    "description": "Saisissez pour trouver un geste. Utilisez les flèches et Entrée.",
+    "seeAll": "Afficher tous les résultats pour « {{query}} »"
+  },
   "kit": {
     "close": "Fermer",
     "clear": "Effacer",

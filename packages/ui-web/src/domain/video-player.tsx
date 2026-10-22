@@ -63,7 +63,7 @@ const ASPECT = { "3:4": "aspect-3/4", "16:9": "aspect-video" } as const;
 /** mux-player fills the frame; its colours follow the theme's roles. */
 const PLAYER_STYLE: MuxCSSProperties = {
   "--media-accent-color": "var(--color-primary)",
-  "--media-background-color": "var(--color-surface-sunken)",
+  "--media-background-color": "var(--color-muted)",
   "--media-object-fit": "contain",
   height: "100%",
   width: "100%",
@@ -88,8 +88,9 @@ interface TimeEventTarget {
 }
 
 /**
- * The gesture video: Mux Player, loaded on the client only as its own
- * chunk, with the Mux poster until it is ready. Mux Data tracking and its
+ * The gesture video in its frame (rounded, ringed, raised: the video is the
+ * page's centre): Mux Player, loaded on the client only as its own chunk,
+ * with the Mux poster until it is ready. Mux Data tracking and its
  * cookies are off.
  */
 export function VideoPlayer({
@@ -151,7 +152,7 @@ export function VideoPlayer({
     <section
       aria-label={name}
       className={cn(
-        "relative w-full overflow-hidden rounded-lg bg-surface-sunken",
+        "relative w-full overflow-hidden rounded-2xl bg-muted shadow-1 ring-1 ring-foreground/10",
         ASPECT[aspect],
         className
       )}

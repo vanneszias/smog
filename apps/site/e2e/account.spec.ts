@@ -238,6 +238,9 @@ test.describe("consent banner", () => {
   }) => {
     const errors = watchErrors(page);
     const relay = recordRelay(page);
+    // The home page's posters come from image.mux.com: without the stub a
+    // slow answer keeps the network busy and `networkidle` times out.
+    await stubMux(page);
     await page.goto("/");
     const banner = page.getByRole("region", { name: BANNER });
     await expect(banner).toBeVisible();
@@ -254,6 +257,10 @@ test.describe("consent banner", () => {
     // The held screen view goes out once consent is true.
     await expect.poll(() => relay.length).toBeGreaterThan(0);
 
+    // The pointer stays where Allow was; once the banner is gone a gesture
+    // card can sit there, and hovering it preloads that route's chunks (a
+    // slow first compile on the dev server keeps `networkidle` from coming).
+    await page.mouse.move(0, 0);
     await page.reload();
     await page.waitForLoadState("networkidle");
     await expect(page.getByRole("region", { name: BANNER })).toBeHidden();

@@ -33,6 +33,20 @@ describe("GestureCard", () => {
     expect(classesOf(image?.parentElement ?? null)).toContain("aspect-3/4");
   });
 
+  test("video first: a play glyph on the still and the categories in a badge", () => {
+    const { container } = renderKit(
+      <GestureCard gesture={HELLO} href="/gestures/hello" />
+    );
+    const glyph = container.querySelector('[data-slot="gesture-play"]');
+    expect(glyph?.getAttribute("aria-hidden")).toBe("true");
+    expect(glyph?.parentElement?.querySelector("img")).not.toBeNull();
+    const badge = container.querySelector('[data-slot="gesture-category"]');
+    expect(badge?.textContent).toBe("Greetings, Everyday");
+    expect(container.querySelector("article")?.className).toContain(
+      "rounded-2xl"
+    );
+  });
+
   test("the favorite toggle sits beside the link, not inside it", async () => {
     const onFavoriteToggle = mock();
     renderKit(

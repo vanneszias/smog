@@ -55,6 +55,15 @@ export {
   DialogFooter,
   DialogTrigger,
 } from "./components/dialog";
+export {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  type EmptyTitleProps,
+} from "./components/empty";
 export { EmptyState, type EmptyStateProps } from "./components/empty-state";
 export { ErrorState, type ErrorStateProps } from "./components/error-state";
 export {
@@ -73,6 +82,11 @@ export {
   useFormField,
   useZodForm,
 } from "./components/form";
+export {
+  HandIllustration,
+  type HandIllustrationProps,
+  type HandIndex,
+} from "./components/hand-illustration";
 export {
   HoverCard,
   HoverCardContent,
@@ -210,6 +224,10 @@ export {
   OpenInAppBanner,
   type OpenInAppBannerProps,
 } from "./domain/app-banner";
+export {
+  AuthSidePanel,
+  type AuthSidePanelProps,
+} from "./domain/auth-side-panel";
 export {
   CategoryChips,
   type CategoryChipsProps,
