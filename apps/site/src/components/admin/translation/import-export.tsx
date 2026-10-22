@@ -198,6 +198,29 @@ interface FileState {
   name: string;
 }
 
+/**
+ * Whether a JSON file holds the texts of one language (a flat or nested map
+ * with texts at its top level), so the person must say which language: no
+ * dry run is asked before, since the server would only refuse it. Anything
+ * else (language sections, a CSV with language columns, text that is not
+ * JSON) goes to the server, which reads it and says what is wrong.
+ */
+function needsLanguageChoice(file: FileState): boolean {
+  if (file.format !== "json") {
+    return false;
+  }
+  try {
+    const parsed: unknown = JSON.parse(file.content);
+    return (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      Object.values(parsed).some((value) => typeof value === "string")
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** The dry-run diff of an import: the counts, what changes and what is refused. */
 function PlanView({ plan }: { plan: ImportPlan }): ReactNode {
   const { t } = useTranslation();
@@ -294,7 +317,7 @@ export function ImportDialog(): ReactNode {
 
   // A dry run whenever the file or the language changes.
   useEffect(() => {
-    if (!file) {
+    if (!file || (locale === FROM_FILE && needsLanguageChoice(file))) {
       resetPreview();
       return;
     }
@@ -411,6 +434,11 @@ export function ImportDialog(): ReactNode {
               value={locale}
             />
           </Field>
+          {file && locale === FROM_FILE && needsLanguageChoice(file) ? (
+            <Text size="body-sm" tone="muted">
+              {t("admin.translation.import.errors.file.needsLanguage")}
+            </Text>
+          ) : null}
           {file && preview.isPending ? (
             <Skeleton aria-busy="true" className="h-24 w-full" />
           ) : null}

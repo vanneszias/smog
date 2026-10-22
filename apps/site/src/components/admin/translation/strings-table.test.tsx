@@ -9,6 +9,8 @@ import type { ReactNode } from "react";
 import { renderSite, rpcError } from "@/test/render";
 import { StringsTable } from "./strings-table";
 
+const EDIT_TEXT_EN = /^Edit demo\.text in English/;
+const EDIT_HELLO_EN = /^Edit demo\.hello in English/;
 const MUST_MATCH = /must match the source: name/;
 
 function cell(overrides: Partial<StringCell> = {}): StringCell {
@@ -155,9 +157,7 @@ describe("the strings table", () => {
         "translation/strings/save": () => held,
       },
     });
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Edit demo.text in English" })
-    );
+    fireEvent.click(await screen.findByRole("button", { name: EDIT_TEXT_EN }));
     const box = await screen.findByRole("textbox", {
       name: "Text of demo.text in English",
     });
@@ -188,9 +188,7 @@ describe("the strings table", () => {
         "translation/strings/list": PAGE,
       },
     });
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Edit demo.hello in English" })
-    );
+    fireEvent.click(await screen.findByRole("button", { name: EDIT_HELLO_EN }));
     const box = await screen.findByRole("textbox", {
       name: "Text of demo.hello in English",
     });
@@ -212,9 +210,7 @@ describe("the strings table", () => {
         }),
       },
     });
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Edit demo.text in English" })
-    );
+    fireEvent.click(await screen.findByRole("button", { name: EDIT_TEXT_EN }));
     fireEvent.change(
       await screen.findByRole("textbox", {
         name: "Text of demo.text in English",

@@ -47,7 +47,7 @@ async function states(page: Page): Promise<string[]> {
   await openAdmin(page, STRINGS);
   await page.getByRole("button", { name: "Importeren" }).click();
   const dialog = page.getByRole("dialog", { name: "Teksten importeren" });
-  await dialog.getByLabel("Bestand").setInputFiles({
+  await dialog.getByLabel("Bestand", { exact: true }).setInputFiles({
     buffer: Buffer.from(
       JSON.stringify({
         "auth.errors.generic": "Same text, kept as is",

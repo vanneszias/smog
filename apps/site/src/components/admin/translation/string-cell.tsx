@@ -239,12 +239,13 @@ export function CellView({
   return (
     <div className="flex min-w-48 flex-col items-start gap-1">
       <button
-        aria-label={label}
         className="min-h-touch w-full max-w-prose rounded-md px-2 py-1 text-left text-body-sm outline-none hover:bg-surface-sunken focus-visible:ring-2 focus-visible:ring-ring"
         data-testid={`cell-${language.code}`}
         onClick={onEdit}
         type="button"
       >
+        {/* The name starts with what the button does and then holds the visible text (WCAG 2.5.3 label in name). */}
+        <span className="sr-only">{label} </span>
         {value === null ? (
           <span className="text-muted-foreground">
             {t("admin.translation.cell.empty")}

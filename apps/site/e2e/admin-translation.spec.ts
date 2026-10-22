@@ -220,7 +220,7 @@ test.describe("translation strings", () => {
         name: "Teksten importeren",
       });
       const before = (await englishCell(page.request, OTHER_KEY)).value;
-      await dialog.getByLabel("Bestand").setInputFiles({
+      await dialog.getByLabel("Bestand", { exact: true }).setInputFiles({
         buffer: Buffer.from(
           JSON.stringify({
             [OTHER_KEY]: "Your code is {{code}} (imported).",
@@ -263,7 +263,7 @@ test.describe("translation strings", () => {
     await openAdmin(page, STRINGS);
     await page.getByRole("button", { name: "Importeren" }).click();
     const dialog = page.getByRole("dialog", { name: "Teksten importeren" });
-    await dialog.getByLabel("Bestand").setInputFiles({
+    await dialog.getByLabel("Bestand", { exact: true }).setInputFiles({
       buffer: Buffer.from("{ not json"),
       mimeType: "application/json",
       name: "broken.json",
@@ -274,7 +274,7 @@ test.describe("translation strings", () => {
     await expect(
       dialog.getByRole("button", { name: "Importeren" })
     ).toBeDisabled();
-    await dialog.getByLabel("Bestand").setInputFiles({
+    await dialog.getByLabel("Bestand", { exact: true }).setInputFiles({
       buffer: Buffer.from(
         JSON.stringify({ [OTHER_KEY]: "No placeholders here" })
       ),

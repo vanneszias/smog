@@ -14,7 +14,6 @@ import { signInAsAdmin } from "./maintenance";
 const CODE = "pt-BR";
 const NAME = "Português (Brasil)";
 const LANGUAGES = "/admin/translation/languages";
-const NAME_ROW = new RegExp(NAME);
 const DUTCH_ROW = /Nederlands/;
 
 interface LanguageRow {
@@ -69,7 +68,7 @@ test.describe("languages", () => {
       const table = page.getByRole("table", { name: "Talen" });
       await expect(table.getByRole("row", { name: DUTCH_ROW })).toBeVisible();
 
-      const existing = await table.getByRole("row", { name: NAME_ROW }).count();
+      const existing = await table.getByRole("row", { name: NAME }).count();
       if (existing === 0) {
         await page.getByRole("button", { name: "Taal toevoegen" }).click();
         const dialog = page.getByRole("dialog", { name: "Taal toevoegen" });
@@ -81,9 +80,9 @@ test.describe("languages", () => {
       } else {
         await table
           .getByRole("switch", { name: `${NAME} inschakelen` })
-          .check();
+          .click();
       }
-      const row = table.getByRole("row", { name: NAME_ROW });
+      const row = table.getByRole("row", { name: NAME });
       await expect(row).toBeVisible();
       await expect(
         row.getByRole("switch", { name: `${NAME} inschakelen` })
@@ -107,7 +106,7 @@ test.describe("languages", () => {
       ).toBeDisabled();
       await table
         .getByRole("switch", { name: `${NAME} inschakelen` })
-        .uncheck();
+        .click();
       await expect
         .poll(async () => await menuCodes(page.request))
         .not.toContain(CODE);
