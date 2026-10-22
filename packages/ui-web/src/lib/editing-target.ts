@@ -4,7 +4,7 @@ const EDITING_SELECTOR =
 /**
  * Whether a keystroke is for a text field (or another editor), not for a
  * page shortcut: the target is, or sits inside, an input, textarea, select,
- * contenteditable or ARIA text-entry widget.
+ * contenteditable or ARIA textbox widget.
  */
 export function isEditingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {

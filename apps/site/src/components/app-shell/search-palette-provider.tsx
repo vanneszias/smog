@@ -50,7 +50,7 @@ class PaletteBoundary extends Component<
   { children: ReactNode; onError: (error: unknown) => void },
   { failed: boolean }
 > {
-  override state = { failed: false };
+  override state: { failed: boolean } = { failed: false };
 
   static getDerivedStateFromError(): { failed: boolean } {
     return { failed: true };
@@ -108,10 +108,8 @@ export function SearchPaletteProvider({
   // `lazy` caches a rejection: every attempt gets its own component (and
   // boundary), so opening again after a failure fetches the chunk again.
   const [attempt, setAttempt] = useState(0);
-  const Palette = useMemo(
-    () => lazy(() => loadPaletteChunk(loadPalette)),
-    // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` is the retry key
-    [attempt, loadPalette]
+  const [Palette, setPalette] = useState(() =>
+    lazy(() => loadPaletteChunk(loadPalette))
   );
   const show = useCallback((): void => {
     setLoaded(true);
@@ -123,9 +121,10 @@ export function SearchPaletteProvider({
       setOpen(false);
       setLoaded(false);
       setAttempt((n) => n + 1);
+      setPalette(() => lazy(() => loadPaletteChunk(loadPalette)));
       toast({ title: t("searchPalette.loadFailed"), variant: "danger" });
     },
-    [t, toast]
+    [loadPalette, t, toast]
   );
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {

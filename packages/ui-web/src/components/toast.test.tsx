@@ -124,7 +124,9 @@ describe("Toast", () => {
       name: NOTIFICATIONS,
     });
     expect(region.getAttribute("aria-live")).toBe("polite");
-    expect(region.closest("[aria-hidden='true'], [hidden], [inert]")).toBeNull();
+    expect(
+      region.closest("[aria-hidden='true'], [hidden], [inert]")
+    ).toBeNull();
     expect(region.textContent).toContain("Could not save");
     expect(region.querySelector("[role='alert']")).not.toBeNull();
   });

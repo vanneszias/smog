@@ -151,7 +151,7 @@ describe("the search palette", () => {
 });
 
 describe("the palette's status line", () => {
-  async function openAndType(api: object, text: string) {
+  async function openAndType(api: Record<string, unknown>, text: string) {
     await renderSite(Page, { api });
     await userEvent.click(screen.getByRole("button", { name: "Open search" }));
     const dialog = await screen.findByRole("dialog", { name: "Search" });
@@ -223,9 +223,9 @@ describe("a palette chunk that fails to load", () => {
   test("closes the palette with a toast, keeps the page and loads again next time", async () => {
     const real = () =>
       import("./search-palette").then((m) => ({ default: m.SearchPalette }));
-    let broken = true;
+    const state: { broken: boolean } = { broken: true };
     const load = () =>
-      broken ? Promise.reject(new Error("chunk gone")) : real();
+      state.broken ? Promise.reject(new Error("chunk gone")) : real();
     const errors = spyOn(console, "error").mockImplementation(() => undefined);
     function FailingPage(): ReactNode {
       return (
@@ -242,7 +242,7 @@ describe("a palette chunk that fails to load", () => {
     expect(alert.textContent).toContain("The search could not be opened");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByTestId("page")).toBeDefined();
-    broken = false;
+    state.broken = false;
     await userEvent.click(screen.getByRole("button", { name: "Open search" }));
     await screen.findByRole("dialog", { name: "Search" });
     errors.mockRestore();

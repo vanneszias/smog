@@ -150,8 +150,10 @@ function PaletteBody({
   } else if (matchingCategories[0]) {
     first = `category:${matchingCategories[0].slug}`;
   }
-  let status: string;
-  if (found.isError) {
+  let status = "";
+  if (typed === "") {
+    // Nothing typed, nothing to report.
+  } else if (found.isError) {
     status = t("searchPalette.error");
   } else if (found.isDebouncing || found.isFetching || !found.data) {
     status = t("search.searching");
@@ -185,7 +187,7 @@ function PaletteBody({
         data-testid="palette-status"
         role="status"
       >
-        {typed === "" ? null : status}
+        {status}
       </div>
       <CommandList>
         <CommandEmpty>{t("search.noResults.title")}</CommandEmpty>

@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import { renderSite } from "@/test/render";
 import { AdminRail } from "./admin-rail";
 
+const WHITESPACE = /\s+/;
+
 function Page(): ReactNode {
   return (
     <SidebarProvider>
@@ -19,7 +21,7 @@ describe("the admin rail in the first (server) markup", () => {
     await renderSite(Page, { path: "/admin" });
     const rail = document.querySelector('[data-slot="sidebar"]');
     expect(rail).not.toBeNull();
-    const classes = (rail?.getAttribute("class") ?? "").split(/\s+/);
+    const classes = (rail?.getAttribute("class") ?? "").split(WHITESPACE);
     // `hidden` is the base, `md:flex` the desktop display; no unprefixed `flex`.
     expect(classes).toContain("hidden");
     expect(classes).toContain("md:flex");
