@@ -216,6 +216,40 @@ const DEAD_LETTER_AUDIT_SCHEMAS = {
 } satisfies AuditSchemaBlock;
 
 /**
+ * Phase 10b task 4: the translation screens. `language.*` target the
+ * language (`target_id` its code); `translation.string_save` targets one
+ * string (`target_type` `ui_string`, `target_id` `<locale>:<key>`) and
+ * `translation.string_import` the language an import wrote to (`target_id`
+ * the code, NULL for a file with several). Texts are public interface copy,
+ * but an entry carries the key and the counts only, never a value.
+ */
+const TRANSLATION_AUDIT_SCHEMAS = {
+  "language.create": z.object({
+    code: z.string(),
+    enabled: z.boolean(),
+    intlTag: z.string(),
+    name: z.string(),
+  }),
+  "language.update": z.object({
+    /** The fields the update changed. */
+    fields: z.array(z.enum(["enabled", "intlTag", "name", "sortOrder"])).min(1),
+  }),
+  "translation.string_import": z.object({
+    /** Strings written (added or changed). */
+    applied: z.number().int().nonnegative(),
+    format: z.enum(["csv", "json"]),
+    /** Rows of the file that were left out (unknown key, invalid, unchanged excluded). */
+    skipped: z.number().int().nonnegative(),
+  }),
+  "translation.string_save": z.object({
+    key: z.string(),
+    locale: z.string(),
+    /** Set when the override was removed (back to the shipped text). */
+    reverted: z.literal(true).optional(),
+  }),
+} satisfies AuditSchemaBlock;
+
+/**
  * `audit_log.data` per action. The writer validates `data` with it before
  * any write, and `admin.audit.list` parses stored rows with it.
  */
@@ -226,6 +260,7 @@ export const AUDIT_DATA_SCHEMAS = {
   ...MAINTENANCE_AUDIT_SCHEMAS,
   ...SPONSORSHIP_AUDIT_SCHEMAS,
   ...DEAD_LETTER_AUDIT_SCHEMAS,
+  ...TRANSLATION_AUDIT_SCHEMAS,
 } satisfies AuditSchemaBlock;
 
 /** Actions that are parsed on read but never written. */

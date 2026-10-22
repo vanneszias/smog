@@ -26,6 +26,7 @@
     "@smog/lists": "workspace:*",
     "@smog/rpc": "workspace:*",
     "@smog/sponsorships": "workspace:*",
+    "@smog/translation": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -21,6 +21,7 @@
     "@smog/db": "workspace:*",
     "@smog/email": "workspace:*",
     "@smog/gestures": "workspace:*",
+    "@smog/i18n": "workspace:*",
     "@smog/jobs": "workspace:*",
     "@smog/payments": "workspace:*",
     "@smog/rpc": "workspace:*",

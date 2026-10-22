@@ -1,15 +1,15 @@
 import { env } from "cloudflare:workers";
 import { call } from "@orpc/server";
 import { implementRpc, requireAdmin } from "@smog/rpc";
-import { baseContract } from "@smog/rpc/contract";
-import { sql } from "drizzle-orm";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 import {
   type AuditSchemas,
   buildAuditStatement,
   writeAuditWith,
-} from "../src/server/audit-writer";
+} from "@smog/rpc/audit";
+import { baseContract } from "@smog/rpc/contract";
+import { sql } from "drizzle-orm";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import {
   AUTH_READ_METHODS,
   adminGuard,

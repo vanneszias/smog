@@ -46,6 +46,7 @@
     "@smog/rpc": "workspace:*",
     "@smog/sponsorships": "workspace:*",
     "@smog/styles": "workspace:*",
+    "@smog/translation": "workspace:*",
     "@smog/ui-web": "workspace:*",
     "@smog/utils": "workspace:*",
     "@smog/video": "workspace:*",

@@ -3,6 +3,7 @@ import { call } from "@orpc/server";
 import { ADMIN_PROCEDURE_KINDS } from "@smog/admin/contract";
 import { loadSession, teacherProcedure, translatorProcedure } from "@smog/rpc";
 import { makeRpcContext, makeSession } from "@smog/rpc/testing";
+import { TRANSLATION_PROCEDURE_KINDS } from "@smog/translation/contract";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { appContract } from "../src/contract";
 import { appRouter } from "../src/index";
@@ -187,6 +188,31 @@ const PROCEDURES: Record<string, Row> = {
   "system.health": { level: "public" },
   "system.i18n": { input: {}, level: "public" },
   "system.whoami": { level: "public" },
+  // Phase 10b task 4: the translation screens. Strings, the language list
+  // and the coverage need the translator role (an admin passes); creating
+  // or changing a language needs the admin role. Every change carries an
+  // audit kind (`TRANSLATION_PROCEDURE_KINDS`, checked below).
+  "translation.coverage": { level: "translator" },
+  "translation.languages.create": { level: "admin" },
+  "translation.languages.list": { level: "translator" },
+  "translation.languages.update": { level: "admin" },
+  "translation.strings.export": {
+    input: { format: "json" },
+    level: "translator",
+  },
+  "translation.strings.import": {
+    input: { content: "{}", format: "json", locale: "en" },
+    level: "translator",
+  },
+  "translation.strings.list": { input: {}, level: "translator" },
+  "translation.strings.preview": {
+    input: { content: "{}", format: "json", locale: "en" },
+    level: "translator",
+  },
+  "translation.strings.save": {
+    input: { expectedUpdatedAt: null, key: "a.b", locale: "en", value: "x" },
+    level: "translator",
+  },
 };
 
 /** Every procedure path of a contract (`lists.share.create`, …). */
@@ -322,6 +348,21 @@ describe("the authorization table", () => {
     for (const level of ["admin", "public", "session", "token"] as const) {
       expect(levels.has(level)).toBe(true);
     }
+  });
+
+  it("agrees with the translation kinds: every translation procedure has a kind and its role", () => {
+    const translationRows = Object.entries(PROCEDURES).filter(([path]) =>
+      path.startsWith("translation.")
+    );
+    expect(translationRows.map(([path]) => path).sort()).toEqual(
+      Object.keys(TRANSLATION_PROCEDURE_KINDS).sort()
+    );
+    // Only the language changes are the admin's.
+    expect(
+      translationRows
+        .filter(([, row]) => row.level === "admin")
+        .map(([path]) => path)
+    ).toEqual(["translation.languages.create", "translation.languages.update"]);
   });
 
   it("agrees with the admin kinds: a row per admin procedure, writes audited", () => {

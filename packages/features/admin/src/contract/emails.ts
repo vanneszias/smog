@@ -1,4 +1,4 @@
-import { LOCALES } from "@smog/config/constants";
+import { localeCodeSchema } from "@smog/config/locale";
 import { EMAIL_TEMPLATE_IDS } from "@smog/email/samples";
 import { baseContract } from "@smog/rpc/contract";
 import { z } from "zod";
@@ -12,16 +12,17 @@ import type { AdminProcedures } from "./audit-map";
  */
 export const emailsSlice = {
   emails: {
-    /** Every registered template with its sample subject in nl, en and fr. */
+    /** Every registered template with its sample subject in each enabled language (the `ui_string` edits included). */
     list: baseContract.output(z.array(emailTemplateSummarySchema)),
     /**
      * One template rendered from its sample in `locale`: subject, HTML and
-     * plain text. An unknown template or locale is `VALIDATION`.
+     * plain text, with the translators' edits applied. An unknown
+     * template, or a language that is not enabled, is `VALIDATION`.
      */
     preview: baseContract
       .input(
         z.object({
-          locale: z.enum(LOCALES),
+          locale: localeCodeSchema,
           template: z.enum(EMAIL_TEMPLATE_IDS),
         })
       )

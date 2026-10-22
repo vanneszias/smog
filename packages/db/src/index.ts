@@ -7,6 +7,7 @@ export {
   rebuildGesturesFtsSql,
 } from "./fts";
 export {
+  defaultLanguageCode,
   type EnabledLanguage,
   isEnabledLanguage,
   uiCatalogueSource,

@@ -24,6 +24,7 @@ import {
 import { implementRpc } from "@smog/rpc";
 import { roleSchema } from "@smog/rpc/contract";
 import { createSponsorshipsRouter } from "@smog/sponsorships/server";
+import { createTranslationRouter } from "@smog/translation/server";
 import { adminSponsorshipServices } from "./admin-deps";
 import { appContract } from "./contract";
 
@@ -97,6 +98,9 @@ export const appRouter = os.router({
   // and renewal slices.
   sponsorships: createSponsorshipsRouter(),
   system,
+  // Translators and admins: the strings, languages and coverage. Each
+  // procedure carries its role guard and the audit guard.
+  translation: createTranslationRouter(),
 });
 
 export type AppRouter = typeof appRouter;

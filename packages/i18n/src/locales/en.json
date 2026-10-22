@@ -92,7 +92,8 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "gestures": "Gestures",
-    "legal": "Legal"
+    "legal": "Legal",
+    "translation": "Translation"
   },
   "theme": {
     "label": "Theme",
@@ -928,8 +929,11 @@
       "groups": {
         "content": "Content",
         "community": "Community",
-        "operations": "Operations"
-      }
+        "operations": "Operations",
+        "translation": "Translation"
+      },
+      "strings": "Strings",
+      "languages": "Languages"
     },
     "comingSoon": {
       "title": "Coming in this phase",
@@ -2010,6 +2014,154 @@
       "rowActions": "Actions for {{name}}",
       "open": "Open",
       "actions": "Actions"
+    },
+    "translation": {
+      "loadError": "The translation data could not be loaded.",
+      "strings": {
+        "title": "Strings",
+        "description": "The texts of the site, the app and the emails. A change shows at once, without a new release."
+      },
+      "filters": {
+        "label": "Filters for the strings",
+        "search": "Search",
+        "searchPlaceholder": "Search keys and texts",
+        "namespace": "Section",
+        "allNamespaces": "All sections",
+        "status": "Show",
+        "allStatuses": "All strings",
+        "language": "Language",
+        "anyLanguage": "Any language",
+        "statuses": {
+          "missing": "Missing",
+          "stale": "Source changed",
+          "invalid": "Placeholder problems"
+        }
+      },
+      "table": {
+        "label": "Interface strings",
+        "key": "Key",
+        "sourceHeader": "{{language}} (source)",
+        "total": "Strings: {{n}}",
+        "empty": "No strings match these filters."
+      },
+      "cell": {
+        "edit": "Edit {{key}} in {{language}}",
+        "empty": "No text yet",
+        "missing": "Missing",
+        "stale": "Source changed",
+        "confirm": "Confirm",
+        "confirmLabel": "Confirm {{key}} in {{language}}",
+        "placeholderIssue": "Placeholders do not match",
+        "notApplicable": "Not used in this language"
+      },
+      "editor": {
+        "label": "Text of {{key}} in {{language}}",
+        "source": "Source:",
+        "placeholders": "Keep these placeholders: {{placeholders}}.",
+        "save": "Save",
+        "cancel": "Cancel",
+        "revert": "Back to the default text",
+        "conflictTitle": "Somebody was first",
+        "conflictBody": "This text was saved by somebody else in the meantime. Their version is below.",
+        "useTheirs": "Use their version",
+        "keepMine": "Save mine anyway"
+      },
+      "errors": {
+        "empty": "Enter a text.",
+        "tooLong": "This text is too long.",
+        "placeholders": "The placeholders must match the source: {{placeholders}}.",
+        "generic": "Saving failed. Try again.",
+        "notFound": "This string no longer exists.",
+        "saveFailed": "The text could not be saved."
+      },
+      "export": {
+        "button": "Export",
+        "all": "All languages",
+        "item": "{{language}} ({{format}})",
+        "allItem": "All languages ({{format}})",
+        "failed": "Exporting failed."
+      },
+      "import": {
+        "button": "Import",
+        "title": "Import strings",
+        "description": "Choose a JSON or CSV file. You see what would change first, and only then are the texts saved.",
+        "file": "File",
+        "fileHint": "JSON or CSV, such as a file from the export.",
+        "language": "Language of the file",
+        "fromFile": "As in the file",
+        "added": "New: {{n}}",
+        "changed": "Changed: {{n}}",
+        "unchanged": "Unchanged: {{n}}",
+        "skipped": "Skipped: {{n}}",
+        "changes": "Changes",
+        "problems": "Skipped lines",
+        "problem": {
+          "unknownKey": "unknown key",
+          "unknownLanguage": "unknown language",
+          "notApplicable": "plural form this language does not use",
+          "placeholders": "placeholders do not match",
+          "tooLong": "too long",
+          "duplicate": "appears more than once"
+        },
+        "apply": "Import",
+        "done": "Strings saved: {{n}}",
+        "errors": {
+          "title": "The file cannot be used",
+          "tooLarge": "The file is too large.",
+          "applyFailed": "Importing failed.",
+          "file": {
+            "invalidJson": "This is not a valid JSON file.",
+            "invalidCsv": "This is not a valid CSV file.",
+            "noKeyColumn": "The key column is missing.",
+            "noLanguageColumn": "There is no column for the chosen language.",
+            "unknownLanguage": "The file names a language that does not exist or is not enabled.",
+            "unsupportedShape": "The values in the file must be texts.",
+            "needsLanguage": "Choose the language of this file.",
+            "generic": "The file could not be read."
+          }
+        }
+      },
+      "languages": {
+        "title": "Languages",
+        "description": "Which languages exist, what they are called and in which order they appear in the language menu. A new language shows the Dutch text until it is translated.",
+        "label": "Languages",
+        "add": "Add a language",
+        "addTitle": "Add a language",
+        "editTitle": "Change {{language}}",
+        "dialogDescription": "The code cannot be changed later.",
+        "code": "Code",
+        "codeHint": "A language code such as pt or pt-BR.",
+        "name": "Name",
+        "nameHint": "As the language calls itself, for example Português.",
+        "intlTag": "Intl tag",
+        "intlTagHint": "For dates and lists, for example pt-PT.",
+        "order": "Order",
+        "orderHint": "A number. Leave empty to put the language last.",
+        "enabled": "Enabled",
+        "enabledLabel": "Enable {{language}}",
+        "default": "Default",
+        "edit": "Change",
+        "editLabel": "Change {{language}}",
+        "save": "Save",
+        "saved": "The language was saved.",
+        "errors": {
+          "code": "Use a valid language code.",
+          "intlTag": "This is not a valid Intl tag.",
+          "exists": "This language code exists already.",
+          "order": "Enter a whole number.",
+          "default": "The default language stays enabled.",
+          "failed": "Saving failed. Try again."
+        }
+      },
+      "coverage": {
+        "title": "Translation coverage",
+        "percent": "{{percent}}% translated",
+        "progress": "Translated in {{language}}",
+        "missing": "Missing: {{n}}",
+        "stale": "Source changed: {{n}}",
+        "invalid": "Placeholders: {{n}}",
+        "complete": "Everything translated"
+      }
     }
   },
   "sponsorship": {

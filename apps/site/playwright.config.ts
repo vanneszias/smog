@@ -52,14 +52,15 @@ const executablePath =
 const WORKERS = Number(process.env.E2E_WORKERS ?? (process.env.CI ? 1 : 2));
 
 /**
- * The two specs that change what every visitor sees, on one worker, in this
- * order (alphabetical file order, one worker): the catalogue spec publishes
- * 100 gestures of its own for a moment (the bulk smoke), the settings spec
+ * The three specs that change what every visitor sees, on one worker, in
+ * this order (alphabetical file order, one worker): the catalogue spec
+ * publishes 100 gestures of its own for a moment (the bulk smoke), the
+ * languages spec adds a language to the menu (phase 10b), the settings spec
  * turns maintenance mode on. They are the `serial` project, which runs
  * alone (its own runner in CI, its own command locally), so no other spec
- * sees those rows or that window.
+ * sees those rows, that language or that window.
  */
-const SERIAL_SPECS = /\/admin-(catalog|settings)\.spec\.ts$/;
+const SERIAL_SPECS = /\/admin-(catalog|languages|settings)\.spec\.ts$/;
 /**
  * The accessibility specs (phase 9 task 5), three projects so none passes
  * about 15 minutes on a CI runner (a hung test was the first problem, the

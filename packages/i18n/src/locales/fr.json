@@ -92,7 +92,8 @@
     "signIn": "Se connecter",
     "signOut": "Se déconnecter",
     "gestures": "Signes",
-    "legal": "Mentions légales"
+    "legal": "Mentions légales",
+    "translation": "Traduction"
   },
   "theme": {
     "label": "Thème",
@@ -936,8 +937,11 @@
       "groups": {
         "content": "Contenu",
         "community": "Communauté",
-        "operations": "Exploitation"
-      }
+        "operations": "Exploitation",
+        "translation": "Traduction"
+      },
+      "strings": "Textes",
+      "languages": "Langues"
     },
     "comingSoon": {
       "title": "Prévu dans cette phase",
@@ -2048,6 +2052,154 @@
       "rowActions": "Actions pour {{name}}",
       "open": "Ouvrir",
       "actions": "Actions"
+    },
+    "translation": {
+      "loadError": "Les données de traduction n'ont pas pu être chargées.",
+      "strings": {
+        "title": "Textes",
+        "description": "Les textes du site, de l'appli et des e-mails. Une modification est visible immédiatement, sans nouvelle version."
+      },
+      "filters": {
+        "label": "Filtres des textes",
+        "search": "Rechercher",
+        "searchPlaceholder": "Rechercher dans les clés et les textes",
+        "namespace": "Section",
+        "allNamespaces": "Toutes les sections",
+        "status": "Afficher",
+        "allStatuses": "Tous les textes",
+        "language": "Langue",
+        "anyLanguage": "Toutes les langues",
+        "statuses": {
+          "missing": "Manquants",
+          "stale": "Source modifiée",
+          "invalid": "Problèmes de variables"
+        }
+      },
+      "table": {
+        "label": "Textes de l'interface",
+        "key": "Clé",
+        "sourceHeader": "{{language}} (source)",
+        "total": "Nombre de textes\u00a0: {{n}}",
+        "empty": "Aucun texte pour ces filtres."
+      },
+      "cell": {
+        "edit": "Modifier {{key}} en {{language}}",
+        "empty": "Pas encore de texte",
+        "missing": "Manquant",
+        "stale": "Source modifiée",
+        "confirm": "Confirmer",
+        "confirmLabel": "Confirmer {{key}} en {{language}}",
+        "placeholderIssue": "Les variables ne correspondent pas",
+        "notApplicable": "Non utilisé dans cette langue"
+      },
+      "editor": {
+        "label": "Texte de {{key}} en {{language}}",
+        "source": "Source\u00a0:",
+        "placeholders": "Conservez ces variables\u00a0: {{placeholders}}.",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "revert": "Revenir au texte par défaut",
+        "conflictTitle": "Quelqu'un a été plus rapide",
+        "conflictBody": "Ce texte a été enregistré entre-temps par quelqu'un d'autre. Sa version figure ci-dessous.",
+        "useTheirs": "Reprendre sa version",
+        "keepMine": "Enregistrer quand même la mienne"
+      },
+      "errors": {
+        "empty": "Saisissez un texte.",
+        "tooLong": "Ce texte est trop long.",
+        "placeholders": "Les variables doivent correspondre à la source\u00a0: {{placeholders}}.",
+        "generic": "L'enregistrement a échoué. Réessayez.",
+        "notFound": "Ce texte n'existe plus.",
+        "saveFailed": "Le texte n'a pas pu être enregistré."
+      },
+      "export": {
+        "button": "Exporter",
+        "all": "Toutes les langues",
+        "item": "{{language}} ({{format}})",
+        "allItem": "Toutes les langues ({{format}})",
+        "failed": "L'exportation a échoué."
+      },
+      "import": {
+        "button": "Importer",
+        "title": "Importer des textes",
+        "description": "Choisissez un fichier JSON ou CSV. Vous voyez d'abord ce qui changerait, les textes ne sont enregistrés qu'ensuite.",
+        "file": "Fichier",
+        "fileHint": "JSON ou CSV, par exemple un fichier issu de l'exportation.",
+        "language": "Langue du fichier",
+        "fromFile": "Comme dans le fichier",
+        "added": "Nouveaux\u00a0: {{n}}",
+        "changed": "Modifiés\u00a0: {{n}}",
+        "unchanged": "Inchangés\u00a0: {{n}}",
+        "skipped": "Ignorés\u00a0: {{n}}",
+        "changes": "Modifications",
+        "problems": "Lignes ignorées",
+        "problem": {
+          "unknownKey": "clé inconnue",
+          "unknownLanguage": "langue inconnue",
+          "notApplicable": "forme de pluriel que cette langue n'utilise pas",
+          "placeholders": "les variables ne correspondent pas",
+          "tooLong": "trop long",
+          "duplicate": "apparaît plusieurs fois"
+        },
+        "apply": "Importer",
+        "done": "Textes enregistrés\u00a0: {{n}}",
+        "errors": {
+          "title": "Le fichier est inutilisable",
+          "tooLarge": "Le fichier est trop volumineux.",
+          "applyFailed": "L'importation a échoué.",
+          "file": {
+            "invalidJson": "Ce n'est pas un fichier JSON valide.",
+            "invalidCsv": "Ce n'est pas un fichier CSV valide.",
+            "noKeyColumn": "La colonne key est absente.",
+            "noLanguageColumn": "Il n'y a pas de colonne pour la langue choisie.",
+            "unknownLanguage": "Le fichier nomme une langue qui n'existe pas ou n'est pas activée.",
+            "unsupportedShape": "Les valeurs du fichier doivent être des textes.",
+            "needsLanguage": "Choisissez la langue de ce fichier.",
+            "generic": "Le fichier n'a pas pu être lu."
+          }
+        }
+      },
+      "languages": {
+        "title": "Langues",
+        "description": "Les langues qui existent, leur nom et leur ordre dans le menu des langues. Une nouvelle langue affiche le texte néerlandais tant qu'elle n'est pas traduite.",
+        "label": "Langues",
+        "add": "Ajouter une langue",
+        "addTitle": "Ajouter une langue",
+        "editTitle": "Modifier {{language}}",
+        "dialogDescription": "Le code ne peut plus être modifié ensuite.",
+        "code": "Code",
+        "codeHint": "Un code de langue comme pt ou pt-BR.",
+        "name": "Nom",
+        "nameHint": "Tel que la langue se nomme elle-même, par exemple Português.",
+        "intlTag": "Balise Intl",
+        "intlTagHint": "Pour les dates et les listes, par exemple pt-PT.",
+        "order": "Ordre",
+        "orderHint": "Un nombre. Laissez vide pour placer la langue en dernier.",
+        "enabled": "Activée",
+        "enabledLabel": "Activer {{language}}",
+        "default": "Par défaut",
+        "edit": "Modifier",
+        "editLabel": "Modifier {{language}}",
+        "save": "Enregistrer",
+        "saved": "La langue a été enregistrée.",
+        "errors": {
+          "code": "Utilisez un code de langue valide.",
+          "intlTag": "Ce n'est pas une balise Intl valide.",
+          "exists": "Ce code de langue existe déjà.",
+          "order": "Saisissez un nombre entier.",
+          "default": "La langue par défaut reste activée.",
+          "failed": "L'enregistrement a échoué. Réessayez."
+        }
+      },
+      "coverage": {
+        "title": "Couverture de la traduction",
+        "percent": "{{percent}}\u202f% traduit",
+        "progress": "Traduit en {{language}}",
+        "missing": "Manquants\u00a0: {{n}}",
+        "stale": "Source modifiée\u00a0: {{n}}",
+        "invalid": "Variables\u00a0: {{n}}",
+        "complete": "Tout est traduit"
+      }
     }
   },
   "sponsorship": {

@@ -1,4 +1,4 @@
-import { AuthError, requireAdminUser } from "@smog/auth";
+import { AuthError, requireRoleUser } from "@smog/auth";
 import { type AuthUser, toAuthState } from "@smog/auth/react";
 import { notFound, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
@@ -27,18 +27,20 @@ export interface AdminGate {
  * navigation. The session is read from D1 for this request, so a demotion
  * applies on the next navigation:
  * - a guest is redirected to `/sign-in?redirect=<the admin path>`;
- * - a signed-in non-admin gets the 404 page (the admin surface is not
- *   disclosed);
- * - an admin gets `{ user }`.
- * The procedures check the role again (`requireAdmin`); this only decides
- * what the page shows.
+ * - a signed-in account with neither the admin nor the translator role gets
+ *   the 404 page (the admin surface is not disclosed);
+ * - an admin or a translator gets `{ user }`; the layout then narrows a
+ *   translator to the translation screens (`lib/admin-access.ts`).
+ * The procedures check the role again (`requireAdmin`, `requireRole`); this
+ * only decides what the page shows.
  */
 export const getAdminGate = createServerFn()
   .validator((href: unknown): string => adminReturnPath(href))
   .handler(async ({ data: returnPath }): Promise<AdminGate> => {
     const session = await requestSession(getRequest());
     try {
-      requireAdminUser(session);
+      // `admin` implies every other role: this is the translator or the admin.
+      requireRoleUser(session, "translator");
     } catch (error) {
       if (error instanceof AuthError && error.code === "UNAUTHORIZED") {
         throw redirect({ search: { redirect: returnPath }, to: "/sign-in" });

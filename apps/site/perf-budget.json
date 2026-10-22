@@ -84,6 +84,8 @@
         ["admin.tsx", "admin/settings.tsx"],
         ["admin.tsx", "admin/sponsorships/$id.tsx"],
         ["admin.tsx", "admin/sponsorships/index.tsx"],
+        ["admin.tsx", "admin/translation/languages.tsx"],
+        ["admin.tsx", "admin/translation/strings.tsx"],
         ["admin.tsx", "admin/users.tsx"]
       ]
     }
