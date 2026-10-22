@@ -1,4 +1,4 @@
-import type { Locale } from "@smog/config/constants";
+import type { Locale, ShippedLocale } from "@smog/config/constants";
 import { MOLLIE_DEFAULT_API_URL } from "@smog/config/env/worker";
 import { centsToMollieValue } from "./money";
 import {
@@ -217,7 +217,15 @@ export const MOLLIE_LOCALES = {
   en: "en_US",
   fr: "fr_BE",
   nl: "nl_BE",
-} as const satisfies Record<Locale, string>;
+} as const satisfies Record<ShippedLocale, string>;
+
+/**
+ * The Mollie locale of a language: the shipped ones above, else Mollie's
+ * `en_US` (a language an admin added has no Mollie checkout of its own).
+ */
+export function mollieLocale(locale: Locale): string {
+  return (MOLLIE_LOCALES as Record<string, string>)[locale] ?? "en_US";
+}
 
 export interface CreatePaymentInput {
   /** Integer cents, more than 0. */
@@ -252,7 +260,7 @@ export async function createPayment(
     body: {
       amount: { currency: "EUR", value: centsToMollieValue(input.amountCents) },
       description: input.description,
-      locale: MOLLIE_LOCALES[input.locale],
+      locale: mollieLocale(input.locale),
       metadata: input.metadata,
       redirectUrl: input.redirectUrl,
       ...(input.webhookUrl ? { webhookUrl: input.webhookUrl } : {}),

@@ -84,7 +84,7 @@ interface SponsorshipView {
   gestureSlug: string;
   id: string;
   sponsorEmail: string;
-  sponsorLocale: "nl" | "en" | "fr";
+  sponsorLocale: string;
   sponsorName: string;
   status: SponsorshipStatus;
   videoAssetId: string | null;

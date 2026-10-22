@@ -150,7 +150,8 @@ async function resolveToken(
 }
 
 function ownerFallback(locale: Locale): string {
-  return resources[locale].translation.lists.ownerFallback;
+  return (resources[locale as keyof typeof resources] ?? resources.nl)
+    .translation.lists.ownerFallback;
 }
 
 /**

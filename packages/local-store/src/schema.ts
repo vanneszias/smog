@@ -1,8 +1,8 @@
 import {
-  LOCALES,
   RECENT_GESTURES_MAX,
   RECENT_SEARCHES_MAX,
 } from "@smog/config/constants";
+import { localeCodeSchema } from "@smog/config/locale";
 import { z } from "zod";
 
 /** 2 added `preferences.importDismissedFor` (`MIGRATIONS[1]`). */
@@ -46,7 +46,7 @@ export const guestDataSchema = z.object({
      */
     importDismissedFor: z.array(z.string()),
     /** `null` follows the device or browser language. */
-    locale: z.enum(LOCALES).nullable(),
+    locale: localeCodeSchema.nullable(),
     /**
      * Gestures this device opened lately, newest first (at most
      * `RECENT_GESTURES_MAX`): Home's "continue where you left off". Like

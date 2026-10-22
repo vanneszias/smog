@@ -3,7 +3,7 @@
  * validate before sending; consumers parse again (an invalid message is
  * logged and acked, never retried).
  */
-import { LOCALES } from "@smog/config/constants";
+import { localeCodeSchema } from "@smog/config/locale";
 import type { OutboxEmail } from "@smog/email";
 import { EMAIL_TEMPLATE_IDS } from "@smog/email/samples";
 import { z } from "zod";
@@ -23,7 +23,7 @@ export const emailMessageSchema = z.object({
   id: z.uuid(),
   /** The consumer skips a key it sent in the last 7 days (`email:sent:<key>`). */
   idempotencyKey: z.string().min(1).max(EMAIL_IDEMPOTENCY_KEY_MAX).optional(),
-  locale: z.enum(LOCALES),
+  locale: localeCodeSchema,
   /** The template's props; the template's own types checked them at the producer. */
   props: z.record(z.string(), z.unknown()),
   template: z.enum(EMAIL_TEMPLATE_IDS),

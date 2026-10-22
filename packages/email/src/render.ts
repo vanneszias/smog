@@ -107,11 +107,9 @@ export class EmailRenderError extends Error {
 }
 
 /** After a details label in the plain text ("Gesture: Hond"); French spaces the colon. */
-const LABEL_SEPARATOR: Record<Locale, string> = {
-  en: ": ",
-  fr: " : ",
-  nl: ": ",
-};
+function labelSeparator(locale: Locale): string {
+  return locale === "fr" || locale.startsWith("fr-") ? "\u00a0: " : ": ";
+}
 
 /**
  * html-to-text runs table cells together ("GestureHond"), so a details
@@ -127,7 +125,7 @@ function plainTextOptions(locale: Locale) {
         builder: { addInline: (text: string) => void }
       ) => {
         walk(element.children, builder as never);
-        builder.addInline(LABEL_SEPARATOR[locale]);
+        builder.addInline(labelSeparator(locale));
       },
     },
     selectors: [{ format: "emailLabel", selector: "td[data-email-label]" }],

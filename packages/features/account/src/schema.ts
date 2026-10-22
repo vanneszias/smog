@@ -7,7 +7,8 @@ import {
   PROFILE_NAME_MAX as AUTH_PROFILE_NAME_MAX,
   profileNameSchema as authProfileNameSchema,
 } from "@smog/auth/fields";
-import { CONSENT_POLICY_VERSION, LOCALES } from "@smog/config/constants";
+import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
+import { localeCodeSchema } from "@smog/config/locale";
 import {
   gestureIdSchema,
   LIST_DESCRIPTION_MAX,
@@ -123,8 +124,8 @@ export const PROFILE_NAME_MAX = AUTH_PROFILE_NAME_MAX;
 
 export const profileNameSchema = authProfileNameSchema;
 
-/** An app language (`LOCALES`), or `null` to follow the device or browser. */
-export const profileLocaleSchema = z.enum(LOCALES).nullable();
+/** An app language (a code in the `language` table), or `null` to follow the device or browser. */
+export const profileLocaleSchema = localeCodeSchema.nullable();
 
 /** Only the fields sent change; an empty object changes nothing. */
 export const updateProfileInputSchema = z.object({
@@ -301,7 +302,7 @@ export const accountExportSchema = z.object({
       contact: z.object({
         company: z.string().nullable(),
         email: z.string(),
-        locale: z.enum(LOCALES),
+        locale: localeCodeSchema,
         name: z.string(),
       }),
       createdAt: isoDate,

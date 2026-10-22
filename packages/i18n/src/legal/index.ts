@@ -28,10 +28,11 @@ export const LEGAL_CANONICAL_LOCALE: Locale = "nl";
  */
 export const LEGAL_EFFECTIVE_DATE = "2026-09-30";
 
-const TEXTS: Readonly<Record<Locale, LegalTexts>> = { en, fr, nl };
+const TEXTS: Readonly<Record<string, LegalTexts>> = { en, fr, nl };
 
 export function legalDocument(locale: Locale, kind: LegalKind): LegalDocument {
-  return TEXTS[locale][kind];
+  // A language without a shipped text reads the Dutch one (the canonical text).
+  return (TEXTS[locale] ?? nl)[kind];
 }
 
 export type LegalInline =

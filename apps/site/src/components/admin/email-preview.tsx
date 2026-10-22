@@ -1,5 +1,9 @@
 import { useEmailPreview, useEmailTemplates } from "@smog/admin/client";
-import { DEFAULT_LOCALE, LOCALES, type Locale } from "@smog/config/constants";
+import {
+  DEFAULT_LOCALE,
+  LOCALES,
+  type ShippedLocale as Locale,
+} from "@smog/config/constants";
 import { EMAIL_TEMPLATE_IDS, type EmailTemplateId } from "@smog/email/samples";
 import type { Translate, TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";

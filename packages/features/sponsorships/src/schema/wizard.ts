@@ -7,9 +7,9 @@
  */
 import {
   DISPLAY_NAME_MAX,
-  LOCALES,
   MAX_GESTURES_PER_CHECKOUT,
 } from "@smog/config/constants";
+import { localeCodeSchema } from "@smog/config/locale";
 import { z } from "zod";
 import { vatNumberSchema } from "./vat";
 
@@ -81,7 +81,7 @@ export const checkoutInputSchema = z.object({
   gestureIds: checkoutGestureIdsSchema,
   invoice: invoiceSchema.optional(),
   /** The sponsor's language (emails, the Mollie checkout). */
-  locale: z.enum(LOCALES),
+  locale: localeCodeSchema,
   /** The uploaded logo, or left out for none. */
   logoKey: logoKeySchema.optional(),
 });

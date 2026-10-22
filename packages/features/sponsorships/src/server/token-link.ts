@@ -33,7 +33,7 @@ export interface LinkSponsorship {
   hasLogo: boolean;
   id: string;
   logoKey: string | null;
-  sponsorLocale: "nl" | "en" | "fr";
+  sponsorLocale: string;
   status: typeof sponsorship.$inferSelect.status;
 }
 
