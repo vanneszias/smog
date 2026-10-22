@@ -23,6 +23,7 @@ import {
 } from "@tanstack/react-router";
 import {
   HeartHandshake,
+  Languages,
   LogIn,
   LogOut,
   Settings,
@@ -30,6 +31,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { type ReactNode, useCallback } from "react";
+import { TRANSLATION_HOME } from "@/lib/admin-access";
 import { useAuthClient } from "@/lib/auth-client";
 import { signInReturnPath } from "@/lib/redirect";
 import { LanguageMenuItems } from "./language-menu";
@@ -99,6 +101,9 @@ export function UserMenu(): ReactNode {
   const openAdmin = useCallback(() => {
     navigate({ to: "/admin" });
   }, [navigate]);
+  const openTranslation = useCallback(() => {
+    navigate({ to: TRANSLATION_HOME });
+  }, [navigate]);
   const redirect = signInReturnPath(href);
   const openSignIn = useCallback(() => {
     navigate({ search: redirect ? { redirect } : {}, to: "/sign-in" });
@@ -164,10 +169,15 @@ export function UserMenu(): ReactNode {
         <MenuItem icon={<UserRound />} onSelect={openAccount}>
           {t("nav.account")}
         </MenuItem>
-        {/* Admins only; the admin pages check the role on the server. */}
+        {/* Admins and translators only; the admin pages check the role on the server. */}
         {user.roles.includes("admin") ? (
           <MenuItem icon={<ShieldCheck />} onSelect={openAdmin}>
             {t("nav.admin")}
+          </MenuItem>
+        ) : null}
+        {user.roles.includes("translator") && !user.roles.includes("admin") ? (
+          <MenuItem icon={<Languages />} onSelect={openTranslation}>
+            {t("nav.translation")}
           </MenuItem>
         ) : null}
         <MenuSeparator />

@@ -26,6 +26,7 @@ import { AdminPage } from "@/components/admin/admin-page";
 import { AuditEntries } from "@/components/admin/audit-table";
 import { DeadLetterStats } from "@/components/admin/dead-letters/dead-letter-stats";
 import { SponsorshipStats } from "@/components/admin/sponsorships/dashboard-stats";
+import { CoverageCard } from "@/components/admin/translation/coverage";
 import { pageMeta } from "@/lib/head";
 
 // The chart is its own chunk, and only the browser loads it (the Worker's
@@ -114,6 +115,7 @@ function Stats({ data }: { data: Dashboard }): ReactNode {
         title={t("admin.dashboard.users")}
         total={users.total}
       />
+      <CoverageCard className="sm:col-span-2 lg:col-span-3" />
     </div>
   );
 }

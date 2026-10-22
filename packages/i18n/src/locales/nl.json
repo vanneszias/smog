@@ -92,7 +92,8 @@
     "signIn": "Aanmelden",
     "signOut": "Afmelden",
     "gestures": "Gebaren",
-    "legal": "Juridisch"
+    "legal": "Juridisch",
+    "translation": "Vertalen"
   },
   "theme": {
     "label": "Thema",
@@ -928,8 +929,11 @@
       "groups": {
         "content": "Inhoud",
         "community": "Gemeenschap",
-        "operations": "Opvolging"
-      }
+        "operations": "Opvolging",
+        "translation": "Vertalen"
+      },
+      "strings": "Teksten",
+      "languages": "Talen"
     },
     "comingSoon": {
       "title": "Komt in deze fase",
@@ -2010,6 +2014,154 @@
       "rowActions": "Acties voor {{name}}",
       "open": "Openen",
       "actions": "Acties"
+    },
+    "translation": {
+      "loadError": "De vertaalgegevens konden niet worden geladen.",
+      "strings": {
+        "title": "Teksten",
+        "description": "De teksten van de site, de app en de e-mails. Een wijziging is meteen zichtbaar, zonder nieuwe release."
+      },
+      "filters": {
+        "label": "Filters voor de teksten",
+        "search": "Zoeken",
+        "searchPlaceholder": "Zoek in sleutels en teksten",
+        "namespace": "Onderdeel",
+        "allNamespaces": "Alle onderdelen",
+        "status": "Toon",
+        "allStatuses": "Alle teksten",
+        "language": "Taal",
+        "anyLanguage": "Elke taal",
+        "statuses": {
+          "missing": "Ontbrekend",
+          "stale": "Bron gewijzigd",
+          "invalid": "Problemen met invulplaatsen"
+        }
+      },
+      "table": {
+        "label": "Interfaceteksten",
+        "key": "Sleutel",
+        "sourceHeader": "{{language}} (bron)",
+        "total": "Aantal teksten: {{n}}",
+        "empty": "Geen teksten voor deze filters."
+      },
+      "cell": {
+        "edit": "Bewerk {{key}} in het {{language}}",
+        "empty": "Nog geen tekst",
+        "missing": "Ontbreekt",
+        "stale": "Bron gewijzigd",
+        "confirm": "Bevestigen",
+        "confirmLabel": "Bevestig {{key}} in het {{language}}",
+        "placeholderIssue": "Invulplaatsen kloppen niet",
+        "notApplicable": "Niet gebruikt in deze taal"
+      },
+      "editor": {
+        "label": "Tekst van {{key}} in het {{language}}",
+        "source": "Bron:",
+        "placeholders": "Behoud deze invulplaatsen: {{placeholders}}.",
+        "save": "Opslaan",
+        "cancel": "Annuleren",
+        "revert": "Terug naar de standaardtekst",
+        "conflictTitle": "Iemand was je voor",
+        "conflictBody": "Deze tekst is intussen door iemand anders opgeslagen. Hun versie staat hieronder.",
+        "useTheirs": "Hun versie overnemen",
+        "keepMine": "Toch mijn versie opslaan"
+      },
+      "errors": {
+        "empty": "Vul een tekst in.",
+        "tooLong": "Deze tekst is te lang.",
+        "placeholders": "De invulplaatsen moeten gelijk zijn aan de bron: {{placeholders}}.",
+        "generic": "Opslaan is niet gelukt. Probeer het opnieuw.",
+        "notFound": "Deze tekst bestaat niet meer.",
+        "saveFailed": "De tekst kon niet worden opgeslagen."
+      },
+      "export": {
+        "button": "Exporteren",
+        "all": "Alle talen",
+        "item": "{{language}} ({{format}})",
+        "allItem": "Alle talen ({{format}})",
+        "failed": "Het exporteren is niet gelukt."
+      },
+      "import": {
+        "button": "Importeren",
+        "title": "Teksten importeren",
+        "description": "Kies een JSON- of CSV-bestand. Je ziet eerst wat er zou veranderen, pas daarna worden de teksten opgeslagen.",
+        "file": "Bestand",
+        "fileHint": "JSON of CSV, ook een bestand uit de export.",
+        "language": "Taal van het bestand",
+        "fromFile": "Zoals in het bestand",
+        "added": "Nieuw: {{n}}",
+        "changed": "Gewijzigd: {{n}}",
+        "unchanged": "Ongewijzigd: {{n}}",
+        "skipped": "Overgeslagen: {{n}}",
+        "changes": "Wijzigingen",
+        "problems": "Overgeslagen regels",
+        "problem": {
+          "unknownKey": "onbekende sleutel",
+          "unknownLanguage": "onbekende taal",
+          "notApplicable": "meervoudsvorm die deze taal niet gebruikt",
+          "placeholders": "invulplaatsen kloppen niet",
+          "tooLong": "te lang",
+          "duplicate": "komt meer dan eens voor"
+        },
+        "apply": "Importeren",
+        "done": "Teksten opgeslagen: {{n}}",
+        "errors": {
+          "title": "Het bestand kan niet worden gebruikt",
+          "tooLarge": "Het bestand is te groot.",
+          "applyFailed": "Het importeren is niet gelukt.",
+          "file": {
+            "invalidJson": "Dit is geen geldig JSON-bestand.",
+            "invalidCsv": "Dit is geen geldig CSV-bestand.",
+            "noKeyColumn": "De kolom key ontbreekt.",
+            "noLanguageColumn": "Er is geen kolom voor de gekozen taal.",
+            "unknownLanguage": "Het bestand noemt een taal die niet bestaat of niet is ingeschakeld.",
+            "unsupportedShape": "De waarden in het bestand moeten teksten zijn.",
+            "needsLanguage": "Kies de taal van dit bestand.",
+            "generic": "Het bestand kon niet worden gelezen."
+          }
+        }
+      },
+      "languages": {
+        "title": "Talen",
+        "description": "Welke talen er zijn, hoe ze heten en in welke volgorde ze in het taalmenu staan. Een nieuwe taal toont de Nederlandse tekst tot ze vertaald is.",
+        "label": "Talen",
+        "add": "Taal toevoegen",
+        "addTitle": "Taal toevoegen",
+        "editTitle": "{{language}} wijzigen",
+        "dialogDescription": "De code kan later niet meer wijzigen.",
+        "code": "Code",
+        "codeHint": "Een taalcode zoals pt of pt-BR.",
+        "name": "Naam",
+        "nameHint": "Zoals de taal zichzelf noemt, bijvoorbeeld Português.",
+        "intlTag": "Intl-tag",
+        "intlTagHint": "Voor datums en lijsten, bijvoorbeeld pt-PT.",
+        "order": "Volgorde",
+        "orderHint": "Een getal. Leeg laten zet de taal achteraan.",
+        "enabled": "Ingeschakeld",
+        "enabledLabel": "{{language}} inschakelen",
+        "default": "Standaard",
+        "edit": "Wijzigen",
+        "editLabel": "{{language}} wijzigen",
+        "save": "Opslaan",
+        "saved": "De taal is opgeslagen.",
+        "errors": {
+          "code": "Gebruik een geldige taalcode.",
+          "intlTag": "Dit is geen geldige Intl-tag.",
+          "exists": "Deze taalcode bestaat al.",
+          "order": "Vul een geheel getal in.",
+          "default": "De standaardtaal blijft ingeschakeld.",
+          "failed": "Opslaan is niet gelukt. Probeer het opnieuw."
+        }
+      },
+      "coverage": {
+        "title": "Vertaaldekking",
+        "percent": "{{percent}}% vertaald",
+        "progress": "Vertaald in het {{language}}",
+        "missing": "Ontbrekend: {{n}}",
+        "stale": "Bron gewijzigd: {{n}}",
+        "invalid": "Invulplaatsen: {{n}}",
+        "complete": "Alles vertaald"
+      }
     }
   },
   "sponsorship": {

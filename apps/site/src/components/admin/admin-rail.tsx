@@ -1,3 +1,4 @@
+import type { AuthUser } from "@smog/auth/react";
 import type { TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
@@ -16,28 +17,34 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@smog/ui-web";
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useRouteContext } from "@tanstack/react-router";
 import {
   ChevronDown,
   FolderTree,
   Hand,
   HandCoins,
+  Languages,
   LayoutDashboard,
   Mail,
   MailWarning,
   ScrollText,
   Settings,
+  TextCursorInput,
   Users,
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 
 interface RailItem {
+  /** Shown to admins only (a translator sees the other items of their group). */
+  adminOnly?: true;
   href: string;
   icon: ReactNode;
   label: TranslationKey;
 }
 
 interface RailGroup {
+  /** Shown to admins only; a translator sees the translation group only. */
+  adminOnly?: true;
   id: string;
   items: readonly RailItem[];
   label: TranslationKey;
@@ -51,12 +58,15 @@ const DASHBOARD: RailItem = {
 };
 
 /**
- * The admin sections (spec 1 §16, phase 10a): Content, Community and
- * Operations. The groups of the translation screens (spec 2) and the teacher
- * area (spec 3) are added here later, shown by role.
+ * The admin sections (spec 1 §16, phase 10a): Content, Translation
+ * (phase 10b: the strings for a translator or an admin, the language list
+ * for an admin), Community and Operations. A translator sees the
+ * translation group only (`railFor`). The teacher area (spec 3) is added
+ * here later, shown by role.
  */
 export const RAIL_GROUPS: readonly RailGroup[] = [
   {
+    adminOnly: true,
     id: "content",
     items: [
       { href: "/admin/gestures", icon: <Hand />, label: "admin.rail.gestures" },
@@ -69,6 +79,24 @@ export const RAIL_GROUPS: readonly RailGroup[] = [
     label: "admin.rail.groups.content",
   },
   {
+    id: "translation",
+    items: [
+      {
+        href: "/admin/translation/strings",
+        icon: <TextCursorInput />,
+        label: "admin.rail.strings",
+      },
+      {
+        adminOnly: true,
+        href: "/admin/translation/languages",
+        icon: <Languages />,
+        label: "admin.rail.languages",
+      },
+    ],
+    label: "admin.rail.groups.translation",
+  },
+  {
+    adminOnly: true,
     id: "community",
     items: [
       { href: "/admin/users", icon: <Users />, label: "admin.rail.users" },
@@ -81,6 +109,7 @@ export const RAIL_GROUPS: readonly RailGroup[] = [
     label: "admin.rail.groups.community",
   },
   {
+    adminOnly: true,
     id: "operations",
     items: [
       {
@@ -197,21 +226,51 @@ function RailGroupSection({
   );
 }
 
+/**
+ * The groups a person sees: an admin every group, a translator the
+ * translation group without the admin-only items (the language list).
+ */
+export function railFor(isAdmin: boolean): readonly RailGroup[] {
+  if (isAdmin) {
+    return RAIL_GROUPS;
+  }
+  return RAIL_GROUPS.filter((group) => !group.adminOnly).map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.adminOnly),
+  }));
+}
+
+/**
+ * Whether the rail is for an admin: the `/admin` layout put the signed-in
+ * user in the route context (so the server render knows it); without one
+ * (a test, a screen outside the layout) the full rail shows.
+ */
+function useIsAdmin(): boolean {
+  const admin = useRouteContext({
+    select: (context) => (context as { admin?: AuthUser }).admin,
+    strict: false,
+  });
+  return !admin || admin.roles.includes("admin");
+}
+
 function RailNav(): ReactNode {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const isAdmin = useIsAdmin();
   const active = activeHref(pathname);
   return (
     <nav aria-label={t("admin.rail.label")} className="flex min-h-0 flex-1">
       <SidebarContent className="gap-0 py-2">
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <RailLink active={active === "/admin"} item={DASHBOARD} />
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        {RAIL_GROUPS.map((group) => (
+        {isAdmin ? (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <RailLink active={active === "/admin"} item={DASHBOARD} />
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+        {railFor(isAdmin).map((group) => (
           <RailGroupSection active={active} group={group} key={group.id} />
         ))}
       </SidebarContent>
