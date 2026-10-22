@@ -4,6 +4,8 @@ import {
   userRefusalOf,
 } from "@smog/admin/client";
 import {
+  ADMIN_ROLES,
+  type AdminRole,
   type AdminUserDetail,
   BAN_DAYS_MAX,
   BAN_REASON_MAX,
@@ -47,7 +49,7 @@ import {
 } from "react";
 import { useAuditTime } from "../audit-data";
 import { StatusBadge as SponsorshipStatusBadge } from "../sponsorships/status-badge";
-import { RoleBadge, StatusBadge, useUserDate } from "./user-table";
+import { RoleBadges, roleLabel, StatusBadge, useUserDate } from "./user-table";
 
 /** The ban lengths offered (days); `forever` has no end. */
 const BAN_DAYS = [1, 7, 30, 90, BAN_DAYS_MAX] as const;
@@ -64,6 +66,12 @@ const REFUSED = {
 } as const satisfies Record<UserGuardReason, TranslationKey>;
 
 /** The sign-in methods with a label; another provider shows its id. */
+const ROLE_HELP = {
+  admin: "admin.users.roleSection.help.admin",
+  teacher: "admin.users.roleSection.help.teacher",
+  translator: "admin.users.roleSection.help.translator",
+} as const satisfies Record<AdminRole, TranslationKey>;
+
 const METHODS: Readonly<Record<string, TranslationKey>> = {
   apple: "admin.users.methods.apple",
   credential: "admin.users.methods.credential",
@@ -122,8 +130,8 @@ function UserFacts({ user }: { user: AdminUserDetail }): ReactNode {
       <Row className="col-span-2" label={t("admin.users.panel.email")}>
         {user.email}
       </Row>
-      <Row label={t("admin.users.panel.role")}>
-        <RoleBadge role={user.role} />
+      <Row label={t("admin.users.panel.roles")}>
+        <RoleBadges roles={user.roles} />
       </Row>
       <Row label={t("admin.users.panel.status")}>
         <StatusBadge user={user} />
@@ -215,14 +223,14 @@ function UserSponsorships({ user }: { user: AdminUserDetail }): ReactNode {
   );
 }
 
-type DialogKind = "ban" | "delete" | "role" | "unban";
+type DialogKind = "ban" | "delete" | "grant" | "revoke" | "unban";
 
 /**
  * Why some actions are off (the admin's own account, an admin, a ban) and
  * which buttons the note describes (M-6).
  */
 function actionNotes(isSelf: boolean, user: AdminUserDetail) {
-  const isAdmin = user.role === "admin";
+  const isAdmin = user.roles.includes("admin");
   const promoteBlocked = !(isAdmin || isSelf) && user.banned;
   let key: TranslationKey | null = null;
   if (isSelf) {
@@ -236,7 +244,7 @@ function actionNotes(isSelf: boolean, user: AdminUserDetail) {
     banDescribed: isSelf || isAdmin,
     key,
     promoteBlocked,
-    roleDescribed: isSelf || promoteBlocked,
+    roleDescribed: isSelf,
   };
 }
 
@@ -246,11 +254,67 @@ interface ActionsProps {
   user: AdminUserDetail;
 }
 
+interface RoleRowProps {
+  /** Adding the role is not offered (a banned account is not made admin). */
+  blocked: boolean;
+  held: boolean;
+  locked: boolean;
+  /** The note that says why the button is off. */
+  noteId: string | undefined;
+  onOpen: (kind: "grant" | "revoke", role: AdminRole) => void;
+  pending: boolean;
+  role: AdminRole;
+}
+
+/** One role of the set: its name and what it allows, and the button that adds or removes it. */
+function RoleRow({
+  blocked,
+  held,
+  locked,
+  noteId,
+  onOpen,
+  pending,
+  role,
+}: RoleRowProps): ReactNode {
+  const { t } = useTranslation();
+  const open = useCallback(
+    () => onOpen(held ? "revoke" : "grant", role),
+    [held, onOpen, role]
+  );
+  const label = roleLabel(t, role);
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 py-2">
+      <span className="flex min-w-0 flex-col">
+        <Text as="span" size="body-sm" weight="semibold">
+          {label}
+        </Text>
+        <Text as="span" size="caption" tone="muted">
+          {t(ROLE_HELP[role])}
+        </Text>
+      </span>
+      <Button
+        aria-describedby={noteId}
+        disabled={locked || (!held && blocked)}
+        icon={held ? <ShieldOff /> : <ShieldCheck />}
+        loading={pending}
+        onClick={open}
+        size="sm"
+        variant="secondary"
+      >
+        {t(held ? "admin.users.revoke.action" : "admin.users.grant.action", {
+          role: label,
+        })}
+      </Button>
+    </li>
+  );
+}
+
 /**
- * The actions, each behind an AlertDialog: promote or demote, ban (reason
- * and length), lift a ban, delete (type the email). Disabled, with the
- * reason, on the admin's own account; ban and delete wait for a demotion.
- * The server runs the same guards (ruling 7).
+ * The actions, each behind an AlertDialog: add or remove a role (the set:
+ * translator, teacher, admin), ban (reason and length), lift a ban, delete
+ * (type the email). Disabled, with the reason, on the admin's own account;
+ * ban and delete wait for the admin role to go; a banned account is not made
+ * admin. The server runs the same guards (ruling 7).
  */
 function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
   const { t } = useTranslation();
@@ -260,8 +324,9 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
   const [reason, setReason] = useState("");
   const [days, setDays] = useState<string>(FOREVER);
   const [confirmEmail, setConfirmEmail] = useState("");
+  const [role, setRole] = useState<AdminRole>("translator");
   const name = user.name || user.email;
-  const isAdmin = user.role === "admin";
+  const isAdmin = user.roles.includes("admin");
 
   const openDialog = useCallback((kind: DialogKind) => {
     setReason("");
@@ -269,7 +334,13 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
     setConfirmEmail("");
     setDialog(kind);
   }, []);
-  const openRole = useCallback(() => openDialog("role"), [openDialog]);
+  const openRole = useCallback(
+    (kind: "grant" | "revoke", next: AdminRole) => {
+      setRole(next);
+      openDialog(kind);
+    },
+    [openDialog]
+  );
   const openBan = useCallback(() => openDialog("ban"), [openDialog]);
   const openUnban = useCallback(() => openDialog("unban"), [openDialog]);
   const openDelete = useCallback(() => openDialog("delete"), [openDialog]);
@@ -294,15 +365,19 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
     [t, toast]
   );
 
-  const confirmRole = useCallback(() => {
-    const role = isAdmin ? "user" : "admin";
+  const confirmGrant = useCallback(() => {
     run(
-      () => actions.setRole.mutateAsync({ role, userId: user.id }),
-      t(isAdmin ? "admin.users.demote.done" : "admin.users.promote.done", {
-        name,
-      })
+      () => actions.grantRole.mutateAsync({ role, userId: user.id }),
+      t("admin.users.grant.done", { name, role: roleLabel(t, role) })
     ).catch(() => undefined);
-  }, [actions.setRole, isAdmin, name, run, t, user.id]);
+  }, [actions.grantRole, name, role, run, t, user.id]);
+
+  const confirmRevoke = useCallback(() => {
+    run(
+      () => actions.revokeRole.mutateAsync({ role, userId: user.id }),
+      t("admin.users.revoke.done", { name, role: roleLabel(t, role) })
+    ).catch(() => undefined);
+  }, [actions.revokeRole, name, role, run, t, user.id]);
 
   const confirmBan = useCallback(() => {
     run(
@@ -348,7 +423,8 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
   const emailMatches =
     confirmEmail.trim().toLowerCase() === user.email.toLowerCase();
   const busy = [
-    actions.setRole,
+    actions.grantRole,
+    actions.revokeRole,
     actions.ban,
     actions.unban,
     actions.remove,
@@ -360,7 +436,6 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
   const notes = actionNotes(isSelf, user);
   const { promoteBlocked } = notes;
   const note = notes.key ? t(notes.key) : null;
-  const roleNote = notes.roleDescribed ? noteId : undefined;
   const banNote = notes.banDescribed ? noteId : undefined;
   const durationOptions = [
     { label: t("admin.users.ban.forever"), value: FOREVER },
@@ -383,20 +458,39 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
           {note}
         </Text>
       ) : null}
+      <section
+        aria-labelledby="user-roles-heading"
+        className="flex flex-col gap-2"
+      >
+        <Heading id="user-roles-heading" level={4}>
+          {t("admin.users.roleSection.title")}
+        </Heading>
+        <Text size="body-sm" tone="muted">
+          {t("admin.users.roleSection.description")}
+        </Text>
+        <ul className="flex flex-col divide-y divide-border-subtle">
+          {ADMIN_ROLES.map((item) => (
+            <RoleRow
+              blocked={item === "admin" && promoteBlocked}
+              held={user.roles.includes(item)}
+              key={item}
+              locked={locked}
+              noteId={
+                isSelf || (item === "admin" && promoteBlocked)
+                  ? noteId
+                  : undefined
+              }
+              onOpen={openRole}
+              pending={
+                role === item &&
+                (actions.grantRole.isPending || actions.revokeRole.isPending)
+              }
+              role={item}
+            />
+          ))}
+        </ul>
+      </section>
       <div className="flex flex-wrap gap-2">
-        <Button
-          aria-describedby={roleNote}
-          disabled={locked || promoteBlocked}
-          icon={isAdmin ? <ShieldOff /> : <ShieldCheck />}
-          loading={actions.setRole.isPending}
-          onClick={openRole}
-          size="sm"
-          variant="secondary"
-        >
-          {t(
-            isAdmin ? "admin.users.demote.action" : "admin.users.promote.action"
-          )}
-        </Button>
         {user.banned ? (
           <Button
             aria-describedby={isSelf ? noteId : undefined}
@@ -437,21 +531,31 @@ function UserActions({ isSelf, onDeleted, user }: ActionsProps): ReactNode {
 
       <AlertDialog
         className="wrap-anywhere"
-        confirmLabel={t(
-          isAdmin ? "admin.users.demote.action" : "admin.users.promote.action"
-        )}
-        description={t(
-          isAdmin
-            ? "admin.users.demote.description"
-            : "admin.users.promote.description"
-        )}
-        onConfirm={confirmRole}
+        confirmLabel={t("admin.users.grant.action", {
+          role: roleLabel(t, role),
+        })}
+        description={t("admin.users.grant.description")}
+        onConfirm={confirmGrant}
         onOpenChange={onOpenChange}
-        open={dialog === "role"}
-        title={t(
-          isAdmin ? "admin.users.demote.title" : "admin.users.promote.title",
-          { name }
-        )}
+        open={dialog === "grant"}
+        title={t("admin.users.grant.title", {
+          name,
+          role: roleLabel(t, role),
+        })}
+      />
+      <AlertDialog
+        className="wrap-anywhere"
+        confirmLabel={t("admin.users.revoke.action", {
+          role: roleLabel(t, role),
+        })}
+        description={t("admin.users.revoke.description")}
+        onConfirm={confirmRevoke}
+        onOpenChange={onOpenChange}
+        open={dialog === "revoke"}
+        title={t("admin.users.revoke.title", {
+          name,
+          role: roleLabel(t, role),
+        })}
       />
       <AlertDialog
         body={

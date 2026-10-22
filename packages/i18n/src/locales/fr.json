@@ -1496,7 +1496,9 @@
       },
       "roles": {
         "user": "Utilisateur",
-        "admin": "Administrateur"
+        "admin": "Administrateur",
+        "translator": "Traducteur",
+        "teacher": "Enseignant"
       },
       "columns": {
         "name": "Nom",
@@ -1527,12 +1529,13 @@
         "banUntil": "Bloqué jusqu’au",
         "banForever": "Sans date de fin",
         "actions": "Actions",
-        "self": "C’est votre propre compte. Un autre administrateur doit en changer le rôle, le bloquer ou le supprimer.",
+        "self": "C’est votre propre compte. Un autre administrateur doit en changer les rôles, le bloquer ou le supprimer.",
         "adminTarget": "Retirez d’abord le rôle d’administrateur avant de bloquer ou de supprimer ce compte.",
         "bannedTarget": "Levez le blocage avant de nommer ce compte administrateur.",
         "notFound": "Ce compte n’existe plus.",
         "sponsorships": "Parrainages",
-        "noSponsorships": "Aucun parrainage avec cette adresse e-mail."
+        "noSponsorships": "Aucun parrainage avec cette adresse e-mail.",
+        "roles": "Rôles"
       },
       "methods": {
         "credential": "Mot de passe",
@@ -1540,17 +1543,27 @@
         "apple": "Apple",
         "passkey": "Clé d’accès"
       },
-      "promote": {
-        "action": "Nommer administrateur",
-        "title": "Nommer {{name}} administrateur\u202f?",
-        "description": "Les administrateurs peuvent modifier le catalogue, les comptes et les réglages. Cela s’applique dès leur prochaine page.",
-        "done": "{{name}} est maintenant administrateur."
+      "roleSection": {
+        "title": "Rôles",
+        "description": "Une personne peut avoir plusieurs rôles. Un administrateur peut faire tout ce que font les autres rôles.",
+        "none": "Aucun rôle : un apprenant.",
+        "help": {
+          "translator": "Traduit les noms, les mots-clés, les écrans et les textes juridiques.",
+          "teacher": "Enregistre et vérifie les vidéos des signes.",
+          "admin": "Gère le catalogue, les comptes, les parrainages et les réglages."
+        }
       },
-      "demote": {
-        "action": "Retirer le rôle d’administrateur",
-        "title": "Retirer le rôle d’administrateur de {{name}}\u202f?",
-        "description": "L’accès à l’administration disparaît immédiatement.",
-        "done": "{{name}} n’est plus administrateur."
+      "grant": {
+        "action": "Ajouter le rôle : {{role}}",
+        "title": "Donner le rôle {{role}} à {{name}} ?",
+        "description": "Cela s’applique dès leur prochaine page.",
+        "done": "{{name}} a maintenant le rôle {{role}}."
+      },
+      "revoke": {
+        "action": "Retirer le rôle : {{role}}",
+        "title": "Retirer le rôle {{role}} à {{name}} ?",
+        "description": "Ce que le rôle permet disparaît immédiatement.",
+        "done": "{{name}} n’a plus le rôle {{role}}."
       },
       "ban": {
         "action": "Bloquer",

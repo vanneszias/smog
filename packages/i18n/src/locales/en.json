@@ -1462,7 +1462,9 @@
       },
       "roles": {
         "user": "User",
-        "admin": "Admin"
+        "admin": "Admin",
+        "translator": "Translator",
+        "teacher": "Teacher"
       },
       "columns": {
         "name": "Name",
@@ -1493,12 +1495,13 @@
         "banUntil": "Banned until",
         "banForever": "No end date",
         "actions": "Actions",
-        "self": "This is your own account. Another admin has to change its role, ban it or delete it.",
+        "self": "This is your own account. Another admin has to change its roles, ban it or delete it.",
         "adminTarget": "Remove the admin role before you ban or delete this account.",
         "bannedTarget": "Lift the ban before you make this account an admin.",
         "notFound": "This account no longer exists.",
         "sponsorships": "Sponsorships",
-        "noSponsorships": "No sponsorships with this email address."
+        "noSponsorships": "No sponsorships with this email address.",
+        "roles": "Roles"
       },
       "methods": {
         "credential": "Password",
@@ -1506,17 +1509,27 @@
         "apple": "Apple",
         "passkey": "Passkey"
       },
-      "promote": {
-        "action": "Make admin",
-        "title": "Make {{name}} an admin?",
-        "description": "Admins can change the catalogue, the accounts and the settings. It applies from their next page.",
-        "done": "{{name}} is now an admin."
+      "roleSection": {
+        "title": "Roles",
+        "description": "A person can hold several roles. An admin can do everything the other roles can.",
+        "none": "No role: a learner.",
+        "help": {
+          "translator": "Translates names, keywords, screens and legal texts.",
+          "teacher": "Records and checks the sign videos.",
+          "admin": "Manages the catalogue, accounts, sponsorships and settings."
+        }
       },
-      "demote": {
-        "action": "Remove admin role",
-        "title": "Remove the admin role of {{name}}?",
-        "description": "They lose access to the admin at once.",
-        "done": "{{name}} is no longer an admin."
+      "grant": {
+        "action": "Add role: {{role}}",
+        "title": "Give {{name}} the role {{role}}?",
+        "description": "It applies from their next page.",
+        "done": "{{name}} now has the role {{role}}."
+      },
+      "revoke": {
+        "action": "Remove role: {{role}}",
+        "title": "Remove the role {{role}} from {{name}}?",
+        "description": "They lose what the role allows at once.",
+        "done": "{{name}} no longer has the role {{role}}."
       },
       "ban": {
         "action": "Ban",

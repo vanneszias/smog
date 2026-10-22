@@ -19,6 +19,8 @@ export const USER_QUERY_MAX = 200;
 
 /** The roles an admin can grant and revoke (phase 10b): a set per user. */
 export const userRoleSchema = z.enum(USER_ROLES);
+/** translator, teacher, admin: what the user screen offers, in this order. */
+export const ADMIN_ROLES = USER_ROLES;
 export type AdminRole = z.infer<typeof userRoleSchema>;
 
 /**

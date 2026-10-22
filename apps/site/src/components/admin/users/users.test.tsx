@@ -20,7 +20,7 @@ const MEMBER: AdminUserDetail = {
   lists: 1,
   methods: ["credential", "google"],
   name: "Mia Member",
-  role: "user",
+  roles: [],
   sessions: 2,
   sponsorships: [],
 };
@@ -61,7 +61,7 @@ describe("user labels", () => {
         );
         expect(message, `${locale} ${reason}`).not.toContain("admin.users");
       }
-      for (const role of ["user", "admin"] as const) {
+      for (const role of ["user", "translator", "teacher", "admin"] as const) {
         expect(roleLabel(t, role)).not.toContain("admin.users");
       }
     }
@@ -102,6 +102,9 @@ describe("user search", () => {
       q: undefined,
       role: undefined,
     });
+    for (const role of ["user", "translator", "teacher", "admin"]) {
+      expect(validateUserSearch({ role }).role).toBe(role);
+    }
   });
 
   test("turns the URL into the list input", () => {
@@ -125,7 +128,7 @@ describe("UserPanel", () => {
           email: "ada@smog.test",
           id: ADMIN_ID,
           name: "Ada Admin",
-          role: "admin",
+          roles: ["admin"],
         },
       },
     });
@@ -134,7 +137,13 @@ describe("UserPanel", () => {
       expect(dialog.textContent).toContain("ada@smog.test");
     });
     expect(dialog.textContent).toContain("This is your own account.");
-    for (const name of ["Remove admin role", "Ban", "Delete account"]) {
+    for (const name of [
+      "Remove role: Admin",
+      "Add role: Translator",
+      "Add role: Teacher",
+      "Ban",
+      "Delete account",
+    ]) {
       const button = screen.getByRole("button", { name }) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
       // The reason is tied to the button, for screen readers (M-6).
@@ -169,10 +178,10 @@ describe("UserPanel", () => {
     expect(section.textContent).toContain("Live");
   });
 
-  test("an admin target can be demoted, not banned or deleted", async () => {
+  test("an admin target can lose the role, not be banned or deleted", async () => {
     await renderSite(panelPage("u-other"), {
       api: {
-        "admin/users/get": { ...MEMBER, id: "u-other", role: "admin" },
+        "admin/users/get": { ...MEMBER, id: "u-other", roles: ["admin"] },
       },
     });
     await screen.findByText(
@@ -181,7 +190,7 @@ describe("UserPanel", () => {
     expect(
       (
         screen.getByRole("button", {
-          name: "Remove admin role",
+          name: "Remove role: Admin",
         }) as HTMLButtonElement
       ).disabled
     ).toBe(false);
@@ -203,14 +212,102 @@ describe("UserPanel", () => {
       },
     });
     const promote = (await screen.findByRole("button", {
-      name: "Make admin",
+      name: "Add role: Admin",
     })) as HTMLButtonElement;
     expect(promote.disabled).toBe(true);
     expect(describedBy(promote)).toContain("Lift the ban before");
+    // Another role is fine for a banned account.
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Add role: Translator",
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(false);
     expect(
       (screen.getByRole("button", { name: "Lift ban" }) as HTMLButtonElement)
         .disabled
     ).toBe(false);
+  });
+
+  test("shows the roles held and one button per role of the set", async () => {
+    await renderSite(panelPage(MEMBER.id), {
+      api: {
+        "admin/users/get": { ...MEMBER, roles: ["translator", "teacher"] },
+      },
+    });
+    const section = await screen.findByRole("region", { name: "Roles" });
+    expect(section.textContent).toContain("Translates names");
+    expect(
+      screen.getByRole("button", { name: "Remove role: Translator" })
+    ).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Remove role: Teacher" })
+    ).toBeDefined();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Add role: Admin",
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(false);
+  });
+
+  test("adds a role behind an AlertDialog and sends the grant", async () => {
+    const site = await renderSite(panelPage(MEMBER.id), {
+      api: {
+        "admin/users/get": MEMBER,
+        "admin/users/grantRole": {
+          user: { ...MEMBER, roles: ["translator"] },
+        },
+      },
+    });
+    await screen.findByText("Password, Google");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add role: Translator" })
+    );
+    const alert = await screen.findByRole("alertdialog");
+    expect(alert.textContent).toContain("Give Mia Member the role Translator?");
+    const confirm = Array.from(alert.querySelectorAll("button")).find(
+      (button) => button.textContent === "Add role: Translator"
+    ) as HTMLButtonElement;
+    fireEvent.click(confirm);
+    await waitFor(() => {
+      expect(site.calls.map((call) => call.path)).toContain(
+        "admin/users/grantRole"
+      );
+    });
+    expect(
+      site.calls.find((call) => call.path === "admin/users/grantRole")?.input
+    ).toEqual({ role: "translator", userId: MEMBER.id });
+    await screen.findByText("Mia Member now has the role Translator.");
+  });
+
+  test("removes a role behind an AlertDialog and sends the revoke", async () => {
+    const site = await renderSite(panelPage(MEMBER.id), {
+      api: {
+        "admin/users/get": { ...MEMBER, roles: ["teacher"] },
+        "admin/users/revokeRole": { user: MEMBER },
+      },
+    });
+    await screen.findByText("Password, Google");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove role: Teacher" })
+    );
+    const alert = await screen.findByRole("alertdialog");
+    const confirm = Array.from(alert.querySelectorAll("button")).find(
+      (button) => button.textContent === "Remove role: Teacher"
+    ) as HTMLButtonElement;
+    fireEvent.click(confirm);
+    await waitFor(() => {
+      expect(site.calls.map((call) => call.path)).toContain(
+        "admin/users/revokeRole"
+      );
+    });
+    expect(
+      site.calls.find((call) => call.path === "admin/users/revokeRole")?.input
+    ).toEqual({ role: "teacher", userId: MEMBER.id });
+    await screen.findByText("Mia Member no longer has the role Teacher.");
   });
 
   test("bans with a reason and a length, behind an AlertDialog", async () => {
