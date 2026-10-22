@@ -6,6 +6,7 @@ export {
   rebuildGestureFtsSql,
   rebuildGesturesFtsSql,
 } from "./fts";
+export { type EnabledLanguage, uiCatalogueSource } from "./i18n-queries";
 export {
   AUDIT_RETENTION_MS,
   DEAD_LETTER_RETENTION_MS,
