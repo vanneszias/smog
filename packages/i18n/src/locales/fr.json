@@ -474,8 +474,7 @@
   "shell": {
     "explore": "Explorer",
     "supportTitle": "Soutenir SMOG",
-    "supportText": "Montrez votre nom ou logo avec un geste.",
-    "searchShortcut": "Appuyez sur / pour chercher"
+    "supportText": "Montrez votre nom ou logo avec un geste."
   },
   "mySpace": {
     "title": "Mon espace",

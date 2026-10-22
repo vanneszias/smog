@@ -6,7 +6,7 @@ import {
   useGestures,
 } from "@smog/gestures/client";
 import { useTranslation } from "@smog/i18n/react";
-import { Button, CategoryChips, Text } from "@smog/ui-web";
+import { Button, Text } from "@smog/ui-web";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   type ReactNode,
@@ -16,6 +16,10 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  CategoryFilterInline,
+  CategoryFilterTrigger,
+} from "@/components/learning/category-filter";
 import { Page, PageHeader, RouteError } from "@/components/learning/page";
 import { ResultsView } from "@/components/learning/results-view";
 import type { SearchTrigger } from "@/components/learning/search-box";
@@ -279,14 +283,23 @@ function Gestures(): ReactNode {
     <Page>
       <PageHeader title={t("nav.gestures")} />
       <div className="flex flex-col gap-4">
-        <SearchBox
-          label={t("home.searchLabel")}
-          onSubmit={submit}
-          onValueChange={type}
-          placeholder={t("home.searchPlaceholder")}
-          value={text}
-        />
-        <CategoryChips
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <SearchBox
+              label={t("home.searchLabel")}
+              onSubmit={submit}
+              onValueChange={type}
+              placeholder={t("home.searchPlaceholder")}
+              value={text}
+            />
+          </div>
+          <CategoryFilterTrigger
+            categories={categories.data ?? []}
+            onChange={changeCategories}
+            selected={selectedCategories}
+          />
+        </div>
+        <CategoryFilterInline
           categories={categories.data ?? []}
           onChange={changeCategories}
           selected={selectedCategories}

@@ -5,7 +5,7 @@ import {
 } from "@smog/local-store";
 import { useLocalStore, useLocalStoreInstance } from "@smog/local-store/react";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import type { GestureSummary } from "../schema";
 import { CATALOG_STALE_TIME, useGesturesRpc } from "./slice";
 
@@ -61,4 +61,18 @@ export function useRecentGestures(): RecentGestures {
     gestures: ids.length === 0 ? NO_GESTURES : (query.data ?? NO_GESTURES),
     status,
   };
+}
+
+/**
+ * Remembers `gestureId` as opened on this device while the screen shows it
+ * (the gesture page, or the detail beside the results). Never throws: the
+ * convenience is not worth an error screen.
+ */
+export function useRememberGesture(gestureId: string): void {
+  const store = useLocalStoreInstance();
+  useEffect(() => {
+    store.update(addRecentGesture(gestureId)).catch((error: unknown) => {
+      console.error("[recentGestures] Failed to remember a gesture:", error);
+    });
+  }, [gestureId, store]);
 }

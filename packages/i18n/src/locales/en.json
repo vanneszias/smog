@@ -468,8 +468,7 @@
   "shell": {
     "explore": "Explore",
     "supportTitle": "Support SMOG",
-    "supportText": "Show your name or logo with a gesture.",
-    "searchShortcut": "Press / to search"
+    "supportText": "Show your name or logo with a gesture."
   },
   "mySpace": {
     "title": "My space",
