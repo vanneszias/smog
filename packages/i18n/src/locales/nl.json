@@ -463,7 +463,9 @@
   "searchPalette": {
     "placeholder": "Zoek gebaren en categorieën",
     "description": "Typ om een gebaar te vinden. Gebruik de pijltjestoetsen en Enter.",
-    "seeAll": "Toon alle resultaten voor “{{query}}”"
+    "seeAll": "Toon alle resultaten voor “{{query}}”",
+    "loadFailed": "De zoekfunctie kon niet worden geopend. Controleer je verbinding en probeer het opnieuw.",
+    "error": "Zoeken is mislukt. Probeer het opnieuw."
   },
   "shell": {
     "explore": "Ontdek",

@@ -469,7 +469,9 @@
   "searchPalette": {
     "placeholder": "Rechercher des gestes et des catégories",
     "description": "Saisissez pour trouver un geste. Utilisez les flèches et Entrée.",
-    "seeAll": "Afficher tous les résultats pour « {{query}} »"
+    "seeAll": "Afficher tous les résultats pour « {{query}} »",
+    "loadFailed": "La recherche n’a pas pu s’ouvrir. Vérifiez votre connexion et réessayez.",
+    "error": "La recherche a échoué. Réessayez."
   },
   "shell": {
     "explore": "Explorer",

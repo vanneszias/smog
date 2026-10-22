@@ -14,6 +14,7 @@ import {
   useState,
 } from "react";
 import { cn } from "../lib/cn";
+import { isEditingTarget } from "../lib/editing-target";
 import { useIsMobile } from "../lib/use-mobile";
 import { disabled, transition } from "../lib/variants";
 import { IconButton, type IconButtonProps } from "./icon-button";
@@ -95,7 +96,9 @@ export function SidebarProvider({
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (
         event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-        (event.metaKey || event.ctrlKey)
+        (event.metaKey || event.ctrlKey) &&
+        // In a text field Ctrl/Cmd+B is the editor's (bold) or the browser's.
+        !isEditingTarget(event.target)
       ) {
         event.preventDefault();
         toggleSidebar();

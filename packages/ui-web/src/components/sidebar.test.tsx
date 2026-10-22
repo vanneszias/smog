@@ -62,6 +62,30 @@ describe("Sidebar", () => {
     ).toBe("collapsed");
   });
 
+  test("Ctrl+B in a text field is left to the field (bold, the browser)", async () => {
+    const { container } = renderKit(
+      <>
+        <Shell />
+        <textarea aria-label="Notes" />
+      </>
+    );
+    await userEvent.click(screen.getByRole("textbox", { name: "Notes" }));
+    const notes = screen.getByRole("textbox", { name: "Notes" });
+    const event = new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      key: "b",
+    });
+    notes.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(
+      container
+        .querySelector('[data-slot="sidebar"]')
+        ?.getAttribute("data-state")
+    ).toBe("expanded");
+  });
+
   test("a menu button outside the provider fails loudly", () => {
     expect(() =>
       renderKit(<SidebarMenuButton>Orphan</SidebarMenuButton>)

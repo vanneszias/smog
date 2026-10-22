@@ -284,4 +284,5 @@ export {
   type VideoPlayerProps,
 } from "./domain/video-player";
 export { cn } from "./lib/cn";
+export { isEditingTarget } from "./lib/editing-target";
 export { PortalContainerProvider } from "./lib/portal";

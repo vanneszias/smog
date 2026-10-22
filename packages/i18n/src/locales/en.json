@@ -463,7 +463,9 @@
   "searchPalette": {
     "placeholder": "Search gestures and categories",
     "description": "Type to find a gesture. Use the arrow keys and Enter.",
-    "seeAll": "Show all results for “{{query}}”"
+    "seeAll": "Show all results for “{{query}}”",
+    "loadFailed": "The search could not be opened. Check your connection and try again.",
+    "error": "The search failed. Try again."
   },
   "shell": {
     "explore": "Explore",

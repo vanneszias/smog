@@ -150,6 +150,18 @@ function PaletteBody({
   } else if (matchingCategories[0]) {
     first = `category:${matchingCategories[0].slug}`;
   }
+  let status = "";
+  if (typed === "") {
+    // Nothing typed, nothing to report.
+  } else if (found.isError) {
+    status = t("searchPalette.error");
+  } else if (found.isDebouncing || found.isFetching || !found.data) {
+    status = t("search.searching");
+  } else if (found.data.total === 0) {
+    status = t("search.noResults.title");
+  } else {
+    status = t("search.resultCount", { count: found.data.total });
+  }
   const [highlight, setHighlight] = useState(first);
   useEffect(() => {
     setHighlight(first);
@@ -166,12 +178,19 @@ function PaletteBody({
         placeholder={t("searchPalette.placeholder")}
         value={query}
       />
+      {/* "Show all results" is always listed once something is typed, so cmdk
+          never renders its empty state then: this line is the palette's
+          visible and spoken feedback (searching, failed, none, how many). */}
+      <div
+        aria-live="polite"
+        className="px-4 pt-2 text-body-sm text-muted-foreground empty:hidden"
+        data-testid="palette-status"
+        role="status"
+      >
+        {status}
+      </div>
       <CommandList>
-        <CommandEmpty>
-          {found.isFetching
-            ? t("search.searching")
-            : t("search.noResults.title")}
-        </CommandEmpty>
+        <CommandEmpty>{t("search.noResults.title")}</CommandEmpty>
         {showRecent ? (
           <CommandGroup heading={t("search.recent")}>
             {recent.items.map((item) => (

@@ -56,16 +56,28 @@ async function settled(page: Page): Promise<void> {
   await page.waitForLoadState("networkidle");
 }
 
+/**
+ * Before leaving a screen: the pointer off whatever it was over (a hover
+ * preload would start a request the next `goto` aborts) and the network
+ * quiet, so no request of this screen is in flight when the next loads.
+ */
+async function quiesce(page: Page): Promise<void> {
+  await page.mouse.move(0, 0);
+  await page.waitForLoadState("networkidle");
+}
+
 /** Every admin screen, then its overlays, in one theme at one width. */
 async function auditScreens(page: Page, width: number): Promise<Violation[]> {
   const found: Violation[] = [];
   for (const [name, path] of ADMIN_PAGES) {
     // biome-ignore lint/performance/noAwaitInLoops: one screen at a time.
+    await quiesce(page);
     await openAdmin(page, path);
     await settled(page);
     found.push(...(await axe(page, name)));
   }
 
+  await quiesce(page);
   await openAdmin(page, `/admin/gestures/${await hondId(page.request)}`);
   await settled(page);
   found.push(...(await axe(page, "gesture-editor")));
@@ -79,6 +91,7 @@ async function auditScreens(page: Page, width: number): Promise<Violation[]> {
     await page.keyboard.press("Escape");
   }
 
+  await quiesce(page);
   await openAdmin(page, "/admin/audit");
   await settled(page);
   await page
@@ -90,6 +103,7 @@ async function auditScreens(page: Page, width: number): Promise<Violation[]> {
   found.push(...(await axe(page, "audit:detail")));
   await page.keyboard.press("Escape");
 
+  await quiesce(page);
   await openAdmin(page, "/admin/gestures?q=hond");
   await page.getByRole("button", { name: "Acties voor Hond" }).click();
   await page.getByRole("menuitem", { name: "QR-code" }).click();
@@ -107,6 +121,7 @@ async function auditScreens(page: Page, width: number): Promise<Violation[]> {
   ).toBeVisible();
   found.push(...(await axe(page, "gestures:table-editor")));
 
+  await quiesce(page);
   await openAdmin(page, "/admin/categories");
   await settled(page);
   await page.getByRole("button", { name: "Nieuwe categorie" }).click();
@@ -116,6 +131,7 @@ async function auditScreens(page: Page, width: number): Promise<Violation[]> {
   found.push(...(await axe(page, "categories:create")));
   await page.keyboard.press("Escape");
 
+  await quiesce(page);
   await openAdmin(
     page,
     `/admin/users?q=${encodeURIComponent(SEED_ADMIN_EMAIL)}`
@@ -131,6 +147,7 @@ async function auditScreens(page: Page, width: number): Promise<Violation[]> {
   found.push(...(await axe(page, "users:panel")));
   await page.keyboard.press("Escape");
 
+  await quiesce(page);
   await openAdmin(page, "/admin/emails?template=auth/otp");
   await settled(page);
   await page.getByRole("tab", { name: "Platte tekst" }).click();

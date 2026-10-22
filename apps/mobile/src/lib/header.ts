@@ -4,6 +4,8 @@ import { useMemo } from "react";
 /** The native stack header options every stack in the app shares. */
 export interface StackHeaderOptions {
   contentStyle: { backgroundColor: string };
+  /** The expanded large-title area (iOS): green, so the white large title reads. */
+  headerLargeStyle: { backgroundColor: string };
   headerLargeTitleShadowVisible: false;
   headerLargeTitleStyle: { color: string };
   headerShadowVisible: false;
@@ -28,6 +30,7 @@ export function useStackHeaderOptions(): StackHeaderOptions {
   return useMemo(
     () => ({
       contentStyle: { backgroundColor: background },
+      headerLargeStyle: { backgroundColor: header },
       headerLargeTitleShadowVisible: false,
       headerLargeTitleStyle: { color: onHeader },
       headerShadowVisible: false,
