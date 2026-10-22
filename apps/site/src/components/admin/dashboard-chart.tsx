@@ -12,7 +12,7 @@ interface Bar {
 }
 
 /** The bars of both groups: the sponsorship pipeline and the catalogue. */
-export function chartGroups(data: Dashboard): {
+function chartGroups(data: Dashboard): {
   bars: Bar[];
   title: TranslationKey;
 }[] {
