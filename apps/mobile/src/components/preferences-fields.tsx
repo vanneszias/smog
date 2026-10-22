@@ -1,9 +1,10 @@
 import { useAccount } from "@smog/account/client";
 import { useAuthState } from "@smog/auth/react";
-import { isLocale, LOCALES } from "@smog/i18n";
+import { isLocale, languageCodes } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import { Field, SegmentedControl, Select } from "@smog/ui-native";
 import { type ReactElement, useCallback } from "react";
+import { useRuntimeCatalogue } from "@/lib/catalogue";
 import { usePreferences } from "@/lib/preferences";
 
 const THEMES = ["system", "light", "dark"] as const;
@@ -24,10 +25,12 @@ export function PreferencesFields(): ReactElement {
   const auth = useAuthState();
   const { updateProfile } = useAccount();
   const [preferences, setPreferences] = usePreferences();
+  // The enabled languages (the shipped three until the server has answered).
+  const { languages } = useRuntimeCatalogue();
   const signedIn = auth.status === "signedIn";
   const changeLocale = useCallback(
     (value: string) => {
-      const locale = isLocale(value) ? value : null;
+      const locale = isLocale(value, languageCodes(languages)) ? value : null;
       setPreferences({ locale });
       if (signedIn) {
         updateProfile({ locale }).catch(() => {
@@ -35,7 +38,7 @@ export function PreferencesFields(): ReactElement {
         });
       }
     },
-    [setPreferences, signedIn, updateProfile]
+    [languages, setPreferences, signedIn, updateProfile]
   );
   const changeTheme = useCallback(
     (value: string) => {
@@ -55,9 +58,9 @@ export function PreferencesFields(): ReactElement {
           onValueChange={changeLocale}
           options={[
             { label: t("language.device"), value: DEVICE },
-            ...LOCALES.map((locale) => ({
-              label: t(`language.${locale}`),
-              value: locale,
+            ...languages.map((language) => ({
+              label: language.name,
+              value: language.code,
             })),
           ]}
           value={preferences.locale ?? DEVICE}

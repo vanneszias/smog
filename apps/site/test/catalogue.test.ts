@@ -1,4 +1,4 @@
-import { env, exports } from "cloudflare:workers";
+import { exports } from "cloudflare:workers";
 import { createI18n } from "@smog/i18n";
 import { bumpI18nVersion } from "@smog/i18n/server";
 import { afterEach, describe, expect, it } from "vitest";
@@ -45,16 +45,17 @@ async function putString(
   key: string,
   value: string
 ): Promise<void> {
-  await env.DB.prepare(
-    "INSERT INTO ui_string (locale, key, value, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT (locale, key) DO UPDATE SET value = excluded.value"
-  )
+  await siteEnv()
+    .db.prepare(
+      "INSERT INTO ui_string (locale, key, value, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT (locale, key) DO UPDATE SET value = excluded.value"
+    )
     .bind(locale, key, value, Date.now())
     .run();
 }
 
 async function publishEdit(): Promise<void> {
   // What every translation write does after its D1 batch.
-  await bumpI18nVersion(env.KV);
+  await bumpI18nVersion(siteEnv().kv);
 }
 
 async function page(path: string, cookie: string): Promise<string> {
@@ -66,9 +67,11 @@ async function page(path: string, cookie: string): Promise<string> {
 }
 
 afterEach(async () => {
-  await env.DB.batch([
-    env.DB.prepare("DELETE FROM ui_string WHERE locale IN ('fr', 'nl', 'de')"),
-    env.DB.prepare("DELETE FROM language WHERE code = 'de'"),
+  await siteEnv().db.batch([
+    siteEnv().db.prepare(
+      "DELETE FROM ui_string WHERE locale IN ('fr', 'nl', 'de')"
+    ),
+    siteEnv().db.prepare("DELETE FROM language WHERE code = 'de'"),
   ]);
   await publishEdit();
 });
@@ -122,9 +125,11 @@ describe("the overlay behind the i18n version", () => {
   });
 
   it("a language added as data works at once: untranslated keys show the default language", async () => {
-    await env.DB.prepare(
-      "INSERT INTO language (code, name, intl_tag, enabled, is_default, sort_order) VALUES ('de', 'Deutsch', 'de-BE', 1, 0, 9)"
-    ).run();
+    await siteEnv()
+      .db.prepare(
+        "INSERT INTO language (code, name, intl_tag, enabled, is_default, sort_order) VALUES ('de', 'Deutsch', 'de-BE', 1, 0, 9)"
+      )
+      .run();
     await putString("de", "common.cancel", "Abbrechen");
     await publishEdit();
 
@@ -136,9 +141,9 @@ describe("the overlay behind the i18n version", () => {
     expect(i18n.t("common.confirm")).toBe("Bevestigen");
 
     // Disabled, it is no longer offered and resolves to the default.
-    await env.DB.prepare(
-      "UPDATE language SET enabled = 0 WHERE code = 'de'"
-    ).run();
+    await siteEnv()
+      .db.prepare("UPDATE language SET enabled = 0 WHERE code = 'de'")
+      .run();
     await publishEdit();
     const disabled = await catalogue("de");
     expect(disabled.locale).toBe("nl");
@@ -148,9 +153,11 @@ describe("the overlay behind the i18n version", () => {
   });
 
   it("the RPC context only accepts enabled languages from the cookie", async () => {
-    await env.DB.prepare(
-      "INSERT INTO language (code, name, intl_tag, enabled, is_default, sort_order) VALUES ('de', 'Deutsch', 'de-BE', 1, 0, 9)"
-    ).run();
+    await siteEnv()
+      .db.prepare(
+        "INSERT INTO language (code, name, intl_tag, enabled, is_default, sort_order) VALUES ('de', 'Deutsch', 'de-BE', 1, 0, 9)"
+      )
+      .run();
     await publishEdit();
     const { loadLanguages } = await import("@smog/i18n/server");
     const codes = (await loadLanguages(catalogueDeps())).map(

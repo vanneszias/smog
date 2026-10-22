@@ -37,6 +37,10 @@ const QUERY_CACHE_MAX_BYTES = 1024 * 1024;
  * kept by `useFavorites`, and a sign-in drops it).
  */
 const PUBLIC_PROCEDURES = [
+  // The enabled languages and the ui_string overlay (phase 10b): the last
+  // answer is the device's cache of the runtime catalogue; the bundled
+  // catalogue is the base offline.
+  "system.i18n",
   "gestures.list",
   "gestures.categories",
   "gestures.bySlug",

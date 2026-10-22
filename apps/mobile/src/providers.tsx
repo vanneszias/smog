@@ -6,6 +6,7 @@ import {
   type SessionHookResult,
   useAuthState,
 } from "@smog/auth/react";
+import { languageCodes, registerLanguages } from "@smog/i18n";
 import { setupNative } from "@smog/i18n/native";
 import { I18nextProvider } from "@smog/i18n/react";
 import { createLocalStore, type LocalStore } from "@smog/local-store";
@@ -36,6 +37,7 @@ import {
 import { createMobileApiClient } from "@/lib/api";
 import { appScheme } from "@/lib/app-scheme";
 import { AuthClientProvider } from "@/lib/auth-client";
+import { useRuntimeCatalogue } from "@/lib/catalogue";
 import { mobileEnv } from "@/lib/env";
 import { connectQueryToDevice } from "@/lib/network";
 import { usePreferences } from "@/lib/preferences";
@@ -121,7 +123,20 @@ function PreferencesRoot({ children }: { children: ReactNode }): ReactElement {
   useEffect(() => {
     setColorScheme(theme);
   }, [setColorScheme, theme]);
-  const i18n = useMemo(() => setupNative({ preference: locale }), [locale]);
+  // The bundled catalogue first (offline works from it), then the enabled
+  // languages and the ui_string overlay of the last `system.i18n` answer: a
+  // language change or a fresh answer hot-swaps the instance.
+  const { languages, overlay } = useRuntimeCatalogue();
+  registerLanguages(languages);
+  const i18n = useMemo(
+    () =>
+      setupNative({
+        enabled: languageCodes(languages),
+        overlay,
+        preference: locale,
+      }),
+    [languages, locale, overlay]
+  );
   return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
 }
 

@@ -90,6 +90,7 @@ const keys = {
     "u1"
   ),
   guestIds: userScopedKey(rpc.favorites.ids.key({ type: "query" }), undefined),
+  i18n: rpc.system.i18n.queryKey({ input: { locale: "fr" } }),
   list: rpc.gestures.list.infiniteKey({
     initialPageParam: undefined,
     input: (cursor: string | undefined) => ({ cursor }),
@@ -114,6 +115,14 @@ function fillCache(queryClient: QueryClient): void {
     publishedAt: 0,
     sponsor: null,
     updatedAt: 0,
+  });
+  queryClient.setQueryData(keys.i18n, {
+    languages: [
+      { code: "nl", intlTag: "nl-BE", isDefault: true, name: "Nederlands" },
+    ],
+    locale: "fr",
+    overlay: { fr: { "common.cancel": "Laisser tomber" } },
+    version: "v1",
   });
   queryClient.setQueryData(keys.favoritesIds, ["g1"]);
   queryClient.setQueryData(keys.guestIds, ["g9"]);
@@ -161,6 +170,11 @@ describe("the offline query cache", () => {
     expect(restored.getQueryData(keys.categories)).toHaveLength(1);
     expect(restored.getQueryData(keys.bySlug)).toMatchObject({ slug: "hond" });
     expect(restored.getQueryData(keys.favoritesIds)).toEqual(["g1"]);
+    // The runtime catalogue (languages and ui_string overlay) is the device's
+    // cache of the last answer; the bundled catalogue is the base offline.
+    expect(restored.getQueryData(keys.i18n)).toMatchObject({
+      overlay: { fr: { "common.cancel": "Laisser tomber" } },
+    });
     // The signed-in favorites tab renders offline too (the null cursor is
     // put back, so the refetch sends a valid first page).
     expect(restored.getQueryData(keys.favoritesList)).toEqual({
