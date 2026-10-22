@@ -39,7 +39,7 @@ import { AccountRow, AccountSection } from "./section";
 import { useActionToast, useShowFeedback } from "./use-action-toast";
 
 const rootApi = getRouteApi("__root__");
-const ACCOUNT_PATH = "/account";
+const ACCOUNT_PATH = "/account?section=sign-in";
 
 type Methods = NonNullable<Account["me"]>["methods"];
 

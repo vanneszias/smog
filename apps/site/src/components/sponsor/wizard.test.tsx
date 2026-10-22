@@ -19,7 +19,7 @@ const FULL_NAME = /^Full name/;
 const EMAIL = /^Email/;
 const NAME_ON_THE_INVOICE = /^Name on the invoice/;
 const ENTERPRISE_NUMBER = /^Enterprise number/;
-const LOGO = /^Logo/;
+const LOGO = /^Logo$/;
 const PREVIEW_FOR = /Preview for/;
 
 const ID = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
@@ -250,7 +250,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     await renderSite(() => <Wizard />, { api: api() });
     await chooseBroerAndZus();
     fireEvent.click(
-      screen.getByRole("checkbox", { name: "Add a logo (+€10.00 per gesture)" })
+      screen.getByRole("radio", { name: "Add a logo (+€10.00 per gesture)" })
     );
     expect(screen.getByTestId("price-total").textContent).toBe("€120.00");
     const input = screen.getByLabelText(LOGO) as HTMLInputElement;
@@ -265,9 +265,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     );
     const browse = screen.getByRole("button", { name: "Choose another logo" });
     expect(browse.getAttribute("aria-describedby")).toContain(error.id);
-    fireEvent.click(
-      screen.getByRole("checkbox", { name: "Add a logo (+€10.00 per gesture)" })
-    );
+    fireEvent.click(screen.getByRole("radio", { name: "Without a logo" }));
     expect(screen.getByTestId("price-total").textContent).toBe("€100.00");
   });
 
@@ -544,7 +542,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
       });
       await chooseBroerAndZus();
       fireEvent.click(
-        screen.getByRole("checkbox", {
+        screen.getByRole("radio", {
           name: "Add a logo (+€10.00 per gesture)",
         })
       );

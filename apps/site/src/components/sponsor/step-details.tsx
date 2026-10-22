@@ -11,7 +11,15 @@ import {
   type WizardDetails,
   type WizardState,
 } from "@smog/sponsorships/client";
-import { Button, Checkbox, Field, Heading, Input, Text } from "@smog/ui-web";
+import {
+  Button,
+  Checkbox,
+  Field,
+  Heading,
+  Input,
+  RadioGroup,
+  Text,
+} from "@smog/ui-web";
 import { formatMoney } from "@smog/utils";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import {
@@ -35,6 +43,9 @@ export interface StepDetailsProps {
   state: WizardState;
   titleRef: (node: HTMLHeadingElement | null) => void;
 }
+
+const LOGO_NONE = "none";
+const LOGO_INCLUDE = "include";
 
 type TextField = Exclude<keyof WizardDetails, "includeLogo" | "wantsInvoice">;
 
@@ -77,10 +88,21 @@ export function StepDetails({
       onDetails({ [field]: event.target.value }),
     [onDetails]
   );
-  const toggleLogo = useCallback(
-    (checked: boolean | "indeterminate") =>
-      onDetails({ includeLogo: checked === true }),
+  const chooseLogo = useCallback(
+    (value: string) => onDetails({ includeLogo: value === LOGO_INCLUDE }),
     [onDetails]
+  );
+  const logoOptions = useMemo(
+    () => [
+      { label: t("sponsor.details.logo.without"), value: LOGO_NONE },
+      {
+        label: t("sponsor.details.logo.include", {
+          price: formatMoney(LOGO_ADDON_PER_GESTURE_CENTS, locale),
+        }),
+        value: LOGO_INCLUDE,
+      },
+    ],
+    [locale, t]
   );
   const toggleInvoice = useCallback(
     (checked: boolean | "indeterminate") => {
@@ -146,13 +168,13 @@ export function StepDetails({
                 value={details.displayName}
               />
             </Field>
-            <Checkbox
-              checked={details.includeLogo}
-              label={t("sponsor.details.logo.include", {
-                price: formatMoney(LOGO_ADDON_PER_GESTURE_CENTS, locale),
-              })}
-              onCheckedChange={toggleLogo}
-            />
+            <Field id="logo-choice" label={t("sponsor.details.logo.choice")}>
+              <RadioGroup
+                onValueChange={chooseLogo}
+                options={logoOptions}
+                value={details.includeLogo ? LOGO_INCLUDE : LOGO_NONE}
+              />
+            </Field>
             {details.includeLogo ? (
               <Field
                 error={errorFor("logo")}

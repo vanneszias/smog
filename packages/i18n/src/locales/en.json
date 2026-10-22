@@ -473,7 +473,17 @@
   "mySpace": {
     "title": "My space",
     "description": "Your favorites and lists, on this device or in your account.",
-    "sections": "My space sections"
+    "sections": "My space sections",
+    "shared": {
+      "tab": "Shared by me",
+      "view": "View link",
+      "edit": "Edit link",
+      "guestTitle": "Share lists with an account",
+      "guestDescription": "Sharing lists needs an account. Sign in to create a view or edit link.",
+      "emptyTitle": "You are not sharing any lists yet",
+      "emptyDescription": "Create a view or edit link in a list to share it. The lists you share show up here.",
+      "toLists": "Go to my lists"
+    }
   },
   "landing": {
     "continue": "Continue where you left off",
@@ -836,6 +846,14 @@
     },
     "preferences": {
       "languageHint": "When you're signed in, this is also the language of the emails we send you."
+    },
+    "nav": {
+      "label": "Account settings",
+      "profile": "Profile",
+      "signIn": "Sign-in methods",
+      "preferences": "Preferences",
+      "language": "Language",
+      "privacy": "Privacy and data"
     }
   },
   "settings": {
@@ -2043,7 +2061,9 @@
           "fileSize": "File size: at most 2 MB",
           "style": "Style: simple, high-contrast logos work best",
           "avoid": "Avoid: very detailed logos or thin lines"
-        }
+        },
+        "choice": "Logo in the video",
+        "without": "Without a logo"
       },
       "contact": {
         "title": "Contact details",

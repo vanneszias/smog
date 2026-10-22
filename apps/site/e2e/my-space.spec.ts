@@ -58,6 +58,24 @@ test.describe("my space", () => {
     expect(await blockingViolations(page)).toEqual([]);
   });
 
+  test("Shared by me asks a guest to sign in", async ({ page }) => {
+    await page.goto("/my?tab=shared");
+    await waitForApp(page);
+    await expect(
+      page.getByRole("tab", { name: "Gedeeld door mij" })
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      page.getByRole("heading", {
+        level: 2,
+        name: "Deel lijsten met een account",
+      })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("tabpanel").getByRole("link", { name: "Aanmelden" })
+    ).toBeVisible();
+    expect(await blockingViolations(page)).toEqual([]);
+  });
+
   test("a guest's list lives on the device and survives a reload", async ({
     page,
   }) => {

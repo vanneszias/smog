@@ -2,6 +2,7 @@ import { OTPInput, OTPInputContext } from "input-otp";
 import { MinusIcon } from "lucide-react";
 import { type ComponentProps, type ReactNode, useContext } from "react";
 import { cn } from "../lib/cn";
+import { useFieldControl } from "./field";
 
 /**
  * A one-time code field (registry `input-otp`): one box per character over a
@@ -12,10 +13,12 @@ import { cn } from "../lib/cn";
 export function InputOTP({
   className,
   containerClassName,
-  ...props
+  ...rest
 }: ComponentProps<typeof OTPInput> & {
   containerClassName?: string;
 }): ReactNode {
+  // The Field's id, description and invalid state, like `Input`.
+  const { invalid: _invalid, ...props } = useFieldControl(rest);
   return (
     <OTPInput
       className={cn("disabled:cursor-not-allowed", className)}

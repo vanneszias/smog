@@ -479,7 +479,17 @@
   "mySpace": {
     "title": "Mon espace",
     "description": "Vos favoris et listes, sur cet appareil ou dans votre compte.",
-    "sections": "Sections de Mon espace"
+    "sections": "Sections de Mon espace",
+    "shared": {
+      "tab": "Partagé par moi",
+      "view": "Lien de lecture",
+      "edit": "Lien de modification",
+      "guestTitle": "Partagez des listes avec un compte",
+      "guestDescription": "Le partage de listes nécessite un compte. Connectez-vous pour créer un lien de lecture ou de modification.",
+      "emptyTitle": "Vous ne partagez encore aucune liste",
+      "emptyDescription": "Créez un lien de lecture ou de modification dans une liste pour la partager. Les listes que vous partagez apparaissent ici.",
+      "toLists": "Aller à mes listes"
+    }
   },
   "landing": {
     "continue": "Reprenez où vous en étiez",
@@ -844,6 +854,14 @@
     },
     "preferences": {
       "languageHint": "Si vous êtes connecté, c'est aussi la langue des e-mails que nous vous envoyons."
+    },
+    "nav": {
+      "label": "Paramètres du compte",
+      "profile": "Profil",
+      "signIn": "Méthodes de connexion",
+      "preferences": "Préférences",
+      "language": "Langue",
+      "privacy": "Confidentialité et données"
     }
   },
   "settings": {
@@ -2085,7 +2103,9 @@
           "fileSize": "Taille\u00a0: 2 Mo maximum",
           "style": "Style\u00a0: les logos simples et contrastés fonctionnent le mieux",
           "avoid": "À éviter\u00a0: logos très détaillés ou traits fins"
-        }
+        },
+        "choice": "Logo dans la vidéo",
+        "without": "Sans logo"
       },
       "contact": {
         "title": "Coordonnées",

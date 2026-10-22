@@ -84,6 +84,10 @@ test.describe("axe: signed in", () => {
             "/my?tab=favorites",
             "/my?tab=lists",
             "/account",
+            "/account?section=sign-in",
+            "/account?section=preferences",
+            "/account?section=language",
+            "/account?section=privacy",
           ]) {
             // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
             await openPublic(page, path);
@@ -102,7 +106,7 @@ test.describe("axe: signed in", () => {
         browser,
         width,
         async (page, found) => {
-          await openPublic(page, "/account");
+          await openPublic(page, "/account?section=privacy");
           await overlay(
             page,
             found,

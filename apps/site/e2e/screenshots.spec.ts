@@ -62,6 +62,9 @@ test.describe("public screenshots", () => {
             ["lists-items", "/lists"],
             ["list", `/lists?id=${fixture.listId}`],
             ["account-signed-in", "/account"],
+            ["account-sign-in", "/account?section=sign-in"],
+            ["account-privacy", "/account?section=privacy"],
+            ["my-shared", "/my?tab=shared"],
           ] as const) {
             // biome-ignore lint/performance/noAwaitInLoops: one route at a time.
             await openPublic(page, path);
