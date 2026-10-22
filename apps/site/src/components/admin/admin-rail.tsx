@@ -245,7 +245,10 @@ export function AdminRail(): ReactNode {
   }
   return (
     <Sidebar
-      className="sticky top-16 h-[calc(100svh-4rem)] shrink-0 self-start border-sidebar-border border-r"
+      // Hidden below `md` in the markup itself: the server renders this
+      // branch (it cannot tell a phone), and a 16rem rail beside the page
+      // until hydration is a layout shift and, at 320 px, no reflow.
+      className="sticky top-16 hidden h-[calc(100svh-4rem)] shrink-0 self-start border-sidebar-border border-r md:flex"
       collapsible="none"
     >
       <RailNav />
