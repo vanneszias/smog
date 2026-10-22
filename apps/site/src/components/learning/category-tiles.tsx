@@ -30,7 +30,7 @@ export function CategoryTiles({
         {categories.map((category, index) => (
           <li key={category.slug}>
             <Link
-              className="inline-flex min-h-14 items-center gap-3 rounded-full border border-border bg-card py-1.5 pr-5 pl-2 font-medium text-foreground outline-none transition duration-fast ease-standard hover:bg-muted focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+              className="inline-flex min-h-14 items-center gap-3 rounded-full border border-border bg-card py-1.5 pr-5 pl-2 font-medium text-foreground outline-none transition duration-fast ease-standard hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               search={{ category: category.slug }}
               to="/gestures"
             >

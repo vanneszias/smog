@@ -50,7 +50,7 @@ describe("renderWebThemeCss", () => {
 
   it("emits every colour role in light and overrides it in .dark", () => {
     const [theme = "", dark = ""] = css.split(".dark {");
-    expect(theme).toContain("--color-surface-raised: #FFFFFF;");
+    expect(theme).toContain("--color-popover: #FFFFFF;");
     expect(theme).toContain("--color-primary: #00805F;");
     expect(dark).toContain("--color-primary: #2BB38A;");
     expect(dark).toContain("--color-background: #0C110E;");
@@ -164,8 +164,8 @@ describe("renderNativeTailwindConfig", () => {
     expect(preset.theme.colors.primary).toBe(
       "rgb(var(--color-primary) / <alpha-value>)"
     );
-    expect(preset.theme.colors["surface-raised"]).toBe(
-      "rgb(var(--color-surface-raised) / <alpha-value>)"
+    expect(preset.theme.colors.popover).toBe(
+      "rgb(var(--color-popover) / <alpha-value>)"
     );
     for (const role of Object.keys(tokens.color.light)) {
       expect(Object.keys(preset.theme.colors)).toContain(kebab(role));

@@ -89,7 +89,7 @@ export default function DashboardChart({
         <div className="grid gap-6 md:grid-cols-2">
           {groups.map((group) => (
             <figure className="flex flex-col gap-3" key={group.title}>
-              <figcaption className="font-medium text-body-sm text-foreground-muted">
+              <figcaption className="font-medium text-body-sm text-muted-foreground">
                 {t(group.title)}
               </figcaption>
               <ul className="flex flex-col gap-3">

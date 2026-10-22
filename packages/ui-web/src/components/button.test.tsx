@@ -11,7 +11,7 @@ describe("Button", () => {
     const button = screen.getByRole("button", { name: "Save" });
     expect(classesOf(button)).toContain("bg-primary");
     expect(classesOf(button)).toContain("min-h-touch");
-    expect(classesOf(button)).toContain("focus-visible:ring-focus-ring");
+    expect(classesOf(button)).toContain("focus-visible:ring-ring");
     expect(button.getAttribute("type")).toBe("button");
   });
 

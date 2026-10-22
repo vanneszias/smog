@@ -369,7 +369,7 @@ function VideoSample({ title }: { title: string }): ReactNode {
         playbackId={SAMPLE_PLAYBACK_ID}
         title={title}
       />
-      <p className="text-caption text-foreground-muted">
+      <p className="text-caption text-muted-foreground">
         onNearEnd × {nearEnd}
       </p>
     </div>

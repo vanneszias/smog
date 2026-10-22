@@ -28,7 +28,7 @@ export function InvoiceBox({
       <h2
         className={cn(
           "flex items-center gap-1.5 font-semibold text-body-sm",
-          invoice ? "text-warning-strong" : "text-foreground-muted"
+          invoice ? "text-warning-strong" : "text-muted-foreground"
         )}
         id="invoice-heading"
       >

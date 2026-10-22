@@ -87,7 +87,7 @@ export function Chip({
   const isToggle = selected !== undefined;
   const isSelected = selected ?? false;
   const labelColor = useColor(isSelected ? "primaryStrong" : "foreground");
-  const mutedColor = useColor("foregroundMuted");
+  const mutedColor = useColor("mutedForeground");
   const handlePress = useCallback(
     (event: GestureResponderEvent): void => {
       onPress?.(event);

@@ -39,7 +39,7 @@ function Value({ value }: { value: string }): ReactNode {
   return value ? (
     <span className="whitespace-pre-wrap break-words">{value}</span>
   ) : (
-    <span className="text-foreground-muted">
+    <span className="text-muted-foreground">
       {t("admin.gestures.changes.empty")}
     </span>
   );
@@ -85,7 +85,7 @@ export function ChangesDialog({
                     <TableCell className="whitespace-nowrap font-medium">
                       {t(FIELD_KEYS[change.field])}
                     </TableCell>
-                    <TableCell className="text-foreground-muted line-through decoration-foreground-muted/60">
+                    <TableCell className="text-muted-foreground line-through decoration-muted-foreground/60">
                       <Value value={change.before} />
                     </TableCell>
                     <TableCell>

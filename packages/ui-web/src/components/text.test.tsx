@@ -13,7 +13,7 @@ describe("Text and Heading", () => {
     const text = screen.getByText("Hint");
     expect(text.tagName).toBe("P");
     expect(classesOf(text)).toContain("text-body-sm");
-    expect(classesOf(text)).toContain("text-foreground-muted");
+    expect(classesOf(text)).toContain("text-muted-foreground");
   });
 
   test("Text as span", () => {

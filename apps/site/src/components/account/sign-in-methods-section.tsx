@@ -282,7 +282,7 @@ function PasskeyItem({
     <li className="flex min-h-touch items-center gap-3">
       <Fingerprint
         aria-hidden="true"
-        className="size-5 shrink-0 text-foreground-muted"
+        className="size-5 shrink-0 text-muted-foreground"
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Text className="truncate" weight="medium">

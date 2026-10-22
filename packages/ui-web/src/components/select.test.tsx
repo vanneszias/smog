@@ -16,7 +16,7 @@ describe("Select", () => {
     expect(trigger.textContent).toContain("Choose an option");
     const classes = classesOf(trigger);
     expect(classes).toContain("min-h-touch");
-    expect(classes).toContain("focus-visible:ring-focus-ring");
+    expect(classes).toContain("focus-visible:ring-ring");
   });
 
   test("shows the selected option and marks invalid", () => {

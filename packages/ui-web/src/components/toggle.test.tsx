@@ -12,7 +12,7 @@ describe("Toggle", () => {
     const toggle = screen.getByRole("button", { name: "Bold" });
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
     expect(classesOf(toggle)).toContain("min-h-touch");
-    expect(classesOf(toggle)).toContain("focus-visible:ring-focus-ring");
+    expect(classesOf(toggle)).toContain("focus-visible:ring-ring");
     await userEvent.click(toggle);
     expect(onPressedChange).toHaveBeenCalledWith(true);
     expect(toggle.getAttribute("aria-pressed")).toBe("true");

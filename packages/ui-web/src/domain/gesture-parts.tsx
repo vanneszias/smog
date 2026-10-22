@@ -22,7 +22,7 @@ function PlainLink({ children, className, href }: KitLinkProps): ReactNode {
  * card or row), and carries the focus ring there.
  */
 const stretchedLink =
-  "outline-none after:absolute after:inset-0 after:rounded-[inherit] focus-visible:after:ring-2 focus-visible:after:ring-focus-ring focus-visible:after:ring-offset-2 focus-visible:after:ring-offset-background";
+  "outline-none after:absolute after:inset-0 after:rounded-[inherit] focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-offset-2 focus-visible:after:ring-offset-background";
 
 export function GestureLink({
   children,

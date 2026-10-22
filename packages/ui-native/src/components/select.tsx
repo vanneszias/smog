@@ -82,7 +82,7 @@ export function Select({
     defaultValue,
     onValueChange
   );
-  const iconColor = useColor("foregroundMuted");
+  const iconColor = useColor("mutedForeground");
   const show = useCallback((): void => {
     setOpen(true);
   }, [setOpen]);

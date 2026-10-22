@@ -57,7 +57,7 @@ export function Switch({
           {label}
         </label>
         {description ? (
-          <span className="text-body-sm text-foreground-muted">
+          <span className="text-body-sm text-muted-foreground">
             {description}
           </span>
         ) : null}

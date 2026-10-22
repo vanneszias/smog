@@ -166,7 +166,7 @@ function TemplateButton({
       aria-current={current ? "true" : undefined}
       className={cn(
         "flex min-h-touch w-full min-w-0 flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left",
-        "outline-none hover:bg-surface-sunken focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "outline-none hover:bg-surface-sunken focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         current &&
           "bg-primary-subtle text-primary-strong hover:bg-primary-subtle"
       )}
@@ -179,7 +179,7 @@ function TemplateButton({
       <span
         className={cn(
           "w-full truncate text-caption",
-          current ? "text-primary-strong" : "text-foreground-muted"
+          current ? "text-primary-strong" : "text-muted-foreground"
         )}
       >
         {subject}
@@ -288,12 +288,12 @@ function PreviewPane({ locale, template, width }: PreviewPaneProps): ReactNode {
                 scrolling, axe scrollable-region-focusable). */}
             <section
               aria-label={t("admin.emails.frameTitle", { name })}
-              className="overflow-x-auto rounded-md border border-border-subtle bg-surface-sunken p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              className="overflow-x-auto rounded-md border border-border-subtle bg-surface-sunken p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be reachable by keyboard.
               tabIndex={0}
             >
               <iframe
-                className="mx-auto block h-[40rem] max-w-none rounded-sm bg-surface"
+                className="mx-auto block h-[40rem] max-w-none rounded-sm bg-card"
                 sandbox=""
                 srcDoc={document}
                 style={{ width: `${WIDTHS[width]}px` }}

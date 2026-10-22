@@ -44,7 +44,7 @@ export function Input({
       {leading ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 inline-flex text-foreground-muted *:size-5"
+          className="pointer-events-none absolute left-3 inline-flex text-muted-foreground *:size-5"
         >
           {leading}
         </span>

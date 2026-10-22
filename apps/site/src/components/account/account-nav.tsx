@@ -72,10 +72,10 @@ export function AccountNav({
               <Link
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-h-touch items-center gap-2 rounded-full px-4 font-medium text-body-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring md:rounded-lg [&_svg]:size-4",
+                  "flex min-h-touch items-center gap-2 rounded-full px-4 font-medium text-body-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring md:rounded-lg [&_svg]:size-4",
                   active
                     ? "bg-accent text-accent-foreground"
-                    : "text-foreground-muted hover:bg-accent/60 hover:text-foreground"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                 )}
                 search={{ section }}
                 to="/account"

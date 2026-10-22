@@ -66,7 +66,7 @@ export function ShareLink({
     <section
       aria-labelledby={headingId}
       className={cn(
-        "flex flex-col gap-3 rounded-lg border border-border-subtle bg-surface p-4",
+        "flex flex-col gap-3 rounded-lg border border-border-subtle bg-card p-4",
         className
       )}
       {...props}
@@ -79,7 +79,7 @@ export function ShareLink({
               : "lists.share.viewTitle"
           )}
         </h3>
-        <p className="text-body-sm text-foreground-muted">
+        <p className="text-body-sm text-muted-foreground">
           {t(
             access === "edit"
               ? "lists.share.editDescription"

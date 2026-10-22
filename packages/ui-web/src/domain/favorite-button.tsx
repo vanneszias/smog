@@ -33,7 +33,7 @@ const favoriteVariants = cva(
       variant: {
         ghost: "border-transparent bg-transparent",
         // On a thumbnail: a solid chip so the heart reads on any frame.
-        overlay: "border-border-subtle bg-surface shadow-1",
+        overlay: "border-border-subtle bg-card shadow-1",
       },
     },
   }

@@ -24,7 +24,7 @@ describe("SegmentedControl", () => {
     const grid = screen.getByRole("radio", { name: "Grid" });
     expect(grid.getAttribute("aria-checked")).toBe("true");
     expect(classesOf(grid)).toContain("min-h-touch");
-    expect(classesOf(grid)).toContain("data-[state=on]:bg-surface");
+    expect(classesOf(grid)).toContain("data-[state=on]:bg-card");
     await userEvent.click(screen.getByRole("radio", { name: "List" }));
     expect(onValueChange).toHaveBeenCalledWith("list");
   });

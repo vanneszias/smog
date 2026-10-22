@@ -87,7 +87,7 @@ describe("kit and app classes", () => {
     ).toEqual([]);
   });
 
-  it("accepts the shadcn colour vocabulary and the alias names", async () => {
+  it("accepts the shadcn colour vocabulary", async () => {
     expect(
       await missingFrom([
         "bg-card",
@@ -105,15 +105,22 @@ describe("kit and app classes", () => {
         "bg-chart-1",
         "bg-highlight",
         "bg-primary/40",
-        // The phase 1 to 9 names, until task 9 removes them.
-        "bg-surface",
-        "bg-surface-raised",
         "bg-surface-sunken",
-        "text-foreground-muted",
-        "bg-danger",
         "text-primary-strong",
       ])
     ).toEqual([]);
+  });
+
+  it("no longer knows the retired alias names", async () => {
+    expect(
+      await missingFrom([
+        "bg-surface",
+        "bg-surface-raised",
+        "text-foreground-muted",
+        "bg-danger",
+        "border-focus-ring",
+      ])
+    ).toHaveLength(5);
   });
 
   it("finds no hex colours or arbitrary values in the sources", () => {

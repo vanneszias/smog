@@ -57,7 +57,7 @@ export function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "relative inline-flex min-h-touch shrink-0 items-center justify-center gap-2 whitespace-nowrap border-transparent px-4 font-medium text-body-sm text-foreground-muted [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "relative inline-flex min-h-touch shrink-0 items-center justify-center gap-2 whitespace-nowrap border-transparent px-4 font-medium text-body-sm text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0",
         "hover:text-foreground data-active:text-foreground",
         // line: the underline sits on the list border.
         "group-data-vertical/tabs:group-data-[variant=line]/tabs-list:-mr-px group-data-vertical/tabs:group-data-[variant=line]/tabs-list:mb-0 group-data-vertical/tabs:group-data-[variant=line]/tabs-list:border-r-2 group-data-vertical/tabs:group-data-[variant=line]/tabs-list:border-b-0 group-data-[variant=line]/tabs-list:-mb-px group-data-[variant=line]/tabs-list:border-b-2 group-data-[variant=line]/tabs-list:data-active:border-primary",

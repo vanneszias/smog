@@ -82,7 +82,7 @@ export function Select({
         <SelectPrimitive.Value
           placeholder={placeholder ?? t("kit.selectPlaceholder")}
         />
-        <SelectPrimitive.Icon className="shrink-0 text-foreground-muted">
+        <SelectPrimitive.Icon className="shrink-0 text-muted-foreground">
           <ChevronDown aria-hidden="true" className="size-5" />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>

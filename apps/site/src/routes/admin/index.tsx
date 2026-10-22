@@ -51,7 +51,7 @@ function StatCard({
   return (
     <Card className="gap-1 sm:p-4">
       <CardContent className="gap-1">
-        <div className="flex items-center gap-2 text-foreground-muted [&_svg]:size-4">
+        <div className="flex items-center gap-2 text-muted-foreground [&_svg]:size-4">
           <span aria-hidden="true">{icon}</span>
           <CardTitle className="font-medium text-body-sm" level={2}>
             {title}

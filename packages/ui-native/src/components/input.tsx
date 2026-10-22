@@ -57,8 +57,8 @@ export function Input({
   ...props
 }: InputProps): ReactElement {
   const field = useFieldControl({ ...props, invalid: invalidProp, required });
-  const placeholderColor = useColor("foregroundMuted");
-  const iconColor = useColor("foregroundMuted");
+  const placeholderColor = useColor("mutedForeground");
+  const iconColor = useColor("mutedForeground");
   return (
     <View
       className={cn(

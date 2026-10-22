@@ -14,8 +14,8 @@ export interface SegmentedOption {
 
 const segmentVariants = cva(
   [
-    "inline-flex min-w-0 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-sm px-3 font-medium text-foreground-muted",
-    "hover:text-foreground data-[state=on]:bg-surface data-[state=on]:text-foreground data-[state=on]:shadow-1 dark:data-[state=on]:bg-surface-raised",
+    "inline-flex min-w-0 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-sm px-3 font-medium text-muted-foreground",
+    "hover:text-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-1 dark:data-[state=on]:bg-popover",
     focusRing,
     transition,
     disabled,

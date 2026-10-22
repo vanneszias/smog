@@ -102,7 +102,7 @@ function DropZone({ onFile }: { onFile: (file: File) => void }): ReactNode {
         onDragOver={onDragOver}
         onDrop={onDrop}
       >
-        <Upload aria-hidden="true" className="size-8 text-foreground-muted" />
+        <Upload aria-hidden="true" className="size-8 text-muted-foreground" />
         <Text weight="medium">{t("admin.mux.upload.drop")}</Text>
         <Text size="body-sm" tone="muted">
           {t("admin.mux.upload.or")}

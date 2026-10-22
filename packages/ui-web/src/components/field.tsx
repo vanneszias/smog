@@ -111,7 +111,7 @@ export function Field({
         >
           <span>{label}</span>
           {optional ? (
-            <span className="font-regular text-caption text-foreground-muted">
+            <span className="font-regular text-caption text-muted-foreground">
               {t("kit.optional")}
             </span>
           ) : null}
@@ -129,7 +129,7 @@ export function Field({
         {hint || counter ? (
           <div className="flex items-start justify-between gap-4">
             {hint ? (
-              <p className="text-body-sm text-foreground-muted" id={hintId}>
+              <p className="text-body-sm text-muted-foreground" id={hintId}>
                 {hint}
               </p>
             ) : (
@@ -141,7 +141,7 @@ export function Field({
                   "shrink-0 text-caption tabular-nums",
                   counter.count > counter.max
                     ? "text-danger-strong"
-                    : "text-foreground-muted"
+                    : "text-muted-foreground"
                 )}
                 id={counterId}
               >

@@ -80,7 +80,7 @@ function Segment({
   slop: number;
 }): ReactElement {
   const on = useColor("foreground");
-  const off = useColor("foregroundMuted");
+  const off = useColor("mutedForeground");
   const choose = useCallback((): void => {
     if (!checked) {
       onChoose(option.value);

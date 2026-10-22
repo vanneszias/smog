@@ -32,7 +32,7 @@ export function Textarea({
   ...props
 }: TextareaProps): ReactElement {
   const field = useFieldControl({ ...props, invalid: invalidProp, required });
-  const placeholderColor = useColor("foregroundMuted");
+  const placeholderColor = useColor("mutedForeground");
   const minHeight = rows * tokens.fontSize.body.lineHeight + PADDING_Y * 2;
   return (
     <View

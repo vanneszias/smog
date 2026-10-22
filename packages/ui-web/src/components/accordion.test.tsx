@@ -24,7 +24,7 @@ describe("Accordion", () => {
     });
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
     expect(classesOf(trigger)).toContain("min-h-touch");
-    expect(classesOf(trigger)).toContain("focus-visible:ring-focus-ring");
+    expect(classesOf(trigger)).toContain("focus-visible:ring-ring");
     await userEvent.click(trigger);
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
     const panel = screen.getByRole("region", {

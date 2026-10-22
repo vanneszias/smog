@@ -63,7 +63,7 @@ export function SearchResults<T extends GestureCardData>({
     >
       <p
         className={cn(
-          "text-body-sm text-foreground-muted",
+          "text-body-sm text-muted-foreground",
           state !== "results" && "sr-only"
         )}
         role="status"

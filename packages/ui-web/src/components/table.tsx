@@ -114,7 +114,7 @@ export function TableHead({
   return (
     <th
       className={cn(
-        "h-touch whitespace-nowrap px-3 text-left align-middle font-semibold text-caption text-foreground-muted",
+        "h-touch whitespace-nowrap px-3 text-left align-middle font-semibold text-caption text-muted-foreground",
         className
       )}
       data-slot="table-head"
@@ -275,7 +275,7 @@ export function DataTable<Row>({
         {sorted.length === 0 && empty ? (
           <TableRow>
             <TableCell
-              className="py-6 text-center text-foreground-muted"
+              className="py-6 text-center text-muted-foreground"
               colSpan={columns.length}
             >
               {empty}

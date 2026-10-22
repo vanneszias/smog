@@ -176,7 +176,7 @@ function DangerZone({
   }, [gesture.id, gesture.name, navigate, onLeave, remove, t, toast, typed]);
   const published = gesture.publishedAt !== null;
   return (
-    <Card className="gap-3 border-danger sm:p-4">
+    <Card className="gap-3 border-destructive sm:p-4">
       <CardContent className="gap-2">
         <CardTitle className="text-body" level={2}>
           {t("admin.gestures.danger.title")}

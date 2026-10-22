@@ -27,10 +27,10 @@ const FONT = tokens.fontFamily.web.join(", ");
 function palette(colors: typeof light | typeof dark): string {
   return [
     `--background:${colors.background}`,
-    `--surface:${colors.surfaceRaised}`,
+    `--surface:${colors.popover}`,
     `--border:${colors.border}`,
     `--foreground:${colors.foreground}`,
-    `--muted:${colors.foregroundMuted}`,
+    `--muted:${colors.mutedForeground}`,
     `--primary:${colors.primary}`,
     `--primary-strong:${colors.primaryStrong}`,
     `--primary-foreground:${colors.primaryForeground}`,

@@ -41,7 +41,7 @@ function AccordionTrigger({
     <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger
         className={cn(
-          "group/accordion-trigger relative flex min-h-touch flex-1 items-start justify-between gap-6 border border-transparent p-4 text-left font-medium text-body outline-none transition-all hover:underline focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none",
+          "group/accordion-trigger relative flex min-h-touch flex-1 items-start justify-between gap-6 border border-transparent p-4 text-left font-medium text-body outline-none transition-all hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none",
           className
         )}
         data-slot="accordion-trigger"

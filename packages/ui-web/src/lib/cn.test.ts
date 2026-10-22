@@ -8,7 +8,7 @@ describe("cn", () => {
 
   test("the last class of a group wins", () => {
     expect(cn("text-body", "text-caption")).toBe("text-caption");
-    expect(cn("bg-primary", "bg-danger")).toBe("bg-danger");
+    expect(cn("bg-primary", "bg-destructive")).toBe("bg-destructive");
     expect(cn("shadow-1", "shadow-2")).toBe("shadow-2");
     expect(cn("duration-fast", "duration-slow")).toBe("duration-slow");
     expect(cn("min-h-touch", "min-h-12")).toBe("min-h-12");

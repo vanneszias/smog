@@ -64,7 +64,7 @@ export function ListPicker({
         title={title ?? t("lists.addToList")}
       >
         {lists.length === 0 ? (
-          <p className="text-body text-foreground-muted">
+          <p className="text-body text-muted-foreground">
             {t("lists.noLists")}
           </p>
         ) : (
