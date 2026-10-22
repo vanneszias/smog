@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { activeHref, RAIL_GROUPS } from "./admin-rail";
+import { activeHref, RAIL_GROUPS, railFor } from "./admin-rail";
 import { crumbsFor } from "./admin-toolbar";
 
 describe("the admin rail", () => {
-  it("groups the sections as Content, Community and Operations", () => {
+  it("groups the sections as Content, Translation, Community and Operations", () => {
     expect(
       RAIL_GROUPS.map((group) => [
         group.id,
@@ -11,6 +11,10 @@ describe("the admin rail", () => {
       ])
     ).toEqual([
       ["content", ["/admin/gestures", "/admin/categories"]],
+      [
+        "translation",
+        ["/admin/translation/strings", "/admin/translation/languages"],
+      ],
       ["community", ["/admin/users", "/admin/sponsorships"]],
       [
         "operations",
@@ -22,6 +26,25 @@ describe("the admin rail", () => {
         ],
       ],
     ]);
+  });
+
+  it("shows a translator the translation group only, without the language list", () => {
+    expect(
+      railFor(false).map((group) => [
+        group.id,
+        group.items.map((item) => item.href),
+      ])
+    ).toEqual([["translation", ["/admin/translation/strings"]]]);
+    expect(railFor(true)).toBe(RAIL_GROUPS);
+  });
+
+  it("marks the translation screens", () => {
+    expect(activeHref("/admin/translation/strings")).toBe(
+      "/admin/translation/strings"
+    );
+    expect(activeHref("/admin/translation/languages/")).toBe(
+      "/admin/translation/languages"
+    );
   });
 
   it("marks the dashboard only on its own path", () => {
@@ -36,6 +59,13 @@ describe("the admin rail", () => {
 describe("the admin breadcrumbs", () => {
   it("is just Admin on the dashboard", () => {
     expect(crumbsFor("/admin")).toEqual([{ label: "admin.rail.label" }]);
+  });
+
+  it("trails the translation screens as Admin and the screen", () => {
+    expect(crumbsFor("/admin/translation/strings")).toEqual([
+      { href: "/admin", label: "admin.rail.label" },
+      { label: "admin.rail.strings" },
+    ]);
   });
 
   it("ends on the section for a list screen", () => {

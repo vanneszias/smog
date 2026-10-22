@@ -9,7 +9,7 @@ const FIRST_RENDER_TIMEOUT = 120_000;
 
 /** A verified account with `role`, signed in in-process: its cookie header. */
 async function signedIn(
-  role: "admin" | "user"
+  role: "admin" | "translator" | "user"
 ): Promise<{ cookie: string; email: string }> {
   const auth = getAuth();
   const email = `${crypto.randomUUID()}@smog.test`;
@@ -18,8 +18,16 @@ async function signedIn(
   });
   await siteEnv()
     .db.prepare("UPDATE user SET email_verified = 1, role = ? WHERE email = ?")
-    .bind(role, email)
+    .bind(role === "admin" ? "admin" : "user", email)
     .run();
+  if (role === "translator") {
+    await siteEnv()
+      .db.prepare(
+        "INSERT INTO user_role (user_id, role, granted_at) SELECT id, 'translator', ? FROM user WHERE email = ?"
+      )
+      .bind(Date.now(), email)
+      .run();
+  }
   const { headers } = await auth.api.signInEmail({
     body: { email, password: PASSWORD },
     returnHeaders: true,
@@ -67,6 +75,47 @@ describe("the admin gate (ruling 10)", () => {
     const html = await response.text();
     expect(html).toContain("Logboek");
     expect(html).toContain('content="noindex"');
+  });
+
+  it("sends a translator from the dashboard to the strings and shows them only the translation group", async () => {
+    const { cookie } = await signedIn("translator");
+    const home = await open("/admin", cookie);
+    expect([302, 307]).toContain(home.status);
+    expect(new URL(home.headers.get("location") ?? "", ORIGIN).pathname).toBe(
+      "/admin/translation/strings"
+    );
+    const strings = await open("/admin/translation/strings", cookie);
+    expect(strings.status).toBe(200);
+    const html = await strings.text();
+    expect(html).toContain("Vertalen");
+    // No other group and no language list in their rail.
+    expect(html).not.toContain("Logboek");
+    expect(html).not.toContain("Gebruikers");
+    expect(html).not.toContain("/admin/translation/languages");
+  });
+
+  it("keeps a translator from every other admin screen and from the languages", async () => {
+    const { cookie } = await signedIn("translator");
+    const statuses = await Promise.all(
+      [
+        "/admin/users",
+        "/admin/audit",
+        "/admin/gestures",
+        "/admin/settings",
+        "/admin/translation/languages",
+      ].map(async (path) => [path, (await open(path, cookie)).status])
+    );
+    expect(statuses.map(([, status]) => status)).toEqual([
+      404, 404, 404, 404, 404,
+    ]);
+  });
+
+  it("shows an admin the language list", async () => {
+    const response = await open(
+      "/admin/translation/languages",
+      (await signedIn("admin")).cookie
+    );
+    expect(response.status).toBe(200);
   });
 
   it("a demoted admin's next navigation is a 404", async () => {

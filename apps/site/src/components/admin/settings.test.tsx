@@ -274,13 +274,19 @@ describe("email previews", () => {
   });
 
   test("keeps valid search params only", () => {
+    // A language is data: any well-formed code is kept (the screen falls
+    // back to the default language for one that is not enabled).
     expect(
       validateEmailPreviewSearch({
         locale: "de",
         template: "auth/otp",
         width: "huge",
       })
-    ).toEqual({ locale: undefined, template: "auth/otp", width: undefined });
+    ).toEqual({ locale: "de", template: "auth/otp", width: undefined });
+    expect(
+      validateEmailPreviewSearch({ locale: "not a code", template: "auth/otp" })
+        .locale
+    ).toBeUndefined();
     expect(validateEmailPreviewSearch({ template: "auth/nope" })).toEqual({
       locale: undefined,
       template: undefined,

@@ -35,6 +35,8 @@ export const ADMIN_PAGES = [
   ["users", "/admin/users"],
   ["settings", "/admin/settings"],
   ["emails", "/admin/emails?template=auth/otp"],
+  ["strings", "/admin/translation/strings"],
+  ["languages", "/admin/translation/languages"],
 ] as const;
 
 /** One oRPC call over HTTP, as the admin client makes it. */
