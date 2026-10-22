@@ -343,7 +343,11 @@ test("keyboard only: the cards, the selection bar, the dropzone's button and the
   await tabTo(page, page.getByLabel(NAAM_IN_DE_VIDEO));
   await page.keyboard.type("Bakkerij Toets");
   await tabTo(page, page.getByRole("radio", { name: "Zonder logo" }));
-  await page.keyboard.press("ArrowDown");
+  // Radix checks a radio when the arrow key is still down as the focus
+  // arrives (it moves the focus in a timeout): hold the key until it has.
+  await page.keyboard.down("ArrowDown");
+  await expect(page.getByRole("radio", { name: LOGO_TOEVOEGEN })).toBeFocused();
+  await page.keyboard.up("ArrowDown");
   await expect(page.getByRole("radio", { name: LOGO_TOEVOEGEN })).toBeChecked();
   // The dropzone's keyboard path is its button, which opens the file picker.
   // The chooser listener goes first: Playwright turns file chooser

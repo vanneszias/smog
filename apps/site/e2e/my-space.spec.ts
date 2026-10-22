@@ -70,7 +70,9 @@ test.describe("my space", () => {
         name: "Deel lijsten met een account",
       })
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: "Aanmelden" })).toBeVisible();
+    await expect(
+      page.getByRole("tabpanel").getByRole("link", { name: "Aanmelden" })
+    ).toBeVisible();
     expect(await blockingViolations(page)).toEqual([]);
   });
 
