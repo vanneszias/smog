@@ -57,6 +57,7 @@ describe("appRouter.system", () => {
           image: null,
           name: "A",
           role: "admin",
+          roles: ["admin"],
         },
       }
     );

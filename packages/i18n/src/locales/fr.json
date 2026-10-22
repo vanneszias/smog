@@ -1546,7 +1546,7 @@
       "roleSection": {
         "title": "Rôles",
         "description": "Une personne peut avoir plusieurs rôles. Un administrateur peut faire tout ce que font les autres rôles.",
-        "none": "Aucun rôle : un apprenant.",
+        "none": "Aucun rôle\u00a0: un apprenant.",
         "help": {
           "translator": "Traduit les noms, les mots-clés, les écrans et les textes juridiques.",
           "teacher": "Enregistre et vérifie les vidéos des signes.",
@@ -1554,14 +1554,14 @@
         }
       },
       "grant": {
-        "action": "Ajouter le rôle : {{role}}",
-        "title": "Donner le rôle {{role}} à {{name}} ?",
+        "action": "Ajouter le rôle\u00a0: {{role}}",
+        "title": "Donner le rôle {{role}} à {{name}}\u202f?",
         "description": "Cela s’applique dès leur prochaine page.",
         "done": "{{name}} a maintenant le rôle {{role}}."
       },
       "revoke": {
-        "action": "Retirer le rôle : {{role}}",
-        "title": "Retirer le rôle {{role}} à {{name}} ?",
+        "action": "Retirer le rôle\u00a0: {{role}}",
+        "title": "Retirer le rôle {{role}} à {{name}}\u202f?",
         "description": "Ce que le rôle permet disparaît immédiatement.",
         "done": "{{name}} n’a plus le rôle {{role}}."
       },
