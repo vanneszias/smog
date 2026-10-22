@@ -25,7 +25,7 @@ export const findSummaries: FindGestureSummaries = async (
   const byId = new Map(rows.map((row) => [row.id, row]));
   return ids.flatMap((id) => {
     const row = byId.get(id);
-    return row ? [{ ...row, categories: [] }] : [];
+    return row ? [{ ...row, categories: [], fallbackUsed: false }] : [];
   });
 };
 

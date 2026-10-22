@@ -35,7 +35,14 @@ import {
 
 function summary(name: string): GestureSummary {
   const slug = name.toLowerCase();
-  return { categories: [], id: `g-${slug}`, name, playbackId: "p", slug };
+  return {
+    categories: [],
+    fallbackUsed: false,
+    id: `g-${slug}`,
+    name,
+    playbackId: "p",
+    slug,
+  };
 }
 
 const CATALOGUE = ["Aap", "Beer", "Hond", "Kat"].map(summary);

@@ -40,6 +40,8 @@ import {
 /** The slug of a name without letters or digits. */
 const FALLBACK_SLUG = /^gesture(-\d+)?$/;
 
+const SUBQUERY_NUMBER = /LIST SUBQUERY \d+/;
+
 let admin: Authed;
 
 beforeAll(async () => {
@@ -803,12 +805,18 @@ describe("admin.gestures reads", () => {
           )
             .bind(...query.params)
             .all<{ detail: string; parent: number }>();
-          return results
-            .filter(
-              (row) => row.parent === 0 && !row.detail.startsWith("CORRELATED")
-            )
-            .map((row) => row.detail)
-            .join(" | ");
+          return (
+            results
+              .filter(
+                (row) =>
+                  row.parent === 0 && !row.detail.startsWith("CORRELATED")
+              )
+              // The subquery numbers move with every column the list adds.
+              .map((row) =>
+                row.detail.replace(SUBQUERY_NUMBER, "LIST SUBQUERY n")
+              )
+              .join(" | ")
+          );
         })
       )
     );
@@ -820,14 +828,14 @@ describe("admin.gestures reads", () => {
       `SEARCH gesture USING INDEX ${index} (sort_name>?)`,
     ];
     const members =
-      "SEARCH gesture USING INDEX sqlite_autoindex_gesture_1 (id=?) | LIST SUBQUERY 6 | USE TEMP B-TREE FOR ORDER BY";
+      "SEARCH gesture USING INDEX sqlite_autoindex_gesture_1 (id=?) | LIST SUBQUERY n | USE TEMP B-TREE FOR ORDER BY";
     expect(plans).toEqual([
       ...ordered("gesture_published_sort_name_idx"),
       ...ordered("gesture_sort_name_idx"),
       members,
       members,
       ...ordered("gesture_sort_name_idx").map(
-        (plan) => `${plan} | LIST SUBQUERY 5`
+        (plan) => `${plan} | LIST SUBQUERY n`
       ),
     ]);
   });

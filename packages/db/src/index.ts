@@ -38,4 +38,11 @@ export {
   toGuardFailure,
   userBanInForce,
 } from "./sql";
+export {
+  DEFAULT_LANGUAGE_SQL,
+  gestureNeedsTranslationSql,
+  gestureUntranslatedSql,
+  type TranslationReport,
+  translationReport,
+} from "./translation-report";
 export type * from "./types";

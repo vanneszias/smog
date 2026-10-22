@@ -22,9 +22,28 @@ served at `/api/openapi`.
 Public reads. Unpublished gestures and categories never appear; the reads
 come from the catalog snapshot (spec §7.1), which every admin write bumps.
 
+**In the viewer's language (phase 10b task 5).** Every read except the
+sitemap answers in the request's language (`context.locale`: the `locale`
+cookie, then `Accept-Language`, only an enabled language; the mobile app
+sends `Accept-Language` from its stored choice). A translated gesture shows
+its own name, description, keywords and category names; one without a
+`gesture_translation` row shows the default language's text and
+`fallbackUsed: true` (also on a category without a translated name). A
+translated gesture whose description is blank shows the default
+description; one with no keyword in the language shows none. The order
+stays the default language's `sort_name` (the catalogue keyset), the slug is
+one per gesture (from the default name). The snapshot (typo tier and the
+categories) is kept per language, all under the one `catalog:version`.
+`gestures.search` searches the language's full-text rows plus the default
+row of every gesture that has no translation into it, so an untranslated
+gesture is still found by its Dutch name (shown in Dutch, flagged
+`fallbackUsed`); the ranking sorts ties with `Intl.Collator(locale)` and the
+typo tier runs on the language's projection. Favorites and lists embed the
+same summaries in the request's language.
+
 | Procedure | Input | Output |
 |---|---|---|
-| `gestures.categories` | none | published categories (`sort_order`, then name; ≤ 100) |
+| `gestures.categories` | none | published categories (`sort_order`, then the default name; ≤ 100), each `{ name, slug, gestureCount, fallbackUsed }` |
 | `gestures.list` | `{ category?: slug[] (≤ 20, any of), cursor?, limit? (1..100, = 50) }` | `{ items: GestureSummary[], nextCursor }` (name order, keyset) |
 | `gestures.search` | `{ q (≤ 100), category?, limit? (1..50, = 20) }` | `{ items: SearchResult[], total }` (FTS5 candidates ≤ 200, the TS ranking, then the typo tier; an empty `q` is the browse list) |
 | `gestures.bySlug` | `{ slug }` | the gesture, also by its legacy id (`canonicalSlug` then differs); `NOT_FOUND` otherwise |
@@ -189,7 +208,7 @@ payment's sponsorships still holds its gesture (a blocking status).
 
 | Procedure | Input | Output | Audit |
 |---|---|---|---|
-| `admin.gestures.list` | `{ q?, status?: "all" \| "published" \| "unpublished" (= "all"), category?: string[] (ids), cursor?, limit? (1..100, = 50) }` | `{ items: AdminGestureRow[], nextCursor: string \| null, counts: { total, published, unpublished } }` | read |
+| `admin.gestures.list` | `{ q?, status?: "all" \| "published" \| "unpublished" (= "all"), category?: string[] (ids), needsTranslation?: locale, cursor?, limit? (1..100, = 50) }` | `{ items: AdminGestureRow[], nextCursor: string \| null, counts: { total, published, unpublished } }` | read |
 | `admin.gestures.get` | `{ id }` | `AdminGestureDetail` | read |
 | `admin.gestures.checkName` | `{ name, excludeId? }` | `{ duplicates: { id, name, slug }[] }` | read |
 | `admin.gestures.create` | `{ name, description?, keywords?, categoryIds, playbackId, muxAssetId?, published? (= true) }` | `AdminGestureDetail` | `gesture.create` |
@@ -200,7 +219,8 @@ payment's sponsorships still holds its gesture (a blocking status).
 | `admin.gestures.delete` | `{ id, confirmName }` | `{ id }` | `gesture.delete` |
 
 - `AdminGestureRow` is `{ id, slug, name, description, playbackId, muxAssetId, publishedAt, updatedAt, categories: { id, name, slug, published }[], keywords: string[] }` (epoch milliseconds; every category, published or not, in category order; `description` since phase 5 task 4, for the table editor). `AdminGestureDetail` adds `createdAt`. Reads come from D1, never the catalog snapshot.
-- `list` is `sort_name, id` order, a keyset page at a time (index `gesture_sort_name_idx`, migration 0006). `q` matches a `normalizeText` substring of the name or of a keyword; `counts` apply `q` and `category` but not `status`. A foreign cursor is `VALIDATION`.
+- `list` is `sort_name, id` order, a keyset page at a time (index `gesture_sort_name_idx`, migration 0006). `q` matches a `normalizeText` substring of the name or of a default-language keyword; `needsTranslation: <language>` keeps the gestures that still need a translation there (the definition of `catalogTranslation`, below); `counts` apply `q` and `category` but not `status`. A foreign cursor is `VALIDATION`.
+- This editor writes the default language's text only: `update` replaces the default language's keywords and leaves every other language's alone (`gesture_keyword.locale`). The other languages are `catalogTranslation.gestures.save`.
 - Limits (ruling 8): the name 1..120 characters after trimming, the description ≤ 2000, ≤ 30 keywords of 1..60 characters (de-duplicated by `normalizeText`), 1..20 categories. Unknown categories are `VALIDATION`; an unknown gesture is `NOT_FOUND`. The slug is set at create (`-2`, `-3`, … on a collision) and never changes.
 - Every write is one D1 batch (the change, the gesture's `gesture_fts` rows and the audit entry), then bumps `catalog:version`; a KV failure is logged, and the call still succeeds.
 - `CONFLICT` carries `{ reason, ids? }`: `stale` (the ids changed since `expectedUpdatedAt`; nothing was written, `saveMany` is all or nothing), `published` / `sponsored` (`delete`: unpublish first; a sponsored gesture is never deleted).
@@ -221,6 +241,22 @@ payment's sponsorships still holds its gesture (a blocking status).
 - Names are 1..60 characters; a `normalizeText`-equal name is `CONFLICT` `duplicateName`. The slug stays on rename. `create` appends to the order, and refuses a 101st category (`INVALID_STATE`).
 - A rename, publish or unpublish rebuilds the `gesture_fts` rows of every gesture in the category in the same batch. Every write bumps `catalog:version`.
 - `update` is `CONFLICT` `stale` when the category changed since `expectedUpdatedAt`. `delete` is `CONFLICT` `inUse` while any gesture has the category (unpublish it instead). `reorder` is `INVALID_STATE` unless `ids` is exactly the current set; it sets `sort_order` 0..n-1. `setPublished` to the current state is `INVALID_STATE`.
+
+### Gesture and category translations (`catalogTranslation.*`, phase 10b task 5)
+
+A translator or an admin (`requireRole("translator")`; `admin` passes, a user or a teacher is `FORBIDDEN`). Outside `admin.*` on purpose (that router is `requireAdmin` as a whole); the writes carry the same audit guard (`adminGuard`): one D1 batch with the stale guard, the translation, this language's keywords, the full-text rows of every language of the gesture and the audit entry, then a new `catalog:version`. Only an enabled language other than the default is writable (`VALIDATION` on `locale` otherwise).
+
+| Procedure | Input | Output | Audit |
+|---|---|---|---|
+| `catalogTranslation.gestures.list` | `{ locale, status?: "all" \| "needs" (= "all"), q?, cursor?, limit? (1..100, = 50) }` | `{ items: { id, slug, name, published, keywordCount, needsTranslation, translation: { name, description, keywordCount, updatedAt } \| null }[], nextCursor, report }` | read |
+| `catalogTranslation.gestures.get` | `{ id }` | `{ id, slug, published, source: { name, description, keywords }, translations: { <locale>: { name, description, keywords, updatedAt } } }` | read |
+| `catalogTranslation.gestures.save` | `{ id, locale, name (1..120), description? (≤ 2000), keywords? (≤ 30 x 60), expectedUpdatedAt: number \| null }` | `{ updatedAt }` | `translation.gesture_save` (`{ name, slug, locale, fields, created }`) |
+| `catalogTranslation.categories.list` | `{ locale, status? }` | `{ items: { id, slug, name, published, needsTranslation, translation: { name, updatedAt } \| null }[], report }` | read |
+| `catalogTranslation.categories.save` | `{ id, locale, name (1..60), expectedUpdatedAt: number \| null }` | `{ updatedAt }` | `translation.category_save` (`{ name, slug, locale, created }`) |
+| `catalogTranslation.reports` | none | the report of every enabled non-default language | read |
+
+- **Needs translation** (one definition, `@smog/db` `gestureNeedsTranslationSql`, shared by the list filter, the counts and the admin list's `needsTranslation`): no `gesture_translation` row (the default name is shown), or a blank translated description where the default has one, or no keyword in the language where the default has some. A category needs one without a `category_translation` row. The default language never needs a translation. `report` is `{ locale, gestures: { total, needsTranslation, missingName, missingDescription, missingKeywords }, categories: { total, missing } }` (every gesture, published or not).
+- `expectedUpdatedAt` is the translation's own `updatedAt` (`null` when the editor read none): a save by someone else since is `CONFLICT` `{ reason: "stale" }` and nothing is written. A save that changes nothing writes nothing (no entry, no version bump) and returns the stored `updatedAt`.
 
 ### Mux
 

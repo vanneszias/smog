@@ -1413,6 +1413,47 @@
       "countWithPublished_many": "{{count}} gestes · {{published}} publiés",
       "countWithPublished_other": "{{count}} gestes · {{published}} publiés"
     },
+    "catalogTranslation": {
+      "title": "Traductions",
+      "description": "Traduisez le nom, la description et les mots-clés pour chaque langue. Le texte de la langue par défaut s’affiche à côté.",
+      "sourceLabel": "Source ({{language}})",
+      "tabsLabel": "Langue de la traduction",
+      "noLanguages": "Aucune autre langue n’est activée.",
+      "needs": "À traduire",
+      "translated": "Traduit",
+      "fields": {
+        "name": "Nom en {{language}}",
+        "description": "Description en {{language}}",
+        "keywords": "Mots-clés en {{language}}"
+      },
+      "fallbackHint": "Tant qu’une traduction manque, le visiteur voit le texte de la langue par défaut.",
+      "save": "Enregistrer la traduction",
+      "saved": "Traduction enregistrée.",
+      "saveFailed": "La traduction n’a pas pu être enregistrée.",
+      "stale": "Quelqu’un d’autre vient d’enregistrer cette traduction. Le dernier texte est chargé\u00a0: vérifiez-le et enregistrez à nouveau.",
+      "nameRequired": "Saisissez un nom.",
+      "loadFailed": "Les traductions n’ont pas pu être chargées.",
+      "report": {
+        "title": "Traductions par langue",
+        "gestures": "{{needs}} gestes sur {{total}} ont besoin d’une traduction",
+        "categories": "{{missing}} catégories sur {{total}} n’ont pas encore de nom traduit",
+        "detail": "Sans nom\u00a0: {{name}}, sans description\u00a0: {{description}}, sans mots-clés\u00a0: {{keywords}}",
+        "allDone": "Tout est traduit",
+        "show": "Afficher ce qui reste à traduire"
+      },
+      "filter": {
+        "label": "À traduire en",
+        "none": "Aucun filtre"
+      },
+      "categories": {
+        "title": "Noms par langue",
+        "description": "Traduisez le nom de chaque catégorie. Les visiteurs voient le nom traduit dans les filtres et sur les cartes des gestes.",
+        "nameIn": "Nom en {{language}}",
+        "save": "Enregistrer",
+        "saveFor": "Enregistrer la traduction de {{name}}",
+        "saved": "Nom enregistré."
+      }
+    },
     "mux": {
       "title": "Vidéo",
       "label": "Vidéo",

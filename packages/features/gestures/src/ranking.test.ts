@@ -294,6 +294,41 @@ describe("typo tier", () => {
   });
 });
 
+describe("ties sort with the language's collation", () => {
+  const tied: SearchableGesture[] = [
+    { id: "a", keywords: ["dier"], name: "Zebra" },
+    { id: "b", keywords: ["dier"], name: "Älg" },
+  ];
+  const namesOf = (ranked: Ranked<SearchableGesture>[]): string[] =>
+    ranked.map((result) => result.gesture.name);
+
+  test("nl (the default) puts a before z, Swedish puts ä after z", () => {
+    expect(namesOf(rankGestures(tied, "dier"))).toEqual(["Älg", "Zebra"]);
+    expect(namesOf(rankGestures(tied, "dier", { locale: "nl" }))).toEqual([
+      "Älg",
+      "Zebra",
+    ]);
+    expect(namesOf(rankGestures(tied, "dier", { locale: "sv" }))).toEqual([
+      "Zebra",
+      "Älg",
+    ]);
+  });
+
+  test("the typo tier sorts with the language too", () => {
+    expect(namesOf(typoMatches(tied, "diir", { locale: "sv" }))).toEqual([
+      "Zebra",
+      "Älg",
+    ]);
+    expect(namesOf(typoMatches(tied, "diir"))).toEqual(["Älg", "Zebra"]);
+  });
+
+  test("a tag Intl refuses sorts like nl instead of throwing", () => {
+    expect(
+      namesOf(rankGestures(tied, "dier", { locale: "not a tag!" }))
+    ).toEqual(["Älg", "Zebra"]);
+  });
+});
+
 describe("damerauLevenshtein", () => {
   test("counts insertions, deletions, substitutions and transpositions", () => {
     expect(damerauLevenshtein("hond", "hond")).toBe(0);

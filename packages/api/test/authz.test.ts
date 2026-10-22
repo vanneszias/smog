@@ -90,6 +90,30 @@ const PROCEDURES: Record<string, Row> = {
   },
   "account.me": { level: "session" },
   "account.updateProfile": { input: {}, level: "session" },
+  // Phase 10b task 5: the gesture and category translations (a translator
+  // or an admin; the writes also carry the admin audit guard, tested in
+  // `@smog/admin`'s `catalog-translation.test.ts`).
+  "catalogTranslation.categories.list": {
+    input: { locale: "fr" },
+    level: "translator",
+  },
+  "catalogTranslation.categories.save": {
+    input: { expectedUpdatedAt: null, id: "c1", locale: "fr", name: "Animaux" },
+    level: "translator",
+  },
+  "catalogTranslation.gestures.get": {
+    input: { id: "g1" },
+    level: "translator",
+  },
+  "catalogTranslation.gestures.list": {
+    input: { locale: "fr" },
+    level: "translator",
+  },
+  "catalogTranslation.gestures.save": {
+    input: { expectedUpdatedAt: null, id: "g1", locale: "fr", name: "Chien" },
+    level: "translator",
+  },
+  "catalogTranslation.reports": { level: "translator" },
   ...admin({
     "audit.actors": "read",
     "audit.list": "read",

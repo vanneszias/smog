@@ -1,10 +1,12 @@
 import {
   category,
+  DEFAULT_LANGUAGE_SQL,
   failWhen,
   GuardFailedError,
   gesture,
   gestureCategory,
   gestureKeyword,
+  gestureNeedsTranslationSql,
   gestureSortName,
   inList,
   jsonList,
@@ -69,9 +71,13 @@ const categoriesColumn =
       }))
   );
 
-/** Keywords in the editor's order. */
+/**
+ * Keywords in the editor's order: the default language's only (this editor
+ * edits the base text; the other languages' keywords belong to
+ * `catalogTranslation.gestures.save`).
+ */
 const keywordsColumn =
-  sql`(SELECT json_group_array(o.keyword) FROM (SELECT ${ref("k", gestureKeyword.keyword)} AS keyword FROM ${gestureKeyword} AS k WHERE ${ref("k", gestureKeyword.gestureId)} = ${ref(G, gesture.id)} ORDER BY ${ref("k", gestureKeyword.position)}) AS o)`.mapWith(
+  sql`(SELECT json_group_array(o.keyword) FROM (SELECT ${ref("k", gestureKeyword.keyword)} AS keyword FROM ${gestureKeyword} AS k WHERE ${ref("k", gestureKeyword.gestureId)} = ${ref(G, gesture.id)} AND ${ref("k", gestureKeyword.locale)} = ${DEFAULT_LANGUAGE_SQL} ORDER BY ${ref("k", gestureKeyword.position)}) AS o)`.mapWith(
     parseJson<string[]>
   );
 
@@ -163,7 +169,8 @@ async function keywordMatches(db: Db, needle: string): Promise<string[]> {
       gestureId: gestureKeyword.gestureId,
       keyword: gestureKeyword.keyword,
     })
-    .from(gestureKeyword);
+    .from(gestureKeyword)
+    .where(eq(gestureKeyword.locale, DEFAULT_LANGUAGE_SQL));
   const ids = new Set<string>();
   for (const row of rows) {
     if (normalizeText(row.keyword).includes(needle)) {
@@ -173,7 +180,7 @@ async function keywordMatches(db: Db, needle: string): Promise<string[]> {
   return [...ids];
 }
 
-/** The `q` and `category` filters (the counts ignore `status`). */
+/** The `q`, `category` and `needsTranslation` filters (the counts ignore `status`). */
 function listFilters(
   query: AdminGestureListQuery,
   needle: string,
@@ -183,6 +190,9 @@ function listFilters(
     needle === ""
       ? undefined
       : sql`(instr(${gesture.sortName}, ${needle}) > 0 OR ${gesture.id} IN (SELECT value FROM json_each(${jsonList(keywordIds)})))`,
+    query.needsTranslation === undefined
+      ? undefined
+      : gestureNeedsTranslationSql(query.needsTranslation),
     query.category && query.category.length > 0
       ? sql`${gesture.id} IN (SELECT ${ref("gc", gestureCategory.gestureId)} FROM ${gestureCategory} AS gc WHERE ${ref("gc", gestureCategory.categoryId)} IN (SELECT value FROM json_each(${jsonList(query.category)})))`
       : undefined
@@ -327,7 +337,12 @@ async function unknownCategories(
   return ids.filter((id) => !known.has(id));
 }
 
-/** The keyword rows for a gesture, in order (already trimmed and de-duplicated). */
+/**
+ * The default language's keyword rows for a gesture, in order (already
+ * trimmed and de-duplicated). `locale` is the column's SQL default (`nl`,
+ * migration 0017), not a bound value: D1 binds at most 100 values per
+ * statement, and 30 keywords of four columns would be 120.
+ */
 function keywordRows(gestureId: string, keywords: readonly string[]) {
   return keywords.map((keyword, position) => ({
     gestureId,
@@ -364,8 +379,16 @@ function patchStatements(
       .where(eq(gesture.id, id)),
   ];
   if (patch.keywords !== undefined) {
+    // Only the default language's: the other languages' keywords stay.
     statements.push(
-      db.delete(gestureKeyword).where(eq(gestureKeyword.gestureId, id))
+      db
+        .delete(gestureKeyword)
+        .where(
+          and(
+            eq(gestureKeyword.gestureId, id),
+            eq(gestureKeyword.locale, DEFAULT_LANGUAGE_SQL)
+          )
+        )
     );
     if (patch.keywords.length > 0) {
       statements.push(

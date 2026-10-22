@@ -1380,6 +1380,47 @@
       "countWithPublished_one": "{{count}} gesture · {{published}} published",
       "countWithPublished_other": "{{count}} gestures · {{published}} published"
     },
+    "catalogTranslation": {
+      "title": "Translations",
+      "description": "Translate the name, description and keywords for each language. The text in the default language is shown next to it.",
+      "sourceLabel": "Source ({{language}})",
+      "tabsLabel": "Language of the translation",
+      "noLanguages": "No other languages are enabled.",
+      "needs": "Needs translation",
+      "translated": "Translated",
+      "fields": {
+        "name": "Name in {{language}}",
+        "description": "Description in {{language}}",
+        "keywords": "Keywords in {{language}}"
+      },
+      "fallbackHint": "Until a translation exists, visitors see the text in the default language.",
+      "save": "Save translation",
+      "saved": "Translation saved.",
+      "saveFailed": "The translation could not be saved.",
+      "stale": "Someone else just saved this translation. The latest text has been loaded: check it and save again.",
+      "nameRequired": "Enter a name.",
+      "loadFailed": "The translations could not be loaded.",
+      "report": {
+        "title": "Translations by language",
+        "gestures": "{{needs}} of {{total}} gestures need a translation",
+        "categories": "{{missing}} of {{total}} categories have no translated name yet",
+        "detail": "Missing a name: {{name}}, a description: {{description}}, keywords: {{keywords}}",
+        "allDone": "Everything is translated",
+        "show": "Show what still needs translating"
+      },
+      "filter": {
+        "label": "Needs translation in",
+        "none": "No filter"
+      },
+      "categories": {
+        "title": "Names by language",
+        "description": "Translate the name of each category. Visitors see the translated name in the filters and on the gesture cards.",
+        "nameIn": "Name in {{language}}",
+        "save": "Save",
+        "saveFor": "Save the translation of {{name}}",
+        "saved": "Name saved."
+      }
+    },
     "mux": {
       "title": "Video",
       "label": "Video",

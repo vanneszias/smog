@@ -6,8 +6,9 @@ import {
   type SessionHookResult,
   useAuthState,
 } from "@smog/auth/react";
+import { isLocalizedQuery } from "@smog/gestures/client";
 import { languageCodes, registerLanguages } from "@smog/i18n";
-import { setupNative } from "@smog/i18n/native";
+import { deviceLocaleTags, setupNative } from "@smog/i18n/native";
 import { I18nextProvider } from "@smog/i18n/react";
 import { createLocalStore, type LocalStore } from "@smog/local-store";
 import { nativeAdapter } from "@smog/local-store/native";
@@ -27,6 +28,7 @@ import {
   type ReactNode,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -37,7 +39,7 @@ import {
 import { createMobileApiClient } from "@/lib/api";
 import { appScheme } from "@/lib/app-scheme";
 import { AuthClientProvider } from "@/lib/auth-client";
-import { useRuntimeCatalogue } from "@/lib/catalogue";
+import { useRuntimeCatalogue, wantedLocale } from "@/lib/catalogue";
 import { mobileEnv } from "@/lib/env";
 import { connectQueryToDevice } from "@/lib/network";
 import { usePreferences } from "@/lib/preferences";
@@ -47,6 +49,7 @@ import {
   keepPersistedQueries,
   type PersistStorage,
 } from "@/lib/query-persist";
+import { setRequestedLocale } from "@/lib/request-locale";
 
 export interface AppClients {
   /** Consent-gated; tests leave it out (a no-op). */
@@ -123,6 +126,23 @@ function PreferencesRoot({ children }: { children: ReactNode }): ReactElement {
   useEffect(() => {
     setColorScheme(theme);
   }, [setColorScheme, theme]);
+  // The catalogue answers in the language the requests ask for (the stored
+  // choice, else the device's). Set while rendering, so the first requests
+  // already carry it; a later change drops the cached answers, which are in
+  // the old language, and the active queries refetch.
+  const queryClient = useQueryClient();
+  const device = useMemo(deviceLocaleTags, []);
+  const wanted = wantedLocale(locale, device);
+  const applied = useRef<string | null | undefined>(undefined);
+  setRequestedLocale(wanted);
+  useEffect(() => {
+    if (applied.current !== undefined && applied.current !== wanted) {
+      queryClient.resetQueries({ predicate: isLocalizedQuery }).catch(() => {
+        // A failed refetch shows its own error state.
+      });
+    }
+    applied.current = wanted;
+  }, [queryClient, wanted]);
   // The bundled catalogue first (offline works from it), then the enabled
   // languages and the ui_string overlay of the last `system.i18n` answer: a
   // language change or a fresh answer hot-swaps the instance.

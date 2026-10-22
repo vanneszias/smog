@@ -24,6 +24,8 @@ const ADMIN = { email: "admin@smog.test", password: "smog-dev-admin" };
 const SAMPLE_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
 const GESTURE_EDITOR_URL = /\/admin\/gestures\/(?!new$)[A-Za-z0-9_-]+$/;
 const HEADERS = { origin: ORIGIN };
+/** The description field, not the translation tabs' "Beschrijving in <taal>". */
+const DESCRIPTION_FIELD = /^Beschrijving(?! in )/;
 const PNG_MAGIC = "89504e470d0a1a0a";
 const EXPECTED_ERRORS = [
   "mux-player",
@@ -216,7 +218,9 @@ test.describe("admin catalogue", () => {
       const form = page.getByRole("dialog", { name: "Nieuwe categorie" });
       await form.getByRole("textbox", { name: "Naam" }).fill(categoryName);
       await form.getByRole("button", { name: "Aanmaken" }).click();
-      await expect(page.getByText(categoryName, { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(categoryName, { exact: true }).first()
+      ).toBeVisible();
       expect(await blockingViolations(page)).toEqual([]);
 
       // A gesture in it, with a pasted playback id.
@@ -250,9 +254,11 @@ test.describe("admin catalogue", () => {
       const renamedWord = tag();
       const renamed = `Zzwuiven ${renamedWord}`;
       await open(page, `/admin/gestures/${gestureId}`);
-      await page.getByRole("textbox", { name: "Naam" }).fill(renamed);
+      await page
+        .getByRole("textbox", { exact: true, name: "Naam" })
+        .fill(renamed);
       const renaming = page.waitForResponse("**/api/rpc/admin/gestures/update");
-      await page.getByRole("button", { name: "Opslaan" }).click();
+      await page.getByRole("button", { exact: true, name: "Opslaan" }).click();
       expect((await renaming).ok()).toBe(true);
       expect((await getGesture(page.request, created.id)).slug).toBe(slug);
       const publicPage = await page.request.get(`/gestures/${slug}`);
@@ -275,8 +281,8 @@ test.describe("admin catalogue", () => {
         id: created.id,
         keywords: ["van-b"],
       });
-      await page.getByLabel("Beschrijving").fill("Mijn eigen uitleg");
-      await page.getByRole("button", { name: "Opslaan" }).click();
+      await page.getByLabel(DESCRIPTION_FIELD).fill("Mijn eigen uitleg");
+      await page.getByRole("button", { exact: true, name: "Opslaan" }).click();
       const conflict = page.getByRole("dialog", {
         name: "Iemand anders wijzigde dit gebaar",
       });
@@ -287,15 +293,15 @@ test.describe("admin catalogue", () => {
       expect(await blockingViolations(page)).toEqual([]);
       await page.keyboard.press("Escape");
       await expect(conflict).toBeHidden();
-      await expect(page.getByLabel("Beschrijving")).toHaveValue(
+      await expect(page.getByLabel(DESCRIPTION_FIELD)).toHaveValue(
         "Mijn eigen uitleg"
       );
-      await page.getByRole("button", { name: "Opslaan" }).click();
+      await page.getByRole("button", { exact: true, name: "Opslaan" }).click();
       await page
         .getByRole("dialog", { name: "Iemand anders wijzigde dit gebaar" })
         .getByRole("button", { name: "Hun versie gebruiken" })
         .click();
-      await expect(page.getByLabel("Beschrijving")).toHaveValue(
+      await expect(page.getByLabel(DESCRIPTION_FIELD)).toHaveValue(
         "Uitleg van een andere beheerder"
       );
       expect((await getGesture(page.request, created.id)).keywords).toEqual([
@@ -307,7 +313,7 @@ test.describe("admin catalogue", () => {
       const hiding = page.waitForResponse(
         "**/api/rpc/admin/gestures/setPublished"
       );
-      await page.getByRole("button", { name: "Opslaan" }).click();
+      await page.getByRole("button", { exact: true, name: "Opslaan" }).click();
       expect((await hiding).ok()).toBe(true);
       expect((await page.request.get(`/gestures/${slug}`)).status()).toBe(404);
       await open(page, `/admin/gestures?q=${renamedWord}&status=unpublished`);

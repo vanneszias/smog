@@ -9,8 +9,10 @@
 export {
   ADMIN_STALE_TIME,
   type AdminQueryUtils,
+  type CatalogTranslationQueryUtils,
   useAdminKey,
   useAdminRpc,
+  useCatalogTranslationRpc,
   useInvalidateAfterAdminWrite,
 } from "./slice";
 export { useAdminAudit, useAdminAuditActors } from "./use-admin-audit";
@@ -22,6 +24,7 @@ export * from "./use-admin-export";
 export * from "./use-admin-gestures";
 export * from "./use-admin-sponsorships";
 export * from "./use-admin-users";
+export * from "./use-catalog-translation";
 export * from "./use-email-preview";
 export * from "./use-maintenance";
 export * from "./use-mux-assets";

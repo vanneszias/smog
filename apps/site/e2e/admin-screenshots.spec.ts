@@ -139,7 +139,9 @@ test.describe("admin screenshots", () => {
         // The editor: a gesture with a name another has, then the new one's
         // validation and the video field's states.
         await openAdmin(page, `/admin/gestures/${await hondId(page.request)}`);
-        await page.getByRole("textbox", { name: "Naam" }).fill("Kat");
+        await page
+          .getByRole("textbox", { exact: true, name: "Naam" })
+          .fill("Kat");
         await expect(page.getByText("Mogelijk dubbel")).toBeVisible();
         await shoot(page, file("gesture-editor"));
         await openAdmin(page, "/admin/gestures/new");

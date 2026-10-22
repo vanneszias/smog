@@ -35,6 +35,7 @@ afterEach(() => {
 
 const HOND = {
   categories: [{ name: "Dieren", slug: "dieren" }],
+  fallbackUsed: false,
   id: "g1",
   name: "Hond",
   playbackId: "pb1",
@@ -105,7 +106,7 @@ function fillCache(queryClient: QueryClient): void {
     pages: [{ items: [HOND], nextCursor: null }],
   });
   queryClient.setQueryData(keys.categories, [
-    { gestureCount: 1, name: "Dieren", slug: "dieren" },
+    { fallbackUsed: false, gestureCount: 1, name: "Dieren", slug: "dieren" },
   ]);
   queryClient.setQueryData(keys.bySlug, {
     ...HOND,

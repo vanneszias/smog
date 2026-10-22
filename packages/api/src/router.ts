@@ -1,5 +1,8 @@
 import { createAccountRouter } from "@smog/account/server";
-import { createAdminRouter } from "@smog/admin/server";
+import {
+  createAdminRouter,
+  createCatalogTranslationRouter,
+} from "@smog/admin/server";
 import { publicAuthConfig } from "@smog/config/env/worker";
 import { uiCatalogueSource } from "@smog/db";
 import {
@@ -29,6 +32,12 @@ import { adminSponsorshipServices } from "./admin-deps";
 import { appContract } from "./contract";
 
 const os = implementRpc(appContract);
+
+/** What the admin procedures inject from other features' servers. */
+const adminDeps = {
+  bumpCatalogVersion,
+  sponsorships: adminSponsorshipServices,
+};
 
 const system = os.system.router({
   authConfig: os.system.authConfig.handler(({ context }) =>
@@ -84,10 +93,10 @@ export const appRouter = os.router({
   // cache); the sponsorship actions run the sponsorship batches and enqueue
   // on the rpc env's queues after the commit. Every admin procedure is
   // `requireAdmin`.
-  admin: createAdminRouter({
-    bumpCatalogVersion,
-    sponsorships: adminSponsorshipServices,
-  }),
+  admin: createAdminRouter(adminDeps),
+  // The gesture and category translations: open to a translator (an admin
+  // passes too), with the admin audit guard on every write.
+  catalogTranslation: createCatalogTranslationRouter(adminDeps),
   // Favorites and lists resolve summaries with the gestures query (a
   // feature never imports another feature's server; the api wires them).
   favorites: createFavoritesRouter({ findSummaries: findGesturesByIds }),

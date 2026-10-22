@@ -8,7 +8,7 @@
  * - Direct tiers per field value: exact 1000, startsWith 500, word boundary
  *   250, times the field weight (name 100, keyword 50, category 30,
  *   description 10). The best field wins; ties sort by name with
- *   `localeCompare("nl")`.
+ *   `Intl.Collator(locale)` (`nl` unless the caller names the language).
  * - A multi-word query whose words match in different values or out of
  *   order still matches at the word-boundary tier, weighted by the field of
  *   its weakest word (FTS5 matches it, so the ranking keeps it).
@@ -62,6 +62,8 @@ export interface Ranked<T> {
 }
 
 export interface RankOptions<T> {
+  /** The language the names are in: ties sort by `Intl.Collator(locale)` (default `nl`). */
+  locale?: string | undefined;
   /**
    * Where the typo tier looks (spec §7.1 step 4); without it the tier is
    * skipped (the server runs `typoMatches` on the catalog projection itself).
@@ -72,6 +74,8 @@ export interface RankOptions<T> {
 export interface TypoOptions {
   /** Ids already in the results (the direct matches). */
   exclude?: ReadonlySet<string>;
+  /** The language the names are in: ties sort by `Intl.Collator(locale)` (default `nl`). */
+  locale?: string | undefined;
   minSimilarity?: number;
   /**
    * The values are already `normalizeQuery`d (the catalog snapshot), so
@@ -82,7 +86,28 @@ export interface TypoOptions {
 
 type Fields = readonly (readonly [MatchField, readonly string[]])[];
 
-const NL = new Intl.Collator("nl");
+/** The default language's collation (nl), also the fallback for a tag `Intl` refuses. */
+const DEFAULT_COLLATOR_LOCALE = "nl";
+
+const collators = new Map<string, Intl.Collator>();
+
+/**
+ * The collator of a language (`Intl.Collator(locale)`, built once per
+ * language). A tag `Intl` refuses (a language added as data with a malformed
+ * code) sorts like the default language instead of throwing.
+ */
+function collatorFor(locale: string): Intl.Collator {
+  let collator = collators.get(locale);
+  if (!collator) {
+    try {
+      collator = new Intl.Collator(locale);
+    } catch {
+      collator = new Intl.Collator(DEFAULT_COLLATOR_LOCALE);
+    }
+    collators.set(locale, collator);
+  }
+  return collator;
+}
 
 function same(value: string): string {
   return value;
@@ -204,11 +229,12 @@ export function countDirectMatches(
 
 function compareRanked<T extends SearchableGesture>(
   a: Ranked<T>,
-  b: Ranked<T>
+  b: Ranked<T>,
+  collator: Intl.Collator
 ): number {
   return (
     b.score - a.score ||
-    NL.compare(a.gesture.name, b.gesture.name) ||
+    collator.compare(a.gesture.name, b.gesture.name) ||
     (a.gesture.id < b.gesture.id ? -1 : Number(a.gesture.id > b.gesture.id))
   );
 }
@@ -242,12 +268,16 @@ export function rankGestures<T extends SearchableGesture>(
       direct.push({ gesture, ...match });
     }
   }
-  direct.sort(compareRanked);
+  const collator = collatorFor(options.locale ?? DEFAULT_COLLATOR_LOCALE);
+  direct.sort((a, b) => compareRanked(a, b, collator));
   if (!(options.typoPool && shouldRunTypoTier(direct.length, q))) {
     return direct;
   }
   const exclude = new Set(direct.map((result) => result.gesture.id));
-  return [...direct, ...typoMatches(options.typoPool, q, { exclude })];
+  return [
+    ...direct,
+    ...typoMatches(options.typoPool, q, { exclude, locale: options.locale }),
+  ];
 }
 
 /**
@@ -287,7 +317,8 @@ export function typoMatches<T extends SearchableGesture>(
       results.push(best);
     }
   }
-  return results.sort(compareRanked);
+  const collator = collatorFor(options.locale ?? DEFAULT_COLLATOR_LOCALE);
+  return results.sort((a, b) => compareRanked(a, b, collator));
 }
 
 /** The best similarity of `q` to the whole value or one of its words. */
@@ -359,7 +390,8 @@ export function damerauLevenshtein(a: string, b: string): number {
  */
 export function typoCandidates<T extends SearchableGesture>(
   pool: readonly T[],
-  query: string
+  query: string,
+  locale: string = DEFAULT_COLLATOR_LOCALE
 ): Ranked<T>[] {
   if (!shouldRunTypoTier(0, query)) {
     return [];
@@ -372,5 +404,5 @@ export function typoCandidates<T extends SearchableGesture>(
   ) {
     return [];
   }
-  return typoMatches(pool, query, { normalized: true });
+  return typoMatches(pool, query, { locale, normalized: true });
 }

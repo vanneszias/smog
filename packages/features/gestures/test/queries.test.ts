@@ -109,6 +109,7 @@ describe("gestures.list", () => {
           { name: "Actie", slug: "actie" },
           { name: "Zomer", slug: "zomer" },
         ],
+        fallbackUsed: false,
         id: row.id,
         name: "Zwemmen",
         playbackId: row.playbackId,
@@ -222,6 +223,7 @@ describe("gestures.bySlug", () => {
       canonicalSlug: "hond",
       categories: [{ name: "Dieren", slug: "dieren" }],
       description: "Een hond.",
+      fallbackUsed: false,
       id: row.id,
       keywords: ["hondje", "huisdier", "blaffen"],
       name: "Hond",
@@ -467,9 +469,19 @@ describe("gestures.categories", () => {
     expect(
       await call(gesturesRouter.categories, undefined, { context: context() })
     ).toEqual([
-      { gestureCount: 0, name: "Begroeten", slug: begroeten.slug },
-      { gestureCount: 1, name: "Familie", slug: "familie" },
-      { gestureCount: 2, name: "Dieren", slug: "dieren" },
+      {
+        fallbackUsed: false,
+        gestureCount: 0,
+        name: "Begroeten",
+        slug: begroeten.slug,
+      },
+      {
+        fallbackUsed: false,
+        gestureCount: 1,
+        name: "Familie",
+        slug: "familie",
+      },
+      { fallbackUsed: false, gestureCount: 2, name: "Dieren", slug: "dieren" },
     ]);
   });
 });

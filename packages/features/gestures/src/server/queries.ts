@@ -8,7 +8,6 @@ import {
   category,
   gesture,
   gestureCategory,
-  gestureKeyword,
   inList,
   ref,
   sponsorship,
@@ -23,6 +22,15 @@ import type {
   GestureSummary,
   SitemapEntry,
 } from "../schema";
+import {
+  categoryFallbackSql,
+  categoryNameSql,
+  descriptionColumn,
+  fallbackColumn,
+  G,
+  keywordsColumn,
+  nameColumn,
+} from "./localized";
 
 /** At most this many categories (the filter chips and the menu). */
 const CATEGORY_LIMIT = 100;
@@ -31,8 +39,8 @@ const SITEMAP_LIMIT = 50_000;
 /** Sponsorships whose video and credit are shown (spec §5.4). */
 const RUNNING_STATUSES = sql.raw("'live', 'expiring'");
 
-/** The outer row's name in every catalogue query (the `gesture` table). */
-export const G = "gesture";
+/** The default language: what a read without a language (the sitemap, the legacy redirects) means. */
+export const DEFAULT_LOCALE = "nl";
 
 function parseJson<T>(value: unknown): T {
   return JSON.parse(String(value)) as T;
@@ -43,17 +51,15 @@ export const isPublished: SQL = isNotNull(gesture.publishedAt);
 /** The running sponsorship's video, else the gesture's own. */
 const playbackIdColumn = sql<string>`coalesce((SELECT ${ref("s", sponsorship.videoPlaybackId)} FROM ${sponsorship} AS s WHERE ${ref("s", sponsorship.gestureId)} = ${ref(G, gesture.id)} AND ${ref("s", sponsorship.status)} IN (${RUNNING_STATUSES}) AND ${ref("s", sponsorship.videoPlaybackId)} IS NOT NULL), ${ref(G, gesture.playbackId)})`;
 
-/** Published categories as JSON, in category order (`sort_order`, name). */
-const categoriesColumn =
-  sql`(SELECT json_group_array(json_object('name', o.name, 'slug', o.slug)) FROM (SELECT ${ref("c", category.name)} AS name, ${ref("c", category.slug)} AS slug FROM ${gestureCategory} AS gc JOIN ${category} AS c ON ${ref("c", category.id)} = ${ref("gc", gestureCategory.categoryId)} WHERE ${ref("gc", gestureCategory.gestureId)} = ${ref(G, gesture.id)} AND ${ref("c", category.publishedAt)} IS NOT NULL ORDER BY ${ref("c", category.sortOrder)}, ${ref("c", category.name)} COLLATE NOCASE) AS o)`.mapWith(
+/**
+ * Published categories as JSON, in category order (`sort_order`, the default
+ * name), with the names in `locale` (the default name where untranslated).
+ */
+function categoriesColumn(locale: string) {
+  return sql`(SELECT json_group_array(json_object('name', o.name, 'slug', o.slug)) FROM (SELECT ${categoryNameSql("c", locale)} AS name, ${ref("c", category.slug)} AS slug FROM ${gestureCategory} AS gc JOIN ${category} AS c ON ${ref("c", category.id)} = ${ref("gc", gestureCategory.categoryId)} WHERE ${ref("gc", gestureCategory.gestureId)} = ${ref(G, gesture.id)} AND ${ref("c", category.publishedAt)} IS NOT NULL ORDER BY ${ref("c", category.sortOrder)}, ${ref("c", category.name)} COLLATE NOCASE) AS o)`.mapWith(
     parseJson<CategoryRef[]>
   );
-
-/** Keywords as JSON, in the editor's order. */
-const keywordsColumn =
-  sql`(SELECT json_group_array(o.keyword) FROM (SELECT ${ref("k", gestureKeyword.keyword)} AS keyword FROM ${gestureKeyword} AS k WHERE ${ref("k", gestureKeyword.gestureId)} = ${ref(G, gesture.id)} ORDER BY ${ref("k", gestureKeyword.position)}) AS o)`.mapWith(
-    parseJson<string[]>
-  );
+}
 
 /** Published category slugs as JSON (the typo tier's category filter). */
 const categorySlugsColumn =
@@ -61,28 +67,37 @@ const categorySlugsColumn =
     parseJson<string[]>
   );
 
-export const summaryColumns = {
-  categories: categoriesColumn,
-  id: gesture.id,
-  name: gesture.name,
-  playbackId: playbackIdColumn,
-  slug: gesture.slug,
-};
+/** What a summary shows, in `locale` (the default text where untranslated). */
+export function summaryColumns(locale: string) {
+  return {
+    categories: categoriesColumn(locale),
+    fallbackUsed: fallbackColumn(locale),
+    id: gesture.id,
+    name: nameColumn(locale),
+    playbackId: playbackIdColumn,
+    slug: gesture.slug,
+  };
+}
 
 /** A summary plus what the ranking reads. */
-export const searchableColumns = {
-  ...summaryColumns,
-  description: gesture.description,
-  keywords: keywordsColumn,
-};
+export function searchableColumns(locale: string) {
+  return {
+    ...summaryColumns(locale),
+    description: descriptionColumn(locale),
+    keywords: keywordsColumn(locale),
+  };
+}
 
-export const projectionColumns = {
-  categories: categoriesColumn,
-  categorySlugs: categorySlugsColumn,
-  id: gesture.id,
-  keywords: keywordsColumn,
-  name: gesture.name,
-};
+/** The typo tier's projection row of one language. */
+export function projectionColumns(locale: string) {
+  return {
+    categories: categoriesColumn(locale),
+    categorySlugs: categorySlugsColumn,
+    id: gesture.id,
+    keywords: keywordsColumn(locale),
+    name: nameColumn(locale),
+  };
+}
 
 /**
  * The public catalogue order: `sort_name` (`gestureSortName`: lowercase, no
@@ -106,6 +121,7 @@ export function inCategories(
 export function toSummary(row: GestureSummary): GestureSummary {
   return {
     categories: row.categories,
+    fallbackUsed: row.fallbackUsed,
     id: row.id,
     name: row.name,
     playbackId: row.playbackId,
@@ -152,10 +168,11 @@ export function listGesturesQuery(
   db: Db,
   slugs: readonly string[] | undefined,
   position: ListPosition | null,
-  limit: number
+  limit: number,
+  locale: string = DEFAULT_LOCALE
 ) {
   return db
-    .select({ ...summaryColumns, sortName: gesture.sortName })
+    .select({ ...summaryColumns(locale), sortName: gesture.sortName })
     .from(gesture)
     .where(
       and(
@@ -171,7 +188,8 @@ export function listGesturesQuery(
 /** A page of the catalogue in name order (`InvalidCursorError` for a bad cursor). */
 export async function listGestures(
   db: Db,
-  input: ListInput
+  input: ListInput,
+  locale: string = DEFAULT_LOCALE
 ): Promise<{ items: GestureSummary[]; nextCursor: string | null }> {
   const position =
     input.cursor === undefined ? null : parseListCursor(input.cursor);
@@ -180,7 +198,8 @@ export async function listGestures(
       db,
       input.category,
       position,
-      input.limit
+      input.limit,
+      locale
     );
     const page = rows.slice(0, input.limit);
     const last = page.at(-1);
@@ -212,12 +231,13 @@ export function countGestures(db: Db, slugs: readonly string[] | undefined) {
  */
 export async function findGestureBySlug(
   db: Db,
-  slug: string
+  slug: string,
+  locale: string = DEFAULT_LOCALE
 ): Promise<GestureBySlug | null> {
   try {
     const [row] = await db
       .select({
-        ...searchableColumns,
+        ...searchableColumns(locale),
         publishedAt: gesture.publishedAt,
         sponsorName: sponsorship.displayName,
         sponsorUntil: sponsorship.endsAt,
@@ -262,9 +282,13 @@ export async function findGestureBySlug(
 }
 
 /** The published gestures among `ids` as summaries, in no order (one read). */
-export function gesturesByIdsQuery(db: Db, ids: readonly string[]) {
+export function gesturesByIdsQuery(
+  db: Db,
+  ids: readonly string[],
+  locale: string = DEFAULT_LOCALE
+) {
   return db
-    .select(summaryColumns)
+    .select(summaryColumns(locale))
     .from(gesture)
     .where(and(isPublished, inList(gesture.id, ids)));
 }
@@ -272,13 +296,14 @@ export function gesturesByIdsQuery(db: Db, ids: readonly string[]) {
 /** Published gestures by id, in the order given (duplicates and unknown ids dropped). */
 export async function findGesturesByIds(
   db: Db,
-  ids: readonly string[]
+  ids: readonly string[],
+  locale: string = DEFAULT_LOCALE
 ): Promise<GestureSummary[]> {
   if (ids.length === 0) {
     return [];
   }
   try {
-    const rows = await gesturesByIdsQuery(db, ids);
+    const rows = await gesturesByIdsQuery(db, ids, locale);
     const byId = new Map(rows.map((row) => [row.id, row]));
     return [...new Set(ids)].flatMap((id) => {
       const row = byId.get(id);
@@ -297,12 +322,13 @@ export async function findGesturesByIds(
 export async function findRelatedGestures(
   db: Db,
   slug: string,
-  limit: number
+  limit: number,
+  locale: string = DEFAULT_LOCALE
 ): Promise<GestureSummary[]> {
   const source = sql`(SELECT ${ref("s", gesture.id)} FROM ${gesture} AS s WHERE ${ref("s", gesture.slug)} = ${slug} AND ${ref("s", gesture.publishedAt)} IS NOT NULL)`;
   try {
     return await db
-      .select(summaryColumns)
+      .select(summaryColumns(locale))
       .from(gestureCategory)
       .innerJoin(gesture, eq(gesture.id, gestureCategory.gestureId))
       .innerJoin(category, eq(category.id, gestureCategory.categoryId))
@@ -323,12 +349,16 @@ export async function findRelatedGestures(
   }
 }
 
+/** The outer category row's name in `categoriesQuery`. */
+const G_CATEGORY = "category";
+
 /** Published categories (`sort_order`, name) with their published gesture counts. */
-export function categoriesQuery(db: Db) {
+export function categoriesQuery(db: Db, locale: string = DEFAULT_LOCALE) {
   return db
     .select({
+      fallbackUsed: categoryFallbackSql(G_CATEGORY, locale),
       gestureCount: sql<number>`(SELECT count(*) FROM ${gestureCategory} AS gc JOIN ${gesture} AS g ON ${ref("g", gesture.id)} = ${ref("gc", gestureCategory.gestureId)} WHERE ${ref("gc", gestureCategory.categoryId)} = ${ref("category", category.id)} AND ${ref("g", gesture.publishedAt)} IS NOT NULL)`,
-      name: category.name,
+      name: categoryNameSql(G_CATEGORY, locale),
       slug: category.slug,
     })
     .from(category)
@@ -341,9 +371,12 @@ export function categoriesQuery(db: Db) {
  * The categories straight from D1. `gestures.categories` serves them from
  * the catalog snapshot (`getCatalogCategories`) and falls back to this.
  */
-export async function listCategories(db: Db): Promise<Category[]> {
+export async function listCategories(
+  db: Db,
+  locale: string = DEFAULT_LOCALE
+): Promise<Category[]> {
   try {
-    return await categoriesQuery(db);
+    return await categoriesQuery(db, locale);
   } catch (error) {
     console.error("[gestures] Failed to list categories:", error);
     throw error;

@@ -1380,6 +1380,47 @@
       "countWithPublished_one": "{{count}} gebaar · {{published}} gepubliceerd",
       "countWithPublished_other": "{{count}} gebaren · {{published}} gepubliceerd"
     },
+    "catalogTranslation": {
+      "title": "Vertalingen",
+      "description": "Vertaal de naam, beschrijving en trefwoorden per taal. De tekst in de standaardtaal staat ernaast.",
+      "sourceLabel": "Bron ({{language}})",
+      "tabsLabel": "Taal van de vertaling",
+      "noLanguages": "Er zijn geen andere talen ingeschakeld.",
+      "needs": "Vertaling nodig",
+      "translated": "Vertaald",
+      "fields": {
+        "name": "Naam in {{language}}",
+        "description": "Beschrijving in {{language}}",
+        "keywords": "Trefwoorden in {{language}}"
+      },
+      "fallbackHint": "Zolang een vertaling ontbreekt, ziet de bezoeker de tekst in de standaardtaal.",
+      "save": "Vertaling opslaan",
+      "saved": "Vertaling opgeslagen.",
+      "saveFailed": "De vertaling kon niet worden opgeslagen.",
+      "stale": "Iemand anders heeft deze vertaling net opgeslagen. De nieuwste tekst is geladen: controleer hem en sla opnieuw op.",
+      "nameRequired": "Vul een naam in.",
+      "loadFailed": "De vertalingen konden niet worden geladen.",
+      "report": {
+        "title": "Vertalingen per taal",
+        "gestures": "{{needs}} van {{total}} gebaren hebben een vertaling nodig",
+        "categories": "{{missing}} van {{total}} categorieën hebben nog geen vertaalde naam",
+        "detail": "Zonder naam: {{name}}, zonder beschrijving: {{description}}, zonder trefwoorden: {{keywords}}",
+        "allDone": "Alles is vertaald",
+        "show": "Toon wat nog vertaald moet worden"
+      },
+      "filter": {
+        "label": "Vertaling nodig in",
+        "none": "Geen filter"
+      },
+      "categories": {
+        "title": "Namen per taal",
+        "description": "Vertaal de naam van elke categorie. Bezoekers zien de vertaalde naam in de filters en op de gebarenkaarten.",
+        "nameIn": "Naam in {{language}}",
+        "save": "Opslaan",
+        "saveFor": "Vertaling van {{name}} opslaan",
+        "saved": "Naam opgeslagen."
+      }
+    },
     "mux": {
       "title": "Video",
       "label": "Video",

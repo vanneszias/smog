@@ -22,7 +22,14 @@ import { type UseFavoritesOptions, useFavorites } from "./index";
 
 function summary(name: string): GestureSummary {
   const slug = name.toLowerCase();
-  return { categories: [], id: `id-${slug}`, name, playbackId: "p", slug };
+  return {
+    categories: [],
+    fallbackUsed: false,
+    id: `id-${slug}`,
+    name,
+    playbackId: "p",
+    slug,
+  };
 }
 
 const CATALOGUE = ["Aap", "Beer", "Hond", "Kat", "Vogel"].map(summary);

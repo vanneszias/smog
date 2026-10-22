@@ -64,7 +64,7 @@ export function createFavoritesRouter({ findSummaries }: FavoritesRouterDeps) {
       async ({ context, errors, input }) =>
         await guarded(errors, () =>
           listFavorites(
-            { db: context.db, findSummaries },
+            { db: context.db, findSummaries, locale: context.locale },
             context.user.id,
             input
           )

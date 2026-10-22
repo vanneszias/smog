@@ -80,6 +80,26 @@ const CATALOG_AUDIT_SCHEMAS = {
   }),
 } satisfies AuditSchemaBlock;
 
+/**
+ * Phase 10b task 5: a gesture's or category's translation (`translation.*`),
+ * one entry per save, `target_type` `gesture` or `category`. `name` and
+ * `slug` are the default language's (what the admin list shows); `locale`
+ * the language written. The translated text itself is not in the entry.
+ */
+const CATALOG_TRANSLATION_AUDIT_SCHEMAS = {
+  "translation.category_save": catalogTarget.extend({
+    /** The first translation of the category in this language. */
+    created: z.boolean(),
+    locale: z.string(),
+  }),
+  "translation.gesture_save": catalogTarget.extend({
+    created: z.boolean(),
+    /** The parts the save changed. */
+    fields: z.array(z.enum(["name", "description", "keywords"])).min(1),
+    locale: z.string(),
+  }),
+} satisfies AuditSchemaBlock;
+
 const auditRole = z.enum(ROLES);
 
 /**
@@ -256,6 +276,7 @@ const TRANSLATION_AUDIT_SCHEMAS = {
 export const AUDIT_DATA_SCHEMAS = {
   ...LEGACY_AUDIT_SCHEMAS,
   ...CATALOG_AUDIT_SCHEMAS,
+  ...CATALOG_TRANSLATION_AUDIT_SCHEMAS,
   ...USER_AUDIT_SCHEMAS,
   ...MAINTENANCE_AUDIT_SCHEMAS,
   ...SPONSORSHIP_AUDIT_SCHEMAS,

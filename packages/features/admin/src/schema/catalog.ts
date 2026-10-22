@@ -3,6 +3,7 @@
  * inputs, limits; ruling 8). Everything exported here is part of
  * `@smog/admin/schema` (`index.ts` re-exports this file). Client-safe.
  */
+import { localeCodeSchema } from "@smog/config/locale";
 import { normalizeText } from "@smog/utils";
 import { z } from "zod";
 
@@ -164,6 +165,13 @@ export const adminGestureListInputSchema = z.object({
     .min(1)
     .max(ADMIN_GESTURE_PAGE_MAX)
     .default(ADMIN_GESTURE_PAGE_DEFAULT),
+  /**
+   * Only gestures that still need a translation in this language (the
+   * "needs translation" definition of `@smog/db`: no translated name, a
+   * blank description or no keyword where the default language has some).
+   * The default language itself never needs one.
+   */
+  needsTranslation: localeCodeSchema.optional(),
   /** A `normalizeText` substring of the name or of a keyword. */
   q: z.string().max(GESTURE_NAME_MAX).optional(),
   status: z.enum(ADMIN_GESTURE_STATUSES).default("all"),

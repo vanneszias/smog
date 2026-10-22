@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { AdminPage } from "@/components/admin/admin-page";
 import { CategoryList } from "@/components/admin/catalog/category-list";
+import { CategoryTranslations } from "@/components/admin/catalog/category-translations";
 import { pageMeta } from "@/lib/head";
 
 export const Route = createFileRoute("/admin/categories")({
@@ -19,6 +20,7 @@ function AdminCategories(): ReactNode {
       title={t("admin.categories.title")}
     >
       <CategoryList />
+      <CategoryTranslations />
     </AdminPage>
   );
 }

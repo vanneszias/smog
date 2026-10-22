@@ -38,12 +38,16 @@ import {
  */
 export type FindGestureSummaries = (
   db: Db,
-  ids: readonly string[]
+  ids: readonly string[],
+  /** The viewer's language (names in it, the default text where untranslated). */
+  locale?: string
 ) => Promise<GestureSummary[]>;
 
 export interface ListsDeps {
   db: Db;
   findSummaries: FindGestureSummaries;
+  /** The request's language, for the summaries. */
+  locale?: string;
 }
 
 export type ListsErrorCode = "FORBIDDEN" | "INVALID_STATE" | "NOT_FOUND";
@@ -154,7 +158,8 @@ export async function hydrateItems(
   const positions = new Map(rows.map((row) => [row.gestureId, row.position]));
   const summaries = await deps.findSummaries(
     deps.db,
-    rows.map((row) => row.gestureId)
+    rows.map((row) => row.gestureId),
+    deps.locale
   );
   return summaries.map((summary) => ({
     ...summary,

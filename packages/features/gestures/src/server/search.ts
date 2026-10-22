@@ -11,8 +11,12 @@
  *    gesture).
  *
  * An empty query is the browse list and its total, in one batch.
+ *
+ * Phase 10b: the search takes the viewer's language (see `ftsLocaleFilter`);
+ * the typo tier reads that language's projection and the ties sort with its
+ * collation. The browse order stays the default language's `sort_name`.
  */
-import { gesture, ref } from "@smog/db";
+import { DEFAULT_LANGUAGE_SQL, gesture, ref } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { and, sql } from "drizzle-orm";
 import { buildFtsQuery } from "../normalize-query";
@@ -24,9 +28,10 @@ import {
 } from "../ranking";
 import type { SearchResult } from "../schema";
 import { type CatalogEntry, getCatalogProjection } from "./catalog-cache";
+import { G } from "./localized";
 import {
   countGestures,
-  G,
+  DEFAULT_LOCALE,
   gesturesByIdsQuery,
   inCategories,
   isPublished,
@@ -47,12 +52,17 @@ const BM25 = sql.raw("bm25(gesture_fts, 0.0, 10.0, 5.0, 3.0, 1.0)");
 
 /**
  * `gesture_fts` holds one row per (gesture, language) since migration 0022.
- * Until the search takes the active language (phase 10b task 5) it reads the
- * default language's rows only, which is what it always read.
+ * A search in a language reads that language's rows, and the default
+ * language's row of every gesture that has no translation into it (spec
+ * 5.4: an untranslated gesture is still found by its Dutch name, shown in
+ * Dutch and flagged `fallbackUsed`). The translation table decides, by its
+ * primary key, so the virtual table is never scanned for the fallback; a
+ * translation write rebuilds the rows in the same batch, so a translation
+ * row and its index row exist together.
  */
-const DEFAULT_LOCALE_SQL = sql.raw(
-  "(SELECT code FROM language WHERE is_default = 1)"
-);
+function ftsLocaleFilter(locale: string) {
+  return sql`(gesture_fts.locale = ${locale} OR (gesture_fts.locale = ${DEFAULT_LANGUAGE_SQL} AND NOT EXISTS (SELECT 1 FROM gesture_translation AS gt WHERE gt.gesture_id = gesture_fts.gesture_id AND gt.locale = ${locale})))`;
+}
 
 export interface SearchInput {
   category?: string[] | undefined;
@@ -63,6 +73,8 @@ export interface SearchInput {
 export interface SearchDeps {
   db: Db;
   kv: KVNamespace;
+  /** The viewer's language (default `nl`): the rows searched, the names shown, the collation. */
+  locale?: string | undefined;
 }
 
 interface SearchPage {
@@ -70,10 +82,14 @@ interface SearchPage {
   total: number;
 }
 
-async function browse(db: Db, input: SearchInput): Promise<SearchPage> {
+async function browse(
+  db: Db,
+  input: SearchInput,
+  locale: string
+): Promise<SearchPage> {
   const [rows, [count]] = await db.batch([
     db
-      .select(summaryColumns)
+      .select(summaryColumns(locale))
       .from(gesture)
       .where(and(isPublished, inCategories(input.category)))
       .orderBy(...nameOrder)
@@ -91,13 +107,18 @@ async function browse(db: Db, input: SearchInput): Promise<SearchPage> {
   };
 }
 
-function findCandidates(db: Db, fts: string, slugs: string[] | undefined) {
+function findCandidates(
+  db: Db,
+  fts: string,
+  slugs: string[] | undefined,
+  locale: string
+) {
   // The inner `gesture` shadows the outer one, so `inCategories` (which
   // names `gesture`) filters the candidates before the bm25 cap.
   const filter = inCategories(slugs);
-  const ids = sql`SELECT gesture_fts.gesture_id FROM gesture_fts JOIN ${gesture} ON ${ref(G, gesture.id)} = gesture_fts.gesture_id WHERE gesture_fts MATCH ${fts} AND gesture_fts.locale = ${DEFAULT_LOCALE_SQL} AND ${ref(G, gesture.publishedAt)} IS NOT NULL${filter ? sql` AND ${filter}` : sql``} ORDER BY ${BM25} LIMIT ${CANDIDATE_LIMIT}`;
+  const ids = sql`SELECT gesture_fts.gesture_id FROM gesture_fts JOIN ${gesture} ON ${ref(G, gesture.id)} = gesture_fts.gesture_id WHERE gesture_fts MATCH ${fts} AND ${ftsLocaleFilter(locale)} AND ${ref(G, gesture.publishedAt)} IS NOT NULL${filter ? sql` AND ${filter}` : sql``} ORDER BY ${BM25} LIMIT ${CANDIDATE_LIMIT}`;
   return db
-    .select(searchableColumns)
+    .select(searchableColumns(locale))
     .from(gesture)
     .where(sql`${gesture.id} IN (${ids})`);
 }
@@ -112,7 +133,8 @@ function findCandidates(db: Db, fts: string, slugs: string[] | undefined) {
  */
 async function typoTier(
   { db, kv }: SearchDeps,
-  input: SearchInput
+  input: SearchInput,
+  locale: string
 ): Promise<Ranked<CatalogEntry>[]> {
   // Too short for a typo match, whatever the direct results.
   if (!shouldRunTypoTier(0, input.q)) {
@@ -120,7 +142,7 @@ async function typoTier(
   }
   let projection: readonly CatalogEntry[];
   try {
-    projection = await getCatalogProjection(db, kv);
+    projection = await getCatalogProjection(db, kv, locale);
   } catch (error) {
     console.error(
       "[gestures] Failed to load the typo tier, answering with direct matches:",
@@ -135,7 +157,7 @@ async function typoTier(
       : projection.filter((entry) =>
           entry.categorySlugs.some((slug) => slugs.has(slug))
         );
-  return typoCandidates(pool, input.q);
+  return typoCandidates(pool, input.q, locale);
 }
 
 /**
@@ -147,25 +169,28 @@ async function typoTier(
  * after the batch), so the rest still fill the page.
  */
 export async function searchGestures(
-  { db, kv }: SearchDeps,
+  { db, kv, locale = DEFAULT_LOCALE }: SearchDeps,
   input: SearchInput
 ): Promise<SearchPage> {
   const fts = buildFtsQuery(input.q);
   if (fts === null) {
-    return await browse(db, input);
+    return await browse(db, input, locale);
   }
   try {
-    const typoAll = await typoTier({ db, kv }, input);
+    const typoAll = await typoTier({ db, kv }, input, locale);
     const typoPage = typoAll
       .slice(0, input.limit)
       .map((result) => result.gesture.id);
-    const candidatesQuery = findCandidates(db, fts, input.category);
+    const candidatesQuery = findCandidates(db, fts, input.category, locale);
     const [candidates, typoRows] =
       typoPage.length > 0
-        ? await db.batch([candidatesQuery, gesturesByIdsQuery(db, typoPage)])
+        ? await db.batch([
+            candidatesQuery,
+            gesturesByIdsQuery(db, typoPage, locale),
+          ])
         : [await candidatesQuery, []];
 
-    const direct = rankGestures(candidates, input.q);
+    const direct = rankGestures(candidates, input.q, { locale });
     const directIds = new Set(direct.map((result) => result.gesture.id));
     const typo = shouldRunTypoTier(direct.length, input.q)
       ? typoAll.filter((result) => !directIds.has(result.gesture.id))

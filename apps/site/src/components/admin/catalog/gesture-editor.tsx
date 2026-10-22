@@ -64,6 +64,7 @@ import {
   sameField,
   withMine,
 } from "./gesture-draft";
+import { GestureTranslations } from "./gesture-translations";
 import { KeywordInput } from "./keyword-input";
 
 /** The duplicate-name check waits this long after the last keystroke. */
@@ -641,6 +642,7 @@ export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
           {saved ? <DangerZone gesture={saved} onLeave={allowLeave} /> : null}
         </div>
       </form>
+      {saved ? <GestureTranslations gestureId={saved.id} /> : null}
       <ConflictDialog
         categories={categories.data ?? []}
         conflict={conflict}
