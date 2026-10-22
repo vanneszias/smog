@@ -84,6 +84,45 @@ describe("home", () => {
       home.getByRole("togglebutton", { name: "Dieren" })
     ).toBeOnTheScreen();
     expect(screen.queryByTestId("offline-banner")).not.toBeOnTheScreen();
+    // Nothing to continue: the section is not there.
+    expect(home.queryByTestId("home-recent")).toBeNull();
+  });
+
+  it("opens with the hero: the headline and the search, on green", async () => {
+    await renderApp();
+    const home = await inScreen("home");
+    expect(
+      await home.findByRole("header", {
+        name: "Gestures that support your speech",
+      })
+    ).toBeOnTheScreen();
+    expect(
+      home.getByPlaceholderText("Look up a gesture, for example dog")
+    ).toBeOnTheScreen();
+  });
+
+  it("continues where this device left off", async () => {
+    await renderApp({
+      guest: {
+        preferences: {
+          importDismissedFor: [],
+          locale: "en",
+          recentGestureIds: [KAT.id],
+          theme: "light",
+        },
+      },
+    });
+    const home = await inScreen("home");
+    const recent = await home.findByTestId("home-recent");
+    expect(
+      within(recent).getByRole("header", {
+        name: "Continue where you left off",
+      })
+    ).toBeOnTheScreen();
+    expect(
+      await within(recent).findByRole("button", { name: "Kat" })
+    ).toBeOnTheScreen();
+    expect(within(recent).queryByRole("button", { name: "Hond" })).toBeNull();
   });
 });
 

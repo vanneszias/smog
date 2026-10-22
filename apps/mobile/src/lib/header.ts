@@ -10,6 +10,8 @@ export interface StackHeaderOptions {
   headerStyle: { backgroundColor: string };
   headerTintColor: string;
   headerTitleStyle: { color: string };
+  /** White status bar icons over the green header. */
+  statusBarStyle: "light";
 }
 
 /**
@@ -32,6 +34,7 @@ export function useStackHeaderOptions(): StackHeaderOptions {
       headerStyle: { backgroundColor: header },
       headerTintColor: onHeader,
       headerTitleStyle: { color: onHeader },
+      statusBarStyle: "light" as const,
     }),
     [background, header, onHeader]
   );

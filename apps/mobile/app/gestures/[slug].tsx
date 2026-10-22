@@ -6,6 +6,7 @@ import {
   useGesture,
   useGestureViewed,
   useRelated,
+  useRememberGesture,
   useVideoEnd,
 } from "@smog/gestures/client";
 import type { GestureBySlug } from "@smog/gestures/schema";
@@ -145,6 +146,8 @@ function GestureDetail({
 }): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
+  // "Continue where you left off" on Home.
+  useRememberGesture(gesture.id);
   // video_playback_completed and the course banner, once per visit.
   const { banner: course, onNearEnd } = useVideoEnd<CourseMessageIndex>({
     gestureId: gesture.id,
