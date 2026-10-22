@@ -76,7 +76,7 @@ function SettingFacts({ setting }: { setting: MaintenanceSetting }): ReactNode {
   const { t } = useTranslation();
   const time = useAuditTime();
   return (
-    <dl className="grid gap-4 sm:grid-cols-3">
+    <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <Row label={t("admin.settings.maintenance.status")}>
         {setting.enabled ? (
           <Badge variant="warning">{t("admin.settings.maintenance.on")}</Badge>
@@ -287,7 +287,7 @@ export function MaintenanceCard({
       <>
         <SettingFacts setting={setting} />
         {setting.enabled ? null : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field
               counter={{ count: message.length, max: MAINTENANCE_MESSAGE_MAX }}
               hint={t("admin.settings.maintenance.messageHint", {

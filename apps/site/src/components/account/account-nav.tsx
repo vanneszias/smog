@@ -47,8 +47,8 @@ const LABEL_KEYS = {
 } as const satisfies Record<AccountSectionId, string>;
 
 /**
- * The settings navigation: a column from `md`, a scrolling row of pills
- * below it. One section shows at a time (`?section=`); each entry is a real
+ * The settings navigation: a column from `md`, a wrapping row of pills
+ * below it (never a sideways scroll, so every section shows at once). One section shows at a time (`?section=`); each entry is a real
  * link, so the keyboard and the back button work.
  */
 export function AccountNav({
@@ -60,11 +60,8 @@ export function AccountNav({
 }): ReactNode {
   const { t } = useTranslation();
   return (
-    <nav
-      aria-label={t("account.nav.label")}
-      className="-mx-4 overflow-x-auto px-4 md:mx-0 md:w-56 md:shrink-0 md:overflow-visible md:px-0"
-    >
-      <ul className="flex gap-2 md:flex-col md:gap-1">
+    <nav aria-label={t("account.nav.label")} className="md:w-56 md:shrink-0">
+      <ul className="flex flex-wrap gap-2 md:flex-col md:flex-nowrap md:gap-1">
         {sections.map((section) => {
           const active = section === current;
           return (
