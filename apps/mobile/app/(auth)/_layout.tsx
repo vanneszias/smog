@@ -1,19 +1,31 @@
 import { useTranslation } from "@smog/i18n/react";
-import { IconButton, useColor } from "@smog/ui-native";
+import { IconButton, Surface, useColor } from "@smog/ui-native";
 import { Stack, useRouter } from "expo-router";
 import X from "lucide-react-native/icons/x";
 import { type ReactElement, useCallback } from "react";
 
-/** Sign in, sign up and forgot password, as a modal stack. */
+/**
+ * Sign in, sign up and forgot password, as a modal stack: the header is the
+ * green of the band under it, so the two read as one surface.
+ */
 export default function AuthLayout(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const background = useColor("background");
-  const foreground = useColor("foreground");
-  const primary = useColor("primary");
+  const green = useColor("primary");
+  const onGreen = useColor("primaryForeground");
   const close = useCallback(() => router.dismissAll(), [router]);
   const headerRight = useCallback(
-    () => <IconButton icon={<X />} label={t("a11y.close")} onPress={close} />,
+    () => (
+      <Surface className="bg-transparent" tone="primary">
+        <IconButton
+          icon={<X />}
+          label={t("a11y.close")}
+          onPress={close}
+          variant="ghost"
+        />
+      </Surface>
+    ),
     [close, t]
   );
   return (
@@ -22,10 +34,11 @@ export default function AuthLayout(): ReactElement {
         contentStyle: { backgroundColor: background },
         headerRight,
         headerShadowVisible: false,
-        headerStyle: { backgroundColor: background },
-        headerTintColor: primary,
+        headerStyle: { backgroundColor: green },
+        headerTintColor: onGreen,
         headerTitle: "",
-        headerTitleStyle: { color: foreground },
+        headerTitleStyle: { color: onGreen },
+        statusBarStyle: "light",
       }}
     />
   );
