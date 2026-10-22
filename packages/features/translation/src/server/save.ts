@@ -21,14 +21,14 @@ import {
 } from "./store";
 
 /** One key in one language as stored now, with what a save needs to know about it. */
-export interface CurrentCell {
+interface CurrentCell {
   cell: StringCell;
   isDefault: boolean;
   source: string;
 }
 
 /** The cell of one key and language as stored now; `null` for an unknown key, a language that is not enabled or a plural form it does not use. */
-export async function currentCell(
+async function currentCell(
   db: Db,
   locale: string,
   key: string

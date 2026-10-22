@@ -504,7 +504,6 @@ export function createAuth(options: CreateAuthOptions) {
               await welcome(created, context?.request);
             }
           },
-          // biome-ignore lint/suspicious/useAwait: Better Auth's hook signature is async.
           before: async (data, context) => {
             if (signInOnly) {
               throw new APIError("FORBIDDEN", {

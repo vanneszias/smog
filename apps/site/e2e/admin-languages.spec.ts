@@ -104,9 +104,7 @@ test.describe("languages", () => {
       await expect(
         table.getByRole("switch", { name: "Nederlands inschakelen" })
       ).toBeDisabled();
-      await table
-        .getByRole("switch", { name: `${NAME} inschakelen` })
-        .click();
+      await table.getByRole("switch", { name: `${NAME} inschakelen` }).click();
       await expect
         .poll(async () => await menuCodes(page.request))
         .not.toContain(CODE);

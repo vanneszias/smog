@@ -54,7 +54,7 @@ export interface KeyInfo {
 }
 
 /** The first dotted segment of a key. */
-export function namespaceOf(key: string): string {
+function namespaceOf(key: string): string {
   const dot = key.indexOf(".");
   return dot === -1 ? key : key.slice(0, dot);
 }
@@ -62,7 +62,7 @@ export function namespaceOf(key: string): string {
 const shippedCache = new Map<string, Readonly<Record<string, string>>>();
 
 /** The flat shipped catalogue of a language (cached: the bundle never changes at runtime). */
-export function shippedFlat(locale: string): Readonly<Record<string, string>> {
+function shippedFlat(locale: string): Readonly<Record<string, string>> {
   const hit = shippedCache.get(locale);
   if (hit) {
     return hit;

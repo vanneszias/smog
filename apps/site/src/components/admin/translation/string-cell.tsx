@@ -49,7 +49,7 @@ export const EDITOR_ERRORS = {
 export type EditorErrorCode = keyof typeof EDITOR_ERRORS;
 
 /** The first problem of `value` as an error code, checked before the request (the server checks again). */
-export function draftProblem(
+function draftProblem(
   language: CellLanguage,
   row: StringRow,
   value: string

@@ -156,7 +156,9 @@ describe("saving", () => {
       { kv: env.KV, source: uiCatalogueSource(testDb()) },
       () => "en"
     );
-    expect(catalogue.overlay.en[KEY]).toBe("Something broke, sorry");
+    expect(catalogue.overlay).toMatchObject({
+      en: { [KEY]: "Something broke, sorry" },
+    });
   });
 
   it("stores the hash of the source and marks the text stale when the source is edited", async () => {

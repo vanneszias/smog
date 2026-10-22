@@ -13,7 +13,7 @@ import { I18N_VERSION_KEY, resetCatalogueCache } from "@smog/i18n/server";
 import { makeRpcContext } from "@smog/rpc/testing";
 import { createTranslationRouter } from "../src/server";
 
-export const SITE_URL = "http://localhost:5173";
+const SITE_URL = "http://localhost:5173";
 const PASSWORD = "correct horse battery";
 
 export function testDb(): Db {
@@ -79,7 +79,7 @@ export async function signedUp(role: TestRole = "user"): Promise<Authed> {
   return { auth, cookie, user: row };
 }
 
-export async function contextAs(as: Authed | null) {
+async function contextAs(as: Authed | null) {
   if (!as) {
     return makeRpcContext({ db: testDb(), env: {}, kv: env.KV });
   }

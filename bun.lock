@@ -531,7 +531,6 @@
       "name": "@smog/translation",
       "version": "0.0.0",
       "dependencies": {
-        "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",
         "@smog/admin": "workspace:*",
         "@smog/auth": "workspace:*",
@@ -539,7 +538,6 @@
         "@smog/db": "workspace:*",
         "@smog/i18n": "workspace:*",
         "@smog/rpc": "workspace:*",
-        "@smog/utils": "workspace:*",
         "drizzle-orm": "catalog:",
         "zod": "catalog:",
       },
