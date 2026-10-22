@@ -7,6 +7,7 @@ import {
   I18N_VERSION_KEY,
   INITIAL_I18N_VERSION,
   loadCatalogue,
+  loadLanguages,
   resetCatalogueCache,
 } from "./server";
 import { createI18n } from "./setup-web";
@@ -114,7 +115,44 @@ describe("loadCatalogue", () => {
     expect(calls.languages).toBe(1);
     // nl (the default), fr and de.
     expect(calls.strings).toBe(3);
-    expect(kv.gets).toBe(3);
+    // The isolate's memo: one KV read for the three requests.
+    expect(kv.gets).toBe(1);
+  });
+
+  test("another isolate's bump is seen once the memo (30 s) has expired", async () => {
+    const { source, strings } = fakeSource();
+    let clock = 1_000_000;
+    const now = () => clock;
+    await loadCatalogue({ kv, now, source }, pick("fr"));
+    strings.fr = { "common.cancel": "Stop" };
+    kv.data.set(I18N_VERSION_KEY, "written-by-another-isolate");
+    clock += 29_000;
+    const within = await loadCatalogue({ kv, now, source }, pick("fr"));
+    expect(within.overlay.fr).toEqual({ "common.cancel": "Laisser tomber" });
+    clock += 2000;
+    const after = await loadCatalogue({ kv, now, source }, pick("fr"));
+    expect(after.version).toBe("written-by-another-isolate");
+    expect(after.overlay.fr).toEqual({ "common.cancel": "Stop" });
+  });
+
+  test("loadLanguages lists the enabled languages and falls back to the shipped ones", async () => {
+    const { source } = fakeSource();
+    const languages = await loadLanguages({ kv, source });
+    expect(languages.map((language) => language.code)).toEqual([
+      "nl",
+      "fr",
+      "de",
+    ]);
+    resetCatalogueCache();
+    const error = spyOn(console, "error").mockImplementation(() => undefined);
+    const broken: CatalogueSource = {
+      languages: () => Promise.reject(new Error("D1 is down")),
+      strings: () => Promise.reject(new Error("D1 is down")),
+    };
+    expect(await loadLanguages({ kv, source: broken })).toEqual(
+      SHIPPED_LANGUAGES
+    );
+    error.mockRestore();
   });
 
   test("hands over only the active and the default language", async () => {

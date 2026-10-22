@@ -1,4 +1,4 @@
-import { createI18n, type Locale } from "@smog/i18n";
+import { type CatalogueOverlay, createI18n, type Locale } from "@smog/i18n";
 import { render } from "react-email";
 import { type MagicLinkProps, magicLink } from "./templates/auth/magic-link";
 import { type OtpProps, otp } from "./templates/auth/otp";
@@ -92,6 +92,12 @@ export interface RenderedEmail {
 }
 
 export interface RenderOptions {
+  /**
+   * The `ui_string` overlay (`@smog/i18n/server`'s `loadCatalogue`): the
+   * emails read the same merged catalogue as the apps, so a translator's
+   * edit reaches the next email without a deploy. None: the shipped texts.
+   */
+  overlay?: CatalogueOverlay | undefined;
   /** The site origin (`SITE_URL`): the header logo is loaded from it. */
   siteUrl?: string | undefined;
 }
@@ -160,7 +166,7 @@ export async function renderEmail<Id extends EmailTemplateId>(
     const context = {
       locale,
       siteUrl: options.siteUrl,
-      t: createI18n(locale).t,
+      t: createI18n(locale, options.overlay).t,
     };
     const definition: EmailTemplate<EmailTemplateProps[Id]> =
       TEMPLATES[template];

@@ -1,4 +1,4 @@
-import type { Locale } from "@smog/i18n";
+import type { CatalogueOverlay, Locale } from "@smog/i18n";
 import {
   type EmailTemplateId,
   type EmailTemplateProps,
@@ -47,14 +47,23 @@ export interface EmailDeliveryEnv {
  */
 export async function deliverEmail(
   sender: EmailSender,
-  { email, env }: { email: OutboxEmail; env: EmailDeliveryEnv }
+  {
+    email,
+    env,
+    overlay,
+  }: {
+    email: OutboxEmail;
+    env: EmailDeliveryEnv;
+    /** The `ui_string` overlay of the recipient's language (see `RenderOptions`). */
+    overlay?: CatalogueOverlay | undefined;
+  }
 ): Promise<void> {
   // Each template's props match its id (`OutboxEmail` is a union by id).
   const rendered = await renderEmail(
     email.template,
     email.props as never,
     email.locale,
-    { siteUrl: env.SITE_URL }
+    { overlay, siteUrl: env.SITE_URL }
   );
   await sender.send({
     ...rendered,
@@ -62,6 +71,27 @@ export async function deliverEmail(
     replyTo: env.EMAIL_REPLY_TO,
     to: email.to,
   });
+}
+
+/** Reads the `ui_string` overlay of a language (the Worker's catalogue loader). */
+export type OverlayLoader = (locale: Locale) => Promise<CatalogueOverlay>;
+
+/**
+ * The overlay of `locale`, or none: a failing loader never stops an email
+ * (the shipped texts are always there).
+ */
+export async function safeOverlay(
+  load: OverlayLoader | undefined,
+  locale: Locale
+): Promise<CatalogueOverlay | undefined> {
+  if (!load) {
+    return;
+  }
+  try {
+    return await load(locale);
+  } catch (error) {
+    console.error("[email] Failed to load the string overlay:", error);
+  }
 }
 
 /**
@@ -72,14 +102,24 @@ export async function deliverEmail(
  */
 export class DirectEmailOutbox implements EmailOutbox {
   readonly #env: EmailDeliveryEnv;
+  readonly #loadOverlay: OverlayLoader | undefined;
   readonly #sender: EmailSender;
 
-  constructor(sender: EmailSender, env: EmailDeliveryEnv) {
+  constructor(
+    sender: EmailSender,
+    env: EmailDeliveryEnv,
+    loadOverlay?: OverlayLoader
+  ) {
     this.#sender = sender;
     this.#env = env;
+    this.#loadOverlay = loadOverlay;
   }
 
   async send(email: OutboxEmail): Promise<void> {
-    await deliverEmail(this.#sender, { email, env: this.#env });
+    await deliverEmail(this.#sender, {
+      email,
+      env: this.#env,
+      overlay: await safeOverlay(this.#loadOverlay, email.locale),
+    });
   }
 }

@@ -11,6 +11,7 @@ import {
 } from "@smog/rpc";
 import { getRequest, setResponseStatus } from "@tanstack/react-start/server";
 import { siteEnv } from "./auth";
+import { enabledLanguageCodes } from "./catalogue";
 import { clientIp, createRpcContext } from "./context";
 import { requestSession } from "./session";
 
@@ -49,7 +50,12 @@ async function renderContext(): Promise<RpcContext> {
       status: ERRORS.RATE_LIMITED.status,
     });
   }
-  const context = createRpcContext(request, env, { waitUntil });
+  const context = createRpcContext(
+    request,
+    env,
+    { waitUntil },
+    await enabledLanguageCodes()
+  );
   return { ...context, session: await requestSession(request) };
 }
 

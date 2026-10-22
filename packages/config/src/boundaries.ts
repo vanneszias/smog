@@ -40,7 +40,14 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/jobs/cron",
     `${FEATURE_PATTERN}/schema`,
   ],
-  "@smog/api": ["@smog/rpc", FEATURE_PATTERN, "@smog/config"],
+  // `system.i18n` reads the language list and the ui_string overlay.
+  "@smog/api": [
+    "@smog/rpc",
+    FEATURE_PATTERN,
+    "@smog/config",
+    "@smog/db",
+    "@smog/i18n",
+  ],
   "@smog/mobile": [
     "@smog/api/client",
     "@smog/auth/expo",

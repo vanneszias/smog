@@ -1,6 +1,7 @@
 import { accountContract } from "@smog/account/contract";
 import { adminContract } from "@smog/admin/contract";
 import { ENVIRONMENTS } from "@smog/config/env/worker";
+import { localeCodeSchema } from "@smog/config/locale";
 import { favoritesContract } from "@smog/favorites/contract";
 import { gesturesContract } from "@smog/gestures/contract";
 import { listsContract } from "@smog/lists/contract";
@@ -17,6 +18,27 @@ export const whoamiUserSchema = z.object({
   role: roleSchema,
 });
 
+/** An enabled language, as the language menus show it. */
+export const languageSchema = z.object({
+  code: z.string(),
+  intlTag: z.string(),
+  isDefault: z.boolean(),
+  name: z.string(),
+});
+
+/**
+ * The runtime catalogue (phase 10b ruling 1): the enabled languages and the
+ * `ui_string` overlay rows (flat key to value) of the resolved language and
+ * the default one, never the shipped base. The apps merge it over their
+ * bundled catalogue; the mobile app caches it on the device.
+ */
+export const i18nCatalogueSchema = z.object({
+  languages: z.array(languageSchema),
+  locale: z.string(),
+  overlay: z.record(z.string(), z.record(z.string(), z.string())),
+  version: z.string(),
+});
+
 /** Liveness and the current session, before any feature exists. */
 export const systemContract = {
   /** Which sign-in methods and captcha the app shows (no secrets). */
@@ -30,6 +52,14 @@ export const systemContract = {
   health: baseContract.output(
     z.object({ environment: z.enum(ENVIRONMENTS), ok: z.literal(true) })
   ),
+  /**
+   * The enabled languages and the overlay of `locale` (the device's choice;
+   * a language that is not enabled resolves to the default one). Public: it
+   * holds interface texts only.
+   */
+  i18n: baseContract
+    .input(z.object({ locale: localeCodeSchema.nullish() }))
+    .output(i18nCatalogueSchema),
   whoami: baseContract.output(z.object({ user: whoamiUserSchema.nullable() })),
 };
 
