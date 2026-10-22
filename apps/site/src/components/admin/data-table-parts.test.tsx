@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { DataTable, type DataTableColumn } from "@smog/ui-web";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { renderSite } from "@/test/render";
 import {
   ColumnsMenu,
@@ -25,26 +25,29 @@ interface Row {
 const ROWS: Row[] = [{ id: "r1", name: "Hond", note: "Een dier" }];
 const PINNED = ["name", "actions"] as const;
 
+function rowId(row: Row): string {
+  return row.id;
+}
+
 function Harness(): ReactNode {
   const [opened, setOpened] = useState<string[]>([]);
   const [rowClicks, setRowClicks] = useState(0);
+  const open = useCallback(
+    (row: Row) => setOpened((current) => [...current, row.id]),
+    []
+  );
+  const click = useCallback(() => setRowClicks((count) => count + 1), []);
   const all = useMemo<DataTableColumn<Row>[]>(
     () => [
       { cell: (row) => row.name, header: "Name", id: "name" },
       { cell: (row) => row.note, header: "Note", id: "note" },
       {
-        cell: (row) => (
-          <RowActions
-            name={row.name}
-            onOpen={(r: Row) => setOpened((current) => [...current, r.id])}
-            row={row}
-          />
-        ),
+        cell: (row) => <RowActions name={row.name} onOpen={open} row={row} />,
         header: <span className="sr-only">Actions</span>,
         id: "actions",
       },
     ],
-    []
+    [open]
   );
   const visibility = useColumnVisibility("test", all, PINNED);
   return (
@@ -53,8 +56,8 @@ function Harness(): ReactNode {
       <DataTable
         aria-label="Rows"
         columns={visibility.columns}
-        getRowId={(row) => row.id}
-        onRowClick={() => setRowClicks((count) => count + 1)}
+        getRowId={rowId}
+        onRowClick={click}
         rows={ROWS}
       />
       <output data-testid="opened">{opened.join(",")}</output>
