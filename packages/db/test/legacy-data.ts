@@ -79,11 +79,19 @@ export async function seedRealisticData(db: D1Database): Promise<void> {
       T,
       T
     ),
+    // A gesture whose index row is missing (an index that drifted): the
+    // migration writes it from the tables.
     run(
-      "INSERT INTO gesture_keyword (gesture_id, keyword, position) VALUES ('g-cafe', 'koffie', 0), ('g-cafe', 'espresso bestellen', 1), ('g-draft', 'schets', 0)"
+      "INSERT INTO gesture (id, slug, name, sort_name, description, playback_id, published_at, created_at, updated_at) VALUES ('g-nofts', 'vergeten', 'Vergeten', 'vergeten', 'Niet geindexeerd.', 'pb-nofts', ?, ?, ?)",
+      T,
+      T,
+      T
     ),
     run(
-      "INSERT INTO gesture_category (gesture_id, category_id) VALUES ('g-cafe', '5eed0001-0000-4000-8000-000000000001'), ('g-cafe', 'c-hidden'), ('g-draft', 'c-hidden')"
+      "INSERT INTO gesture_keyword (gesture_id, keyword, position) VALUES ('g-cafe', 'koffie', 0), ('g-cafe', 'espresso bestellen', 1), ('g-draft', 'schets', 0), ('g-nofts', 'kwijt', 0)"
+    ),
+    run(
+      "INSERT INTO gesture_category (gesture_id, category_id) VALUES ('g-cafe', '5eed0001-0000-4000-8000-000000000001'), ('g-cafe', 'c-hidden'), ('g-draft', 'c-hidden'), ('g-nofts', '5eed0001-0000-4000-8000-000000000001')"
     ),
     run(
       "INSERT INTO gesture_fts (gesture_id, name, keywords, categories, description) VALUES ('g-cafe', 'Café', 'koffie espresso bestellen', 'Begroeten', 'Een koffie ''to go'' bestellen.'), ('g-draft', 'Concept', 'schets', '', '')"

@@ -2,13 +2,18 @@ import type {
   account,
   auditLog,
   category,
+  categoryTranslation,
   consentEvent,
   deadLetter,
   favorite,
   gesture,
+  gestureAudio,
   gestureCategory,
   gestureKeyword,
+  gestureTranslation,
   invoiceRequest,
+  language,
+  legalText,
   list,
   listItem,
   listShare,
@@ -21,7 +26,9 @@ import type {
   sponsorship,
   sponsorshipEvent,
   sponsorshipToken,
+  uiString,
   user,
+  userRole,
   verification,
 } from "./schema";
 
@@ -56,3 +63,19 @@ export type PaymentItem = typeof paymentItem.$inferSelect;
 export type RenderJob = typeof renderJob.$inferSelect;
 export type SponsorshipEvent = typeof sponsorshipEvent.$inferSelect;
 export type SponsorshipToken = typeof sponsorshipToken.$inferSelect;
+
+/** Phase 10b: languages, translations, audio, legal texts and roles. */
+export type Language = typeof language.$inferSelect;
+export type NewLanguage = typeof language.$inferInsert;
+export type UiString = typeof uiString.$inferSelect;
+export type NewUiString = typeof uiString.$inferInsert;
+export type GestureTranslation = typeof gestureTranslation.$inferSelect;
+export type NewGestureTranslation = typeof gestureTranslation.$inferInsert;
+export type CategoryTranslation = typeof categoryTranslation.$inferSelect;
+export type NewCategoryTranslation = typeof categoryTranslation.$inferInsert;
+export type GestureAudio = typeof gestureAudio.$inferSelect;
+export type NewGestureAudio = typeof gestureAudio.$inferInsert;
+export type LegalText = typeof legalText.$inferSelect;
+export type NewLegalText = typeof legalText.$inferInsert;
+export type UserRoleRow = typeof userRole.$inferSelect;
+export type NewUserRoleRow = typeof userRole.$inferInsert;

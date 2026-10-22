@@ -51,6 +51,13 @@ const TABLES = [
   "render_job",
   "sponsorship_event",
   "sponsorship_token",
+  "language",
+  "ui_string",
+  "gesture_translation",
+  "category_translation",
+  "gesture_audio",
+  "legal_text",
+  "user_role",
 ];
 
 const DUPLICATE_FAVORITE =

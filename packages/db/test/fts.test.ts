@@ -4,8 +4,10 @@ import { eq, type SQL } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import {
   category,
+  categoryTranslation,
   gestureCategory,
   gestureKeyword,
+  gestureTranslation,
   rebuildCategoryGesturesFtsSql,
   rebuildGestureFtsSql,
   rebuildGesturesFtsSql,
@@ -25,6 +27,10 @@ interface FtsRow {
   gesture_id: string;
   keywords: string;
   name: string;
+}
+
+interface LocaleFtsRow extends FtsRow {
+  locale: string;
 }
 
 const db: Db = createDb(env.DB);
@@ -168,5 +174,143 @@ describe("rebuildCategoryGesturesFtsSql", () => {
     expect(() => rebuildCategoryGesturesFtsSql(`${newId()}'`)).toThrow(
       INVALID_CATEGORY_ID
     );
+  });
+});
+
+/** Words in a stable order (`group_concat` has no defined order). */
+const sorted = (text: string): string => text.split(" ").sort().join(" ");
+
+/** Every row of a gesture, one per language, by locale (category and keyword words sorted). */
+async function ftsRows(
+  gestureId: string
+): Promise<Record<string, LocaleFtsRow>> {
+  const { results } = await env.DB.prepare(
+    "SELECT gesture_id, locale, name, keywords, categories, description FROM gesture_fts WHERE gesture_id = ? ORDER BY locale"
+  )
+    .bind(gestureId)
+    .all<LocaleFtsRow>();
+  return Object.fromEntries(
+    results.map((row) => [
+      row.locale,
+      {
+        ...row,
+        categories: sorted(row.categories),
+        keywords: sorted(row.keywords),
+      },
+    ])
+  );
+}
+
+describe("one gesture_fts row per (gesture, language)", () => {
+  it("writes the default-language row from the base columns and one row per translation", async () => {
+    const shown = await makeCategory(db, { name: "Dieren" });
+    const plain = await makeCategory(db, { name: "Kleuren" });
+    const item = await makeGesture(db, {
+      description: "Een hond aaien.",
+      name: "Hond",
+    });
+    await db
+      .insert(gestureCategory)
+      .values([
+        { categoryId: shown.id, gestureId: item.id },
+        { categoryId: plain.id, gestureId: item.id },
+      ]);
+    await db.insert(gestureKeyword).values([
+      { gestureId: item.id, keyword: "huisdier", position: 0 },
+      { gestureId: item.id, keyword: "chien", locale: "fr", position: 0 },
+      { gestureId: item.id, keyword: "pet", locale: "en", position: 0 },
+    ]);
+    await db.insert(categoryTranslation).values({
+      categoryId: shown.id,
+      locale: "fr",
+      name: "Animaux",
+    });
+    await db.insert(gestureTranslation).values([
+      {
+        description: "Caresser un chien.",
+        gestureId: item.id,
+        locale: "fr",
+        name: "Chien",
+      },
+      { gestureId: item.id, locale: "en", name: "Dog" },
+    ]);
+
+    await run(rebuildGestureFtsSql(item.id));
+
+    const rows = await ftsRows(item.id);
+    expect(Object.keys(rows).sort()).toEqual(["en", "fr", "nl"]);
+    // The default language: the base columns, the default keywords only.
+    expect(rows.nl).toMatchObject({
+      categories: "Dieren Kleuren",
+      description: "Een hond aaien.",
+      keywords: "huisdier",
+      name: "Hond",
+    });
+    // A translation: its name, description and keywords, its category
+    // names (the default name where a category has no translation).
+    expect(rows.fr).toMatchObject({
+      categories: "Animaux Kleuren",
+      description: "Caresser un chien.",
+      keywords: "chien",
+      name: "Chien",
+    });
+    expect(rows.en).toMatchObject({
+      categories: "Dieren Kleuren",
+      description: "",
+      keywords: "pet",
+      name: "Dog",
+    });
+
+    // The set form writes the same rows.
+    const viaOne = await ftsRows(item.id);
+    await run(rebuildGesturesFtsSql([item.id]));
+    expect(await ftsRows(item.id)).toEqual(viaOne);
+
+    // A category rename reindexes the translated rows too, and a removed
+    // translation loses its row.
+    await db
+      .update(category)
+      .set({ name: "Huisdieren" })
+      .where(eq(category.id, shown.id));
+    await db
+      .delete(gestureTranslation)
+      .where(eq(gestureTranslation.locale, "en"));
+    await run(rebuildCategoryGesturesFtsSql(shown.id));
+    const after = await ftsRows(item.id);
+    expect(Object.keys(after).sort()).toEqual(["fr", "nl"]);
+    expect(after.nl?.categories).toBe("Huisdieren Kleuren");
+    expect(after.fr?.categories).toBe("Animaux Kleuren");
+  });
+
+  it("searches one language with the locale column, accents folded", async () => {
+    const item = await makeGesture(db, { name: "Koffie" });
+    await db
+      .insert(gestureTranslation)
+      .values({ gestureId: item.id, locale: "fr", name: "Café" });
+    await run(rebuildGestureFtsSql(item.id));
+    const hit = async (query: string, locale: string): Promise<string[]> =>
+      (
+        await env.DB.prepare(
+          "SELECT gesture_id FROM gesture_fts WHERE gesture_fts MATCH ? AND locale = ?"
+        )
+          .bind(query, locale)
+          .all<{ gesture_id: string }>()
+      ).results.map((row) => row.gesture_id);
+    expect(await hit("cafe", "fr")).toEqual([item.id]);
+    expect(await hit("cafe", "nl")).toEqual([]);
+    expect(await hit("koffie", "nl")).toEqual([item.id]);
+    expect(await hit("koffie", "fr")).toEqual([]);
+  });
+
+  it("indexes a language an admin adds (languages are data)", async () => {
+    await env.DB.prepare(
+      "INSERT INTO language (code, name, intl_tag, enabled, is_default, sort_order) VALUES ('de', 'Deutsch', 'de-BE', 1, 0, 9) ON CONFLICT (code) DO NOTHING"
+    ).run();
+    const item = await makeGesture(db, { name: "Danke" });
+    await db
+      .insert(gestureTranslation)
+      .values({ gestureId: item.id, locale: "de", name: "Danke schön" });
+    await run(rebuildGestureFtsSql(item.id));
+    expect((await ftsRows(item.id)).de?.name).toBe("Danke schön");
   });
 });

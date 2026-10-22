@@ -73,7 +73,8 @@ describe("migration 0015_language", () => {
         )
         .all<Record<string, unknown>>()
     ).results;
-    expect(ftsBefore.length).toBe(before.gesture?.rows.length);
+    // One gesture has no index row (it is written by the migration).
+    expect(ftsBefore.length).toBe((before.gesture?.rows.length ?? 0) - 1);
     // The fill is realistic: every table that references user or sponsor has rows.
     for (const table of [
       "user",
@@ -779,8 +780,18 @@ describe("migrations 0016 to 0023", () => {
       new Set(["nl"])
     );
     expect(
-      fts.results.map(({ locale: _locale, ...row }) => row)
+      fts.results
+        .filter((row) => row.gesture_id !== "g-nofts")
+        .map(({ locale: _locale, ...row }) => row)
     ).toEqual(ftsBefore);
+    expect(fts.results.find((row) => row.gesture_id === "g-nofts")).toEqual({
+      categories: "Begroeten",
+      description: "Niet geindexeerd.",
+      gesture_id: "g-nofts",
+      keywords: "kwijt",
+      locale: "nl",
+      name: "Vergeten",
+    });
     // Keywords still match, and the bm25 weights still apply.
     const hits = await db
       .prepare(
