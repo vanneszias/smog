@@ -43,6 +43,7 @@ const ME = {
   methods: { apple: false, google: true, passkeys: 0, password: true },
   name: "An",
   role: "user",
+  roles: [],
 };
 
 const DECIDED = {

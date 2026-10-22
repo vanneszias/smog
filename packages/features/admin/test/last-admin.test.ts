@@ -95,8 +95,12 @@ describe("two admins demoting each other at once", () => {
     const b: Authed = await signedUp("admin", "Bas");
     const mark = await auditMark();
     const results = await Promise.all([
-      outcome(callAs(a, "users.setRole", { role: "user", userId: b.user.id })),
-      outcome(callAs(b, "users.setRole", { role: "user", userId: a.user.id })),
+      outcome(
+        callAs(a, "users.revokeRole", { role: "admin", userId: b.user.id })
+      ),
+      outcome(
+        callAs(b, "users.revokeRole", { role: "admin", userId: a.user.id })
+      ),
     ]);
     expect(results.filter((result) => result.ok)).toHaveLength(1);
     const [refused] = results.filter((result) => !result.ok);
@@ -114,7 +118,7 @@ describe("two admins demoting each other at once", () => {
     );
     expect(await activeAdmins()).toBe(1);
     const rows = (await auditRowsSince(mark)).filter(
-      (row) => row.action === "user.role_change"
+      (row) => row.action === "user.role_revoke"
     );
     expect(rows).toHaveLength(1);
   });
@@ -127,7 +131,7 @@ describe("two admins demoting each other at once", () => {
     await ban(b.user.id);
     const mark = await auditMark();
     await expect(
-      callAs(b, "users.setRole", { role: "user", userId: a.user.id })
+      callAs(b, "users.revokeRole", { role: "admin", userId: a.user.id })
     ).rejects.toMatchObject({
       code: "INVALID_STATE",
       data: { reason: "lastAdmin" },

@@ -1,13 +1,23 @@
-import type { Role } from "@smog/auth";
-import { ROLES } from "@smog/db";
+import type { Role, UserRole } from "@smog/auth";
+import { ROLES, USER_ROLES } from "@smog/db";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { z } from "zod";
-import { baseContract, ERRORS, roleSchema } from "../src/contract";
+import {
+  baseContract,
+  ERRORS,
+  roleSchema,
+  userRoleSchema,
+} from "../src/contract";
 
 describe("@smog/rpc/contract", () => {
   it("keeps roleSchema equal to the auth roles and the db enum", () => {
     expectTypeOf<z.infer<typeof roleSchema>>().toEqualTypeOf<Role>();
     expect(roleSchema.options).toEqual([...ROLES]);
+  });
+
+  it("keeps userRoleSchema equal to the auth and db role sets", () => {
+    expectTypeOf<z.infer<typeof userRoleSchema>>().toEqualTypeOf<UserRole>();
+    expect(userRoleSchema.options).toEqual([...USER_ROLES]);
   });
 
   it("declares the shared error map on every contract procedure", () => {

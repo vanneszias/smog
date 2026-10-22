@@ -11,6 +11,7 @@ import {
   ROLES,
   SPONSORSHIP_STATUSES,
   SPONSORSHIP_TOKEN_PURPOSES,
+  USER_ROLES,
 } from "@smog/db/enums";
 import {
   MARK_PAID_NOTE_MAX,
@@ -102,6 +103,9 @@ const USER_AUDIT_SCHEMAS = {
   ]),
   "user.delete": z.object({ hadSessions: z.boolean() }),
   "user.role_change": z.object({ from: auditRole, to: auditRole }),
+  /** Phase 10b: one entry per role granted or revoked (the set, not the legacy value). */
+  "user.role_grant": z.object({ role: z.enum(USER_ROLES) }),
+  "user.role_revoke": z.object({ role: z.enum(USER_ROLES) }),
   "user.unban": z.object({}),
 } satisfies AuditSchemaBlock;
 

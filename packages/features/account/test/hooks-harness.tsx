@@ -42,6 +42,7 @@ export const ME: Me = {
   methods: { apple: false, google: false, passkeys: 0, password: true },
   name: "Anna",
   role: "user",
+  roles: [],
 };
 
 export const EXPORT: AccountExport = {

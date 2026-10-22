@@ -2,9 +2,11 @@ import { ORPCError, os } from "@orpc/server";
 import {
   AuthError,
   requireAdminUser,
+  requireRoleUser,
   requireUser as requireSessionUser,
   type SessionUser,
   type SessionWithUser,
+  type UserRole,
 } from "@smog/auth";
 import { ERRORS } from "../errors";
 
@@ -41,3 +43,22 @@ export const requireAdmin = withSession.middleware(
       context: { user: guardUser(requireAdminUser, context.session) },
     })
 );
+
+/**
+ * Adds the signed-in user as `user` when they hold one of `roles` (`admin`
+ * passes every check), or throws `UNAUTHORIZED` / `FORBIDDEN`. Roles are
+ * read from D1 on every request, so a demotion applies at once.
+ */
+export function requireRole(...roles: readonly UserRole[]) {
+  return withSession.middleware(
+    async ({ context, next }) =>
+      await next({
+        context: {
+          user: guardUser(
+            (session) => requireRoleUser(session, ...roles),
+            context.session
+          ),
+        },
+      })
+  );
+}

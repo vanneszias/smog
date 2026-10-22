@@ -60,15 +60,18 @@ export function useAdminUser(id: string | null) {
 }
 
 /**
- * The user actions: `setRole`, `ban`, `unban`, `remove` (delete). Each
+ * The user actions: `grantRole`, `revokeRole`, `ban`, `unban`, `remove` (delete). Each
  * refetches every admin query when it settles, so a refused action (another
  * admin changed the account) shows the current state too.
  */
 export function useAdminUserActions() {
   const rpc = useAdminRpc();
   const invalidate = useInvalidateAfterAdminWrite();
-  const setRole = useMutation(
-    rpc.users.setRole.mutationOptions({ onSettled: invalidate })
+  const grantRole = useMutation(
+    rpc.users.grantRole.mutationOptions({ onSettled: invalidate })
+  );
+  const revokeRole = useMutation(
+    rpc.users.revokeRole.mutationOptions({ onSettled: invalidate })
   );
   const ban = useMutation(
     rpc.users.ban.mutationOptions({ onSettled: invalidate })
@@ -79,5 +82,5 @@ export function useAdminUserActions() {
   const remove = useMutation(
     rpc.users.delete.mutationOptions({ onSettled: invalidate })
   );
-  return { ban, remove, setRole, unban };
+  return { ban, grantRole, remove, revokeRole, unban };
 }

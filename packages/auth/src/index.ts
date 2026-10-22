@@ -6,7 +6,9 @@ export {
   getSession,
   type Role,
   requireAdminUser,
+  requireRoleUser,
   requireUser,
   type SessionUser,
   type SessionWithUser,
+  type UserRole,
 } from "./session";

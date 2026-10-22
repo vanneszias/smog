@@ -165,7 +165,7 @@ export function UserMenu(): ReactNode {
           {t("nav.account")}
         </MenuItem>
         {/* Admins only; the admin pages check the role on the server. */}
-        {user.role === "admin" ? (
+        {user.roles.includes("admin") ? (
           <MenuItem icon={<ShieldCheck />} onSelect={openAdmin}>
             {t("nav.admin")}
           </MenuItem>

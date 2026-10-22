@@ -6,7 +6,7 @@ import {
   useMemo,
   useRef,
 } from "react";
-import type { Role } from "./fields";
+import { normalizeRoles, type Role, type UserRole } from "./fields";
 
 export {
   APP_MAGIC_LINK_PATH,
@@ -48,6 +48,8 @@ export interface AuthUser {
   image: string | null;
   name: string;
   role: Role;
+  /** translator, teacher and admin, as held now (`admin` implies the rest). */
+  roles: UserRole[];
 }
 
 export interface AuthState {
@@ -81,6 +83,7 @@ export interface SessionHookResult {
           image?: string | null | undefined;
           name: string;
           role?: string | null | undefined;
+          roles?: readonly string[] | null | undefined;
         };
       }
     | null
@@ -124,6 +127,7 @@ export function toAuthState(
       // Code and magic-link sign-ups have no name yet.
       name: current.name.trim() || current.email,
       role: current.role === "admin" ? "admin" : "user",
+      roles: normalizeRoles(current.roles ?? []),
     },
   };
 }

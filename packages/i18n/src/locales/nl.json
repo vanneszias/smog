@@ -1462,7 +1462,9 @@
       },
       "roles": {
         "user": "Gebruiker",
-        "admin": "Beheerder"
+        "admin": "Beheerder",
+        "translator": "Vertaler",
+        "teacher": "Leerkracht"
       },
       "columns": {
         "name": "Naam",
@@ -1493,12 +1495,13 @@
         "banUntil": "Geblokkeerd tot",
         "banForever": "Geen einddatum",
         "actions": "Acties",
-        "self": "Dit is je eigen account. Een andere beheerder moet de rol wijzigen, het account blokkeren of verwijderen.",
+        "self": "Dit is je eigen account. Een andere beheerder moet de rollen wijzigen, het account blokkeren of verwijderen.",
         "adminTarget": "Neem eerst de beheerdersrol af voor je dit account blokkeert of verwijdert.",
         "bannedTarget": "Hef de blokkering op voor je dit account beheerder maakt.",
         "notFound": "Dit account bestaat niet meer.",
         "sponsorships": "Sponsorings",
-        "noSponsorships": "Geen sponsorings met dit e-mailadres."
+        "noSponsorships": "Geen sponsorings met dit e-mailadres.",
+        "roles": "Rollen"
       },
       "methods": {
         "credential": "Wachtwoord",
@@ -1506,17 +1509,27 @@
         "apple": "Apple",
         "passkey": "Passkey"
       },
-      "promote": {
-        "action": "Beheerder maken",
-        "title": "{{name}} beheerder maken?",
-        "description": "Beheerders kunnen de catalogus, de accounts en de instellingen wijzigen. Het geldt vanaf hun volgende pagina.",
-        "done": "{{name}} is nu beheerder."
+      "roleSection": {
+        "title": "Rollen",
+        "description": "Iemand kan meerdere rollen hebben. Een beheerder kan alles wat de andere rollen kunnen.",
+        "none": "Geen rol: een leerling.",
+        "help": {
+          "translator": "Vertaalt namen, trefwoorden, schermen en juridische teksten.",
+          "teacher": "Neemt de gebarenvideo’s op en controleert ze.",
+          "admin": "Beheert de catalogus, de accounts, de sponsoringen en de instellingen."
+        }
       },
-      "demote": {
-        "action": "Beheerdersrol afnemen",
-        "title": "De beheerdersrol van {{name}} afnemen?",
-        "description": "De toegang tot het beheer verdwijnt meteen.",
-        "done": "{{name}} is geen beheerder meer."
+      "grant": {
+        "action": "Rol toevoegen: {{role}}",
+        "title": "{{name}} de rol {{role}} geven?",
+        "description": "Het geldt vanaf hun volgende pagina.",
+        "done": "{{name}} heeft nu de rol {{role}}."
+      },
+      "revoke": {
+        "action": "Rol afnemen: {{role}}",
+        "title": "De rol {{role}} van {{name}} afnemen?",
+        "description": "Wat de rol toelaat, verdwijnt meteen.",
+        "done": "{{name}} heeft de rol {{role}} niet meer."
       },
       "ban": {
         "action": "Blokkeren",

@@ -68,7 +68,8 @@ function cookiesOf(response: Response): string {
 /** Runs `admin:grant --create`'s statements in order, as wrangler does. */
 async function grantCreate(email: string): Promise<void> {
   const statements = buildGrantStatements(email, { create: true });
-  expect(statements).toHaveLength(2);
+  // The insert, the grant and its mirror into user_role.
+  expect(statements).toHaveLength(3);
   await db.batch(statements.map((statement) => db.prepare(statement)));
 }
 
@@ -106,6 +107,12 @@ describe("the first admin under maintenance (admin:grant --create)", () => {
       .bind(row?.id)
       .first<{ n: number }>();
     expect(accounts?.n).toBe(0);
+    // The grant is mirrored into the set the guards read (phase 10b).
+    const roles = await db
+      .prepare("SELECT role FROM user_role WHERE user_id = ?")
+      .bind(row?.id)
+      .all<{ role: string }>();
+    expect(roles.results).toEqual([{ role: "admin" }]);
 
     await kv.put(
       MAINTENANCE_KV_KEY,

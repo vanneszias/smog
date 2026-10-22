@@ -268,6 +268,12 @@ export function buildSeedSql(): string {
       ["id", "created_at"]
     )
   );
+  // The admin's row in `user_role` (the set the sessions and guards read);
+  // migration 0020's triggers copy a promotion too, the statement does not
+  // depend on them. An existing row (and its `granted_at`) is kept.
+  lines.push(
+    `INSERT OR IGNORE INTO user_role (user_id, role, granted_by, granted_at) SELECT id, 'admin', NULL, ${SEED_TIME} FROM user WHERE email = ${literal(SEED_ADMIN_EMAIL)};`
+  );
   // The admin's email + password credential (the user id may be an existing
   // account's, see above). It replaces any other credential of that user.
   const adminId = `(SELECT id FROM user WHERE email = ${literal(SEED_ADMIN_EMAIL)})`;

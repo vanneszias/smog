@@ -3,8 +3,9 @@
  * how the user can sign in. Read straight from D1 (Better Auth keeps no
  * session cache here, so a change shows in the next session read).
  */
-import { account, passkey, user } from "@smog/db";
+import { account, passkey, user, userRole } from "@smog/db";
 import type { Db } from "@smog/db/client";
+import { USER_ROLES } from "@smog/db/enums";
 import { count, eq } from "drizzle-orm";
 import type { Me, UpdateProfile } from "../schema";
 
@@ -21,7 +22,7 @@ export class AccountNotFoundError extends Error {
 /** The user's profile and sign-in methods (`AccountNotFoundError` if gone). */
 export async function getMe(db: Db, userId: string): Promise<Me> {
   try {
-    const [rows, accounts, passkeys] = await db.batch([
+    const [rows, accounts, passkeys, roles] = await db.batch([
       db
         .select({
           createdAt: user.createdAt,
@@ -40,6 +41,10 @@ export async function getMe(db: Db, userId: string): Promise<Me> {
         .from(account)
         .where(eq(account.userId, userId)),
       db.select({ n: count() }).from(passkey).where(eq(passkey.userId, userId)),
+      db
+        .select({ role: userRole.role })
+        .from(userRole)
+        .where(eq(userRole.userId, userId)),
     ]);
     const [row] = rows;
     if (!row) {
@@ -59,6 +64,9 @@ export async function getMe(db: Db, userId: string): Promise<Me> {
             entry.providerId === PASSWORD_PROVIDER && Boolean(entry.password)
         ),
       },
+      roles: USER_ROLES.filter((role) =>
+        roles.some((held) => held.role === role)
+      ),
     };
   } catch (error) {
     if (!(error instanceof AccountNotFoundError)) {
