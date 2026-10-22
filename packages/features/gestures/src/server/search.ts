@@ -45,6 +45,15 @@ const CANDIDATE_LIMIT = 200;
  */
 const BM25 = sql.raw("bm25(gesture_fts, 0.0, 10.0, 5.0, 3.0, 1.0)");
 
+/**
+ * `gesture_fts` holds one row per (gesture, language) since migration 0022.
+ * Until the search takes the active language (phase 10b task 5) it reads the
+ * default language's rows only, which is what it always read.
+ */
+const DEFAULT_LOCALE_SQL = sql.raw(
+  "(SELECT code FROM language WHERE is_default = 1)"
+);
+
 export interface SearchInput {
   category?: string[] | undefined;
   limit: number;
@@ -86,7 +95,7 @@ function findCandidates(db: Db, fts: string, slugs: string[] | undefined) {
   // The inner `gesture` shadows the outer one, so `inCategories` (which
   // names `gesture`) filters the candidates before the bm25 cap.
   const filter = inCategories(slugs);
-  const ids = sql`SELECT gesture_fts.gesture_id FROM gesture_fts JOIN ${gesture} ON ${ref(G, gesture.id)} = gesture_fts.gesture_id WHERE gesture_fts MATCH ${fts} AND ${ref(G, gesture.publishedAt)} IS NOT NULL${filter ? sql` AND ${filter}` : sql``} ORDER BY ${BM25} LIMIT ${CANDIDATE_LIMIT}`;
+  const ids = sql`SELECT gesture_fts.gesture_id FROM gesture_fts JOIN ${gesture} ON ${ref(G, gesture.id)} = gesture_fts.gesture_id WHERE gesture_fts MATCH ${fts} AND gesture_fts.locale = ${DEFAULT_LOCALE_SQL} AND ${ref(G, gesture.publishedAt)} IS NOT NULL${filter ? sql` AND ${filter}` : sql``} ORDER BY ${BM25} LIMIT ${CANDIDATE_LIMIT}`;
   return db
     .select(searchableColumns)
     .from(gesture)

@@ -61,7 +61,7 @@ export const gesture = sqliteTable(
      */
     needsRecut: integer("needs_recut", { mode: "boolean" })
       .notNull()
-      .default(true),
+      .default(sql`1`),
     publishedAt: timestamp("published_at"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -114,7 +114,7 @@ export const gestureKeyword = sqliteTable(
       .references(() => gesture.id, { onDelete: "cascade" }),
     locale: text("locale")
       .notNull()
-      .default("nl")
+      .default(sql`'nl'`)
       .references(() => language.code),
     keyword: text("keyword").notNull(),
     position: integer("position").notNull(),

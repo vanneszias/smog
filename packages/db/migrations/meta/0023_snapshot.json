@@ -810,7 +810,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": true
+          "default": "1"
         },
         "published_at": {
           "name": "published_at",

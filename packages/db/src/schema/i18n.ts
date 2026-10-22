@@ -23,13 +23,7 @@ import {
   LEGAL_STATUSES,
 } from "../enums";
 import { user } from "./auth";
-import {
-  col,
-  inValues,
-  lengthBetween,
-  timestamp,
-  updatedAt,
-} from "./columns";
+import { col, inValues, lengthBetween, timestamp, updatedAt } from "./columns";
 import { language } from "./language";
 import { category, gesture } from "./learning";
 

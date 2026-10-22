@@ -2,8 +2,8 @@ import { applyD1Migrations } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import {
-  ADMIN2_ID,
   ADMIN_ID,
+  ADMIN2_ID,
   applyLegacySeed,
   BANNED_ADMIN_ID,
   dataTables,
@@ -34,6 +34,13 @@ import {
 
 const db = env.MIGRATION_DB;
 
+const FOREIGN_KEY_FAILED = /FOREIGN KEY constraint failed/;
+const UNIQUE_FAILED = /UNIQUE constraint failed/;
+const CHECK_FAILED = /CHECK constraint failed/;
+const LAST_ADMIN = /last_admin/;
+const DEFAULT_LANGUAGE = /default_language/;
+const SECTION_ID = /^[a-z0-9-]+$/;
+
 /** Audit rows on top of the realistic fill (the `actor_id` backup is the heavy part). */
 const BULK_AUDIT_ROWS = 30_000;
 
@@ -50,6 +57,7 @@ async function expectUnchanged(): Promise<void> {
     if (!dump) {
       throw new Error(`no snapshot of ${table}`);
     }
+    // biome-ignore lint/performance/noAwaitInLoops: a few table reads, in order.
     const rows = await rowsWithColumns(db, table, dump.columns);
     expect(rows, `table ${table}`).toEqual(dump.rows);
   }
@@ -188,22 +196,22 @@ describe("migration 0015_language", () => {
         .prepare("UPDATE user SET locale = 'xx' WHERE id = ?")
         .bind(LEARNER_NONE_ID)
         .run()
-    ).rejects.toThrow(/FOREIGN KEY constraint failed/);
+    ).rejects.toThrow(FOREIGN_KEY_FAILED);
     await expect(
       db.prepare("UPDATE sponsor SET locale = 'xx' WHERE id = 'sp-nl'").run()
-    ).rejects.toThrow(/FOREIGN KEY constraint failed/);
+    ).rejects.toThrow(FOREIGN_KEY_FAILED);
     // A language in use cannot be deleted, the default never.
     await expect(
       db.prepare("DELETE FROM language WHERE code = 'fr'").run()
-    ).rejects.toThrow(/FOREIGN KEY constraint failed/);
+    ).rejects.toThrow(FOREIGN_KEY_FAILED);
     await expect(
       db.prepare("DELETE FROM language WHERE code = 'nl'").run()
-    ).rejects.toThrow(/default_language/);
+    ).rejects.toThrow(DEFAULT_LANGUAGE);
     await db.prepare("DELETE FROM language WHERE code = 'de'").run();
     // At most one default.
     await expect(
       db.prepare("UPDATE language SET is_default = 1 WHERE code = 'en'").run()
-    ).rejects.toThrow(/UNIQUE constraint failed/);
+    ).rejects.toThrow(UNIQUE_FAILED);
   });
 
   it("keeps the foreign key actions of every dependent table", async () => {
@@ -245,7 +253,7 @@ describe("migration 0015_language", () => {
     // A sponsor with sponsorships still cannot be deleted (RESTRICT).
     await expect(
       db.prepare("DELETE FROM sponsor WHERE id = 'sp-nl'").run()
-    ).rejects.toThrow(/FOREIGN KEY constraint failed/);
+    ).rejects.toThrow(FOREIGN_KEY_FAILED);
     await expectUnchanged();
   });
 
@@ -270,7 +278,7 @@ describe("migration 0015_language", () => {
         .prepare("UPDATE user SET role = 'user' WHERE id = ?")
         .bind(ADMIN_ID)
         .run()
-    ).rejects.toThrow(/last_admin/);
+    ).rejects.toThrow(LAST_ADMIN);
     await db
       .prepare("UPDATE user SET role = 'admin' WHERE id = ?")
       .bind(ADMIN2_ID)
@@ -359,6 +367,7 @@ describe("migrations 0016 to 0023", () => {
       "gesture_audio",
     ]) {
       expect(
+        // biome-ignore lint/performance/noAwaitInLoops: four counts, in order.
         await db.prepare(`SELECT count(*) AS n FROM ${table}`).first(),
         table
       ).toEqual({ n: 0 });
@@ -370,7 +379,10 @@ describe("migrations 0016 to 0023", () => {
           "SELECT count(*) AS total, count(*) FILTER (WHERE locale = 'nl') AS nl FROM gesture_keyword"
         )
         .first()
-    ).toEqual({ nl: before.gesture_keyword?.rows.length, total: before.gesture_keyword?.rows.length });
+    ).toEqual({
+      nl: before.gesture_keyword?.rows.length,
+      total: before.gesture_keyword?.rows.length,
+    });
     // A keyword per language, the same word allowed in another one, never twice in one.
     await db.batch([
       db.prepare(
@@ -383,14 +395,14 @@ describe("migrations 0016 to 0023", () => {
           "INSERT INTO gesture_keyword (gesture_id, locale, keyword, position) VALUES ('g-cafe', 'nl', 'koffie', 5)"
         )
         .run()
-    ).rejects.toThrow(/UNIQUE constraint failed/);
+    ).rejects.toThrow(UNIQUE_FAILED);
     await expect(
       db
         .prepare(
           "INSERT INTO gesture_keyword (gesture_id, locale, keyword, position) VALUES ('g-cafe', 'xx', 'k', 0)"
         )
         .run()
-    ).rejects.toThrow(/FOREIGN KEY constraint failed/);
+    ).rejects.toThrow(FOREIGN_KEY_FAILED);
     await db
       .prepare("DELETE FROM gesture_keyword WHERE locale IN ('fr', 'en')")
       .run();
@@ -412,21 +424,21 @@ describe("migrations 0016 to 0023", () => {
           "INSERT INTO gesture_translation (gesture_id, locale, name, updated_at) VALUES ('g-cafe', 'fr', 'Doublon', 1)"
         )
         .run()
-    ).rejects.toThrow(/UNIQUE constraint failed/);
+    ).rejects.toThrow(UNIQUE_FAILED);
     await expect(
       db
         .prepare(
           "INSERT INTO gesture_translation (gesture_id, locale, name, updated_at) VALUES ('g-cafe', 'xx', 'Nope', 1)"
         )
         .run()
-    ).rejects.toThrow(/FOREIGN KEY constraint failed/);
+    ).rejects.toThrow(FOREIGN_KEY_FAILED);
     await expect(
       db
         .prepare(
           "INSERT INTO ui_string (locale, key, value, updated_at) VALUES ('en', 'k', '', 1)"
         )
         .run()
-    ).rejects.toThrow(/CHECK constraint failed/);
+    ).rejects.toThrow(CHECK_FAILED);
 
     const audio = (
       key: string,
@@ -443,23 +455,29 @@ describe("migrations 0016 to 0023", () => {
     await audio("audio/g-cafe/fr/1", "fr", "audio/mpeg", 4096, 1500).run();
     await expect(
       audio("audio/g-cafe/fr/2", "fr", "audio/mpeg", 4096, 1500).run()
-    ).rejects.toThrow(/UNIQUE constraint failed/);
+    ).rejects.toThrow(UNIQUE_FAILED);
     await expect(
       audio("audio/g-cafe/fr/1", "en", "audio/mpeg", 4096, 1500).run()
-    ).rejects.toThrow(/UNIQUE constraint failed/);
+    ).rejects.toThrow(UNIQUE_FAILED);
     await expect(
       audio("audio/g-cafe/en/1", "en", "audio/wav", 4096, 1500).run()
-    ).rejects.toThrow(/CHECK constraint failed/);
+    ).rejects.toThrow(CHECK_FAILED);
     await expect(
       audio("audio/g-cafe/en/1", "en", "audio/mp4", 1_048_577, 1500).run()
-    ).rejects.toThrow(/CHECK constraint failed/);
+    ).rejects.toThrow(CHECK_FAILED);
     await expect(
       audio("audio/g-cafe/en/1", "en", "audio/mp4", 0, 1500).run()
-    ).rejects.toThrow(/CHECK constraint failed/);
+    ).rejects.toThrow(CHECK_FAILED);
     await expect(
       audio("audio/g-cafe/en/1", "en", "audio/mp4", 4096, 10_001).run()
-    ).rejects.toThrow(/CHECK constraint failed/);
-    await audio("audio/g-cafe/en/1", "en", "audio/mp4", 1_048_576, 10_000).run();
+    ).rejects.toThrow(CHECK_FAILED);
+    await audio(
+      "audio/g-cafe/en/1",
+      "en",
+      "audio/mp4",
+      1_048_576,
+      10_000
+    ).run();
 
     // A deleted gesture takes its translations and audio with it.
     await db.batch([
@@ -526,7 +544,7 @@ describe("migrations 0016 to 0023", () => {
       expect(document.title.length).toBeGreaterThan(0);
       expect(document.sections.length).toBeGreaterThan(3);
       for (const section of document.sections) {
-        expect(section.id).toMatch(/^[a-z0-9-]+$/);
+        expect(section.id).toMatch(SECTION_ID);
         expect(section.title.length).toBeGreaterThan(0);
         expect(section.blocks.length).toBeGreaterThan(0);
       }
@@ -551,28 +569,28 @@ describe("migrations 0016 to 0023", () => {
           "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at) VALUES ('d-2', 'terms', 'nl', 3, '{}', '2026-11-01', 'draft', 1)"
         )
         .run()
-    ).rejects.toThrow(/UNIQUE constraint failed/);
+    ).rejects.toThrow(UNIQUE_FAILED);
     await expect(
       db
         .prepare(
           "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at, published_at) VALUES ('d-3', 'terms', 'fr', 2, '{}', '2026-11-01', 'draft', 1, 5)"
         )
         .run()
-    ).rejects.toThrow(/CHECK constraint failed/);
+    ).rejects.toThrow(CHECK_FAILED);
     await expect(
       db
         .prepare(
           "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at) VALUES ('d-4', 'terms', 'nl', 1, '{}', '2026-11-01', 'draft', 1)"
         )
         .run()
-    ).rejects.toThrow(/UNIQUE constraint failed/);
+    ).rejects.toThrow(UNIQUE_FAILED);
     await expect(
       db
         .prepare(
           "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at) VALUES ('d-5', 'terms', 'fr', 2, '{}', 'soon', 'draft', 1)"
         )
         .run()
-    ).rejects.toThrow(/CHECK constraint failed/);
+    ).rejects.toThrow(CHECK_FAILED);
     await db.prepare("DELETE FROM legal_text WHERE id = 'd-1'").run();
   });
 
@@ -593,6 +611,7 @@ describe("migrations 0016 to 0023", () => {
         .map(([user_id, role]) => ({ role, user_id }))
     );
     for (const id of [LEARNER_NL_ID, LEARNER_FR_ID, LEARNER_EN_ID]) {
+      // biome-ignore lint/performance/noAwaitInLoops: three reads, in order.
       expect(await roleRows(id)).toEqual([]);
     }
   });
@@ -608,7 +627,7 @@ describe("migrations 0016 to 0023", () => {
         .prepare("DELETE FROM user_role WHERE user_id = ? AND role = 'admin'")
         .bind(ADMIN_ID)
         .run()
-    ).rejects.toThrow(/last_admin/);
+    ).rejects.toThrow(LAST_ADMIN);
     await expect(
       db
         .prepare(
@@ -616,7 +635,7 @@ describe("migrations 0016 to 0023", () => {
         )
         .bind(ADMIN_ID)
         .run()
-    ).rejects.toThrow(/last_admin/);
+    ).rejects.toThrow(LAST_ADMIN);
     // Moving the admin row to another user is a removal too.
     await expect(
       db
@@ -625,7 +644,7 @@ describe("migrations 0016 to 0023", () => {
         )
         .bind(LEARNER_NL_ID, ADMIN_ID)
         .run()
-    ).rejects.toThrow(/last_admin/);
+    ).rejects.toThrow(LAST_ADMIN);
     // Other roles are never guarded.
     await db
       .prepare(
@@ -634,7 +653,9 @@ describe("migrations 0016 to 0023", () => {
       .bind(ADMIN_ID, ADMIN_ID)
       .run();
     await db
-      .prepare("DELETE FROM user_role WHERE user_id = ? AND role = 'translator'")
+      .prepare(
+        "DELETE FROM user_role WHERE user_id = ? AND role = 'translator'"
+      )
       .bind(ADMIN_ID)
       .run();
     // Giving admin2 the row back restores the state of the snapshot.
@@ -655,7 +676,7 @@ describe("migrations 0016 to 0023", () => {
         .prepare("DELETE FROM user_role WHERE user_id = ? AND role = 'admin'")
         .bind(ADMIN_ID)
         .run()
-    ).rejects.toThrow(/last_admin/);
+    ).rejects.toThrow(LAST_ADMIN);
     await db
       .prepare("UPDATE user SET banned = 0 WHERE id = ?")
       .bind(ADMIN2_ID)
@@ -722,14 +743,12 @@ describe("migrations 0016 to 0023", () => {
         .prepare("UPDATE user SET role = 'user' WHERE id = ?")
         .bind(ADMIN_ID)
         .run()
-    ).rejects.toThrow(/last_admin/);
+    ).rejects.toThrow(LAST_ADMIN);
     // Clean up: back to the snapshot.
     await db.batch([
       db.prepare("DELETE FROM user WHERE id IN ('u-new-admin', 'u-new-user')"),
       db.prepare("DELETE FROM user_role WHERE role = 'translator'"),
-      db
-        .prepare("UPDATE user SET role = 'admin' WHERE id = ?")
-        .bind(ADMIN2_ID),
+      db.prepare("UPDATE user SET role = 'admin' WHERE id = ?").bind(ADMIN2_ID),
     ]);
     expect(
       (
@@ -826,8 +845,12 @@ describe("migrations 0016 to 0023", () => {
           "INSERT INTO audit_log (id, actor_id, action, target_type, target_id, data, created_at) VALUES ('bad', NULL, 'language.delete', 'language', NULL, '{}', 1)"
         )
         .run()
-    ).rejects.toThrow(/CHECK constraint failed/);
-    await db.prepare("DELETE FROM audit_log WHERE id LIKE 'new-%' OR id LIKE 'type-%'").run();
+    ).rejects.toThrow(CHECK_FAILED);
+    await db
+      .prepare(
+        "DELETE FROM audit_log WHERE id LIKE 'new-%' OR id LIKE 'type-%'"
+      )
+      .run();
     await expectUnchanged();
   });
 });

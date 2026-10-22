@@ -259,9 +259,8 @@ export async function dataTables(db: D1Database): Promise<string[]> {
   return rows.results.map((row) => row.name);
 }
 
-export type TableDump = Record<
-  string,
-  { columns: string[]; rows: Record<string, unknown>[] }
+export type TableDump = Partial<
+  Record<string, { columns: string[]; rows: Record<string, unknown>[] }>
 >;
 
 /** Every row of every table, ordered by all columns (a before/after comparison). */
@@ -271,6 +270,7 @@ export async function snapshotTables(
 ): Promise<TableDump> {
   const dump: TableDump = {};
   for (const table of tables) {
+    // biome-ignore lint/performance/noAwaitInLoops: a few table reads, in order.
     const info = await db
       .prepare(`SELECT name FROM pragma_table_info('${table}') ORDER BY cid`)
       .all<{ name: string }>();

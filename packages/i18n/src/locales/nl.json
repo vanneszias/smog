@@ -1038,7 +1038,8 @@
           "publish": "Gebaar gepubliceerd",
           "unpublish": "Gebaar verborgen",
           "delete": "Gebaar verwijderd",
-          "bulk_update": "Gebaren in bulk bewerkt"
+          "bulk_update": "Gebaren in bulk bewerkt",
+          "recut_done": "Video zonder tekst geüpload"
         },
         "category": {
           "create": "Categorie aangemaakt",
@@ -1053,7 +1054,9 @@
           "ban": "Gebruiker geblokkeerd",
           "unban": "Blokkering opgeheven",
           "delete": "Gebruiker verwijderd",
-          "impersonate": "Aangemeld als gebruiker"
+          "impersonate": "Aangemeld als gebruiker",
+          "role_grant": "Rol toegekend",
+          "role_revoke": "Rol ingetrokken"
         },
         "sponsorship": {
           "approve": "Sponsoring goedgekeurd",
@@ -1079,6 +1082,23 @@
         "dead_letter": {
           "replay": "Dead letter opnieuw afgespeeld",
           "discard": "Dead letter verwijderd"
+        },
+        "language": {
+          "create": "Taal toegevoegd",
+          "update": "Taal gewijzigd"
+        },
+        "translation": {
+          "string_save": "Interfacetekst vertaald",
+          "string_import": "Interfaceteksten geïmporteerd",
+          "gesture_save": "Gebaarvertaling opgeslagen",
+          "category_save": "Categorievertaling opgeslagen",
+          "audio_upload": "Audio geüpload",
+          "audio_delete": "Audio verwijderd"
+        },
+        "legal": {
+          "draft_save": "Juridische tekst bewaard als concept",
+          "publish": "Juridische tekst gepubliceerd",
+          "restore": "Juridische tekst hersteld"
         }
       },
       "targetTypes": {
@@ -1090,7 +1110,10 @@
         "list": "Lijst",
         "setting": "Instelling",
         "system": "Systeem",
-        "dead_letter": "Dead letter"
+        "dead_letter": "Dead letter",
+        "language": "Taal",
+        "ui_string": "Interfacetekst",
+        "legal_text": "Juridische tekst"
       }
     },
     "gestures": {

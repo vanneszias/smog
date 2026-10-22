@@ -183,7 +183,7 @@ const sorted = (text: string): string => text.split(" ").sort().join(" ");
 /** Every row of a gesture, one per language, by locale (category and keyword words sorted). */
 async function ftsRows(
   gestureId: string
-): Promise<Record<string, LocaleFtsRow>> {
+): Promise<Partial<Record<string, LocaleFtsRow>>> {
   const { results } = await env.DB.prepare(
     "SELECT gesture_id, locale, name, keywords, categories, description FROM gesture_fts WHERE gesture_id = ? ORDER BY locale"
   )
@@ -209,12 +209,10 @@ describe("one gesture_fts row per (gesture, language)", () => {
       description: "Een hond aaien.",
       name: "Hond",
     });
-    await db
-      .insert(gestureCategory)
-      .values([
-        { categoryId: shown.id, gestureId: item.id },
-        { categoryId: plain.id, gestureId: item.id },
-      ]);
+    await db.insert(gestureCategory).values([
+      { categoryId: shown.id, gestureId: item.id },
+      { categoryId: plain.id, gestureId: item.id },
+    ]);
     await db.insert(gestureKeyword).values([
       { gestureId: item.id, keyword: "huisdier", position: 0 },
       { gestureId: item.id, keyword: "chien", locale: "fr", position: 0 },

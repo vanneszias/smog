@@ -3,6 +3,14 @@ export { auditLog, consentEvent, guestImport } from "./account";
 export { account, passkey, session, user, verification } from "./auth";
 export { deadLetter } from "./dead-letter";
 export {
+  categoryTranslation,
+  gestureAudio,
+  gestureTranslation,
+  legalText,
+  uiString,
+} from "./i18n";
+export { language } from "./language";
+export {
   category,
   favorite,
   gesture,
@@ -12,14 +20,6 @@ export {
   listItem,
   listShare,
 } from "./learning";
-export {
-  categoryTranslation,
-  gestureAudio,
-  gestureTranslation,
-  legalText,
-  uiString,
-} from "./i18n";
-export { language } from "./language";
 export * from "./relations";
 export { userRole } from "./roles";
 export {
