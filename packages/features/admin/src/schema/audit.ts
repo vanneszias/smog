@@ -8,6 +8,7 @@ import {
   AUDIT_TARGET_TYPES,
   type AuditAction,
   DEAD_LETTER_ORIGINS,
+  LEGAL_KINDS,
   ROLES,
   SPONSORSHIP_STATUSES,
   SPONSORSHIP_TOKEN_PURPOSES,
@@ -270,6 +271,31 @@ const TRANSLATION_AUDIT_SCHEMAS = {
 } satisfies AuditSchemaBlock;
 
 /**
+ * Phase 10b task 7: legal texts. One entry per version row
+ * (`target_type` `legal_text`, `target_id` `<kind>:<locale>:<version>`).
+ * The text itself is never in the entry (it is stored in `legal_text`, every
+ * version kept); the entry says who did what to which version.
+ */
+const legalTarget = z.object({
+  kind: z.enum(LEGAL_KINDS),
+  locale: z.string(),
+  /** The version the entry is about (a draft's provisional number until published). */
+  version: z.number().int().positive(),
+});
+
+const LEGAL_AUDIT_SCHEMAS = {
+  "legal.draft_save": legalTarget,
+  "legal.publish": legalTarget.extend({
+    /** ISO date the published version takes effect. */
+    effectiveDate: z.string(),
+  }),
+  "legal.restore": legalTarget.extend({
+    /** The earlier version whose text was copied into the new one. */
+    restoredFrom: z.number().int().positive(),
+  }),
+} satisfies AuditSchemaBlock;
+
+/**
  * `audit_log.data` per action. The writer validates `data` with it before
  * any write, and `admin.audit.list` parses stored rows with it.
  */
@@ -282,6 +308,7 @@ export const AUDIT_DATA_SCHEMAS = {
   ...SPONSORSHIP_AUDIT_SCHEMAS,
   ...DEAD_LETTER_AUDIT_SCHEMAS,
   ...TRANSLATION_AUDIT_SCHEMAS,
+  ...LEGAL_AUDIT_SCHEMAS,
 } satisfies AuditSchemaBlock;
 
 /** Actions that are parsed on read but never written. */

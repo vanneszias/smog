@@ -31,6 +31,12 @@ import {
   SHIPPED_LANGUAGES,
 } from "./languages";
 
+import {
+  type LegalDocument,
+  type LegalKind,
+  validateLegalDocument,
+} from "./legal";
+
 export const I18N_VERSION_KEY = "i18n:version";
 /** The version while no writer has bumped it yet. */
 export const INITIAL_I18N_VERSION = "initial";
@@ -101,6 +107,7 @@ export async function bumpI18nVersion(
 export function resetCatalogueCache(): void {
   cached = null;
   versionMemo = null;
+  legalCached = null;
 }
 
 async function readVersion(
@@ -196,5 +203,86 @@ export async function loadCatalogue(
       overlay: {},
       version: INITIAL_I18N_VERSION,
     };
+  }
+}
+
+/** The published row of a legal text, as D1 stores it (`content` not yet validated). */
+export interface PublishedLegalRow {
+  content: unknown;
+  effectiveDate: string;
+  version: number;
+}
+
+/** Where the published legal texts come from (D1 in the Worker). */
+export interface LegalSource {
+  /** The highest published version of (kind, locale), `null` when there is none. */
+  published: (
+    kind: LegalKind,
+    locale: Locale
+  ) => Promise<PublishedLegalRow | null>;
+}
+
+export interface LegalDeps {
+  kv: CatalogueKv;
+  now?: () => number;
+  source: LegalSource;
+}
+
+export interface LoadedLegal {
+  document: LegalDocument;
+  /** ISO date the version takes effect. */
+  effectiveDate: string;
+  version: number;
+}
+
+/** Resolved rows of one i18n version (data only: see the module note). */
+let legalCached: {
+  rows: Map<string, LoadedLegal | null>;
+  version: string;
+} | null = null;
+
+/**
+ * The published legal text of (kind, locale), cached with the i18n version
+ * like the catalogue: a publish or a restore bumps `i18n:version`
+ * (`bumpI18nVersion`), so the page shows it without a deploy. `null` when
+ * there is no published row, when it does not validate or when KV or D1
+ * fails (logged); the caller then shows the shipped text.
+ */
+export async function loadLegalText(
+  { kv, now = Date.now, source }: LegalDeps,
+  kind: LegalKind,
+  locale: Locale
+): Promise<LoadedLegal | null> {
+  try {
+    const version = await readVersion(kv, now);
+    if (legalCached?.version !== version) {
+      legalCached = { rows: new Map(), version };
+    }
+    const { rows } = legalCached;
+    const key = `${kind}:${locale}`;
+    if (rows.has(key)) {
+      return rows.get(key) ?? null;
+    }
+    const row = await source.published(kind, locale);
+    let loaded: LoadedLegal | null = null;
+    if (row) {
+      const { document, issues } = validateLegalDocument(kind, row.content);
+      if (document && issues.length === 0) {
+        loaded = {
+          document,
+          effectiveDate: row.effectiveDate,
+          version: row.version,
+        };
+      } else {
+        console.error(
+          `[i18n] The published ${kind} text in ${locale} (version ${row.version}) is invalid, the shipped text shows`
+        );
+      }
+    }
+    rows.set(key, loaded);
+    return loaded;
+  } catch (error) {
+    console.error("[i18n] Failed to load a legal text:", error);
+    return null;
   }
 }

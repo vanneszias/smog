@@ -1,6 +1,7 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import type { Db } from "./client";
-import { language, uiString } from "./schema";
+import type { LegalTextKind } from "./enums";
+import { language, legalText, uiString } from "./schema";
 
 /** An enabled language, as the language menu and `Intl` need it. */
 export interface EnabledLanguage {
@@ -66,4 +67,42 @@ export async function isEnabledLanguage(
     .where(and(eq(language.code, code), eq(language.enabled, true)))
     .limit(1);
   return rows.length > 0;
+}
+
+/**
+ * What `@smog/i18n/server`'s `loadLegalText` reads from D1 (structurally its
+ * `LegalSource`): the highest published version of one text, through the
+ * `legal_text_published_idx` partial index.
+ */
+export function legalPublishedSource(db: Db): {
+  published: (
+    kind: LegalTextKind,
+    locale: string
+  ) => Promise<{
+    content: unknown;
+    effectiveDate: string;
+    version: number;
+  } | null>;
+} {
+  return {
+    published: async (kind, locale) => {
+      const [row] = await db
+        .select({
+          content: legalText.content,
+          effectiveDate: legalText.effectiveDate,
+          version: legalText.version,
+        })
+        .from(legalText)
+        .where(
+          and(
+            eq(legalText.kind, kind),
+            eq(legalText.locale, locale),
+            eq(legalText.status, "published")
+          )
+        )
+        .orderBy(desc(legalText.version))
+        .limit(1);
+      return row ?? null;
+    },
+  };
 }

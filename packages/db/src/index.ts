@@ -10,6 +10,7 @@ export {
   defaultLanguageCode,
   type EnabledLanguage,
   isEnabledLanguage,
+  legalPublishedSource,
   uiCatalogueSource,
 } from "./i18n-queries";
 export {
