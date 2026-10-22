@@ -18,6 +18,7 @@ import { ReduceMotion, useReducedMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { cn } from "../lib/cn";
 import { useColor, useShadow, useThemeVars } from "../lib/theme";
+import { SurfaceReset } from "./surface";
 import { ToastViewport } from "./toast";
 
 function Backdrop(props: BottomSheetBackdropProps): ReactElement {
@@ -113,19 +114,21 @@ export function SheetPanel({
           it on present) until the close animation has finished. */}
       {open || mounted ? (
         <BottomSheetScrollView>
-          <View
-            accessibilityViewIsModal
-            className={cn("flex-col gap-4 px-6 pt-2", className)}
-            style={[
-              themeVars,
-              { paddingBottom: insets.bottom + tokens.spacing["6"] },
-            ]}
-            testID="overlay-theme-root"
-          >
-            <View className="flex-col gap-4" testID={testID}>
-              {children}
+          <SurfaceReset>
+            <View
+              accessibilityViewIsModal
+              className={cn("flex-col gap-4 px-6 pt-2", className)}
+              style={[
+                themeVars,
+                { paddingBottom: insets.bottom + tokens.spacing["6"] },
+              ]}
+              testID="overlay-theme-root"
+            >
+              <View className="flex-col gap-4" testID={testID}>
+                {children}
+              </View>
             </View>
-          </View>
+          </SurfaceReset>
         </BottomSheetScrollView>
       ) : null}
       {/* The sheet host draws above the app's toasts; they draw here while

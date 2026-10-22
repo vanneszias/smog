@@ -18,6 +18,7 @@ import {
   withPress,
 } from "../lib/overlay";
 import { useShadow, useThemeVars } from "../lib/theme";
+import { SurfaceReset } from "./surface";
 import { ToastViewport } from "./toast";
 
 const overlay = createOverlay("Popover");
@@ -154,31 +155,33 @@ export function PopoverContent({
       transparent
       visible={open}
     >
-      <View
-        accessibilityViewIsModal
-        className="flex-1"
-        style={themeVars}
-        testID="overlay-theme-root"
-      >
-        <Pressable
-          accessibilityElementsHidden
-          className="absolute inset-0"
-          importantForAccessibility="no-hide-descendants"
-          onPress={close}
-        />
+      <SurfaceReset>
         <View
-          accessibilityLabel={accessibilityLabel}
-          className={cn(
-            "absolute w-72 flex-col gap-2 rounded-lg border border-border bg-popover p-4",
-            className
-          )}
-          style={[position, shadow]}
-          testID={testID}
+          accessibilityViewIsModal
+          className="flex-1"
+          style={themeVars}
+          testID="overlay-theme-root"
         >
-          {children}
+          <Pressable
+            accessibilityElementsHidden
+            className="absolute inset-0"
+            importantForAccessibility="no-hide-descendants"
+            onPress={close}
+          />
+          <View
+            accessibilityLabel={accessibilityLabel}
+            className={cn(
+              "absolute w-72 flex-col gap-2 rounded-lg border border-border bg-popover p-4",
+              className
+            )}
+            style={[position, shadow]}
+            testID={testID}
+          >
+            {children}
+          </View>
+          <ToastViewport />
         </View>
-        <ToastViewport />
-      </View>
+      </SurfaceReset>
     </Modal>
   );
 }

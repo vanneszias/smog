@@ -7,7 +7,6 @@ import {
   screen,
 } from "@testing-library/react-native";
 import { selectionAsync } from "expo-haptics";
-import Heart from "lucide-react-native/icons/heart";
 import type { ReactElement } from "react";
 import { Text, View } from "react-native";
 import { FavoriteButton } from "../domain/favorite-button";
@@ -311,6 +310,21 @@ describe("Surface", () => {
     );
     const json = JSON.stringify(screen.toJSON());
     console.log(json.slice(0, 3000));
+  });
+
+  it("puts the page back inside an overlay opened from a green header", async () => {
+    await inTheme(
+      <Surface tone="header">
+        <Popover open>
+          <PopoverContent testID="pop">
+            <KitText testID="inside">Hello</KitText>
+          </PopoverContent>
+        </Popover>
+      </Surface>
+    );
+    expect(screen.getByTestId("inside")).toHaveStyle({
+      color: rgba(light.foreground),
+    });
   });
 
   it("leaves the default surface alone", async () => {
