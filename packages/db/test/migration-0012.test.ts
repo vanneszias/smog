@@ -19,7 +19,7 @@ const ADMIN_ID = "5eed0003-0000-4000-8000-000000000001";
 const LAST_ADMIN = /last_admin/;
 
 async function applySeed(): Promise<void> {
-  const statements = env.SEED_SQL.split("\n").filter(
+  const statements = env.LEGACY_SEED_SQL.split("\n").filter(
     (line) => line.trim() !== "" && !line.startsWith("--")
   );
   await db.batch(statements.map((line) => db.prepare(line)));

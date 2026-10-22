@@ -6,6 +6,11 @@ declare global {
     interface Env {
       /** The seed SQL (`seed/dev.sql`), one statement per line. */
       SEED_SQL: string;
+      /**
+       * The dev seed frozen at migration 0014 (`test/fixtures/seed-0014.sql`):
+       * the migration tests that stop before 0015 apply it to the old schema.
+       */
+      LEGACY_SEED_SQL: string;
       /** `migrations/*.sql`, read by `readD1Migrations` in vitest.config.ts. */
       TEST_MIGRATIONS: D1Migration[];
     }

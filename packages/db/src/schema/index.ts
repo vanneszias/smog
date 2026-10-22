@@ -12,6 +12,7 @@ export {
   listItem,
   listShare,
 } from "./learning";
+export { language } from "./language";
 export * from "./relations";
 export {
   invoiceRequest,

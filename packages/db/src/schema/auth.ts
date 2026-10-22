@@ -18,6 +18,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { LOCALES, ROLES } from "../enums";
 import { createdAt, inValues, timestamp, updatedAt } from "./columns";
+import { language } from "./language";
 
 /**
  * Migration 0007 adds the `user_keep_one_admin` trigger to this table
@@ -46,7 +47,7 @@ export const user = sqliteTable(
     banned: integer("banned", { mode: "boolean" }).default(false),
     banReason: text("ban_reason"),
     banExpires: timestamp("ban_expires"),
-    locale: text("locale", { enum: LOCALES }),
+    locale: text("locale", { enum: LOCALES }).references(() => language.code),
     legacyId: text("legacy_id").unique(),
     /**
      * When the welcome email was claimed (migration 0012, phase 8 ruling
@@ -59,7 +60,6 @@ export const user = sqliteTable(
   },
   (t) => [
     check("user_role_check", inValues(t.role, ROLES)),
-    check("user_locale_check", inValues(t.locale, LOCALES)),
     index("user_created_at_idx").on(t.createdAt),
   ]
 );

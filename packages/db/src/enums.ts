@@ -9,8 +9,35 @@ import { LOCALES as APP_LOCALES } from "@smog/config/constants";
 export const LOCALES = APP_LOCALES;
 export type Locale = (typeof LOCALES)[number];
 
+/**
+ * The legacy single role on `user.role` (Better Auth's admin plugin). Since
+ * phase 10b it is the mirror of `user_role`: `admin` while the user holds the
+ * `admin` role, else `user` (`USER_ROLES` below is the set).
+ */
 export const ROLES = ["user", "admin"] as const;
 export type Role = (typeof ROLES)[number];
+
+/**
+ * The roles a user can hold besides being a learner (phase 10b, `user_role`).
+ * A user with no row is a plain learner; `admin` implies every other role.
+ */
+export const USER_ROLES = ["translator", "teacher", "admin"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
+
+/** The two legal texts (`legal_text.kind`), as in `@smog/i18n`'s `LegalKind`. */
+export const LEGAL_KINDS = ["privacy", "terms"] as const;
+export type LegalTextKind = (typeof LEGAL_KINDS)[number];
+
+/** A legal text version is a draft until published; history is kept. */
+export const LEGAL_STATUSES = ["draft", "published"] as const;
+export type LegalStatus = (typeof LEGAL_STATUSES)[number];
+
+/**
+ * The audio formats of a gesture's spoken name (`gesture_audio.content_type`):
+ * MP3 and M4A, verified by magic bytes after the upload.
+ */
+export const AUDIO_CONTENT_TYPES = ["audio/mpeg", "audio/mp4"] as const;
+export type AudioContentType = (typeof AUDIO_CONTENT_TYPES)[number];
 
 export const LIST_SHARE_ROLES = ["view", "edit"] as const;
 export type ListShareRole = (typeof LIST_SHARE_ROLES)[number];

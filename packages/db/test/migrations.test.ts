@@ -15,7 +15,7 @@ const BEFORE_0008 = env.TEST_MIGRATIONS.filter(
 );
 
 async function applySeed(): Promise<void> {
-  const statements = env.SEED_SQL.split("\n").filter(
+  const statements = env.LEGACY_SEED_SQL.split("\n").filter(
     (line) => line.trim() !== "" && !line.startsWith("--")
   );
   await db.batch(statements.map((line) => db.prepare(line)));
