@@ -674,6 +674,7 @@
         "@smog/auth": "workspace:*",
         "@smog/config": "workspace:*",
         "@smog/db": "workspace:*",
+        "@smog/utils": "workspace:*",
         "@tanstack/query-core": "catalog:",
         "zod": "catalog:",
       },
