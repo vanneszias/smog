@@ -16,6 +16,8 @@ import {
   requireTurnstile,
   requireUser,
   rpcHandlerOptions,
+  teacherProcedure,
+  translatorProcedure,
   userProcedure,
 } from "../src/index";
 import { makeRpcContext, makeSession } from "../src/testing";
@@ -59,6 +61,52 @@ describe("adminProcedure", () => {
   it("lets an admin through", async () => {
     const context = makeRpcContext({ session: makeSession("admin") });
     expect(await call(stats, undefined, { context })).toBe("stats");
+  });
+});
+
+describe("translatorProcedure and teacherProcedure", () => {
+  const translate = translatorProcedure.handler(
+    ({ context }) => context.user.id
+  );
+  const teach = teacherProcedure.handler(({ context }) => context.user.id);
+  const as = (roles: Parameters<typeof makeSession>[1]) =>
+    makeRpcContext({ session: makeSession("user", roles) });
+
+  it("throws UNAUTHORIZED without a session", async () => {
+    await expect(
+      call(translate, undefined, { context: makeRpcContext() })
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(
+      call(teach, undefined, { context: makeRpcContext() })
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("each role opens only its own door", async () => {
+    expect(
+      await call(translate, undefined, { context: as(["translator"]) })
+    ).toBe("user-1");
+    expect(await call(teach, undefined, { context: as(["teacher"]) })).toBe(
+      "user-1"
+    );
+    await expect(
+      call(translate, undefined, { context: as(["teacher"]) })
+    ).rejects.toMatchObject({ code: "FORBIDDEN", defined: true });
+    await expect(
+      call(teach, undefined, { context: as(["translator"]) })
+    ).rejects.toMatchObject({ code: "FORBIDDEN", defined: true });
+    await expect(
+      call(translate, undefined, { context: as([]) })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("neither role passes the admin guard, an admin passes both", async () => {
+    const stats = adminProcedure.handler(() => "stats");
+    await expect(
+      call(stats, undefined, { context: as(["translator", "teacher"]) })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const admin = makeRpcContext({ session: makeSession("admin") });
+    expect(await call(translate, undefined, { context: admin })).toBe("user-1");
+    expect(await call(teach, undefined, { context: admin })).toBe("user-1");
   });
 });
 

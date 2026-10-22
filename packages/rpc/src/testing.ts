@@ -1,4 +1,4 @@
-import type { Auth, Role, SessionWithUser } from "@smog/auth";
+import type { Auth, Role, SessionWithUser, UserRole } from "@smog/auth";
 import type { Db } from "@smog/db/client";
 import type { RateLimiter, RpcContext, RpcEnv } from "./context";
 
@@ -46,8 +46,15 @@ export function makeRpcContext(overrides: ContextOverrides = {}): RpcContext {
   };
 }
 
-/** A session with only the fields the middleware reads. */
-export function makeSession(role: Role): SessionWithUser {
+/**
+ * A session with only the fields the middleware reads. `roles` (the
+ * `user_role` set) defaults to what the legacy `role` implies: `["admin"]`
+ * for an admin, none for a user.
+ */
+export function makeSession(
+  role: Role,
+  roles: UserRole[] = role === "admin" ? ["admin"] : []
+): SessionWithUser {
   return {
     session: { id: "session-1", userId: "user-1" },
     user: {
@@ -56,6 +63,7 @@ export function makeSession(role: Role): SessionWithUser {
       image: null,
       name: "A",
       role,
+      roles,
     },
   } as SessionWithUser;
 }

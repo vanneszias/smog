@@ -9,6 +9,35 @@ import { z } from "zod";
 
 export type Role = "user" | "admin";
 
+/**
+ * The roles a user can hold besides being a learner (phase 10b, the
+ * `user_role` table; `@smog/db` `USER_ROLES` is the same list, a test keeps
+ * them equal). `admin` implies every other role (`hasRole`).
+ */
+export const USER_ROLES = ["translator", "teacher", "admin"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
+
+/** `roles` of a session user, from raw values: known roles only, sorted, once each. */
+export function normalizeRoles(values: readonly unknown[]): UserRole[] {
+  return USER_ROLES.filter((role) => values.includes(role));
+}
+
+/**
+ * Whether a user holding `roles` may act as one of `allowed`: the `admin`
+ * role passes every check, anything else must hold one of them.
+ */
+export function hasRole(
+  roles: readonly string[] | null | undefined,
+  ...allowed: readonly UserRole[]
+): boolean {
+  if (!roles) {
+    return false;
+  }
+  return (
+    roles.includes("admin") || allowed.some((role) => roles.includes(role))
+  );
+}
+
 /** Password bounds: set on the server and checked by the forms first. */
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;

@@ -6,7 +6,7 @@ import {
 } from "@orpc/server";
 import type { RpcContext } from "./context";
 import { ERRORS } from "./errors";
-import { requireAdmin, requireUser } from "./middleware/auth";
+import { requireAdmin, requireRole, requireUser } from "./middleware/auth";
 import { logErrors } from "./middleware/log";
 
 /** The oRPC builder for the rpc context with the shared error map. */
@@ -20,6 +20,17 @@ export const userProcedure = publicProcedure.use(requireUser);
 
 /** Needs the admin role (`FORBIDDEN`); `context.user` is the admin. */
 export const adminProcedure = publicProcedure.use(requireAdmin);
+
+/**
+ * Needs the translator role (`admin` passes too, `FORBIDDEN` otherwise);
+ * `context.user` is the translator or admin.
+ */
+export const translatorProcedure = publicProcedure.use(
+  requireRole("translator")
+);
+
+/** Needs the teacher role (`admin` passes too, `FORBIDDEN` otherwise). */
+export const teacherProcedure = publicProcedure.use(requireRole("teacher"));
 
 /**
  * The contract-first implementer for a (slice of the) contract, with the
