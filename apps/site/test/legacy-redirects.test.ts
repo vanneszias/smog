@@ -201,8 +201,8 @@ describe("the legacy redirect table (spec §9, inventory §7)", () => {
       "/sponsor/success?payment=tr_1",
       "/sponsorship",
       "/sign-in",
-      "/favorites",
-      "/lists",
+      "/lists/some-share-token",
+      "/my",
       "/gestures",
       "/gestures?category=begroetingen,eten-en-drinken",
       "/gestures?q=Hallo",
@@ -342,8 +342,25 @@ describe("the Worker applies the table first", () => {
     }
   });
 
-  it("keeps /favorites (now a real page)", async () => {
-    expect((await get("/favorites")).status).toBe(200);
+  it("moves /favorites and /lists into My space with a 302, the query kept (phase 10a task 4)", async () => {
+    const cases: [string, string][] = [
+      ["/favorites", "/my?tab=favorites"],
+      ["/favorites/", "/my?tab=favorites"],
+      ["/lists", "/my?tab=lists"],
+      ["/lists?id=abc", "/my?tab=lists&id=abc"],
+      ["/Lists?id=abc&x=1", "/my?tab=lists&id=abc&x=1"],
+    ];
+    for (const [from, to] of cases) {
+      // biome-ignore lint/performance/noAwaitInLoops: one request at a time.
+      const response = await get(from);
+      expect(response.status, from).toBe(302);
+      expect(response.headers.get("location"), from).toBe(to);
+      expect(response.headers.get("cache-control"), from).not.toContain(
+        "immutable"
+      );
+    }
+    // A shared list keeps its own page.
+    expect((await get("/lists/e2eUnknownShareToken")).status).not.toBe(302);
   });
 
   it("sends an old /gestures/<convexId> to the slug, query kept (phase 3)", async () => {
