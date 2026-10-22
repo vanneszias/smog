@@ -6,6 +6,7 @@ import {
   gesture,
   gestureCategory,
   gestureKeyword,
+  gestureNeedsTranslationSql,
   gestureSortName,
   inList,
   jsonList,
@@ -179,7 +180,7 @@ async function keywordMatches(db: Db, needle: string): Promise<string[]> {
   return [...ids];
 }
 
-/** The `q` and `category` filters (the counts ignore `status`). */
+/** The `q`, `category` and `needsTranslation` filters (the counts ignore `status`). */
 function listFilters(
   query: AdminGestureListQuery,
   needle: string,
@@ -189,6 +190,9 @@ function listFilters(
     needle === ""
       ? undefined
       : sql`(instr(${gesture.sortName}, ${needle}) > 0 OR ${gesture.id} IN (SELECT value FROM json_each(${jsonList(keywordIds)})))`,
+    query.needsTranslation === undefined
+      ? undefined
+      : gestureNeedsTranslationSql(query.needsTranslation),
     query.category && query.category.length > 0
       ? sql`${gesture.id} IN (SELECT ${ref("gc", gestureCategory.gestureId)} FROM ${gestureCategory} AS gc WHERE ${ref("gc", gestureCategory.categoryId)} IN (SELECT value FROM json_each(${jsonList(query.category)})))`
       : undefined

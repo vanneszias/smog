@@ -558,6 +558,29 @@ describe("catalogTranslation.gestures.list, get and reports", () => {
   });
 });
 
+describe("admin.gestures.list needsTranslation", () => {
+  it("filters the admin list (and its counts) to the gestures that need a translation in the language", async () => {
+    const done = await addGesture({ name: "Klaar" });
+    await addGesture({ name: "Open" });
+    await save(admin, {
+      expectedUpdatedAt: null,
+      id: done.id,
+      name: "Prêt",
+    });
+    const page = await callAs<{
+      counts: { total: number };
+      items: { name: string }[];
+    }>(admin, "gestures.list", { needsTranslation: "fr" });
+    expect(page.items.map((item) => item.name)).toEqual(["Open"]);
+    expect(page.counts.total).toBe(1);
+    // The default language never needs one.
+    const none = await callAs<{ items: unknown[] }>(admin, "gestures.list", {
+      needsTranslation: "nl",
+    });
+    expect(none.items).toEqual([]);
+  });
+});
+
 describe("catalogTranslation.categories", () => {
   it("saves a name, rebuilds the language's rows of its gestures and finds them by it", async () => {
     const dieren = await addCategory("Dieren");

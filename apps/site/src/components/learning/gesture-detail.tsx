@@ -1,4 +1,5 @@
 import type { GestureViewSource } from "@smog/analytics/schema";
+import { useAuthState } from "@smog/auth/react";
 import { COURSE_URL } from "@smog/config/constants";
 import {
   useGestureViewed,
@@ -109,6 +110,12 @@ export function GestureDetailView({
   viewSource: GestureViewSource;
 }): ReactNode {
   const { t } = useTranslation();
+  // Only translators and admins see that the text is still the default
+  // language's (a learner just reads it).
+  const roles = useAuthState().user?.roles ?? [];
+  const showTranslationStatus =
+    gesture.fallbackUsed &&
+    (roles.includes("admin") || roles.includes("translator"));
   const page = layout === "page";
   // The page's name is its h1; in the browse panel the page title is.
   const titleLevel = page ? 1 : 2;
@@ -154,6 +161,11 @@ export function GestureDetailView({
             <Heading level={titleLevel} size="title-1">
               {gesture.name}
             </Heading>
+            {showTranslationStatus ? (
+              <Badge variant="warning">
+                {t("admin.catalogTranslation.needs")}
+              </Badge>
+            ) : null}
             {gesture.categories.length > 0 ? (
               <ul
                 aria-label={t("search.categories")}

@@ -60,12 +60,19 @@ function nameInput(): HTMLInputElement {
 }
 
 const DIEREN = /Dieren/;
-const DESCRIPTION = /Description/;
+const DESCRIPTION = /^Description(?! in )/;
 
 const BASE_API = {
   "admin/categories/list": CATEGORIES,
   "admin/gestures/checkName": { duplicates: [] },
   "admin/mux/status": { configured: false },
+  "catalogTranslation/gestures/get": {
+    id: "g1",
+    published: true,
+    slug: "zwaaien",
+    source: { description: "", keywords: [], name: "Zwaaien" },
+    translations: {},
+  },
 };
 
 describe("GestureEditor", () => {

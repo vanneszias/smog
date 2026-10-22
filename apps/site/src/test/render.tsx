@@ -4,7 +4,7 @@ import type { AnalyticsEvent } from "@smog/analytics/schema";
 import { createRecordingAnalytics } from "@smog/analytics/testing";
 import { createApiClient, createApiQueryUtils } from "@smog/api/client";
 import { AuthStateProvider, type SessionHookResult } from "@smog/auth/react";
-import { createI18n } from "@smog/i18n";
+import { createI18n, SHIPPED_LANGUAGES } from "@smog/i18n";
 import { I18nextProvider } from "@smog/i18n/react";
 import { createLocalStore, createMemoryAdapter } from "@smog/local-store";
 import { LocalStoreProvider } from "@smog/local-store/react";
@@ -23,7 +23,15 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { LocaleProvider } from "@/lib/locale";
 import type { RouterContext } from "@/router";
+
+/** The language the screens render in: the shipped three, English active. */
+const TEST_LOCALE = {
+  languages: SHIPPED_LANGUAGES,
+  locale: "en",
+  setLocale: (): void => undefined,
+};
 
 const GUEST: SessionHookResult = { data: null, error: null, isPending: false };
 
@@ -184,8 +192,10 @@ export async function renderSite(
               <AnalyticsProvider analytics={recorder.analytics}>
                 <TooltipProvider>
                   <ToastProvider>
-                    {/* biome-ignore lint/suspicious/noExplicitAny: a test route tree, not the app's registered one */}
-                    <RouterProvider router={router as any} />
+                    <LocaleProvider value={TEST_LOCALE}>
+                      {/* biome-ignore lint/suspicious/noExplicitAny: a test route tree, not the app's registered one */}
+                      <RouterProvider router={router as any} />
+                    </LocaleProvider>
                   </ToastProvider>
                 </TooltipProvider>
               </AnalyticsProvider>
