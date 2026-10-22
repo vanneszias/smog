@@ -13,7 +13,7 @@ served at `/api/openapi`.
 | Procedure | Auth | Input | Output |
 |---|---|---|---|
 | `system.health` | public | none | `{ ok: true, environment }` |
-| `system.whoami` | public | none | `{ user: { id, email, name, image, role } \| null }` |
+| `system.whoami` | public | none | `{ user: { id, email, name, image, role, roles } \| null }` (`roles`: translator, teacher, admin held) |
 | `system.authConfig` | public | none | `{ google, apple, turnstileSiteKey }` (which sign-in methods and captcha to show; no secrets) |
 
 ## `gestures.*` (`@smog/gestures`)
@@ -71,7 +71,7 @@ Every procedure needs a session (`UNAUTHORIZED`).
 
 | Procedure | Input | Output |
 |---|---|---|
-| `account.me` | none | the profile and the sign-in methods |
+| `account.me` | none | the profile (with `roles`) and the sign-in methods |
 | `account.updateProfile` | `{ name?, locale? }` | the new profile |
 | `account.consent.get` | none | the current analytics decision |
 | `account.consent.set` | `{ analytics, source? (= "web") }` | appends to the consent log; the new state |
@@ -268,20 +268,22 @@ payment's sponsorships still holds its gesture (a blocking status).
 
 | Procedure | Input | Output | Audit |
 |---|---|---|---|
-| `admin.users.list` | `{ q?, role?: "user" \| "admin", banned?: boolean, cursor?, limit? (1..100, = 50) }` | `{ items: AdminUser[], nextCursor: string \| null }` | read |
+| `admin.users.list` | `{ q?, role?: "user" \| "translator" \| "teacher" \| "admin" (`user` = no role held), banned?: boolean, cursor?, limit? (1..100, = 50) }` | `{ items: AdminUser[], nextCursor: string \| null }` | read |
 | `admin.users.get` | `{ id }` | `AdminUser & { methods: string[], sessions, favorites, lists, sponsorships: { id, status, displayName, gesture: { id, name, slug }, createdAt }[≤100] }` | read |
-| `admin.users.setRole` | `{ userId, role }` | `{ user: AdminUser }` | `user.role_change` `{ from, to }` |
+| `admin.users.grantRole` | `{ userId, role: "translator" \| "teacher" \| "admin" }` | `{ user: AdminUser }` | `user.role_grant` `{ role }` |
+| `admin.users.revokeRole` | `{ userId, role }` | `{ user: AdminUser }` | `user.role_revoke` `{ role }` |
 | `admin.users.ban` | `{ userId, reason (1..200, trimmed), expiresInDays? (1..365) }` | `{ user: AdminUser }` | `user.ban` `{ reason, expiresAt }` |
 | `admin.users.unban` | `{ userId }` | `{ user: AdminUser }` | `user.unban` `{}` |
 | `admin.users.delete` | `{ userId, confirmEmail }` | `{ id }` | `user.delete` `{ hadSessions }` |
 
-- `AdminUser` is `{ id, name, email, emailVerified, role, banned, banReason, banExpires, createdAt }` (epoch ms). `banned` means a ban in force now (an expired ban reads `false`, with `banReason`/`banExpires` `null`); the `banned` filter means the same.
+- `AdminUser` is `{ id, name, email, emailVerified, roles (translator, teacher, admin held, in that order; none = a learner), banned, banReason, banExpires, createdAt }` (epoch ms). `banned` means a ban in force now (an expired ban reads `false`, with `banReason`/`banExpires` `null`); the `banned` filter means the same.
 - `list` reads D1 newest first with a `(created_at, id)` keyset. `q` is a literal substring of the email or the name (`instr`, so `%` and `_` are plain characters and a long email works; D1 refuses `LIKE` patterns over 50 bytes), case-insensitive for ASCII; a name is also matched as typed (`Émile`), not case-folded beyond ASCII.
 - `methods` are the account providers (`credential`, `google`, `apple`) plus `passkey`; `sessions` counts unexpired sessions; `favorites` and `lists` (owned) are counts. `sponsorships` are those whose sponsor email equals the account's (case-insensitive), only while the account's email is verified (the account export's rule), newest first.
-- The writes call Better Auth's `auth.api` (`setRole`, `banUser`, `unbanUser`, `removeUser`) with the request's headers, then write the audit entry (the change first; a failed entry is logged and rethrown, so the call fails after the change). Better Auth's `/api/auth/admin/*` HTTP endpoints are all 404 (`ADMIN_DISABLED_PATHS`).
+- **Roles are a set** (phase 10b, `user_role`): `grantRole` and `revokeRole` write the row and the audit entry in one D1 batch (both or neither; a role change never lands unaudited), `granted_by` is the acting admin. The `admin` role implies every other one (`hasRole`, `requireRole` in `@smog/rpc`), and the legacy `user.role` follows the `admin` row (migration 0020's triggers). The session carries `user.roles`, read from D1 on every request, so a grant or a revocation applies on the account's next request. A user cannot grant or revoke their own roles.
+- The other writes call Better Auth's `auth.api` (`banUser`, `unbanUser`, `removeUser`) with the request's headers, then write the audit entry (the change first; a failed entry is logged and rethrown, so the call fails after the change). Better Auth's `/api/auth/admin/*` HTTP endpoints are all 404 (`ADMIN_DISABLED_PATHS`).
 - A ban revokes every session of the account at once. A delete cascades the account's data; audit entries it wrote keep a `null` actor, and its `user.ban` entries lose their free-text reason (`reasonRemoved: true`) in the same batch as the `user.delete` entry. The audit data holds no email or name.
-- Guards, before any change: `INVALID_STATE` with `data.reason`: `self` (own role, ban or delete), `unchanged` (the role it has), `lastAdmin` (demoting the last admin whose ban is not in force; also enforced atomically by migration 0007's trigger), `targetBanned` (promoting an account whose ban is in force), `adminTarget` (ban or delete an admin: demote first), `alreadyBanned`, `notBanned`. A Better Auth refusal is typed: `FORBIDDEN` (the actor lost the role), `NOT_FOUND`, `BAD_REQUEST`. `NOT_FOUND` for an unknown account; `VALIDATION` when `confirmEmail` differs from the email (case-insensitive).
-- `bun run admin:grant` stays the way to make the first admin (spec §6); it also lifts a ban. **`--create` (phase 8 ruling 18):** `bun run admin:grant --env <dev|staging|production> --create [--yes] [--dry-run] <email>` first inserts the account when no account has that (trimmed, lower-cased) email: `email_verified = 1`, role `admin`, no credential, name `""`, a new UUID, `welcomed_at` set; with an existing account it is the plain grant. It never writes another role than `admin` and never demotes. The new admin signs in with an email code, also during maintenance (the sign-in-only routes of `/api/auth`, then `POST /api/maintenance/bypass`). On staging and production `--create` needs `--yes` (a typo would make a verified admin of someone else's address); `--dry-run` prints the single-quoted `wrangler d1 execute` line to check. The SQL is `@smog/config/admin-grant`'s.
+- Guards, before any change: `INVALID_STATE` with `data.reason`: `self` (own roles, ban or delete), `unchanged` (the role is already held, or not held on a revoke), `lastAdmin` (revoking the admin role of the last admin whose ban is not in force; also enforced atomically by migration 0020's `user_role` triggers), `targetBanned` (making an account admin whose ban is in force; translator and teacher are fine), `adminTarget` (ban or delete an admin: demote first), `alreadyBanned`, `notBanned`. A Better Auth refusal is typed: `FORBIDDEN` (the actor lost the role), `NOT_FOUND`, `BAD_REQUEST`. `NOT_FOUND` for an unknown account; `VALIDATION` when `confirmEmail` differs from the email (case-insensitive).
+- `bun run admin:grant` stays the way to make the first admin (spec §6); it also lifts a ban, and it mirrors the grant into `user_role` (an explicit `INSERT OR IGNORE`, `granted_by` NULL; it never removes another role). **`--create` (phase 8 ruling 18):** `bun run admin:grant --env <dev|staging|production> --create [--yes] [--dry-run] <email>` first inserts the account when no account has that (trimmed, lower-cased) email: `email_verified = 1`, role `admin`, no credential, name `""`, a new UUID, `welcomed_at` set; with an existing account it is the plain grant. It never writes another role than `admin` and never demotes. The new admin signs in with an email code, also during maintenance (the sign-in-only routes of `/api/auth`, then `POST /api/maintenance/bypass`). On staging and production `--create` needs `--yes` (a typo would make a verified admin of someone else's address); `--dry-run` prints the single-quoted `wrangler d1 execute` line to check. The SQL is `@smog/config/admin-grant`'s.
 - `account.delete` is `INVALID_STATE` for the last admin whose ban is not in force.
 
 ### Dead letters (phase 9)
