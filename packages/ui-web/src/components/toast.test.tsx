@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { type ReactNode, useCallback } from "react";
 import { classesOf, renderKit } from "../test/render";
 import { Button } from "./button";
+import { Dialog, DialogContent, DialogTrigger } from "./dialog";
 import { ToastProvider, useToast } from "./toast";
 
 const NOTIFICATIONS = /Notifications/;
@@ -78,5 +79,53 @@ describe("Toast", () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
     expect(screen.queryByText("Saved")).toBeNull();
+  });
+
+  test("a toast raised while a modal is open stays in the accessibility tree", async () => {
+    function Failing(): ReactNode {
+      const { toast } = useToast();
+      const fail = useCallback(
+        () =>
+          toast({
+            description: "Try again.",
+            title: "Could not save",
+            variant: "danger",
+          }),
+        [toast]
+      );
+      return <Button onClick={fail}>Fail</Button>;
+    }
+    renderKit(
+      <ToastProvider>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>Open</Button>
+          </DialogTrigger>
+          <DialogContent title="Edit">
+            <Failing />
+          </DialogContent>
+        </Dialog>
+      </ToastProvider>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    expect(screen.getByRole("dialog", { name: "Edit" })).toBeDefined();
+    // The rest of the page is out of the accessibility tree while the modal
+    // is open (Radix's `hideOthers`)...
+    expect(
+      screen.getByText("Open").closest("[aria-hidden='true']")
+    ).not.toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Fail" }));
+    // ...but `hideOthers` keeps every `aria-live` region (sonner's), so the
+    // toast is still spoken: the region, with the toast in it, has no
+    // hidden ancestor and is not hidden itself. A change of Radix or sonner
+    // that broke this would silence every toast raised from a modal.
+    const region = screen.getByRole("region", {
+      hidden: true,
+      name: NOTIFICATIONS,
+    });
+    expect(region.getAttribute("aria-live")).toBe("polite");
+    expect(region.closest("[aria-hidden='true'], [hidden], [inert]")).toBeNull();
+    expect(region.textContent).toContain("Could not save");
+    expect(region.querySelector("[role='alert']")).not.toBeNull();
   });
 });
