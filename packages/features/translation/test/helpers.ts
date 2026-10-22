@@ -14,6 +14,12 @@ import { makeRpcContext } from "@smog/rpc/testing";
 import { createTranslationRouter } from "../src/server";
 
 const SITE_URL = "http://localhost:5173";
+export const TEST_SECRET = "translation-test-secret-at-least-32-chars";
+
+/** The Worker env a procedure reads: the audio upload URL's secret and site, and the R2 bucket. */
+function rpcEnv() {
+  return { BETTER_AUTH_SECRET: TEST_SECRET, MEDIA: env.MEDIA, SITE_URL };
+}
 const PASSWORD = "correct horse battery";
 
 export function testDb(): Db {
@@ -25,7 +31,7 @@ function testAuth(): Auth {
     baseURL: SITE_URL,
     db: testDb(),
     env: {
-      BETTER_AUTH_SECRET: "translation-test-secret-at-least-32-chars",
+      BETTER_AUTH_SECRET: TEST_SECRET,
       ENVIRONMENT: "dev",
       SITE_URL,
     },
@@ -81,13 +87,13 @@ export async function signedUp(role: TestRole = "user"): Promise<Authed> {
 
 async function contextAs(as: Authed | null) {
   if (!as) {
-    return makeRpcContext({ db: testDb(), env: {}, kv: env.KV });
+    return makeRpcContext({ db: testDb(), env: rpcEnv(), kv: env.KV });
   }
   const headers = new Headers({ cookie: as.cookie, origin: SITE_URL });
   return makeRpcContext({
     auth: as.auth,
     db: testDb(),
-    env: {},
+    env: rpcEnv(),
     kv: env.KV,
     request: new Request(`${SITE_URL}/api/rpc/translation`, {
       headers,

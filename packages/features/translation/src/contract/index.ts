@@ -14,6 +14,14 @@
 import type { AdminProcedures } from "@smog/admin/contract";
 import { baseContract } from "@smog/rpc/contract";
 import {
+  audioDeleteInputSchema,
+  audioDeleteResultSchema,
+  audioFinalizeInputSchema,
+  audioListInputSchema,
+  audioListSchema,
+  audioRowSchema,
+  audioUploadInputSchema,
+  audioUploadResultSchema,
   coverageSchema,
   importPlanSchema,
   languageConflictDataSchema,
@@ -48,6 +56,21 @@ const languageUpdateContract = baseContract.errors({
 export const translationSlice = {
   /** Translation coverage per enabled language (translator or admin). */
   coverage: baseContract.output(coverageSchema),
+  /**
+   * A gesture's spoken name, one clip per language (translator or admin;
+   * phase 10b ruling 6): `uploadAudio` issues the presigned PUT (`NOT_FOUND`
+   * for an unknown gesture or a language that is not enabled), the browser
+   * uploads, `finalizeAudio` reads the object and records it. A refused
+   * object is deleted: `VALIDATION`, field `file`: `missing`, `tooLarge`,
+   * `format` (not an MP3 or M4A by its bytes), `duration` (over 10 s),
+   * `key`. The previous clip of the language is removed.
+   */
+  deleteAudio: baseContract
+    .input(audioDeleteInputSchema)
+    .output(audioDeleteResultSchema),
+  finalizeAudio: baseContract
+    .input(audioFinalizeInputSchema)
+    .output(audioRowSchema),
   languages: {
     /** Admin only. `CONFLICT exists` for a taken code. A new language shows the default language's text until translated. */
     create: languageCreateContract
@@ -64,6 +87,7 @@ export const translationSlice = {
       .input(languageUpdateInputSchema)
       .output(languageRowSchema),
   },
+  listAudio: baseContract.input(audioListInputSchema).output(audioListSchema),
   strings: {
     /** The catalogue as a file, for one language or all enabled ones (read). */
     export: baseContract
@@ -97,6 +121,9 @@ export const translationSlice = {
       .input(stringSaveInputSchema)
       .output(stringSaveResultSchema),
   },
+  uploadAudio: baseContract
+    .input(audioUploadInputSchema)
+    .output(audioUploadResultSchema),
 };
 
 export type TranslationContract = typeof translationSlice;
@@ -104,12 +131,18 @@ export type TranslationContract = typeof translationSlice;
 /** Every procedure with its kind (reads write nothing, mutations build their audit entry). */
 const KINDS = {
   coverage: "read",
+  deleteAudio: {
+    audit: "translation.audio_delete",
+    noop: "deleting a clip that is not there changes nothing",
+  },
+  finalizeAudio: { audit: "translation.audio_upload" },
   "languages.create": { audit: "language.create" },
   "languages.list": "read",
   "languages.update": {
     audit: "language.update",
     noop: "asking for what is stored changes nothing",
   },
+  listAudio: "read",
   "strings.export": "read",
   "strings.import": {
     audit: "translation.string_import",
@@ -121,6 +154,7 @@ const KINDS = {
     audit: "translation.string_save",
     noop: "saving the stored text again changes nothing",
   },
+  uploadAudio: "read",
 } as const satisfies AdminProcedures<TranslationContract>;
 
 /** The kinds by full path (`translation.strings.save`), as `adminGuard` looks them up. */

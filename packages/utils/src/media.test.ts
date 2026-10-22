@@ -1,10 +1,17 @@
 import { describe, expect, it } from "bun:test";
 import {
+  audioPath,
   createNearEndTracker,
   muxStreamUrl,
   muxThumbnailUrl,
   NEAR_END_SECONDS,
 } from "./media";
+
+describe("audioPath", () => {
+  it("serves an R2 key from the same-origin route", () => {
+    expect(audioPath("audio/g1/nl/u1")).toBe("/api/audio/g1/nl/u1");
+  });
+});
 
 describe("mux urls", () => {
   it("builds the HLS stream url", () => {

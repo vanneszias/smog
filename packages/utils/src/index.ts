@@ -17,6 +17,8 @@ export {
   type TopLevelEntry,
 } from "./log";
 export {
+  AUDIO_KEY_PREFIX,
+  audioPath,
   createNearEndTracker,
   type MuxThumbnailOptions,
   muxStreamUrl,

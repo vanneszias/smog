@@ -15,5 +15,7 @@
   ],
   "kv_namespaces": [
     { "binding": "KV", "id": "00000000000000000000000000000000" }
-  ]
+  ],
+  // The audio clips (task 6): the upload route and finalize read and write it.
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "smog-test-media" }]
 }
