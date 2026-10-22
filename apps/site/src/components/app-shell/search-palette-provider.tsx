@@ -1,5 +1,5 @@
 import { useTranslation } from "@smog/i18n/react";
-import { useToast } from "@smog/ui-web";
+import { isEditingTarget, useToast } from "@smog/ui-web";
 import {
   Component,
   createContext,
@@ -76,19 +76,6 @@ const SearchPaletteContext = createContext<SearchPaletteApi>({
 /** Opens the palette (the header's search button). */
 export function useSearchPalette(): SearchPaletteApi {
   return useContext(SearchPaletteContext);
-}
-
-/** Whether a keystroke is for a text field (or other editor), not for a shortcut. */
-function isEditingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  return (
-    target.isContentEditable ||
-    target.closest(
-      "input, textarea, select, [contenteditable=''], [contenteditable='true'], [role='textbox'], [role='searchbox'], [role='combobox']"
-    ) !== null
-  );
 }
 
 /** A plain `/`: no modifier, not repeating, not typed into a field. */
