@@ -473,7 +473,17 @@
   "mySpace": {
     "title": "Mijn ruimte",
     "description": "Je favorieten en lijsten, op dit toestel of in je account.",
-    "sections": "Onderdelen van Mijn ruimte"
+    "sections": "Onderdelen van Mijn ruimte",
+    "shared": {
+      "tab": "Gedeeld door mij",
+      "view": "Kijklink",
+      "edit": "Bewerklink",
+      "guestTitle": "Deel lijsten met een account",
+      "guestDescription": "Lijsten delen kan met een account. Meld je aan om een kijk- of bewerklink te maken.",
+      "emptyTitle": "Je deelt nog geen lijsten",
+      "emptyDescription": "Maak in een lijst een kijk- of bewerklink om hem te delen. Hier zie je welke lijsten je deelt.",
+      "toLists": "Naar mijn lijsten"
+    }
   },
   "landing": {
     "continue": "Ga verder waar je bleef",

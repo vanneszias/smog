@@ -479,7 +479,17 @@
   "mySpace": {
     "title": "Mon espace",
     "description": "Vos favoris et listes, sur cet appareil ou dans votre compte.",
-    "sections": "Sections de Mon espace"
+    "sections": "Sections de Mon espace",
+    "shared": {
+      "tab": "Partagé par moi",
+      "view": "Lien de lecture",
+      "edit": "Lien de modification",
+      "guestTitle": "Partagez des listes avec un compte",
+      "guestDescription": "Le partage de listes nécessite un compte. Connectez-vous pour créer un lien de lecture ou de modification.",
+      "emptyTitle": "Vous ne partagez encore aucune liste",
+      "emptyDescription": "Créez un lien de lecture ou de modification dans une liste pour la partager. Les listes que vous partagez apparaissent ici.",
+      "toLists": "Aller à mes listes"
+    }
   },
   "landing": {
     "continue": "Reprenez où vous en étiez",

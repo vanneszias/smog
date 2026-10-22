@@ -19,6 +19,9 @@ import {
   Field,
   IconButton,
   Input,
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
   Text,
   TextLink,
   useToast,
@@ -63,6 +66,16 @@ const METHOD_ICONS: Record<AuthMethod, ReactNode> = {
 };
 
 type FormValues = (name: string) => string;
+
+const CODE_SLOTS: readonly number[] = Array.from(
+  { length: OTP_LENGTH },
+  (_, index) => index
+);
+
+/** A pasted "123 456" is still the code. */
+function stripSpaces(pasted: string): string {
+  return pasted.replace(/\s/g, "");
+}
 
 /**
  * Moves the focus to the first field a failed submit marked invalid (WCAG
@@ -379,15 +392,20 @@ function CodeStep({ flow }: { flow: AuthFlow }): ReactNode {
         })}
         label={t("auth.otp.label")}
       >
-        <Input
+        <InputOTP
           autoComplete="one-time-code"
-          className="tracking-widest"
           inputMode="numeric"
-          maxLength={OTP_LENGTH + 2}
+          maxLength={OTP_LENGTH}
           name="code"
-          pattern="[0-9 ]*"
-          size="lg"
-        />
+          pasteTransformer={stripSpaces}
+          pattern="^[0-9]*$"
+        >
+          <InputOTPGroup>
+            {CODE_SLOTS.map((index) => (
+              <InputOTPSlot index={index} key={index} />
+            ))}
+          </InputOTPGroup>
+        </InputOTP>
       </Field>
       <ErrorText error={state.error} />
       {state.notice === "codeResent" ? (

@@ -90,6 +90,15 @@ test("create a list, add gestures, reorder with the keyboard and share a view li
   await expect(link).toHaveValue(SHARE_URL);
   const shareUrl = await link.inputValue();
 
+  // "Gedeeld door mij" lists it with the kind of link.
+  await page.goto("/my?tab=shared");
+  await waitForApp(page);
+  const shared = page.getByRole("tabpanel", { name: "Gedeeld door mij" });
+  await expect(shared.getByRole("link", { name: LIST_NAME })).toBeVisible();
+  await expect(shared.getByText("Kijklink")).toBeVisible();
+  await page.goto(listUrl);
+  await waitForApp(page);
+
   // Someone else opens it: view only, no edit controls.
   const guest = await browser.newContext({ locale: "nl-BE" });
   const viewer = await guest.newPage();

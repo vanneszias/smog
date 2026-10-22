@@ -4,10 +4,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode, useCallback } from "react";
 import { FavoritesPanel } from "@/components/learning/favorites-panel";
 import { ListsPanel } from "@/components/learning/lists/lists-panel";
+import { SharedPanel } from "@/components/learning/lists/shared-panel";
 import { Page, PageHeader, RouteError } from "@/components/learning/page";
 import { pageMeta } from "@/lib/head";
 
-const TABS = ["favorites", "lists"] as const;
+const TABS = ["favorites", "lists", "shared"] as const;
 type Tab = (typeof TABS)[number];
 
 export interface MySearch {
@@ -70,12 +71,16 @@ function MySpace(): ReactNode {
         <TabsList aria-label={t("mySpace.sections")}>
           <TabsTrigger value="favorites">{t("nav.favorites")}</TabsTrigger>
           <TabsTrigger value="lists">{t("nav.lists")}</TabsTrigger>
+          <TabsTrigger value="shared">{t("mySpace.shared.tab")}</TabsTrigger>
         </TabsList>
         <TabsContent value="favorites">
           <FavoritesPanel />
         </TabsContent>
         <TabsContent value="lists">
           <ListsPanel />
+        </TabsContent>
+        <TabsContent value="shared">
+          <SharedPanel />
         </TabsContent>
       </Tabs>
     </Page>
