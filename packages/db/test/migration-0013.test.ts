@@ -89,7 +89,11 @@ describe("migration 0013_dead_letter", () => {
     expect(indexesBefore.results.length).toBe(5);
 
     const started = Date.now();
-    await applyD1Migrations(db, env.TEST_MIGRATIONS);
+    // Only through 0013: later migrations add triggers and rebuild audit_log again.
+    await applyD1Migrations(
+      db,
+      env.TEST_MIGRATIONS.filter((migration) => migration.name < "0014")
+    );
     const elapsedMs = Date.now() - started;
     // Reported in the task; no assertion on speed (CI machines differ).
     console.log(

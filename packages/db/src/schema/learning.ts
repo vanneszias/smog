@@ -20,6 +20,7 @@ import {
   timestamp,
   updatedAt,
 } from "./columns";
+import { language } from "./language";
 
 export const category = sqliteTable(
   "category",
@@ -52,6 +53,15 @@ export const gesture = sqliteTable(
     description: text("description").notNull().default(""),
     playbackId: text("playback_id").notNull(),
     muxAssetId: text("mux_asset_id"),
+    /**
+     * Migration 0021: the video still has the name burned into the picture,
+     * so the player's name overlay stays hidden. Every gesture that existed
+     * then is 1 and a gesture defaults to 1 (a textless video is not assumed);
+     * an admin clears it when the textless video is uploaded.
+     */
+    needsRecut: integer("needs_recut", { mode: "boolean" })
+      .notNull()
+      .default(true),
     publishedAt: timestamp("published_at"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -68,6 +78,10 @@ export const gesture = sqliteTable(
     // the same `sort_name, id` keyset order (migration 0006).
     index("gesture_sort_name_idx").on(t.sortName, t.id),
     index("gesture_mux_asset_id_idx").on(t.muxAssetId),
+    // The admin "needs re-cut" list (migration 0021), in the same keyset order.
+    index("gesture_needs_recut_idx")
+      .on(t.sortName, t.id)
+      .where(sql`${col(t.needsRecut)} = 1`),
   ]
 );
 
@@ -87,17 +101,28 @@ export const gestureCategory = sqliteTable(
   ]
 );
 
-/** Synonyms / related concepts ("concept" in the old model). */
+/**
+ * Synonyms / related concepts ("concept" in the old model), per language
+ * (migration 0017 added `locale`; every earlier row is `nl`, the default
+ * language, which is also the column default).
+ */
 export const gestureKeyword = sqliteTable(
   "gesture_keyword",
   {
     gestureId: text("gesture_id")
       .notNull()
       .references(() => gesture.id, { onDelete: "cascade" }),
+    locale: text("locale")
+      .notNull()
+      .default("nl")
+      .references(() => language.code),
     keyword: text("keyword").notNull(),
     position: integer("position").notNull(),
   },
-  (t) => [primaryKey({ columns: [t.gestureId, t.keyword] })]
+  (t) => [
+    primaryKey({ columns: [t.gestureId, t.locale, t.keyword] }),
+    index("gesture_keyword_locale_idx").on(t.locale, t.gestureId),
+  ]
 );
 
 export const favorite = sqliteTable(

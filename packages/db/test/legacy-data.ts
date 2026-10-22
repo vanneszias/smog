@@ -292,3 +292,17 @@ export async function rowsWithColumns(
     .all<Record<string, unknown>>();
   return rows.results;
 }
+
+/**
+ * A big audit table (the `actor_id` the user rebuild nulls and restores): `n`
+ * rows, most with an admin as actor, one in ten a `legacy` row with none.
+ */
+export async function seedBulkAudit(db: D1Database, n: number): Promise<void> {
+  await db
+    .prepare(
+      `WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < ${n})
+       INSERT INTO audit_log (id, actor_id, action, target_type, target_id, data, created_at)
+       SELECT 'bulk-' || printf('%06d', i), CASE WHEN i % 10 = 0 THEN NULL WHEN i % 3 = 0 THEN '${ADMIN2_ID}' ELSE '${ADMIN_ID}' END, CASE WHEN i % 10 = 0 THEN 'legacy' ELSE 'gesture.update' END, CASE WHEN i % 10 = 0 THEN 'system' ELSE 'gesture' END, 'g-' || (i % 50), '{"fields":["name"]}', 1700000000000 + i FROM n`
+    )
+    .run();
+}

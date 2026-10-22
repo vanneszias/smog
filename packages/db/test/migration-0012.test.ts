@@ -93,7 +93,7 @@ describe("migration 0012_user_welcomed_at", () => {
     expect(
       await db
         .prepare(
-          "SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'user'"
+          "SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'user' AND name = 'user_keep_one_admin'"
         )
         .all<{ name: string }>()
     ).toMatchObject({ results: [{ name: "user_keep_one_admin" }] });

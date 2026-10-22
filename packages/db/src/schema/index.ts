@@ -12,8 +12,16 @@ export {
   listItem,
   listShare,
 } from "./learning";
+export {
+  categoryTranslation,
+  gestureAudio,
+  gestureTranslation,
+  legalText,
+  uiString,
+} from "./i18n";
 export { language } from "./language";
 export * from "./relations";
+export { userRole } from "./roles";
 export {
   invoiceRequest,
   payment,

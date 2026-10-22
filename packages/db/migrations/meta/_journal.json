@@ -113,6 +113,62 @@
       "when": 1792693941659,
       "tag": "0015_language",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1792694126160,
+      "tag": "0016_ui_string",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1792694158239,
+      "tag": "0017_translations",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1792694203452,
+      "tag": "0018_gesture_audio",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1792694241536,
+      "tag": "0019_legal_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1792694292938,
+      "tag": "0020_user_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1792694330993,
+      "tag": "0021_gesture_needs_recut",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1792694341180,
+      "tag": "0022_gesture_fts_locale",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1792694359420,
+      "tag": "0023_audit_log_i18n_actions",
+      "breakpoints": true
     }
   ]
 }
