@@ -115,7 +115,7 @@ test.describe("admin users", () => {
     expect(errors).toEqual([]);
   });
 
-  test("translator and teacher: add and remove, neither opens the admin, the session shows them", async ({
+  test("translator and teacher: add and remove, the translator opens only the translation screens, the session shows both", async ({
     browser,
     page,
   }) => {
@@ -144,7 +144,11 @@ test.describe("admin users", () => {
     expect(
       ((await session.json()) as { user: { roles: string[] } }).user.roles
     ).toEqual(["translator", "teacher"]);
-    expect((await member.page.goto("/admin"))?.status()).toBe(404);
+    // A translator is led from /admin to the strings (phase 10b task 4);
+    // every other admin screen stays the 404 page.
+    expect((await member.page.goto("/admin"))?.status()).toBe(200);
+    expect(member.page.url()).toContain("/admin/translation/strings");
+    expect((await member.page.goto("/admin/users"))?.status()).toBe(404);
     expect(await dashboardStatus(member.page)).toBe(403);
 
     // Removed at once: the next session read has one role left.
