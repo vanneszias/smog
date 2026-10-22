@@ -19,7 +19,7 @@ export const whoamiUserSchema = z.object({
 });
 
 /** An enabled language, as the language menus show it. */
-export const languageSchema = z.object({
+const languageSchema = z.object({
   code: z.string(),
   intlTag: z.string(),
   isDefault: z.boolean(),
@@ -32,7 +32,7 @@ export const languageSchema = z.object({
  * the default one, never the shipped base. The apps merge it over their
  * bundled catalogue; the mobile app caches it on the device.
  */
-export const i18nCatalogueSchema = z.object({
+const i18nCatalogueSchema = z.object({
   languages: z.array(languageSchema),
   locale: z.string(),
   overlay: z.record(z.string(), z.record(z.string(), z.string())),

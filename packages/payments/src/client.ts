@@ -223,7 +223,7 @@ export const MOLLIE_LOCALES = {
  * The Mollie locale of a language: the shipped ones above, else Mollie's
  * `en_US` (a language an admin added has no Mollie checkout of its own).
  */
-export function mollieLocale(locale: Locale): string {
+function mollieLocale(locale: Locale): string {
   return (MOLLIE_LOCALES as Record<string, string>)[locale] ?? "en_US";
 }
 
