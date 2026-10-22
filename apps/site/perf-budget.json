@@ -20,15 +20,11 @@
       "note": "Target not reached: the shared closure (see home). Mux Player (314 kB gzip) and the QR dialog load on demand.",
       "routes": [["gestures/$slug.tsx"]]
     },
-    "lists": {
+    "my": {
       "gzip": 523000,
       "target": 300000,
-      "note": "Target not reached: the shared closure (see home). Covers /lists, /lists/$shareToken and /favorites.",
-      "routes": [
-        ["lists/index.tsx"],
-        ["lists/$shareToken.tsx"],
-        ["favorites.tsx"]
-      ]
+      "note": "Target not reached: the shared closure (see home). Covers /my (Favorites and Lists tabs; /favorites and /lists redirect there) and /lists/$shareToken.",
+      "routes": [["my.tsx"], ["lists/$shareToken.tsx"]]
     },
     "sponsor": {
       "gzip": 517000,

@@ -59,7 +59,9 @@ export function ListDetail({
   const remove = useCallback((): void => {
     setRemoving(true);
     removeList()
-      .then(() => navigate({ replace: true, search: {}, to: "/lists" }))
+      .then(() =>
+        navigate({ replace: true, search: { tab: "lists" }, to: "/my" })
+      )
       .catch((error: unknown) => {
         console.error("[lists] Failed to delete the list:", error);
         toast({ title: t("states.actionFailed"), variant: "danger" });
@@ -86,7 +88,9 @@ export function ListDetail({
       <EmptyState
         action={
           <Button asChild variant="secondary">
-            <Link to="/lists">{t("lists.all")}</Link>
+            <Link search={{ tab: "lists" }} to="/my">
+              {t("lists.all")}
+            </Link>
           </Button>
         }
         description={t("lists.notFound.description")}

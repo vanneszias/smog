@@ -471,6 +471,29 @@
     "description": "Saisissez pour trouver un geste. Utilisez les flèches et Entrée.",
     "seeAll": "Afficher tous les résultats pour « {{query}} »"
   },
+  "shell": {
+    "explore": "Explorer",
+    "supportTitle": "Soutenir SMOG",
+    "supportText": "Montrez votre nom ou logo avec un geste.",
+    "searchShortcut": "Appuyez sur / pour chercher"
+  },
+  "mySpace": {
+    "title": "Mon espace",
+    "description": "Vos favoris et listes, sur cet appareil ou dans votre compte.",
+    "sections": "Sections de Mon espace"
+  },
+  "landing": {
+    "continue": "Reprenez où vous en étiez",
+    "clearRecent": "Effacer les gestes récemment consultés",
+    "clear": "Effacer",
+    "categoriesIntro": "Parcourir par thème"
+  },
+  "browse": {
+    "filters": "Filtres",
+    "selected_one": "{{count}} choisie",
+    "selected_other": "{{count}} choisies",
+    "sheetDescription": "Choisissez une ou plusieurs catégories. Les résultats se mettent à jour."
+  },
   "kit": {
     "close": "Fermer",
     "clear": "Effacer",

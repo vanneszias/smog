@@ -1,13 +1,5 @@
 import { useTranslation } from "@smog/i18n/react";
-import {
-  IconButton,
-  Menu,
-  MenuContent,
-  MenuItem,
-  MenuLabel,
-  MenuTrigger,
-  SegmentedControl,
-} from "@smog/ui-web";
+import { MenuGroup, MenuItem, MenuLabel, SegmentedControl } from "@smog/ui-web";
 import { Check, Monitor, Moon, Sun } from "lucide-react";
 import { type ReactNode, useCallback } from "react";
 import { isTheme, THEMES, type Theme } from "@/lib/preferences";
@@ -36,22 +28,16 @@ function ThemeItem({ option }: { option: Theme }): ReactNode {
   );
 }
 
-/** The header's theme picker: an icon button with a menu of the three themes. */
-export function ThemeMenu(): ReactNode {
+/** The theme radio items for a menu (system, light, dark). */
+export function ThemeMenuItems(): ReactNode {
   const { t } = useTranslation();
-  const { theme } = useTheme();
   return (
-    <Menu>
-      <MenuTrigger asChild>
-        <IconButton icon={ICONS[theme]} label={t("theme.toggle")} />
-      </MenuTrigger>
-      <MenuContent>
-        <MenuLabel>{t("theme.label")}</MenuLabel>
-        {THEMES.map((option) => (
-          <ThemeItem key={option} option={option} />
-        ))}
-      </MenuContent>
-    </Menu>
+    <MenuGroup>
+      <MenuLabel>{t("theme.label")}</MenuLabel>
+      {THEMES.map((option) => (
+        <ThemeItem key={option} option={option} />
+      ))}
+    </MenuGroup>
   );
 }
 
