@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { addRecentSearch } from "@smog/local-store";
 import { useLocalStoreInstance } from "@smog/local-store/react";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
@@ -7,6 +7,7 @@ import { type ReactNode, useEffect } from "react";
 import { renderSite } from "@/test/render";
 import {
   isSearchShortcut,
+  loadPaletteChunk,
   SearchPaletteProvider,
   useSearchPalette,
 } from "./search-palette-provider";
@@ -146,5 +147,55 @@ describe("the search palette", () => {
     await waitFor(() =>
       expect(router.state.location.search).toEqual({ q: "xyz" })
     );
+  });
+});
+
+describe("a palette chunk that fails to load", () => {
+  test("the import is retried once", async () => {
+    let calls = 0;
+    const module = await loadPaletteChunk(() => {
+      calls += 1;
+      return calls === 1
+        ? Promise.reject(new Error("offline"))
+        : Promise.resolve({ default: () => null });
+    });
+    expect(calls).toBe(2);
+    expect(typeof module.default).toBe("function");
+    calls = 0;
+    await expect(
+      loadPaletteChunk(() => {
+        calls += 1;
+        return Promise.reject(new Error("offline"));
+      })
+    ).rejects.toThrow("offline");
+    expect(calls).toBe(2);
+  });
+
+  test("closes the palette with a toast, keeps the page and loads again next time", async () => {
+    const real = () =>
+      import("./search-palette").then((m) => ({ default: m.SearchPalette }));
+    let broken = true;
+    const load = () =>
+      broken ? Promise.reject(new Error("chunk gone")) : real();
+    const errors = spyOn(console, "error").mockImplementation(() => undefined);
+    function FailingPage(): ReactNode {
+      return (
+        <SearchPaletteProvider loadPalette={load}>
+          <div data-testid="page">
+            <OpenButton />
+          </div>
+        </SearchPaletteProvider>
+      );
+    }
+    await renderSite(FailingPage, { api: API });
+    await userEvent.click(screen.getByRole("button", { name: "Open search" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("The search could not be opened");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByTestId("page")).toBeDefined();
+    broken = false;
+    await userEvent.click(screen.getByRole("button", { name: "Open search" }));
+    await screen.findByRole("dialog", { name: "Search" });
+    errors.mockRestore();
   });
 });
