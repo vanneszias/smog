@@ -150,6 +150,55 @@ describe("the search palette", () => {
   });
 });
 
+describe("the palette's status line", () => {
+  async function openAndType(api: object, text: string) {
+    await renderSite(Page, { api });
+    await userEvent.click(screen.getByRole("button", { name: "Open search" }));
+    const dialog = await screen.findByRole("dialog", { name: "Search" });
+    await userEvent.type(within(dialog).getByRole("combobox"), text);
+    return dialog;
+  }
+
+  test("says nothing before typing, then searching, then the count", async () => {
+    await renderSite(Page, { api: API });
+    await userEvent.click(screen.getByRole("button", { name: "Open search" }));
+    const dialog = await screen.findByRole("dialog", { name: "Search" });
+    const status = within(dialog).getByRole("status");
+    expect(status.textContent).toBe("");
+    await userEvent.type(within(dialog).getByRole("combobox"), "hond");
+    expect(status.textContent).toBe("Searching…");
+    await waitFor(() => expect(status.textContent).toBe("1 gesture"));
+  });
+
+  test("says when nothing matches although 'show all' is listed", async () => {
+    const dialog = await openAndType(API, "xyz");
+    await waitFor(() =>
+      expect(within(dialog).getByRole("status").textContent).toBe(
+        "No gestures found"
+      )
+    );
+  });
+
+  test("says when the search fails", async () => {
+    const errors = spyOn(console, "error").mockImplementation(() => undefined);
+    const dialog = await openAndType(
+      {
+        ...API,
+        "gestures/search": () => {
+          throw new Error("down");
+        },
+      },
+      "hond"
+    );
+    await waitFor(() =>
+      expect(within(dialog).getByRole("status").textContent).toBe(
+        "The search failed. Try again."
+      )
+    );
+    errors.mockRestore();
+  });
+});
+
 describe("a palette chunk that fails to load", () => {
   test("the import is retried once", async () => {
     let calls = 0;
