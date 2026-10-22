@@ -136,6 +136,15 @@ describe("search", () => {
     expect(search.queryByRole("button", { name: "Hond" })).toBeNull();
   });
 
+  it("offers the categories that match the words typed, as the site's palette", async () => {
+    await renderApp({ initialUrl: "/search?q=dier" });
+    const search = await inScreen("search");
+    const matching = await search.findByTestId("search-categories");
+    expect(
+      within(matching).getByRole("togglebutton", { name: "Dieren" })
+    ).toBeOnTheScreen();
+  });
+
   it("shows the empty state when nothing matches", async () => {
     await renderApp({ initialUrl: "/search?q=olifant" });
     expect(

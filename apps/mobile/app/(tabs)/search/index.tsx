@@ -7,6 +7,7 @@ import {
 import { useTranslation } from "@smog/i18n/react";
 import {
   Button,
+  CategoryChips,
   Heading,
   ListItem,
   SearchField,
@@ -40,6 +41,11 @@ function parseCategories(value: string | string[] | undefined): string[] {
     .split(",")
     .map((slug) => slug.trim())
     .filter(Boolean);
+}
+
+/** Lower case without accents, for a forgiving category match (as the site's palette). */
+function fold(text: string): string {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim();
 }
 
 function RecentSearch({
@@ -159,6 +165,27 @@ export default function SearchScreen(): ReactElement {
       console.error("[search] Failed to clear recent searches:", error);
     });
   }, [recent]);
+  // As the site's palette: the categories that match the words typed.
+  const folded = fold(query);
+  const matching = useMemo(
+    () =>
+      folded
+        ? (categories.data ?? []).filter((item) =>
+            fold(item.name).includes(folded)
+          )
+        : [],
+    [categories.data, folded]
+  );
+  const pickMatching = useCallback(
+    (picked: string[]) => {
+      const slugs = new Set(matching.map((item) => item.slug));
+      changeCategory([
+        ...category.filter((slug) => !slugs.has(slug)),
+        ...picked,
+      ]);
+    },
+    [category, changeCategory, matching]
+  );
   const clearCategories = useCallback(() => setCategory([]), []);
   const focus = useCallback(() => setFocused(true), []);
   const blur = useCallback(() => setFocused(false), []);
@@ -241,21 +268,36 @@ export default function SearchScreen(): ReactElement {
           onPick={pickRecent}
         />
       ) : (
-        <SearchResults
-          className="flex-1 pt-2"
-          emptyAction={
-            category.length > 0 ? (
-              <Button onPress={clearCategories} variant="secondary">
-                {t("search.clearFilter")}
-              </Button>
-            ) : undefined
-          }
-          items={items}
-          onRetry={retry}
-          renderItem={renderCard}
-          retrying={search.isRefetching}
-          state={state}
-        />
+        <>
+          {matching.length > 0 ? (
+            <View className="gap-2 pt-2" testID="search-categories">
+              <Heading className="px-4" level={2} size="title-3">
+                {t("search.categories")}
+              </Heading>
+              <CategoryChips
+                categories={matching}
+                onChange={pickMatching}
+                selected={category}
+                showAll={false}
+              />
+            </View>
+          ) : null}
+          <SearchResults
+            className="flex-1 pt-2"
+            emptyAction={
+              category.length > 0 ? (
+                <Button onPress={clearCategories} variant="secondary">
+                  {t("search.clearFilter")}
+                </Button>
+              ) : undefined
+            }
+            items={items}
+            onRetry={retry}
+            renderItem={renderCard}
+            retrying={search.isRefetching}
+            state={state}
+          />
+        </>
       )}
     </View>
   );
