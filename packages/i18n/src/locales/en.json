@@ -904,7 +904,12 @@
       "audit": "Audit log",
       "emails": "Emails",
       "settings": "Settings",
-      "deadLetters": "Dead letters"
+      "deadLetters": "Dead letters",
+      "groups": {
+        "content": "Content",
+        "community": "Community",
+        "operations": "Operations"
+      }
     },
     "comingSoon": {
       "title": "Coming in this phase",
@@ -1926,6 +1931,9 @@
       "empty": "No dead letters.",
       "nextPage": "Older messages",
       "firstPage": "Newest messages"
+    },
+    "crumb": {
+      "detail": "Details"
     }
   },
   "sponsorship": {

@@ -912,7 +912,12 @@
       "audit": "Journal",
       "emails": "E-mails",
       "settings": "Paramètres",
-      "deadLetters": "Dead letters"
+      "deadLetters": "Dead letters",
+      "groups": {
+        "content": "Contenu",
+        "community": "Communauté",
+        "operations": "Exploitation"
+      }
     },
     "comingSoon": {
       "title": "Prévu dans cette phase",
@@ -1964,6 +1969,9 @@
       "empty": "Aucune dead letter.",
       "nextPage": "Messages plus anciens",
       "firstPage": "Messages les plus récents"
+    },
+    "crumb": {
+      "detail": "Détails"
     }
   },
   "sponsorship": {

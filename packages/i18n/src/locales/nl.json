@@ -904,7 +904,12 @@
       "audit": "Logboek",
       "emails": "E-mails",
       "settings": "Instellingen",
-      "deadLetters": "Dead letters"
+      "deadLetters": "Dead letters",
+      "groups": {
+        "content": "Inhoud",
+        "community": "Gemeenschap",
+        "operations": "Opvolging"
+      }
     },
     "comingSoon": {
       "title": "Komt in deze fase",
@@ -1926,6 +1931,9 @@
       "empty": "Geen dead letters.",
       "nextPage": "Oudere berichten",
       "firstPage": "Nieuwste berichten"
+    },
+    "crumb": {
+      "detail": "Details"
     }
   },
   "sponsorship": {
