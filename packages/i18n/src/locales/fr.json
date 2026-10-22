@@ -930,7 +930,12 @@
       "audit": "Journal",
       "emails": "E-mails",
       "settings": "Paramètres",
-      "deadLetters": "Dead letters"
+      "deadLetters": "Dead letters",
+      "groups": {
+        "content": "Contenu",
+        "community": "Communauté",
+        "operations": "Exploitation"
+      }
     },
     "comingSoon": {
       "title": "Prévu dans cette phase",
@@ -1002,6 +1007,18 @@
         "renderFailed_one": "{{count}} vidéo en échec",
         "renderFailed_many": "{{count}} vidéos en échec",
         "renderFailed_other": "{{count}} vidéos en échec"
+      },
+      "chart": {
+        "title": "En un coup d’œil",
+        "description": "Le parcours des parrainages et l’état du catalogue.",
+        "sponsorships": "Parrainages par étape",
+        "catalogue": "Gestes",
+        "awaitingPayment": "En attente de paiement",
+        "inReview": "En révision",
+        "rendering": "En cours de création",
+        "live": "En ligne",
+        "published": "Publiés",
+        "hidden": "Masqués"
       }
     },
     "audit": {
@@ -1982,6 +1999,17 @@
       "empty": "Aucune dead letter.",
       "nextPage": "Messages plus anciens",
       "firstPage": "Messages les plus récents"
+    },
+    "crumb": {
+      "detail": "Détails"
+    },
+    "table": {
+      "columns": "Colonnes",
+      "columnsLabel": "Afficher les colonnes",
+      "showAll": "Afficher toutes les colonnes",
+      "rowActions": "Actions pour {{name}}",
+      "open": "Ouvrir",
+      "actions": "Actions"
     }
   },
   "sponsorship": {

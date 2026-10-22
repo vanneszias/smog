@@ -21,11 +21,18 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Ellipsis, Eye, EyeOff, Pencil, QrCode } from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useAuditTime } from "@/components/admin/audit-data";
+import {
+  ColumnsMenu,
+  useColumnVisibility,
+} from "@/components/admin/data-table-parts";
 import { LazyGestureQrDialog } from "@/components/lazy-gesture-qr-dialog";
 import { useListFormat } from "./labels";
 
 /** Chips shown per row before "+N". */
 const SHOWN_CATEGORIES = 2;
+
+/** Columns that cannot be hidden (the checkbox, the name, the switch and menu). */
+const PINNED_COLUMNS = ["select", "name", "actions"] as const;
 
 /** The last column stays in view while the table scrolls sideways. */
 const STICKY_END =
@@ -254,7 +261,7 @@ export function GestureTable({
   } else if (someSelected) {
     headerChecked = "indeterminate";
   }
-  const columns = useMemo<DataTableColumn<AdminGestureRow>[]>(
+  const allColumns = useMemo<DataTableColumn<AdminGestureRow>[]>(
     () => [
       {
         cell: (row) => (
@@ -350,11 +357,23 @@ export function GestureTable({
       toggleRow,
     ]
   );
+  const visibility = useColumnVisibility(
+    "gestures",
+    allColumns,
+    PINNED_COLUMNS
+  );
   return (
     <>
+      <div className="flex justify-end">
+        <ColumnsMenu
+          all={allColumns}
+          pinned={PINNED_COLUMNS}
+          visibility={visibility}
+        />
+      </div>
       <DataTable
         aria-label={t("admin.gestures.title")}
-        columns={columns}
+        columns={visibility.columns}
         getRowId={rowId}
         rows={rows}
         selectedRowIds={selected}

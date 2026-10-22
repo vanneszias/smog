@@ -185,6 +185,69 @@ test.describe("admin shell", () => {
     expect(errors).toEqual([]);
   });
 
+  test("the sidebar groups collapse, and the breadcrumbs follow the page", async ({
+    page,
+  }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/audit");
+    await waitForApp(page);
+    const rail = page.getByRole("navigation", { name: "Beheer" });
+    await expect(rail.getByRole("link", { name: "Logboek" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+    const crumbs = page.getByRole("navigation", { name: "Broodkruimelpad" });
+    await expect(crumbs.getByRole("link", { name: "Beheer" })).toBeVisible();
+    await expect(crumbs.getByText("Logboek")).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+    const content = rail.getByRole("button", { name: "Inhoud" });
+    await expect(rail.getByRole("link", { name: "Gebaren" })).toBeVisible();
+    await content.click();
+    await expect(rail.getByRole("link", { name: "Gebaren" })).toBeHidden();
+    await expect(rail.getByRole("link", { name: "Logboek" })).toBeVisible();
+    await content.click();
+    await expect(rail.getByRole("link", { name: "Gebaren" })).toBeVisible();
+    // The toolbar's button hides the whole panel from md.
+    await page.getByRole("button", { name: "Beheermenu openen" }).click();
+    await expect(rail).toBeHidden();
+    await page.getByRole("button", { name: "Beheermenu openen" }).click();
+    await expect(rail).toBeVisible();
+  });
+
+  test("a table's columns can be hidden, and stay hidden after a reload", async ({
+    page,
+  }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/users");
+    await waitForApp(page);
+    const table = page.getByRole("table", { name: "Gebruikers" });
+    await expect(
+      table.getByRole("columnheader", { name: "Rol" })
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Kolommen" }).click();
+    await page.getByRole("menuitemcheckbox", { name: "Rol" }).click();
+    await page.keyboard.press("Escape");
+    await expect(table.getByRole("columnheader", { name: "Rol" })).toHaveCount(
+      0
+    );
+    await page.reload();
+    await waitForApp(page);
+    await expect(
+      table.getByRole("columnheader", { name: "Naam" })
+    ).toBeVisible();
+    await expect(table.getByRole("columnheader", { name: "Rol" })).toHaveCount(
+      0
+    );
+    // Put the browser's choice back for the next test.
+    await page.getByRole("button", { name: "Kolommen" }).click();
+    await page.getByRole("menuitem", { name: "Toon alle kolommen" }).click();
+    await expect(
+      table.getByRole("columnheader", { name: "Rol" })
+    ).toBeVisible();
+  });
+
   test("on a phone the rail is a sheet", async ({ page }) => {
     await page.setViewportSize({ height: 844, width: 390 });
     await signInAsAdmin(page);

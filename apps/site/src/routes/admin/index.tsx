@@ -14,12 +14,23 @@ import {
 } from "@smog/ui-web";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FolderTree, Hand, HandCoins, Plus, Users } from "lucide-react";
-import { type ReactNode, useCallback } from "react";
+import {
+  lazy,
+  type ReactNode,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { AdminPage } from "@/components/admin/admin-page";
 import { AuditEntries } from "@/components/admin/audit-table";
 import { DeadLetterStats } from "@/components/admin/dead-letters/dead-letter-stats";
 import { SponsorshipStats } from "@/components/admin/sponsorships/dashboard-stats";
 import { pageMeta } from "@/lib/head";
+
+// The chart is its own chunk, and only the browser loads it (the Worker's
+// render shows the skeleton).
+const DashboardChart = lazy(() => import("@/components/admin/dashboard-chart"));
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
@@ -67,7 +78,7 @@ function Stats({ data }: { data: Dashboard }): ReactNode {
   const { t } = useTranslation();
   const { categories, gestures, users } = data;
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <SponsorshipStats stats={data.sponsorships} />
       <DeadLetterStats
         renderFailed={data.sponsorships.renderFailed}
@@ -104,6 +115,19 @@ function Stats({ data }: { data: Dashboard }): ReactNode {
         total={users.total}
       />
     </div>
+  );
+}
+
+function ChartSlot({ data }: { data: Dashboard }): ReactNode {
+  const [browser, setBrowser] = useState(false);
+  useEffect(() => setBrowser(true), []);
+  const fallback = <Skeleton className="h-64 w-full" />;
+  return browser ? (
+    <Suspense fallback={fallback}>
+      <DashboardChart data={data} />
+    </Suspense>
+  ) : (
+    fallback
   );
 }
 
@@ -146,6 +170,7 @@ function AdminDashboard(): ReactNode {
     body = (
       <>
         <Stats data={dashboard.data} />
+        <ChartSlot data={dashboard.data} />
         <RecentAudit data={dashboard.data} />
       </>
     );
@@ -154,7 +179,7 @@ function AdminDashboard(): ReactNode {
   } else {
     body = (
       <>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />

@@ -1,22 +1,30 @@
 import type { TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
   cn,
-  IconButton,
   Sheet,
   SheetContent,
-  SheetTrigger,
-  Text,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
 } from "@smog/ui-web";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
+  ChevronDown,
   FolderTree,
   Hand,
   HandCoins,
   LayoutDashboard,
   Mail,
   MailWarning,
-  PanelLeft,
   ScrollText,
   Settings,
   Users,
@@ -24,114 +32,220 @@ import {
 import { type ReactNode, useEffect, useState } from "react";
 
 interface RailItem {
-  /** Only the exact path is active (the dashboard). */
-  exact?: boolean;
   href: string;
   icon: ReactNode;
   label: TranslationKey;
 }
 
-/** The admin sections (spec §16), Sponsorships second (phase 6). */
-const RAIL_ITEMS: readonly RailItem[] = [
+interface RailGroup {
+  id: string;
+  items: readonly RailItem[];
+  label: TranslationKey;
+}
+
+/** The dashboard, above the groups. */
+const DASHBOARD: RailItem = {
+  href: "/admin",
+  icon: <LayoutDashboard />,
+  label: "admin.rail.dashboard",
+};
+
+/**
+ * The admin sections (spec 1 §16, phase 10a): Content, Community and
+ * Operations. The groups of the translation screens (spec 2) and the teacher
+ * area (spec 3) are added here later, shown by role.
+ */
+export const RAIL_GROUPS: readonly RailGroup[] = [
   {
-    exact: true,
-    href: "/admin",
-    icon: <LayoutDashboard />,
-    label: "admin.rail.dashboard",
+    id: "content",
+    items: [
+      { href: "/admin/gestures", icon: <Hand />, label: "admin.rail.gestures" },
+      {
+        href: "/admin/categories",
+        icon: <FolderTree />,
+        label: "admin.rail.categories",
+      },
+    ],
+    label: "admin.rail.groups.content",
   },
   {
-    href: "/admin/sponsorships",
-    icon: <HandCoins />,
-    label: "admin.rail.sponsorships",
+    id: "community",
+    items: [
+      { href: "/admin/users", icon: <Users />, label: "admin.rail.users" },
+      {
+        href: "/admin/sponsorships",
+        icon: <HandCoins />,
+        label: "admin.rail.sponsorships",
+      },
+    ],
+    label: "admin.rail.groups.community",
   },
-  { href: "/admin/gestures", icon: <Hand />, label: "admin.rail.gestures" },
   {
-    href: "/admin/categories",
-    icon: <FolderTree />,
-    label: "admin.rail.categories",
+    id: "operations",
+    items: [
+      {
+        href: "/admin/dead-letters",
+        icon: <MailWarning />,
+        label: "admin.rail.deadLetters",
+      },
+      { href: "/admin/audit", icon: <ScrollText />, label: "admin.rail.audit" },
+      { href: "/admin/emails", icon: <Mail />, label: "admin.rail.emails" },
+      {
+        href: "/admin/settings",
+        icon: <Settings />,
+        label: "admin.rail.settings",
+      },
+    ],
+    label: "admin.rail.groups.operations",
   },
-  { href: "/admin/users", icon: <Users />, label: "admin.rail.users" },
-  { href: "/admin/audit", icon: <ScrollText />, label: "admin.rail.audit" },
-  { href: "/admin/emails", icon: <Mail />, label: "admin.rail.emails" },
-  {
-    href: "/admin/dead-letters",
-    icon: <MailWarning />,
-    label: "admin.rail.deadLetters",
-  },
-  { href: "/admin/settings", icon: <Settings />, label: "admin.rail.settings" },
 ];
 
-const itemClasses = cn(
-  "flex min-h-touch items-center gap-3 rounded-md px-3 font-medium text-body-sm text-foreground-muted",
-  "hover:bg-surface-sunken hover:text-foreground",
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
-  "data-[status=active]:bg-primary-subtle data-[status=active]:text-primary-strong",
-  "[&_svg]:size-5 [&_svg]:shrink-0"
-);
+/** A path without its trailing slash (the root stays `/`). */
+export function trimSlash(pathname: string): string {
+  return pathname.length > 1 && pathname.endsWith("/")
+    ? pathname.slice(0, -1)
+    : pathname;
+}
 
-/** The rail's links; the current section is marked (`aria-current`). */
-function AdminRailNav({ className }: { className?: string }): ReactNode {
+/** The rail item a path belongs to (the dashboard only on the exact path). */
+export function activeHref(pathname: string): string | undefined {
+  const path = trimSlash(pathname);
+  if (path === "/admin") {
+    return "/admin";
+  }
+  return [...RAIL_GROUPS.flatMap((group) => group.items)].find(
+    (item) => path === item.href || path.startsWith(`${item.href}/`)
+  )?.href;
+}
+
+function RailLink({
+  active,
+  item,
+}: {
+  active: boolean;
+  item: RailItem;
+}): ReactNode {
   const { t } = useTranslation();
+  const { isMobile, setOpenMobile } = useSidebar();
   return (
-    <nav aria-label={t("admin.rail.label")} className={className}>
-      <ul className="flex flex-col gap-1">
-        {RAIL_ITEMS.map((item) => (
-          <li key={item.href}>
-            <Link
-              activeOptions={{ exact: item.exact ?? false }}
-              className={itemClasses}
-              to={item.href}
-            >
-              <span aria-hidden="true">{item.icon}</span>
-              {t(item.label)}
-            </Link>
-          </li>
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={active}>
+        <Link
+          onClick={isMobile ? () => setOpenMobile(false) : undefined}
+          to={item.href}
+        >
+          <span aria-hidden="true">{item.icon}</span>
+          <span>{t(item.label)}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+function RailGroupSection({
+  active,
+  group,
+}: {
+  active: string | undefined;
+  group: RailGroup;
+}): ReactNode {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(true);
+  const holdsActive = group.items.some((item) => item.href === active);
+  // Arriving on a section opens its group.
+  useEffect(() => {
+    if (holdsActive) {
+      setOpen(true);
+    }
+  }, [holdsActive]);
+  return (
+    <Collapsible onOpenChange={setOpen} open={open}>
+      <SidebarGroup>
+        <CollapsibleTrigger
+          className={cn(
+            "flex min-h-touch w-full items-center justify-between rounded-xl px-3 font-medium text-caption text-sidebar-foreground-muted",
+            "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+          )}
+        >
+          {t(group.label)}
+          <ChevronDown
+            aria-hidden="true"
+            className={cn(
+              "size-4 transition-transform motion-reduce:transition-none",
+              open ? "" : "-rotate-90"
+            )}
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {group.items.map((item) => (
+                <RailLink
+                  active={item.href === active}
+                  item={item}
+                  key={item.href}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
+  );
+}
+
+function RailNav(): ReactNode {
+  const { t } = useTranslation();
+  const { pathname } = useLocation();
+  const active = activeHref(pathname);
+  return (
+    <nav aria-label={t("admin.rail.label")} className="flex min-h-0 flex-1">
+      <SidebarContent className="gap-0 py-2">
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <RailLink active={active === "/admin"} item={DASHBOARD} />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        {RAIL_GROUPS.map((group) => (
+          <RailGroupSection active={active} group={group} key={group.id} />
         ))}
-      </ul>
+      </SidebarContent>
     </nav>
   );
 }
 
-/** The left rail from `md`; below it, a button opening the rail in a sheet. */
+/**
+ * The admin sidebar (shadcn sidebar block): a panel beside the screen from
+ * `md` (sticky under the site header, hidden with the toolbar's trigger), a
+ * sheet below it. The state lives in the layout's `SidebarProvider`.
+ */
 export function AdminRail(): ReactNode {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const { pathname } = useLocation();
-  // A link in the sheet navigates; the sheet then closes.
-  useEffect(() => {
-    if (pathname) {
-      setOpen(false);
-    }
-  }, [pathname]);
+  const { isMobile, open, openMobile, setOpenMobile } = useSidebar();
+  if (isMobile) {
+    return (
+      <Sheet onOpenChange={setOpenMobile} open={openMobile}>
+        <SheetContent
+          className="w-72 bg-sidebar p-0 text-sidebar-foreground"
+          side="left"
+          title={t("admin.rail.label")}
+        >
+          <RailNav />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+  if (!open) {
+    return null;
+  }
   return (
-    <>
-      <aside className="hidden w-60 shrink-0 border-border-subtle border-r bg-surface md:block">
-        <div className="sticky top-16 flex flex-col gap-3 p-3">
-          <Text
-            as="span"
-            className="px-3 pt-2"
-            size="caption"
-            tone="muted"
-            weight="semibold"
-          >
-            {t("admin.rail.label")}
-          </Text>
-          <AdminRailNav />
-        </div>
-      </aside>
-      <div className="flex items-center gap-2 border-border-subtle border-b px-4 py-2 md:hidden">
-        <Sheet onOpenChange={setOpen} open={open}>
-          <SheetTrigger asChild>
-            <IconButton icon={<PanelLeft />} label={t("admin.rail.open")} />
-          </SheetTrigger>
-          <SheetContent side="left" title={t("admin.rail.label")}>
-            <AdminRailNav />
-          </SheetContent>
-        </Sheet>
-        <Text as="span" size="body-sm" weight="semibold">
-          {t("admin.title")}
-        </Text>
-      </div>
-    </>
+    <Sidebar
+      className="sticky top-16 h-[calc(100svh-4rem)] shrink-0 self-start border-sidebar-border border-r"
+      collapsible="none"
+    >
+      <RailNav />
+    </Sidebar>
   );
 }

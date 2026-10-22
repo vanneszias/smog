@@ -922,7 +922,12 @@
       "audit": "Audit log",
       "emails": "Emails",
       "settings": "Settings",
-      "deadLetters": "Dead letters"
+      "deadLetters": "Dead letters",
+      "groups": {
+        "content": "Content",
+        "community": "Community",
+        "operations": "Operations"
+      }
     },
     "comingSoon": {
       "title": "Coming in this phase",
@@ -979,6 +984,18 @@
         "none": "Nothing waiting",
         "renderFailed_one": "{{count}} video failed",
         "renderFailed_other": "{{count}} videos failed"
+      },
+      "chart": {
+        "title": "At a glance",
+        "description": "The sponsorship pipeline and the state of the catalogue.",
+        "sponsorships": "Sponsorships by stage",
+        "catalogue": "Gestures",
+        "awaitingPayment": "Awaiting payment",
+        "inReview": "In review",
+        "rendering": "Rendering",
+        "live": "Live",
+        "published": "Published",
+        "hidden": "Hidden"
       }
     },
     "audit": {
@@ -1944,6 +1961,17 @@
       "empty": "No dead letters.",
       "nextPage": "Older messages",
       "firstPage": "Newest messages"
+    },
+    "crumb": {
+      "detail": "Details"
+    },
+    "table": {
+      "columns": "Columns",
+      "columnsLabel": "Show columns",
+      "showAll": "Show all columns",
+      "rowActions": "Actions for {{name}}",
+      "open": "Open",
+      "actions": "Actions"
     }
   },
   "sponsorship": {
