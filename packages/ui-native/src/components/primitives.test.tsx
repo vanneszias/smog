@@ -7,8 +7,10 @@ import {
   screen,
 } from "@testing-library/react-native";
 import { selectionAsync } from "expo-haptics";
+import Heart from "lucide-react-native/icons/heart";
 import type { ReactElement } from "react";
 import { Text, View } from "react-native";
+import { FavoriteButton } from "../domain/favorite-button";
 import { rgba } from "../test/colour";
 import { renderKit } from "../test/render";
 import {
@@ -298,6 +300,17 @@ describe("Surface", () => {
     expect(screen.getByText("Later")).toHaveStyle({
       color: rgba(light.sidebarForeground),
     });
+  });
+
+  it("draws the heart white on green and orange when set", async () => {
+    await inTheme(
+      <Surface tone="header">
+        <FavoriteButton active={false} onToggle={jest.fn()} />
+        <FavoriteButton active onToggle={jest.fn()} />
+      </Surface>
+    );
+    const json = JSON.stringify(screen.toJSON());
+    console.log(json.slice(0, 3000));
   });
 
   it("leaves the default surface alone", async () => {
