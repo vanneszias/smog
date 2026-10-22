@@ -31,7 +31,7 @@ export function Stepper({
       {...props}
     >
       <p className="flex flex-col sm:sr-only">
-        <span className="text-caption text-foreground-muted">
+        <span className="text-caption text-muted-foreground">
           {t("kit.stepOf", { current: current + 1, total: steps.length })}
         </span>
         <span
@@ -60,7 +60,7 @@ export function Stepper({
                   "inline-flex size-8 shrink-0 items-center justify-center rounded-full border-2 font-semibold text-body-sm",
                   done || active
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-foreground-muted bg-surface text-foreground-muted"
+                    : "border-muted-foreground bg-card text-muted-foreground"
                 )}
                 data-slot="step-marker"
               >
@@ -79,7 +79,7 @@ export function Stepper({
                   "shrink-0 whitespace-nowrap text-body-sm max-sm:sr-only",
                   active
                     ? "font-semibold text-foreground"
-                    : "text-foreground-muted"
+                    : "text-muted-foreground"
                 )}
               >
                 {step.label}

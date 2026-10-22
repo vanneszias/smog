@@ -500,7 +500,7 @@ function SurfacesSection(): ReactNode {
         </div>
       </Section>
       <Section name="ListItem">
-        <div className="divide-y divide-border-subtle overflow-hidden rounded-lg border border-border-subtle bg-surface">
+        <div className="divide-y divide-border-subtle overflow-hidden rounded-lg border border-border-subtle bg-card">
           <ListItem
             description={t("devTools.gallery.sampleText")}
             leading={<Heart className="size-5" />}

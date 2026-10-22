@@ -77,7 +77,7 @@ export function SheetContent({
             {title}
           </DialogPrimitive.Title>
           {description ? (
-            <DialogPrimitive.Description className="text-body text-foreground-muted">
+            <DialogPrimitive.Description className="text-body text-muted-foreground">
               {description}
             </DialogPrimitive.Description>
           ) : null}

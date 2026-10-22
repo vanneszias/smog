@@ -12,7 +12,7 @@ const alertVariants = cva(
     defaultVariants: { variant: "default" },
     variants: {
       variant: {
-        danger: "bg-danger-subtle text-danger-strong ring-danger/30",
+        danger: "bg-danger-subtle text-danger-strong ring-destructive/30",
         default: "bg-card text-card-foreground",
         success: "bg-success-subtle text-success-strong ring-success/30",
         warning: "bg-warning-subtle text-warning-strong ring-warning/30",

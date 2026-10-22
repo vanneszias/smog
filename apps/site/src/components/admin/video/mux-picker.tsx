@@ -73,7 +73,7 @@ function AssetCard({
   return (
     <li
       className={cn(
-        "flex flex-col overflow-hidden rounded-lg border bg-surface",
+        "flex flex-col overflow-hidden rounded-lg border bg-card",
         chosen ? "border-primary ring-2 ring-primary" : "border-border-subtle"
       )}
       data-testid="mux-asset"

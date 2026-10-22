@@ -112,6 +112,7 @@ export function BypassCard({
       </CardContent>
       <CardFooter>
         <Button
+          className="h-auto min-w-0 max-w-full whitespace-normal py-2 text-left"
           icon={<KeyRound />}
           loading={busy}
           onClick={bypass}

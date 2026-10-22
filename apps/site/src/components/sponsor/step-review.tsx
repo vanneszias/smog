@@ -41,7 +41,7 @@ function Row({ label, value }: { label: string; value: ReactNode }): ReactNode {
   return (
     <TableRow className="flex flex-col gap-0.5 px-3 py-2 sm:table-row sm:px-0 sm:py-0">
       <TableHead
-        className="h-auto whitespace-normal p-0 font-normal text-body-sm text-foreground-muted sm:h-touch sm:px-3"
+        className="h-auto whitespace-normal p-0 font-normal text-body-sm text-muted-foreground sm:h-touch sm:px-3"
         scope="row"
       >
         {label}

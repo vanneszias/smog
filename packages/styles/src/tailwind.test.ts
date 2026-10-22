@@ -37,7 +37,7 @@ describe("generated theme under Tailwind v4", () => {
       "max-w-reading",
       "ease-standard",
       "duration-fast",
-      "dark:bg-surface",
+      "dark:bg-card",
     ]);
     expect(rule(css, ".bg-primary")).toContain("var(--color-primary)");
     expect(rule(css, ".p-0\\.5")).toContain("var(--spacing)");
@@ -45,7 +45,7 @@ describe("generated theme under Tailwind v4", () => {
     expect(rule(css, ".text-display")).toContain("var(--text-display)");
     expect(rule(css, ".max-w-reading")).toContain("var(--container-reading)");
     expect(rule(css, ".duration-fast")).toContain("var(--duration-fast)");
-    expect(css).toContain(".dark\\:bg-surface:where(.dark, .dark *)");
+    expect(css).toContain(".dark\\:bg-card:where(.dark, .dark *)");
   });
 
   it("builds Tailwind's default scales, so registry code compiles", async () => {

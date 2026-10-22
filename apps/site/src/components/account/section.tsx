@@ -58,7 +58,7 @@ export function AccountRow({
           {title}
         </div>
         {description ? (
-          <p className="text-body-sm text-foreground-muted">{description}</p>
+          <p className="text-body-sm text-muted-foreground">{description}</p>
         ) : null}
         {children}
       </div>

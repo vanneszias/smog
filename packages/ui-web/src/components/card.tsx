@@ -5,7 +5,7 @@ import { focusRing, transition } from "../lib/variants";
 
 /**
  * Elevation 1 is a shadow in light mode; in dark mode it is a border and
- * `surface-raised` instead (spec §16; the dark `shadow-1` token is `none`).
+ * `popover` instead (spec §16; the dark `shadow-1` token is `none`).
  */
 const cardVariants = cva(
   "flex flex-col gap-2 rounded-2xl p-4 text-card-foreground ring-1 ring-foreground/10 sm:p-6",

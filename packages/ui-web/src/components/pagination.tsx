@@ -67,7 +67,7 @@ export function Pagination({
       data-slot="pagination"
       {...props}
     >
-      <p className="text-body-sm text-foreground-muted">
+      <p className="text-body-sm text-muted-foreground">
         {t("kit.pageOf", { page, total: pageCount })}
       </p>
       <ul className="flex items-center gap-1" data-slot="pagination-content">
@@ -83,7 +83,7 @@ export function Pagination({
           item === "…" ? (
             <li
               aria-label={t("a11y.morePages")}
-              className="inline-flex size-touch items-center justify-center text-foreground-muted max-sm:hidden"
+              className="inline-flex size-touch items-center justify-center text-muted-foreground max-sm:hidden"
               // biome-ignore lint/suspicious/noArrayIndexKey: ellipses have no identity
               key={`gap-${index}`}
             >

@@ -7,7 +7,7 @@ import {
   contrastRatio,
   NON_TEXT_ROLES,
 } from "./contrast";
-import { ALIASES, type ColorRole, tokens } from "./tokens";
+import { type ColorRole, tokens } from "./tokens";
 
 const HEX_ERROR = /hex/i;
 
@@ -71,11 +71,11 @@ describe("contrast pairs", () => {
 
   it("cover every text colour role on every background role", () => {
     const bodyText = CONTRAST_PAIRS.filter((pair) => pair.min === AA_BODY);
-    for (const foreground of ["foreground", "foregroundMuted"] as const) {
+    for (const foreground of ["foreground", "mutedForeground"] as const) {
       for (const background of [
         "background",
-        "surface",
-        "surfaceRaised",
+        "card",
+        "popover",
         "surfaceSunken",
       ] as const) {
         expect(bodyText).toContainEqual({
@@ -138,18 +138,6 @@ describe("green surfaces", () => {
       )
     ).toBeGreaterThanOrEqual(AA_BODY);
   });
-});
-
-describe("aliases", () => {
-  it.each(Object.entries(ALIASES))(
-    "%s keeps the value of %s in both themes",
-    (oldName, newName) => {
-      for (const theme of ["light", "dark"] as const) {
-        const colours: Record<string, string> = tokens.color[theme];
-        expect(colours[oldName]).toBe(colours[newName]);
-      }
-    }
-  );
 });
 
 describe("brand", () => {

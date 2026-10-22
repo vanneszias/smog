@@ -36,7 +36,7 @@ const PINNED_COLUMNS = ["select", "name", "actions"] as const;
 
 /** The last column stays in view while the table scrolls sideways. */
 const STICKY_END =
-  "sticky right-0 z-[1] bg-surface in-data-[state=selected]:bg-primary-subtle [thead_&]:bg-surface-sunken";
+  "sticky right-0 z-[1] bg-card in-data-[state=selected]:bg-primary-subtle [thead_&]:bg-surface-sunken";
 
 export interface GestureTableProps {
   onSelectedChange: (selected: ReadonlySet<string>) => void;

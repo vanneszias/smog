@@ -12,7 +12,7 @@ describe("Input", () => {
     const classes = classesOf(input);
     expect(classes).toContain("min-h-touch");
     expect(classes).toContain("border-input");
-    expect(classes).toContain("focus-visible:ring-focus-ring");
+    expect(classes).toContain("focus-visible:ring-ring");
   });
 
   test("lg size, invalid state and typing", async () => {

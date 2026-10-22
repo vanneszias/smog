@@ -78,7 +78,7 @@ describe("kit classes", () => {
     expect(missing).toEqual([]);
   });
 
-  test("the shadcn vocabulary, Tailwind's defaults and the alias names build", async () => {
+  test("the shadcn vocabulary, Tailwind's defaults build and the retired alias names do not", async () => {
     const candidates = [
       "bg-card",
       "text-card-foreground",
@@ -100,12 +100,7 @@ describe("kit classes", () => {
       "rounded-md",
       "max-w-lg",
       "font-bold",
-      // The phase 1 to 9 names, until task 9 removes them.
-      "bg-surface",
-      "bg-surface-raised",
       "bg-surface-sunken",
-      "text-foreground-muted",
-      "bg-danger",
       "text-primary-strong",
       "text-body-sm",
       "min-h-touch",
@@ -122,6 +117,19 @@ describe("kit classes", () => {
     const css = compiler.build(candidates);
     expect(
       candidates.filter((c) => !css.includes(`.${escapeClass(c)}`))
+    ).toEqual([]);
+    const retired = [
+      "bg-surface",
+      "bg-surface-raised",
+      "text-foreground-muted",
+      "bg-danger",
+      "ring-focus-ring",
+    ];
+    const retiredCss = compiler.build(retired);
+    expect(
+      retired.filter((c) =>
+        new RegExp(`\\.${escapeClass(c)}(?![\\w-])`).test(retiredCss)
+      )
     ).toEqual([]);
   });
 });

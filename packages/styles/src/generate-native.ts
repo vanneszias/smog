@@ -15,7 +15,7 @@ function mapValues<T>(
 }
 
 /**
- * Every role reads its CSS variable, so one class (`bg-surface`) follows the
+ * Every role reads its CSS variable, so one class (`bg-card`) follows the
  * theme: the app applies `themeVars.light` or `themeVars.dark` from
  * `@smog/styles/native` at its root. The channel form keeps opacity
  * modifiers (`bg-primary/10`) working.

@@ -121,7 +121,7 @@ function TranslationNotice({
   const to = legalPath(kind);
   return (
     <div
-      className="flex flex-col gap-3 rounded-lg border border-border-subtle border-l-4 border-l-primary bg-surface-raised p-4 sm:flex-row sm:items-center"
+      className="flex flex-col gap-3 rounded-lg border border-border-subtle border-l-4 border-l-primary bg-popover p-4 sm:flex-row sm:items-center"
       role="note"
     >
       <Languages

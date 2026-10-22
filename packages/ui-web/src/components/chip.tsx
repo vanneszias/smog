@@ -28,7 +28,7 @@ const chipVariants = cva(
     defaultVariants: { selected: false, size: "md" },
     variants: {
       selected: {
-        false: "border-foreground-muted bg-surface text-foreground",
+        false: "border-muted-foreground bg-card text-foreground",
         true: "border-primary bg-primary-subtle text-primary-strong",
       },
       size: {
@@ -113,7 +113,7 @@ export function Chip({
         className={cn(
           // hitArea first: its `relative` must lose to `absolute`.
           hitArea,
-          "absolute top-1/2 right-1 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-foreground-muted hover:bg-surface-sunken hover:text-foreground",
+          "absolute top-1/2 right-1 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-surface-sunken hover:text-foreground",
           focusRing,
           transition
         )}

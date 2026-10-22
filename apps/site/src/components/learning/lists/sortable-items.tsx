@@ -54,7 +54,7 @@ function ItemRow({
   const remove = useCallback(() => onRemove(item.id), [item.id, onRemove]);
   return (
     <GestureRow
-      className={isDragging ? "bg-surface-raised shadow-2" : undefined}
+      className={isDragging ? "bg-popover shadow-2" : undefined}
       dragHandle={dragHandle}
       favorite={heart.active}
       gesture={item}

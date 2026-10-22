@@ -973,7 +973,7 @@ describe("SponsorshipDetail", () => {
     // on screen with the focus ring, not a visually hidden region.
     const focused = document.activeElement as HTMLElement;
     expect(focused.className).not.toContain("sr-only");
-    expect(focused.className).toContain("focus:outline-focus-ring");
+    expect(focused.className).toContain("focus:outline-ring");
   });
 
   test("no empty live region on a detail page without a failed render (review M-7)", async () => {

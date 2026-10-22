@@ -17,7 +17,7 @@ export const textLinkVariants = cva(
     variants: {
       tone: {
         default: "text-foreground",
-        muted: "text-foreground-muted hover:text-foreground",
+        muted: "text-muted-foreground hover:text-foreground",
         primary: "text-primary-strong",
       },
     },

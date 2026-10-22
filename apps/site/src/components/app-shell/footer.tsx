@@ -29,7 +29,7 @@ function FooterLink({
 export function Footer(): ReactNode {
   const { t } = useTranslation();
   return (
-    <footer className="border-border-subtle border-t bg-surface">
+    <footer className="border-border-subtle border-t bg-card">
       <div className="mx-auto flex w-full max-w-content flex-col gap-8 px-4 py-10 md:px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
           <div className="flex flex-col gap-3">

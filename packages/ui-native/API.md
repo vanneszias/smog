@@ -55,7 +55,7 @@ Not ported: `Tooltip`/`TooltipProvider` (no hover), `Pagination` (lists load mor
 | `SearchField` | `accessibilityRole="search"`, `returnKeyType="search"`. |
 | `Select` | A field-styled `combobox` that opens a picker sheet of `radio` options (the Field label is its heading). `name` is accepted and ignored (no forms). |
 | `Checkbox`, `Switch`, `RadioGroup` | The whole row is the control (`checkbox` / `switch` / `radio` with `accessibilityState.checked`; `"mixed"` for indeterminate). `Switch` is the platform switch inside that row and plays the selection haptic. `description` is the `accessibilityHint`. |
-| `Card` | `onPress` makes the card a button (name it with `accessibilityLabel`); `interactive` (web hover) is accepted and has no effect. Elevation 1 is the token shadow in light mode, a border and `surface-raised` in dark. |
+| `Card` | `onPress` makes the card a button (name it with `accessibilityLabel`); `interactive` (web hover) is accepted and has no effect. Elevation 1 is the token shadow in light mode, a border and `popover` in dark. |
 | `ListItem` | `onPress` (web `onClick`) makes the row a button; no `asChild` (navigate in `onPress`). |
 | `Avatar` | `accessibilityRole="image"`, named by `name`. |
 | `Tabs`, `SegmentedControl`, `RadioGroup` | The containers (`tablist`, `radiogroup`) are named by `aria-label` but are not accessibility elements themselves, so their tabs and radios stay individually focusable. `SegmentedControl` `sm` extends the target vertically only. |

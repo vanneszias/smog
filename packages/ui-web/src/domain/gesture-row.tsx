@@ -59,7 +59,7 @@ export function GestureRow({
           {gesture.name}
         </GestureLink>
         {categories ? (
-          <span className="truncate text-body-sm text-foreground-muted">
+          <span className="truncate text-body-sm text-muted-foreground">
             {categories}
           </span>
         ) : null}

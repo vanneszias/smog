@@ -103,10 +103,10 @@ function Stats({ counts }: { counts: AdminGesturePage["counts"] }): ReactNode {
     >
       {items.map((item) => (
         <div
-          className="flex flex-col rounded-lg border border-border-subtle bg-surface px-3 py-2"
+          className="flex flex-col rounded-lg border border-border-subtle bg-card px-3 py-2"
           key={item.label}
         >
-          <dt className="text-caption text-foreground-muted">{item.label}</dt>
+          <dt className="text-caption text-muted-foreground">{item.label}</dt>
           <dd className="font-semibold text-title-3 tabular-nums">
             {item.value}
           </dd>
@@ -176,7 +176,7 @@ function Filters({
       <legend className="sr-only">{t("admin.gestures.filters.label")}</legend>
       {locked ? (
         <p
-          className="text-body-sm text-foreground-muted sm:col-span-2 xl:col-span-4"
+          className="text-body-sm text-muted-foreground sm:col-span-2 xl:col-span-4"
           id="gesture-filters-locked"
         >
           {t("admin.gestures.table.locked")}

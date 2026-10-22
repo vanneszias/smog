@@ -525,7 +525,9 @@ External services are faked at the adapter boundary. `@smog/payments/testing` pr
 
 **Principles:** calm, clear, consistent. The video is the hero on gesture screens; everything else steps back. Both apps share one visual language built from the same tokens and the same component names. Content first, one primary action per screen, generous whitespace, no decoration that doesn't carry meaning. The brand is the SMOG & Co logo, the green (`#00805F`) and the orange accent (`#EE971C`), plus the illustrated hands used sparingly on the home and empty states.
 
-**Type scale** (system font stack; Inter on web through Google Fonts, SF/Roboto on native):
+> **Amended in phase 10a.** The typeface is **Figtree** (OFL), self-hosted: a variable woff2 on the web (Latin and Latin Extended, preloaded, `font-display: swap` with a size-adjusted fallback), four embedded TTFs on native (one file per weight). Email keeps the system stack. The step names below are unchanged; Tailwind's own numeric scales (`p-4`, `text-sm`, `rounded-md`) are available again next to them, so registry components compile unchanged. Weights now include `bold` on native (the Figtree Bold file).
+
+**Type scale** (Figtree):
 
 | Token | Size/line | Use |
 |---|---|---|
@@ -540,6 +542,8 @@ External services are faked at the adapter boundary. `@smog/payments/testing` pr
 Weights: regular 400, medium 500, semibold 600. Maximum reading line length is 72ch.
 
 **Spacing scale** (4 pt grid): 0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64. Screen gutters: 16 on mobile, 24 on tablet, 32 on desktop, with a max content width of 1200 (admin: fluid).
+
+> **Amended in phase 10a.** The role vocabulary is shadcn's (`background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, `sidebar-*`, `chart-1` to `chart-5`, each with its `-foreground`), plus SMOG's `highlight` (the orange; shadcn's `accent` is a quiet green tint), `primary-strong`, the `*-subtle` and `*-strong` status roles, `surface-sunken` and `border-subtle`. The names `surface`, `surface-raised`, `danger`, `foreground-muted` and `focus-ring` below are retired (`card`, `popover`, `destructive`, `muted-foreground`, `ring`); the neutrals are warm with a faint green tint (`background` `#FAF9F4` light, a deep green-black in dark), **green is a surface** (`bg-primary` with white text for the hero and auth screens, `bg-sidebar` `#006B50` for the header, the admin sidebar and the native stack headers), and the light `ring` is `#B36B0B`. The table is the phase 2 baseline; `packages/styles/src/tokens.ts` holds the current values and `contrast.ts` every text pair.
 
 **Colour roles** (light / dark), defined once in `@smog/styles/tokens`:
 
@@ -571,6 +575,8 @@ All text and background pairs must pass WCAG AA (4.5:1 for body text, 3:1 for la
 **Motion:** durations 120 / 200 / 320 ms, standard easing `cubic-bezier(0.2, 0, 0, 1)`. Motion is used only for state changes (sheet in/out, toast, favorite pop). `prefers-reduced-motion` and the native reduce-motion setting disable non-essential motion.
 **Interaction:** tap targets ≥ 44 × 44 pt, a visible 2 px focus ring in `focus-ring` colour with 2 px offset, a hover state on every clickable web element, haptics on native for toggle, success and error.
 
+> **Amended in phase 10a.** `ui-web` is the shadcn `radix-maia` set, **hand-ported** from `shadcn-ui/ui` at commit `ba1503c` (the CLI could not reach the registry; `AGENTS.md`, UI kit) and edited once for the kit contracts; every exported name and prop above is unchanged. Toasts are sonner; `Command` (the header's search palette) and `Carousel` are lazy entry points; `Sidebar`, `Collapsible`, `HoverCard`, `Toggle`, `ToggleGroup`, `AspectRatio`, `InputOTP` and `Form` (react-hook-form) are new. `ui-native` stays the hand-written kit with web's names (not copies of React Native Reusables) and gains Accordion, Alert, Label, Popover, Separator, Toggle, ToggleGroup and the native-only `Surface`.
+
 **Component inventory** (same name, props and variants in `ui-web` and `ui-native` where the platform allows):
 
 - Primitives: Button (`primary|secondary|ghost|danger`, `sm|md|lg`, `loading`, `icon`), IconButton, Input, Textarea, SearchField, Select, Checkbox, Switch, RadioGroup, Field (label + hint + error), Card, ListItem, Badge (`neutral|primary|accent|success|warning|danger`), Chip (selectable), Avatar, Tabs, SegmentedControl, Sheet (bottom on mobile, side on desktop), Dialog / AlertDialog, Menu, Toast, Tooltip (web), Skeleton, EmptyState, ErrorState, OfflineBanner, Spinner (reserved for button loading only), ProgressBar, Stepper, Table (web, admin), Pagination, Text / Heading.
@@ -587,7 +593,7 @@ All text and background pairs must pass WCAG AA (4.5:1 for body text, 3:1 for la
    - Preview: a Remotion Player per gesture, a summary and Turnstile, then pay.
    - Success: polling status with a clear "what happens next" timeline.
    - Re-edit and renew reuse the same steps.
-5. *Admin:* a dense, table-first layout with a left rail (Dashboard, Sponsorships, Gestures, Categories, Users, Audit log, Emails, Settings). Every list is a sortable, filterable table with URL-synced filters and a row click opening a detail side panel or page. Moderation queue: video, metadata, Approve / Request changes / Reject (reason required). Gesture editor: Mux upload or pick, publish toggle, categories, keywords.
+5. *Admin* (amended in phase 10a: the rail is the registry sidebar with the collapsible groups Content, Community and Operations, a toolbar with breadcrumbs, a column-visibility menu and a row-actions menu on the tables, and a lazy dashboard chart; **not** TanStack Table, recharts or a sheet for the gesture editor, see DECISIONS): a dense, table-first layout with a left rail (Dashboard, Sponsorships, Gestures, Categories, Users, Audit log, Emails, Settings). Every list is a sortable, filterable table with URL-synced filters and a row click opening a detail side panel or page. Moderation queue: video, metadata, Approve / Request changes / Reject (reason required). Gesture editor: Mux upload or pick, publish toggle, categories, keywords.
 
 **States:** every data view has Skeleton (loading), EmptyState (with a next action), ErrorState (retry) and OfflineBanner (network lost). Spinners are only allowed inside buttons.
 **Responsive:** 360 px → desktop; breakpoints `sm` 640, `md` 768, `lg` 1024, `xl` 1280.
@@ -606,5 +612,6 @@ All text and background pairs must pass WCAG AA (4.5:1 for body text, 3:1 for la
 7. Render: compositions, container, Workflow, Mux upload, wizard preview.
 8. Environments (wrangler envs, EAS profiles, deploy workflow) and the Convex → D1 migration script.
 9. Hardening: e2e, accessibility, performance, docs pass, parity audit.
+10a. Brand and design system: the colour system and Figtree, the shadcn kit, every web screen and the mobile headers, home, search and auth (`docs/superpowers/plans/2026-10-21-phase-10a-brand-and-design-system.md`). Not built: illustrated category chips and a hand in the mobile hero, a mobile command overlay (the search tab shows the palette's matching categories instead), TanStack Table, recharts.
 
 Every phase ends with `bun run release:check` green, `docs/PROGRESS.md` updated, and `develop` pushed.

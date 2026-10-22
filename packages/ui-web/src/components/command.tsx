@@ -71,7 +71,7 @@ export function CommandInput({
   const { t } = useTranslation();
   return (
     <div className="p-1 pb-0" data-slot="command-input-wrapper">
-      <div className="flex min-h-touch items-center gap-2 rounded-4xl border border-input bg-card px-4 focus-within:ring-2 focus-within:ring-focus-ring">
+      <div className="flex min-h-touch items-center gap-2 rounded-4xl border border-input bg-card px-4 focus-within:ring-2 focus-within:ring-ring">
         <SearchIcon
           aria-hidden="true"
           className="size-5 shrink-0 text-muted-foreground"

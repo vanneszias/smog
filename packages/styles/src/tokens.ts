@@ -19,9 +19,9 @@ const brand = {
  * Colour roles, light and dark. Phase 10a (docs/DECISIONS.md, "phase 10a
  * task 1") opens the vocabulary to shadcn's semantic names (`card`,
  * `popover`, `secondary`, `muted`, `accent`, `destructive`, `input`, `ring`,
- * `sidebar-*`, `chart-*`) so registry components compile unchanged, and keeps
- * the phase 1 to 9 names as aliases until the phase closes (`ALIASES`
- * below; the unmigrated screens keep compiling).
+ * `sidebar-*`, `chart-*`) so registry components compile unchanged. The
+ * phase 1 to 9 names that duplicated one (`surface`, `surfaceRaised`,
+ * `danger`, `focusRing`, `foregroundMuted`) are gone (task 9).
  *
  * - **Green is a surface.** `primary` with `primaryForeground` (white) is
  *   the filled green: buttons, the hero, the auth screens. `sidebar` with
@@ -55,14 +55,11 @@ const light = {
   chart3: "#2F6DB5",
   chart4: "#8250B5",
   chart5: "#C0392B",
-  danger: "#C62828",
   dangerStrong: "#A61F1F",
   dangerSubtle: "#FBE9E9",
   destructive: "#C62828",
   destructiveForeground: "#FFFFFF",
-  focusRing: "#B36B0B",
   foreground: "#17211A",
-  foregroundMuted: "#56635A",
   highlight: brand.orange,
   highlightForeground: "#17211A",
   input: "#6E7B72",
@@ -91,8 +88,6 @@ const light = {
   success: "#1F8A4C",
   successStrong: "#166B3A",
   successSubtle: "#E3F3EA",
-  surface: "#FFFFFF",
-  surfaceRaised: "#FFFFFF",
   surfaceSunken: "#F2F0E8",
   warning: "#B7791F",
   warningStrong: "#7A4D06",
@@ -114,14 +109,11 @@ const dark: { readonly [Role in ColorRole]: string } = {
   chart3: "#6FA8F0",
   chart4: "#B994E8",
   chart5: "#F08A7E",
-  danger: "#F16B6B",
   dangerStrong: "#F16B6B",
   dangerSubtle: "#3A1717",
   destructive: "#F16B6B",
   destructiveForeground: "#1C0707",
-  focusRing: "#F5AB45",
   foreground: "#EAF1EC",
-  foregroundMuted: "#9DB0A4",
   highlight: "#F5AB45",
   highlightForeground: "#04140E",
   input: "#6F8076",
@@ -150,27 +142,11 @@ const dark: { readonly [Role in ColorRole]: string } = {
   success: "#4CC27E",
   successStrong: "#4CC27E",
   successSubtle: "#123021",
-  surface: "#131914",
-  surfaceRaised: "#1A211C",
   surfaceSunken: "#080B09",
   warning: "#E9B24A",
   warningStrong: "#E9B24A",
   warningSubtle: "#33260B",
 };
-
-/**
- * The phase 1 to 9 role names that now mean a shadcn role. The values are
- * kept equal (a test), so a screen on the old name and a registry component
- * on the new one never disagree. Phase 10a task 9 removes the old names.
- * (`accent` changed meaning: the orange is `highlight` now.)
- */
-export const ALIASES = {
-  danger: "destructive",
-  focusRing: "ring",
-  foregroundMuted: "mutedForeground",
-  surface: "card",
-  surfaceRaised: "popover",
-} as const satisfies Partial<Record<ColorRole, ColorRole>>;
 
 interface TypeStep {
   lineHeight: number;

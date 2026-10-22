@@ -7,7 +7,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 /** The 2 px `focus-ring` ring with a 2 px offset (spec §16). */
 export const focusRing =
-  "outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 /** Colour and shadow changes on hover/press; none under reduced motion. */
 export const transition =
@@ -82,7 +82,7 @@ export type FieldVariantProps = VariantProps<typeof fieldVariants>;
 export const toneText = {
   danger: "text-danger-strong",
   default: "text-foreground",
-  muted: "text-foreground-muted",
+  muted: "text-muted-foreground",
   primary: "text-primary-strong",
   success: "text-success-strong",
   warning: "text-warning-strong",

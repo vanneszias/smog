@@ -16,7 +16,7 @@ import { useShadow, useThemeName } from "../lib/theme";
 
 /**
  * Elevation 1 is a shadow in light mode; in dark mode it is a border and
- * `surface-raised` instead (spec §16; the dark elevation-1 shadow is none).
+ * `popover` instead (spec §16; the dark elevation-1 shadow is none).
  */
 const cardVariants = cva("flex-col gap-2 rounded-lg border p-4", {
   compoundVariants: [

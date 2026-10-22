@@ -16,8 +16,6 @@ describe("ScrollArea", () => {
     expect(viewport?.textContent).toBe("Long content");
     // A scrollable region is reachable by keyboard.
     expect(viewport?.getAttribute("tabindex")).toBe("0");
-    expect(classesOf(viewport ?? null)).toContain(
-      "focus-visible:ring-focus-ring"
-    );
+    expect(classesOf(viewport ?? null)).toContain("focus-visible:ring-ring");
   });
 });

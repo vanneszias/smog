@@ -104,8 +104,8 @@ export function PreviewPicker({
           <button
             aria-pressed={pressed}
             className={cn(
-              "flex w-[5rem] flex-col gap-1 rounded-md border-2 bg-surface p-1 text-left text-foreground transition motion-reduce:transition-none",
-              "focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2",
+              "flex w-[5rem] flex-col gap-1 rounded-md border-2 bg-card p-1 text-left text-foreground transition motion-reduce:transition-none",
+              "focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2",
               pressed
                 ? "border-primary"
                 : "border-border-subtle hover:border-border"

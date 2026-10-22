@@ -84,13 +84,13 @@ function ValueCards(): ReactNode {
     <ul className="grid gap-3 sm:grid-cols-3">
       {cards.map((card) => (
         <li
-          className="flex flex-col gap-1 rounded-lg border border-border-subtle bg-surface p-4"
+          className="flex flex-col gap-1 rounded-lg border border-border-subtle bg-card p-4"
           key={card.label}
         >
           <span className="font-semibold text-primary-strong text-title-2 tabular-nums">
             {card.value}
           </span>
-          <span className="text-body-sm text-foreground-muted">
+          <span className="text-body-sm text-muted-foreground">
             {card.label}
           </span>
         </li>
@@ -158,7 +158,7 @@ function SelectionTick({ selected }: { selected: boolean }): ReactNode {
         "pointer-events-none absolute top-2 right-2 inline-flex size-6 items-center justify-center rounded-sm border-2",
         selected
           ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-surface"
+          : "border-border bg-card"
       )}
     >
       {selected ? <Check className="size-4" strokeWidth={3} /> : null}
@@ -196,8 +196,8 @@ function GestureToggle({
   return (
     <li
       className={cn(
-        "group relative flex min-w-0 flex-col overflow-hidden rounded-lg border-2 bg-surface text-foreground transition",
-        "has-focus-visible:outline-2 has-focus-visible:outline-focus-ring has-focus-visible:outline-offset-2",
+        "group relative flex min-w-0 flex-col overflow-hidden rounded-lg border-2 bg-card text-foreground transition",
+        "has-focus-visible:outline-2 has-focus-visible:outline-ring has-focus-visible:outline-offset-2",
         selected
           ? "border-primary"
           : "border-border-subtle hover:border-border hover:shadow-1",

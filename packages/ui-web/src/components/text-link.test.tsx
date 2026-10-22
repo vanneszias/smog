@@ -15,7 +15,7 @@ describe("TextLink", () => {
     const link = screen.getByRole("link", { name: "Voorwaarden" });
     expect(link.getAttribute("href")).toBe("/terms");
     const classes = classesOf(link);
-    expect(classes).toContain("focus-visible:ring-focus-ring");
+    expect(classes).toContain("focus-visible:ring-ring");
     expect(classes).toContain("focus-visible:ring-offset-2");
     expect(classes).toContain("hover:underline");
     expect(classes).toContain("after:size-touch");
@@ -30,6 +30,6 @@ describe("TextLink", () => {
     );
     const link = screen.getByRole("link", { name: "Maak er een aan" });
     expect(link.hasAttribute("data-router")).toBe(true);
-    expect(classesOf(link)).toContain("text-foreground-muted");
+    expect(classesOf(link)).toContain("text-muted-foreground");
   });
 });

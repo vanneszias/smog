@@ -181,7 +181,7 @@ export function VideoField({
             >
               <Info
                 aria-hidden="true"
-                className="mt-0.5 size-5 shrink-0 text-foreground-muted"
+                className="mt-0.5 size-5 shrink-0 text-muted-foreground"
               />
               <div className="flex flex-col gap-1">
                 <Text size="body-sm" weight="medium">

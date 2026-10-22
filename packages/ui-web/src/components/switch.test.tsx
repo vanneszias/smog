@@ -10,7 +10,7 @@ describe("Switch", () => {
     renderKit(<Switch label="Analytics" onCheckedChange={onCheckedChange} />);
     const control = screen.getByRole("switch", { name: "Analytics" });
     expect(control.getAttribute("aria-checked")).toBe("false");
-    expect(classesOf(control)).toContain("focus-visible:ring-focus-ring");
+    expect(classesOf(control)).toContain("focus-visible:ring-ring");
     expect(classesOf(control)).toContain("after:size-touch");
     await userEvent.click(control);
     expect(onCheckedChange).toHaveBeenCalledWith(true);

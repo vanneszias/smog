@@ -223,7 +223,7 @@ export function AuditDetail({ entry }: { entry: AuditEntry }): ReactNode {
         {/* Scrollable, so it takes focus (keyboard scrolling, axe). */}
         <section
           aria-label={t("admin.audit.detail.data")}
-          className="max-h-96 overflow-auto rounded-md border border-border-subtle bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          className="max-h-96 overflow-auto rounded-md border border-border-subtle bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be reachable by keyboard.
           tabIndex={0}
         >

@@ -148,8 +148,8 @@ function CategoryRow({
   return (
     <div
       className={cn(
-        "flex min-h-touch items-center gap-2 rounded-lg border border-border-subtle bg-surface py-1 pr-1 pl-1",
-        isDragging && "bg-surface-raised shadow-2"
+        "flex min-h-touch items-center gap-2 rounded-lg border border-border-subtle bg-card py-1 pr-1 pl-1",
+        isDragging && "bg-popover shadow-2"
       )}
       data-testid="category-row"
     >
@@ -347,7 +347,7 @@ function Section({
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <Heading id={headingId} level={2}>
         {title}{" "}
-        <span className="font-regular text-foreground-muted tabular-nums">
+        <span className="font-regular text-muted-foreground tabular-nums">
           ({categories.length})
         </span>
       </Heading>

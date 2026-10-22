@@ -52,7 +52,7 @@ export function Switch({
   );
   const trackOn = useColor("primary");
   const trackOff = useColor("border");
-  const thumb = useColor("surface");
+  const thumb = useColor("card");
   const toggle = useCallback(
     (next: boolean): void => {
       hapticToggle();

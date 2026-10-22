@@ -73,7 +73,7 @@ export function RadioGroup({
                 {option.label}
               </label>
               {option.description ? (
-                <span className="text-body-sm text-foreground-muted">
+                <span className="text-body-sm text-muted-foreground">
                   {option.description}
                 </span>
               ) : null}

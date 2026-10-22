@@ -76,7 +76,7 @@ export function SheetPanel({
   const [mounted, setMounted] = useState(open);
   const reducedMotion = useReducedMotion();
   const themeVars = useThemeVars();
-  const background = useColor("surfaceRaised");
+  const background = useColor("popover");
   const shadow = useShadow("2");
   const insets = useSafeAreaInsets();
 

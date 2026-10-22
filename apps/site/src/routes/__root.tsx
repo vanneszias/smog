@@ -298,13 +298,13 @@ function Layout({ children }: { children: ReactNode }): ReactNode {
     <SearchPaletteProvider>
       <div className="flex min-h-screen flex-col">
         <a
-          className="sr-only z-50 rounded-md bg-surface px-4 py-3 text-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:ring-2 focus:ring-focus-ring"
+          className="sr-only z-50 rounded-md bg-card px-4 py-3 text-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:ring-2 focus:ring-ring"
           href="#main"
         >
           {t("a11y.skipToContent")}
         </a>
         <noscript>
-          <p className="bg-surface px-4 py-3 text-center text-foreground text-sm">
+          <p className="bg-card px-4 py-3 text-center text-foreground text-sm">
             {t("a11y.noscript")}
           </p>
         </noscript>

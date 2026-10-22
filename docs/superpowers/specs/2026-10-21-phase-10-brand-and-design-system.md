@@ -78,3 +78,13 @@ Each step: `check:ci`, types, tests, build (perf budgets), e2e shards with CI-ma
 
 ## 9. Out of scope
 Copy rewrites (spec 2), new features (specs 2 and 3), NativeWind 5, a new logo.
+
+## Built in phase 10a: where the build differs from this spec
+
+- **D1 (CLI):** the shadcn CLI could not be used: the registry answers 403 from the build sandbox. The components are hand-ported from `shadcn-ui/ui` at commit `ba1503c64472b82256d9de95e2e62c5901a38e8b` (style `radix-maia`), and `AGENTS.md` (UI kit) documents how to update one.
+- **D2 (tokens):** the old role names were kept as aliases during the phase and removed in task 9; `accent` is shadcn's quiet green tint and the orange is `highlight`.
+- **D3 (mobile):** the native kit is the existing hand-written one extended in Reusables' shape, not copies of Reusables or `@rn-primitives` (the exported API Task 2 keeps would have changed).
+- **§4 (type):** Figtree is served from Vite's hashed `/assets` (not `public/fonts`); native embeds four TTFs, so the next mobile build must be native, not OTA.
+- **§5 and admin:** no TanStack Table (the kit `DataTable` and keyset paging stay), no recharts (a plain lazy chart), the gesture editor stays a route page, not a sheet.
+- **Mobile:** no illustrated category chips and no hand in the hero (kit and brand dependency); "command-style" search is the palette's category match as chips, not an overlay; the iOS native header search bar keeps system colours (to check on a device).
+- **Screenshots:** the repo has no committed baselines; the review PNGs are written on demand (`PUBLIC_SHOTS_DIR`, `ADMIN_SHOTS_DIR`, `SPONSOR_SHOTS_DIR`).
