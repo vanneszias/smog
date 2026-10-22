@@ -7,7 +7,7 @@ import type { ReactElement } from "react";
 export default function TabsLayout(): ReactElement {
   const { t } = useTranslation();
   const primary = useColor("primary");
-  const muted = useColor("foregroundMuted");
+  const muted = useColor("mutedForeground");
   return (
     <NativeTabs iconColor={muted} tintColor={primary}>
       <NativeTabs.Trigger name="index">

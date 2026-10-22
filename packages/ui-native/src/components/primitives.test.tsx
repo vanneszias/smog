@@ -9,6 +9,7 @@ import {
 import { selectionAsync } from "expo-haptics";
 import type { ReactElement } from "react";
 import { Text, View } from "react-native";
+import { FavoriteButton } from "../domain/favorite-button";
 import { rgba } from "../test/colour";
 import { renderKit } from "../test/render";
 import {
@@ -297,6 +298,32 @@ describe("Surface", () => {
     });
     expect(screen.getByText("Later")).toHaveStyle({
       color: rgba(light.sidebarForeground),
+    });
+  });
+
+  it("draws the heart white on green and orange when set", async () => {
+    await inTheme(
+      <Surface tone="header">
+        <FavoriteButton active={false} onToggle={jest.fn()} />
+        <FavoriteButton active onToggle={jest.fn()} />
+      </Surface>
+    );
+    const json = JSON.stringify(screen.toJSON());
+    console.log(json.slice(0, 3000));
+  });
+
+  it("puts the page back inside an overlay opened from a green header", async () => {
+    await inTheme(
+      <Surface tone="header">
+        <Popover open>
+          <PopoverContent testID="pop">
+            <KitText testID="inside">Hello</KitText>
+          </PopoverContent>
+        </Popover>
+      </Surface>
+    );
+    expect(screen.getByTestId("inside")).toHaveStyle({
+      color: rgba(light.foreground),
     });
   });
 

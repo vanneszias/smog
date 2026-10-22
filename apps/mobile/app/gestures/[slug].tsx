@@ -6,6 +6,7 @@ import {
   useGesture,
   useGestureViewed,
   useRelated,
+  useRememberGesture,
   useVideoEnd,
 } from "@smog/gestures/client";
 import type { GestureBySlug } from "@smog/gestures/schema";
@@ -43,6 +44,7 @@ import {
   useOpenGesture,
   useToggleFavorite,
 } from "@/components/gesture-cards";
+import { HeaderActions } from "@/components/header-actions";
 import { SaveToList } from "@/components/save-to-list";
 import { gestureUrl, shareUrl } from "@/lib/site";
 import { SponsorCta } from "@/sponsor-cta";
@@ -144,6 +146,8 @@ function GestureDetail({
 }): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
+  // "Continue where you left off" on Home.
+  useRememberGesture(gesture.id);
   // video_playback_completed and the course banner, once per visit.
   const { banner: course, onNearEnd } = useVideoEnd<CourseMessageIndex>({
     gestureId: gesture.id,
@@ -255,7 +259,7 @@ export default function GestureScreen(): ReactElement {
   const headerRight = useCallback(
     () =>
       data ? (
-        <View className="flex-row items-center">
+        <HeaderActions>
           <FavoriteButton active={isFavorite(data.id)} onToggle={toggleThis} />
           <SaveToList gestureId={data.id} gestureName={data.name} />
           <IconButton
@@ -264,7 +268,7 @@ export default function GestureScreen(): ReactElement {
             onPress={share}
             variant="ghost"
           />
-        </View>
+        </HeaderActions>
       ) : null,
     [data, isFavorite, share, t, toggleThis]
   );

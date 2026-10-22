@@ -1,6 +1,12 @@
 import type { ColorRole } from "@smog/styles/tokens";
 import { cva, type VariantProps } from "class-variance-authority";
-import { createContext, type ReactElement, type Ref, useContext } from "react";
+import {
+  createContext,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+  useContext,
+} from "react";
 import { View, type ViewProps } from "react-native";
 import { cn } from "../lib/cn";
 
@@ -15,6 +21,23 @@ const SurfaceContext = createContext<SurfaceTone>("default");
 /** The tone of the nearest `Surface` (`default` outside one). */
 export function useSurface(): SurfaceTone {
   return useContext(SurfaceContext);
+}
+
+/**
+ * Puts the page back under an overlay: a Modal keeps React context from its
+ * trigger, which may sit in a green header, but draws its own popover
+ * background.
+ */
+export function SurfaceReset({
+  children,
+}: {
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <SurfaceContext.Provider value="default">
+      {children}
+    </SurfaceContext.Provider>
+  );
 }
 
 /** What the kit reads on each surface: text, secondary text, the focus ring. */

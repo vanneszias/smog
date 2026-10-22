@@ -23,7 +23,7 @@ export default function SettingsScreen(): ReactElement {
   const router = useRouter();
   const auth = useAuthState();
   const { toast } = useToast();
-  const muted = useColor("foregroundMuted");
+  const muted = useColor("mutedForeground");
   const devTools = useDevToolsUnlock();
   const openAccount = useCallback(
     () => router.push("/settings/account"),

@@ -46,6 +46,7 @@ import {
   useOpenGesture,
   useToggleFavorite,
 } from "@/components/gesture-cards";
+import { HeaderActions } from "@/components/header-actions";
 import { ListNameSheet } from "@/components/list-name-sheet";
 import { ListShareSheet } from "@/components/list-share-sheet";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
@@ -79,7 +80,7 @@ function ReorderableRow({
 }: RowProps): ReactElement {
   const { t } = useTranslation();
   const drag = useReorderableDrag();
-  const muted = useColor("foregroundMuted");
+  const muted = useColor("mutedForeground");
   const moveUp = useCallback(() => onMove(index, index - 1), [index, onMove]);
   const moveDown = useCallback(() => onMove(index, index + 1), [index, onMove]);
   const removeThis = useCallback(() => onRemove(item), [item, onRemove]);
@@ -283,7 +284,7 @@ export default function ListScreen(): ReactElement {
   const headerRight = useCallback(
     () =>
       list.list ? (
-        <View className="flex-row items-center">
+        <HeaderActions>
           <IconButton
             icon={<Share2 />}
             label={t("lists.share.title")}
@@ -307,7 +308,7 @@ export default function ListScreen(): ReactElement {
               </MenuItem>
             </MenuContent>
           </Menu>
-        </View>
+        </HeaderActions>
       ) : null,
     [list.list, openDelete, openRename, openShare, t]
   );

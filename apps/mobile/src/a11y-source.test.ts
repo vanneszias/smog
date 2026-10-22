@@ -111,3 +111,28 @@ describe("the app's own text", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+const HEADER_RIGHT = /\bheaderRight\b/;
+/** The shadcn names replaced the aliases `surface`, `surface-raised`, `foreground-muted`, `danger` and `focus-ring`. */
+const ALIAS_CLASS =
+  /\b(?:bg|text|border|ring|fill|stroke)-(?:surface-raised|surface|foreground-muted|danger|focus-ring)\b(?!-)/;
+const ALIAS_ROLE =
+  /useColor\("(?:surface|surfaceRaised|foregroundMuted|danger|focusRing)"\)/;
+
+describe("the app's own look (phase 10a)", () => {
+  it("draws every header button on the green: through HeaderActions or a Surface", () => {
+    const offenders = FILES.filter(
+      ({ text }) =>
+        HEADER_RIGHT.test(text) &&
+        !(text.includes("<HeaderActions>") || text.includes("<Surface"))
+    ).map(({ path }) => path);
+    expect(offenders).toEqual([]);
+  });
+
+  it("uses the shadcn token names, not the phase 1 to 9 aliases", () => {
+    const offenders = FILES.filter(
+      ({ text }) => ALIAS_CLASS.test(text) || ALIAS_ROLE.test(text)
+    ).map(({ path }) => path);
+    expect(offenders).toEqual([]);
+  });
+});

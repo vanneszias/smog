@@ -96,7 +96,27 @@ const SCREENS: ScreenCase[] = [
   {
     name: "home",
     options: { initialUrl: "/" },
-    ready: "Discover gestures",
+    ready: "Gestures that support your speech",
+  },
+  {
+    name: "home (continue where you left off)",
+    options: {
+      guest: {
+        preferences: {
+          importDismissedFor: [],
+          locale: "en",
+          recentGestureIds: [KAT.id],
+          theme: "light",
+        },
+      },
+      initialUrl: "/",
+    },
+    ready: "Continue where you left off",
+  },
+  {
+    name: "search (matching categories)",
+    options: { initialUrl: "/search?q=dier" },
+    ready: "Categories",
   },
   {
     name: "search results",

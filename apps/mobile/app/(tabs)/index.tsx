@@ -1,6 +1,7 @@
 import {
   useCategories,
   useFeaturedGestures,
+  useRecentGestures,
   useRecentSearches,
 } from "@smog/gestures/client";
 import { useTranslation } from "@smog/i18n/react";
@@ -14,13 +15,14 @@ import {
   Logo,
   SearchField,
   Skeleton,
+  Surface,
   Text,
 } from "@smog/ui-native";
-import { useRouter } from "expo-router";
+import { useIsFocused, useRouter } from "expo-router";
 import ArrowRight from "lucide-react-native/icons/arrow-right";
 import Settings from "lucide-react-native/icons/settings";
 import { type ReactElement, useCallback, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { ScrollView, StatusBar, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
@@ -43,13 +45,62 @@ function FeaturedSkeleton(): ReactElement {
 const CARD_STYLE = { aspectRatio: 3 / 4 } as const;
 
 /**
- * Home: the logo and tagline, the search field (submitting opens the
- * search tab), the categories and a featured row, as the site's home.
+ * "Continue where you left off": the gestures this device opened lately
+ * (the local store), as the site's home. Nothing while there is nothing to
+ * continue, and no error state when the read fails (a convenience).
+ */
+function RecentGestures(): ReactElement | null {
+  const { t } = useTranslation();
+  const recent = useRecentGestures();
+  const renderCard = useGestureCardRenderer();
+  const { clear } = recent;
+  const clearAll = useCallback(() => {
+    clear().catch((error: unknown) => {
+      console.error("[home] Failed to clear the recent gestures:", error);
+    });
+  }, [clear]);
+  if (recent.status === "empty" || recent.status === "error") {
+    return null;
+  }
+  if (recent.status === "ready" && recent.gestures.length === 0) {
+    return null;
+  }
+  return (
+    <View className="gap-3" testID="home-recent">
+      <View className="flex-row items-center justify-between gap-2 px-4">
+        <Heading level={2}>{t("landing.continue")}</Heading>
+        <Button
+          accessibilityLabel={t("landing.clearRecent")}
+          onPress={clearAll}
+          variant="ghost"
+        >
+          {t("landing.clear")}
+        </Button>
+      </View>
+      {recent.status === "ready" ? (
+        <GestureGrid
+          contentContainerClassName="px-4"
+          items={recent.gestures}
+          renderItem={renderCard}
+          scrollEnabled={false}
+        />
+      ) : (
+        <FeaturedSkeleton />
+      )}
+    </View>
+  );
+}
+
+/**
+ * Home: a green hero (the reversed logo, the headline and the search
+ * field; submitting opens the search tab), the categories, "continue where
+ * you left off" and a featured row, as the site's home.
  */
 export default function HomeScreen(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const focused = useIsFocused();
   const [query, setQuery] = useState("");
   const recent = useRecentSearches();
   const categories = useCategories();
@@ -115,34 +166,40 @@ export default function HomeScreen(): ReactElement {
     <ScrollView
       className="flex-1 bg-background"
       contentContainerClassName="gap-6 pb-10"
-      contentContainerStyle={{ paddingTop: insets.top }}
       keyboardShouldPersistTaps="handled"
       testID="home-screen"
     >
-      <View className="flex-row items-center justify-between gap-3 px-4 pt-4">
-        <Logo decorative size="md" />
-        <IconButton
-          icon={<Settings />}
-          label={t("nav.settings")}
-          onPress={openSettings}
-          variant="ghost"
-        />
-      </View>
-      <ConnectionBanner />
-      <View className="gap-4 px-4">
-        <Heading level={1}>{t("common.appName")}</Heading>
+      {focused ? <StatusBar barStyle="light-content" /> : null}
+      <Surface
+        className="gap-4 rounded-b-3xl px-4 pb-8"
+        style={{ paddingTop: insets.top + 16 }}
+        tone="primary"
+      >
+        <View className="flex-row items-center justify-between gap-3">
+          <Logo color="primaryForeground" decorative size="md" tone="current" />
+          <IconButton
+            icon={<Settings />}
+            label={t("nav.settings")}
+            onPress={openSettings}
+            variant="ghost"
+          />
+        </View>
+        <Heading level={1} size="title-1">
+          {t("home.title")}
+        </Heading>
         <Text tone="muted">{t("home.tagline")}</Text>
         <SearchField
           onSubmitEditing={submit}
           onValueChange={setQuery}
-          placeholder={t("search.placeholder")}
+          placeholder={t("home.searchPlaceholder")}
           value={query}
         />
-      </View>
+      </Surface>
+      <ConnectionBanner />
       {categories.data && categories.data.length > 0 ? (
         <View className="gap-2">
           <Heading className="px-4" level={2} size="title-3">
-            {t("search.categories")}
+            {t("landing.categoriesIntro")}
           </Heading>
           <CategoryChips
             categories={categories.data}
@@ -152,6 +209,7 @@ export default function HomeScreen(): ReactElement {
           />
         </View>
       ) : null}
+      <RecentGestures />
       <View className="gap-3">
         <Heading className="px-4" level={2}>
           {t("home.featured")}
