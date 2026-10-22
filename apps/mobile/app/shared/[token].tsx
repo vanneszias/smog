@@ -24,6 +24,7 @@ import {
   useOpenGesture,
   useToggleFavorite,
 } from "@/components/gesture-cards";
+import { HeaderActions } from "@/components/header-actions";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 
 const sharedQueries = (rpc: AppQueryUtils) => [rpc.lists.shared.get.key()];
@@ -99,12 +100,14 @@ export default function SharedListScreen(): ReactElement {
   const headerRight = useCallback(
     () =>
       canEdit ? (
-        <IconButton
-          icon={<Plus />}
-          label={t("lists.sharedView.add")}
-          onPress={startAdding}
-          variant="ghost"
-        />
+        <HeaderActions>
+          <IconButton
+            icon={<Plus />}
+            label={t("lists.sharedView.add")}
+            onPress={startAdding}
+            variant="ghost"
+          />
+        </HeaderActions>
       ) : null,
     [canEdit, startAdding, t]
   );

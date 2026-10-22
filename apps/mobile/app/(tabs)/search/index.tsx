@@ -28,6 +28,7 @@ import type { SearchBarCommands } from "react-native-screens";
 import { CategoryFilterSheet } from "@/components/category-filter-sheet";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
+import { HeaderActions } from "@/components/header-actions";
 
 /** Results per search (the contract's maximum). */
 const SEARCH_LIMIT = 50;
@@ -179,7 +180,10 @@ export default function SearchScreen(): ReactElement {
     ),
     [categories.data, category, changeCategory]
   );
-  const headerRight = useCallback(() => filter, [filter]);
+  const headerRight = useCallback(
+    () => <HeaderActions>{filter}</HeaderActions>,
+    [filter]
+  );
 
   let state: SearchResultsState = "results";
   if (search.isPending) {

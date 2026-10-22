@@ -43,6 +43,7 @@ import {
   useOpenGesture,
   useToggleFavorite,
 } from "@/components/gesture-cards";
+import { HeaderActions } from "@/components/header-actions";
 import { SaveToList } from "@/components/save-to-list";
 import { gestureUrl, shareUrl } from "@/lib/site";
 import { SponsorCta } from "@/sponsor-cta";
@@ -255,7 +256,7 @@ export default function GestureScreen(): ReactElement {
   const headerRight = useCallback(
     () =>
       data ? (
-        <View className="flex-row items-center">
+        <HeaderActions>
           <FavoriteButton active={isFavorite(data.id)} onToggle={toggleThis} />
           <SaveToList gestureId={data.id} gestureName={data.name} />
           <IconButton
@@ -264,7 +265,7 @@ export default function GestureScreen(): ReactElement {
             onPress={share}
             variant="ghost"
           />
-        </View>
+        </HeaderActions>
       ) : null,
     [data, isFavorite, share, t, toggleThis]
   );
