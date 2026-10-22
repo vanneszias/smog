@@ -9,13 +9,24 @@ export function clientIp(request: Request): string {
   return request.headers.get("cf-connecting-ip") ?? "unknown";
 }
 
-/** The `locale` cookie, then Accept-Language, then `nl`. */
-function requestLocale(request: Request): RpcContext["locale"] {
+/**
+ * The `locale` cookie, then Accept-Language, then the default: only an
+ * enabled language counts (`enabled`, the `language` table's enabled rows;
+ * the shipped three where the caller has none), so a disabled language in a
+ * cookie never reaches an email or a payment.
+ */
+function requestLocale(
+  request: Request,
+  enabled?: readonly string[]
+): RpcContext["locale"] {
   const cookies = parseCookie(request.headers.get("cookie") ?? "");
-  return resolveLocale({
-    acceptLanguage: request.headers.get("accept-language"),
-    cookie: cookies.locale ?? null,
-  });
+  return resolveLocale(
+    {
+      acceptLanguage: request.headers.get("accept-language"),
+      cookie: cookies.locale ?? null,
+    },
+    enabled
+  );
 }
 
 /**
@@ -26,7 +37,8 @@ function requestLocale(request: Request): RpcContext["locale"] {
 export function createRpcContext(
   request: Request,
   env: SiteEnv,
-  ctx: { waitUntil: (promise: Promise<unknown>) => void }
+  ctx: { waitUntil: (promise: Promise<unknown>) => void },
+  enabledLanguages?: readonly string[]
 ): RpcContext {
   return {
     auth: getAuth(),
@@ -40,7 +52,7 @@ export function createRpcContext(
     },
     ip: clientIp(request),
     kv: env.kv,
-    locale: requestLocale(request),
+    locale: requestLocale(request, enabledLanguages),
     request,
     session: null,
     waitUntil: (promise) => ctx.waitUntil(promise),

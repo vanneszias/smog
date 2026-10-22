@@ -3,7 +3,7 @@
  * exported here is part of `@smog/admin/client` (`index.ts` re-exports this
  * file). Reads only: a preview is never sent.
  */
-import type { Locale } from "@smog/config/constants";
+import type { ShippedLocale } from "@smog/config/constants";
 import type { EmailTemplateId } from "@smog/email/samples";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useAdminKey, useAdminRpc } from "./slice";
@@ -27,7 +27,7 @@ export function useEmailTemplates() {
  */
 export function useEmailPreview(
   template: EmailTemplateId | null,
-  locale: Locale
+  locale: ShippedLocale
 ) {
   const rpc = useAdminRpc();
   const scoped = useAdminKey();

@@ -1,7 +1,8 @@
 import {
+  type CatalogueOverlay,
   createI18n,
   DEFAULT_LOCALE,
-  isLocale,
+  intlTag,
   type Locale,
   type Translate,
   type TranslationKey,
@@ -23,13 +24,20 @@ interface ShellHead {
 export function shellHead(matches: readonly MatchWithData[]): ShellHead {
   const data = matches[0]?.loaderData;
   const shell = typeof data === "object" && data !== null ? data : {};
+  // The loader already resolved the locale against the enabled languages.
   const locale =
-    "locale" in shell && isLocale(shell.locale) ? shell.locale : DEFAULT_LOCALE;
+    "locale" in shell && typeof shell.locale === "string"
+      ? shell.locale
+      : DEFAULT_LOCALE;
+  const overlay =
+    "overlay" in shell && typeof shell.overlay === "object" && shell.overlay
+      ? (shell.overlay as CatalogueOverlay)
+      : undefined;
   const siteUrl =
     "siteUrl" in shell && typeof shell.siteUrl === "string"
       ? siteOrigin(shell.siteUrl)
       : "";
-  return { locale, siteUrl, t: createI18n(locale).t };
+  return { locale, siteUrl, t: createI18n(locale, overlay).t };
 }
 
 /**
@@ -72,6 +80,11 @@ export function scriptJson(value: unknown): string {
   return JSON.stringify(value).replaceAll("<", "\\u003c");
 }
 
+/** `og:locale` (`nl_BE`) from the language's `Intl` tag (`nl-BE`). */
+function ogLocale(locale: Locale): string {
+  return intlTag(locale).replaceAll("-", "_");
+}
+
 /** Title, description, canonical, Open Graph and JSON-LD for a public page. */
 export function seoHead(
   matches: readonly MatchWithData[],
@@ -93,8 +106,9 @@ export function seoHead(
       { content: ogImage, property: "og:image" },
       { content: type, property: "og:type" },
       { content: appName, property: "og:site_name" },
-      // The site is Belgian: nl_BE, en_BE, fr_BE.
-      { content: `${locale}_BE`, property: "og:locale" },
+      // The site is Belgian: nl_BE, en_BE, fr_BE (a language added in the
+      // admin has the form its `Intl` tag gives, `de_BE`).
+      { content: ogLocale(locale), property: "og:locale" },
       { content: "summary_large_image", name: "twitter:card" },
     ],
     scripts: jsonLd

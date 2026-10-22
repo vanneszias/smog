@@ -3,7 +3,14 @@ import {
   type PublicAuthConfig,
   publicAuthConfig,
 } from "@smog/config/env/worker";
-import { isLocale, type Locale, resolveLocale } from "@smog/i18n";
+import { localeCodeSchema } from "@smog/config/locale";
+import {
+  type CatalogueOverlay,
+  isLocale,
+  type LanguageInfo,
+  type Locale,
+  resolveLocale,
+} from "@smog/i18n";
 import { createServerFn } from "@tanstack/react-start";
 import {
   getCookie,
@@ -20,12 +27,21 @@ import {
   type Theme,
 } from "../lib/preferences";
 import { siteEnv } from "./auth";
+import { enabledLanguageCodes, loadSiteCatalogue } from "./catalogue";
 import { requestSession } from "./session";
 
 /** What every page needs before it renders (the root route's loader). */
 export interface Shell {
   auth: PublicAuthConfig;
+  /** The enabled languages in menu order (the language menu, the `Intl` tags). */
+  languages: LanguageInfo[];
   locale: Locale;
+  /**
+   * The `ui_string` rows of the active and the default language, over the
+   * shipped catalogue the bundle carries (phase 10b ruling 1). Data only: a
+   * translator's edit reaches the next navigation without a deploy.
+   */
+  overlay: CatalogueOverlay;
   siteUrl: string;
   theme: Theme;
   /** The signed-in user, so the header renders without a flash. */
@@ -38,15 +54,25 @@ export const getShell = createServerFn().handler(async (): Promise<Shell> => {
     // The signed-in user (one D1 read), or null.
     const session = await requestSession(getRequest());
     const cookie = getCookie(LOCALE_COOKIE) ?? null;
+    // This browser's choice (the cookie) first; signed in without one, the
+    // account's language (set in the app, say), then the browser's. Only an
+    // enabled language counts.
+    const catalogue = await loadSiteCatalogue((enabled, fallback) =>
+      resolveLocale(
+        {
+          acceptLanguage: getRequestHeader("accept-language") ?? null,
+          cookie,
+          preference: cookie ? null : (session?.user.locale ?? null),
+        },
+        enabled,
+        fallback
+      )
+    );
     return {
       auth: publicAuthConfig(worker),
-      // This browser's choice (the cookie) first; signed in without one,
-      // the account's language (set in the app, say), then the browser's.
-      locale: resolveLocale({
-        acceptLanguage: getRequestHeader("accept-language") ?? null,
-        cookie,
-        preference: cookie ? null : (session?.user.locale ?? null),
-      }),
+      languages: [...catalogue.languages],
+      locale: catalogue.locale,
+      overlay: catalogue.overlay,
       siteUrl: vars.SITE_URL,
       theme: parseTheme(getCookie(THEME_COOKIE)),
       user: toAuthState({ data: session, isPending: false }).user ?? null,
@@ -73,12 +99,11 @@ export const setTheme = createServerFn({ method: "POST" })
   });
 
 export const setLocale = createServerFn({ method: "POST" })
-  .validator((locale: unknown): Locale => {
-    if (!isLocale(locale)) {
+  .validator((locale: unknown): Locale => localeCodeSchema.parse(locale))
+  .handler(async ({ data }): Promise<void> => {
+    // A language an admin disabled (or never added) is no cookie value.
+    if (!isLocale(data, await enabledLanguageCodes())) {
       throw new Error("[shell] Invalid locale");
     }
-    return locale;
-  })
-  .handler(({ data }): void => {
     setCookie(LOCALE_COOKIE, data, preferenceCookie(secureCookies()));
   });

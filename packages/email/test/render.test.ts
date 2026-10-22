@@ -25,6 +25,37 @@ describe("renderEmail", () => {
     expect(email.text).toContain(URL);
   });
 
+  it("renders through the ui_string overlay: an edited subject, the shipped rest", async () => {
+    const plain = await renderEmail(
+      "auth/verify-email",
+      { minutes: 60, url: URL },
+      "nl"
+    );
+    const edited = await renderEmail(
+      "auth/verify-email",
+      { minutes: 60, url: URL },
+      "nl",
+      { overlay: { nl: { "email.auth.verifyEmail.subject": "Bevestig nu" } } }
+    );
+    expect(plain.subject).toBe("Bevestig je e-mailadres");
+    expect(edited.subject).toBe("Bevestig nu");
+    expect(edited.html).toContain(URL.replaceAll("&", "&amp;"));
+  });
+
+  it("renders in a language that ships no catalogue: its overlay, else Dutch", async () => {
+    const email = await renderEmail(
+      "auth/verify-email",
+      { minutes: 60, url: URL },
+      "de",
+      { overlay: { de: { "email.auth.verifyEmail.subject": "Bestätigen" } } }
+    );
+    expect(email.subject).toBe("Bestätigen");
+    expect(email.html).toContain('lang="de"');
+    // Untranslated keys show the Dutch text, never empty or the key.
+    expect(email.text).toContain(URL);
+    expect(email.text).not.toContain("email.auth.verifyEmail");
+  });
+
   it("never shows a sign-up name in the verify email (phishing)", async () => {
     const email = await renderEmail(
       "auth/verify-email",

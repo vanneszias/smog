@@ -1,13 +1,24 @@
-import { DEFAULT_LOCALE, LOCALES, type Locale } from "@smog/config/constants";
+import { DEFAULT_LOCALE, type Locale } from "@smog/config/constants";
 import { createInstance, type i18n } from "i18next";
-import { DEFAULT_NAMESPACE, resources } from "./keys";
+import { buildResources, type CatalogueOverlay } from "./catalogue";
+import { DEFAULT_NAMESPACE } from "./keys";
 
 /**
  * Creates a fresh, synchronously initialised i18next instance for `locale`.
  * The site creates one per request (SSR, no browser detector: the locale
  * comes from `resolveLocale`) and passes it to `I18nextProvider`.
+ *
+ * The messages are the shipped catalogue with the `overlay` (the
+ * `ui_string` rows) on top, for `locale` and the default language. A key
+ * missing in `locale` resolves in the default language; an empty value
+ * counts as missing (`returnEmptyString: false`), so a string never renders
+ * empty. A language that ships no catalogue (one an admin added) is the
+ * overlay alone, over the default language.
  */
-export function createI18n(locale: Locale): i18n {
+export function createI18n(
+  locale: Locale,
+  overlay: CatalogueOverlay = {}
+): i18n {
   const instance = createInstance();
   instance.init({
     defaultNS: DEFAULT_NAMESPACE,
@@ -17,9 +28,9 @@ export function createI18n(locale: Locale): i18n {
     lng: locale,
     ns: [DEFAULT_NAMESPACE],
     react: { useSuspense: false },
-    resources,
+    resources: buildResources(locale, overlay),
+    returnEmptyString: false,
     returnNull: false,
-    supportedLngs: [...LOCALES],
   });
   return instance;
 }

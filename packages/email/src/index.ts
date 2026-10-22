@@ -7,6 +7,8 @@ export {
   type EmailDeliveryEnv,
   type EmailOutbox,
   type OutboxEmail,
+  type OverlayLoader,
+  safeOverlay,
 } from "./outbox";
 export {
   EmailRenderError,

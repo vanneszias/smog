@@ -14,6 +14,8 @@ import {
   type EmailTemplateId,
   isPermanentSendError,
   type OutboxEmail,
+  type OverlayLoader,
+  safeOverlay,
   sendErrorCode,
 } from "@smog/email";
 import { emailMessageSchema } from "./messages";
@@ -93,6 +95,8 @@ export interface EmailSentStore {
 export interface EmailConsumerDeps {
   env: EmailDeliveryEnv;
   kv: EmailSentStore;
+  /** Reads the `ui_string` overlay of the recipient's language (the site's catalogue); none renders the shipped texts. */
+  loadOverlay?: OverlayLoader | undefined;
   /** Epoch ms (tests). */
   now?: () => number;
   sender: EmailSender;
@@ -124,7 +128,7 @@ function validMinutes(props: Record<string, unknown>): number | null {
  */
 export async function processEmailMessage(
   delivery: EmailDelivery,
-  { env, kv, now = Date.now, sender }: EmailConsumerDeps
+  { env, kv, loadOverlay, now = Date.now, sender }: EmailConsumerDeps
 ): Promise<EmailDecision> {
   const parsed = emailMessageSchema.safeParse(delivery.body);
   if (!parsed.success) {
@@ -177,6 +181,7 @@ export async function processEmailMessage(
     await deliverEmail(sender, {
       email: message as unknown as OutboxEmail,
       env,
+      overlay: await safeOverlay(loadOverlay, message.locale),
     });
   } catch (error) {
     if (!(error instanceof EmailRenderError) && isPermanentSendError(error)) {

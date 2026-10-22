@@ -185,6 +185,7 @@ const PROCEDURES: Record<string, Row> = {
   "sponsorships.uploadLogo": { level: "public" },
   "system.authConfig": { level: "public" },
   "system.health": { level: "public" },
+  "system.i18n": { input: {}, level: "public" },
   "system.whoami": { level: "public" },
 };
 

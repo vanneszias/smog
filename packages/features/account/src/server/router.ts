@@ -1,3 +1,4 @@
+import { isEnabledLanguage } from "@smog/db";
 import { checkRateLimit, implementRpc, requireUser } from "@smog/rpc";
 import { accountContract } from "../contract";
 import { getConsent, setConsent } from "./consent";
@@ -137,11 +138,21 @@ export function createAccountRouter(deps: AccountRouterDeps) {
         )
     ),
     updateProfile: os.updateProfile.handler(
-      async ({ context, errors, input }) =>
-        await forUser(
+      async ({ context, errors, input }) => {
+        // Languages are data: the code must be an enabled `language` row.
+        if (
+          input.locale &&
+          !(await isEnabledLanguage(context.db, input.locale))
+        ) {
+          throw errors.VALIDATION({
+            data: { fieldErrors: { locale: ["unknown"] }, formErrors: [] },
+          });
+        }
+        return await forUser(
           () => updateProfile(context.db, context.user.id, input),
           errors.UNAUTHORIZED
-        )
+        );
+      }
     ),
   });
 }

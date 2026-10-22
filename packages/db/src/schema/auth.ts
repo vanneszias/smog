@@ -16,7 +16,7 @@ import {
   sqliteTable,
   text,
 } from "drizzle-orm/sqlite-core";
-import { LOCALES, ROLES } from "../enums";
+import { ROLES } from "../enums";
 import { createdAt, inValues, timestamp, updatedAt } from "./columns";
 import { language } from "./language";
 
@@ -47,7 +47,7 @@ export const user = sqliteTable(
     banned: integer("banned", { mode: "boolean" }).default(false),
     banReason: text("ban_reason"),
     banExpires: timestamp("ban_expires"),
-    locale: text("locale", { enum: LOCALES }).references(() => language.code),
+    locale: text("locale").references(() => language.code),
     legacyId: text("legacy_id").unique(),
     /**
      * When the welcome email was claimed (migration 0012, phase 8 ruling

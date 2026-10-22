@@ -1,4 +1,4 @@
-import { LOCALES, type Locale } from "@smog/config/constants";
+import { LOCALES, type ShippedLocale } from "@smog/config/constants";
 import {
   type EmailTemplateId,
   type RenderedEmail,
@@ -14,7 +14,7 @@ import { type AdminDeps, adminProcedure } from "./procedure";
  */
 function renderSample(
   template: EmailTemplateId,
-  locale: Locale,
+  locale: ShippedLocale,
   siteUrl: string
 ): Promise<RenderedEmail> {
   // Each id's sample has that template's props (`EMAIL_SAMPLES`' mapped type).
@@ -35,7 +35,7 @@ async function summary(
   );
   return {
     id,
-    subject: Object.fromEntries(subjects) as Record<Locale, string>,
+    subject: Object.fromEntries(subjects) as Record<ShippedLocale, string>,
   };
 }
 

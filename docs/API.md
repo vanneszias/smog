@@ -15,6 +15,7 @@ served at `/api/openapi`.
 | `system.health` | public | none | `{ ok: true, environment }` |
 | `system.whoami` | public | none | `{ user: { id, email, name, image, role, roles } \| null }` (`roles`: translator, teacher, admin held) |
 | `system.authConfig` | public | none | `{ google, apple, turnstileSiteKey }` (which sign-in methods and captcha to show; no secrets) |
+| `system.i18n` | public | `{ locale?: string \| null }` | `{ languages: [{ code, name, intlTag, isDefault }], locale, overlay: { <locale>: { <key>: <text> } }, version }` (the enabled languages and the `ui_string` rows of the resolved language and the default one, never the shipped base; the mobile app caches the answer, the site hands the same data to the browser through its root loader) |
 
 ## `gestures.*` (`@smog/gestures`)
 

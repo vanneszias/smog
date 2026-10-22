@@ -1,6 +1,7 @@
 import { createAccountRouter } from "@smog/account/server";
 import { createAdminRouter } from "@smog/admin/server";
 import { publicAuthConfig } from "@smog/config/env/worker";
+import { uiCatalogueSource } from "@smog/db";
 import {
   createFavoritesRouter,
   insertFavoritesStmt,
@@ -10,6 +11,8 @@ import {
   findGesturesByIds,
   gesturesRouter,
 } from "@smog/gestures/server";
+import { resolveLocale } from "@smog/i18n";
+import { loadCatalogue } from "@smog/i18n/server";
 import {
   appendItemsStmt,
   createListsRouter,
@@ -34,6 +37,19 @@ const system = os.system.router({
     environment: context.env.ENVIRONMENT,
     ok: true as const,
   })),
+  i18n: os.system.i18n.handler(async ({ context, input }) => {
+    const catalogue = await loadCatalogue(
+      { kv: context.kv, source: uiCatalogueSource(context.db) },
+      (enabled, fallback) =>
+        resolveLocale({ preference: input.locale }, enabled, fallback)
+    );
+    return {
+      languages: [...catalogue.languages],
+      locale: catalogue.locale,
+      overlay: catalogue.overlay,
+      version: catalogue.version,
+    };
+  }),
   whoami: os.system.whoami.handler(({ context }) => {
     const user = context.session?.user;
     return {

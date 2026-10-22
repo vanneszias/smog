@@ -1,4 +1,4 @@
-import { LOCALES, type Locale } from "@smog/i18n";
+import { LOCALES, type ShippedLocale as Locale } from "@smog/i18n";
 import { describe, expect, it } from "vitest";
 import { EmailRenderError, type EmailTemplateProps, renderEmail } from "../src";
 import { EMAIL_SAMPLES } from "../src/samples";

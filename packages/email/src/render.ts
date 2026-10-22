@@ -1,4 +1,4 @@
-import { createI18n, type Locale } from "@smog/i18n";
+import { type CatalogueOverlay, createI18n, type Locale } from "@smog/i18n";
 import { render } from "react-email";
 import { type MagicLinkProps, magicLink } from "./templates/auth/magic-link";
 import { type OtpProps, otp } from "./templates/auth/otp";
@@ -92,6 +92,12 @@ export interface RenderedEmail {
 }
 
 export interface RenderOptions {
+  /**
+   * The `ui_string` overlay (`@smog/i18n/server`'s `loadCatalogue`): the
+   * emails read the same merged catalogue as the apps, so a translator's
+   * edit reaches the next email without a deploy. None: the shipped texts.
+   */
+  overlay?: CatalogueOverlay | undefined;
   /** The site origin (`SITE_URL`): the header logo is loaded from it. */
   siteUrl?: string | undefined;
 }
@@ -107,11 +113,9 @@ export class EmailRenderError extends Error {
 }
 
 /** After a details label in the plain text ("Gesture: Hond"); French spaces the colon. */
-const LABEL_SEPARATOR: Record<Locale, string> = {
-  en: ": ",
-  fr: " : ",
-  nl: ": ",
-};
+function labelSeparator(locale: Locale): string {
+  return locale === "fr" || locale.startsWith("fr-") ? "\u00a0: " : ": ";
+}
 
 /**
  * html-to-text runs table cells together ("GestureHond"), so a details
@@ -127,7 +131,7 @@ function plainTextOptions(locale: Locale) {
         builder: { addInline: (text: string) => void }
       ) => {
         walk(element.children, builder as never);
-        builder.addInline(LABEL_SEPARATOR[locale]);
+        builder.addInline(labelSeparator(locale));
       },
     },
     selectors: [{ format: "emailLabel", selector: "td[data-email-label]" }],
@@ -162,7 +166,7 @@ export async function renderEmail<Id extends EmailTemplateId>(
     const context = {
       locale,
       siteUrl: options.siteUrl,
-      t: createI18n(locale).t,
+      t: createI18n(locale, options.overlay).t,
     };
     const definition: EmailTemplate<EmailTemplateProps[Id]> =
       TEMPLATES[template];

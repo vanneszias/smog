@@ -58,7 +58,7 @@ describe("checkoutInputSchema", () => {
     ["a line separator in the display name", { displayName: "Acme\u2028BV" }],
     ["a logo key outside logos/", { logoKey: "avatars/abc" }],
     ["a float total", { expectedTotalCents: 100.5 }],
-    ["an unknown locale", { locale: "de" }],
+    ["a malformed locale", { locale: "not a locale!" }],
     ["a bad email", { contact: { email: "alex@example", name: "Alex" } }],
     [
       "a 121 character contact name",

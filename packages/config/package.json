@@ -8,6 +8,7 @@
     "./admin-grant": "./src/admin-grant.ts",
     "./boundaries": "./src/boundaries.ts",
     "./constants": "./src/constants.ts",
+    "./locale": "./src/locale.ts",
     "./env/worker": "./src/env/worker.ts",
     "./env/mobile": "./src/env/mobile.ts",
     "./env/render": "./src/env/render.ts",

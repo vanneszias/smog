@@ -12,7 +12,6 @@ import {
 } from "drizzle-orm/sqlite-core";
 import {
   BLOCKING_SPONSORSHIP_STATUSES,
-  LOCALES,
   PAYMENT_KINDS,
   PAYMENT_STATUSES,
   RENDER_JOB_STATUSES,
@@ -40,7 +39,7 @@ export const sponsor = sqliteTable(
     name: text("name").notNull(),
     email: text("email").notNull(),
     company: text("company"),
-    locale: text("locale", { enum: LOCALES })
+    locale: text("locale")
       .notNull()
       .references(() => language.code),
     createdAt: createdAt(),
