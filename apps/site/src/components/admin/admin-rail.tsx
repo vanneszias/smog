@@ -132,6 +132,9 @@ function RailLink({
       <SidebarMenuButton asChild isActive={active}>
         <Link
           onClick={isMobile ? () => setOpenMobile(false) : undefined}
+          // A hover preload runs the admin gate and the loader for a screen
+          // that is usually not opened (and is aborted by a reload).
+          preload={false}
           to={item.href}
         >
           <span aria-hidden="true">{item.icon}</span>

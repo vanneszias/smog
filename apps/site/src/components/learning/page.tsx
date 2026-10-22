@@ -1,7 +1,7 @@
 import { useTranslation } from "@smog/i18n/react";
 import { cn, ErrorState, Heading, Text } from "@smog/ui-web";
 import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 /** The page column: the header's width and gutters (spec §16: 16/24/32). */
 export function Page({
@@ -49,7 +49,11 @@ export function RouteError({ error, reset }: ErrorComponentProps): ReactNode {
   const router = useRouter();
   const { t } = useTranslation();
   const [retrying, setRetrying] = useState(false);
-  console.error("[site] Failed to render the page:", error);
+  // In an effect: the render body runs again for every re-render and
+  // boundary retry, which logged one failure four times.
+  useEffect(() => {
+    console.error("[site] Failed to render the page:", error);
+  }, [error]);
   const retry = useCallback((): void => {
     setRetrying(true);
     router

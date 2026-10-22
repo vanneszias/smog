@@ -62,7 +62,9 @@ export function AdminToolbar(): ReactNode {
               <BreadcrumbItem>
                 {crumb.href ? (
                   <BreadcrumbLink asChild>
-                    <Link to={crumb.href}>{t(crumb.label)}</Link>
+                    <Link preload={false} to={crumb.href}>
+                      {t(crumb.label)}
+                    </Link>
                   </BreadcrumbLink>
                 ) : (
                   <BreadcrumbPage>{t(crumb.label)}</BreadcrumbPage>
