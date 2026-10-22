@@ -99,7 +99,12 @@ describe("cells", () => {
     const base = overrides({});
     const source = sourceOf(base, "nl", info);
     const row = overrides({
-      en: { [info.key]: ["Edited {{current}} {{total}}", sourceHash("an older source")] },
+      en: {
+        [info.key]: [
+          "Edited {{current}} {{total}}",
+          sourceHash("an older source"),
+        ],
+      },
     });
     const cell = cellOf(row, EN, info, source);
     expect(cell.overridden).toBe(true);
@@ -112,7 +117,9 @@ describe("cells", () => {
   it("is not stale when the stored hash is the source's", () => {
     const info = infoOf(key);
     const source = sourceOf(NONE, "nl", info);
-    const row = overrides({ en: { [key]: ["Something else", sourceHash(source)] } });
+    const row = overrides({
+      en: { [key]: ["Something else", sourceHash(source)] },
+    });
     expect(cellOf(row, EN, info, source).stale).toBe(false);
   });
 
@@ -150,7 +157,13 @@ describe("coverage", () => {
 
 describe("csv", () => {
   it("round-trips quotes, commas, newlines and a formula-looking cell", () => {
-    const cells = ['a "quoted" word', "one, two", "line\nbreak", "=SUM(A1)", "-5"];
+    const cells = [
+      'a "quoted" word',
+      "one, two",
+      "line\nbreak",
+      "=SUM(A1)",
+      "-5",
+    ];
     const line = cells.map(toCsvCell).join(",");
     expect(parseCsv(`${line}\r\n`)).toEqual([
       ['a "quoted" word', "one, two", "line\nbreak", "'=SUM(A1)", "'-5"],
@@ -265,24 +278,24 @@ describe("export and import", () => {
     expect(code(() => parseImport("json", "[]", "en", enabled))).toBe(
       "invalidJson"
     );
-    expect(code(() => parseImport("json", '{"a":"b"}', undefined, enabled))).toBe(
-      "needsLanguage"
-    );
+    expect(
+      code(() => parseImport("json", '{"a":"b"}', undefined, enabled))
+    ).toBe("needsLanguage");
     expect(code(() => parseImport("json", '{"a":1}', "en", enabled))).toBe(
       "unsupportedShape"
     );
-    expect(code(() => parseImport("json", '{"de":{"a":"b"}}', undefined, enabled))).toBe(
-      "unknownLanguage"
-    );
+    expect(
+      code(() => parseImport("json", '{"de":{"a":"b"}}', undefined, enabled))
+    ).toBe("unknownLanguage");
     expect(code(() => parseImport("csv", "nl,en\na,b", "en", enabled))).toBe(
       "noKeyColumn"
     );
-    expect(code(() => parseImport("csv", "key,de\na,b", undefined, enabled))).toBe(
-      "unknownLanguage"
-    );
-    expect(code(() => parseImport("csv", "key,source\na,b", undefined, enabled))).toBe(
-      "noLanguageColumn"
-    );
+    expect(
+      code(() => parseImport("csv", "key,de\na,b", undefined, enabled))
+    ).toBe("unknownLanguage");
+    expect(
+      code(() => parseImport("csv", "key,source\na,b", undefined, enabled))
+    ).toBe("noLanguageColumn");
     expect(code(() => parseImport("csv", 'key,en\na,"b', "en", enabled))).toBe(
       "invalidCsv"
     );

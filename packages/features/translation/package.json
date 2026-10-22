@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "catalog:",
+    "@smog/email": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@types/react": "catalog:",
     "react": "catalog:",

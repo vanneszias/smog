@@ -1,16 +1,16 @@
 import { env } from "cloudflare:workers";
-import { loadCatalogue } from "@smog/i18n/server";
 import { uiCatalogueSource } from "@smog/db";
+import { loadCatalogue } from "@smog/i18n/server";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type {
   ImportPlan,
+  StringSaveResult,
   StringsImportResult,
   StringsPage,
-  StringSaveResult,
 } from "../src/schema";
 import {
-  addLanguage,
   type Authed,
+  addLanguage,
   auditMark,
   auditRowsSince,
   callAs,
@@ -129,8 +129,7 @@ describe("saving", () => {
     const before = await i18nVersion();
     const mark = await auditMark();
     const row = (await list({ search: KEY })).items.find((r) => r.key === KEY);
-    const cell = row?.cells.en;
-    expect(cell?.overridden).toBe(false);
+    expect(row?.cells.en?.overridden).toBe(false);
     const saved = await save({
       expectedUpdatedAt: null,
       key: KEY,
@@ -157,7 +156,7 @@ describe("saving", () => {
       { kv: env.KV, source: uiCatalogueSource(testDb()) },
       () => "en"
     );
-    expect(catalogue.overlay.en?.[KEY]).toBe("Something broke, sorry");
+    expect(catalogue.overlay.en[KEY]).toBe("Something broke, sorry");
   });
 
   it("stores the hash of the source and marks the text stale when the source is edited", async () => {
@@ -167,7 +166,9 @@ describe("saving", () => {
       locale: "en",
       value: "An English text",
     });
-    const fresh = (await list({ search: KEY })).items.find((r) => r.key === KEY);
+    const fresh = (await list({ search: KEY })).items.find(
+      (r) => r.key === KEY
+    );
     expect(fresh?.cells.en?.stale).toBe(false);
     // An editor changes the Dutch source: the English text is stale until confirmed.
     await save({
@@ -176,7 +177,9 @@ describe("saving", () => {
       locale: "nl",
       value: "Er ging iets mis, sorry",
     });
-    const after = (await list({ search: KEY })).items.find((r) => r.key === KEY);
+    const after = (await list({ search: KEY })).items.find(
+      (r) => r.key === KEY
+    );
     expect(after?.cells.en?.stale).toBe(true);
     expect(after?.source).toBe("Er ging iets mis, sorry");
     const stale = await list({ locale: "en", status: "stale" });
@@ -332,8 +335,9 @@ describe("saving", () => {
 });
 
 describe("import and export", () => {
-  it("exports a language and imports it back with nothing to change", async () => {
-    for (const format of ["json", "csv"] as const) {
+  it.each(["json", "csv"] as const)(
+    "exports a language as %s and imports it back with nothing to change",
+    async (format) => {
       const file = await callAs<{ content: string; rows: number }>(
         translator,
         "strings.export",
@@ -348,7 +352,7 @@ describe("import and export", () => {
       expect(plan.problemCount).toBe(0);
       expect(plan.added + plan.changed).toBe(0);
     }
-  });
+  );
 
   it("previews without writing and applies once, audited with the row count", async () => {
     await addLanguage(admin, "de", "Deutsch", "de-BE");
@@ -371,7 +375,9 @@ describe("import and export", () => {
     // The dry run wrote nothing.
     expect(await auditRowsSince(mark)).toHaveLength(0);
     expect(await i18nVersion()).toBe(before);
-    expect((await list({ locale: "de", status: "missing" })).total).toBeGreaterThan(1700);
+    expect(
+      (await list({ locale: "de", status: "missing" })).total
+    ).toBeGreaterThan(1700);
 
     const applied = await callAs<StringsImportResult>(
       translator,
@@ -389,7 +395,7 @@ describe("import and export", () => {
       targetType: "ui_string",
     });
     expect(await i18nVersion()).not.toBe(before);
-    const row = (await list({ search: KEY, limit: 200 })).items.find(
+    const row = (await list({ limit: 200, search: KEY })).items.find(
       (r) => r.key === KEY
     );
     expect(row?.cells.de).toMatchObject({
@@ -398,11 +404,15 @@ describe("import and export", () => {
       value: "Etwas ging schief",
     });
     // A second apply finds nothing to change and writes no audit row.
-    const again = await callAs<StringsImportResult>(translator, "strings.import", {
-      content,
-      format: "json",
-      locale: "de",
-    });
+    const again = await callAs<StringsImportResult>(
+      translator,
+      "strings.import",
+      {
+        content,
+        format: "json",
+        locale: "de",
+      }
+    );
     expect(again.applied).toBe(0);
     expect(await auditRowsSince(mark)).toHaveLength(1);
   });
@@ -410,10 +420,14 @@ describe("import and export", () => {
   it("imports a CSV with several languages, counts them as a file with no single target", async () => {
     const content = `key,en,fr\r\n${KEY},English one,Francais un\r\n`;
     const mark = await auditMark();
-    const result = await callAs<StringsImportResult>(translator, "strings.import", {
-      content,
-      format: "csv",
-    });
+    const result = await callAs<StringsImportResult>(
+      translator,
+      "strings.import",
+      {
+        content,
+        format: "csv",
+      }
+    );
     expect(result.applied).toBe(2);
     const [audit] = await auditRowsSince(mark);
     expect(audit).toMatchObject({ targetId: null, targetType: "ui_string" });

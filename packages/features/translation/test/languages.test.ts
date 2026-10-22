@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
-import { loadLanguages } from "@smog/i18n/server";
 import { uiCatalogueSource } from "@smog/db";
+import { loadLanguages } from "@smog/i18n/server";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { LanguageRow } from "../src/schema";
 import {
@@ -29,9 +29,8 @@ beforeEach(async () => {
 });
 
 async function languages(): Promise<LanguageRow[]> {
-  return (
-    await callAs<{ items: LanguageRow[] }>(translator, "languages.list")
-  ).items;
+  return (await callAs<{ items: LanguageRow[] }>(translator, "languages.list"))
+    .items;
 }
 
 describe("the language list", () => {
@@ -131,9 +130,9 @@ describe("changing a language", () => {
       targetId: "en",
       targetType: "language",
     });
-    expect(
-      ((audit?.data as { fields: string[] }).fields ?? []).sort()
-    ).toEqual(["enabled", "name", "sortOrder"]);
+    const data = audit?.data as { fields: string[] };
+    const { fields } = data;
+    expect([...fields].sort()).toEqual(["enabled", "name", "sortOrder"]);
     // A disabled language leaves the menu and the strings table.
     const menu = await loadLanguages({
       kv: env.KV,

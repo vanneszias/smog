@@ -42,6 +42,16 @@ export function uiCatalogueSource(db: Db): {
   };
 }
 
+/** The code of the default language (the row flagged `is_default`), `null` only on a database without one. */
+export async function defaultLanguageCode(db: Db): Promise<string | null> {
+  const [row] = await db
+    .select({ code: language.code })
+    .from(language)
+    .where(eq(language.isDefault, true))
+    .limit(1);
+  return row?.code ?? null;
+}
+
 /**
  * Whether `code` is an enabled language: what a profile or a checkout may
  * name as its language (the foreign key alone would also accept a disabled one).

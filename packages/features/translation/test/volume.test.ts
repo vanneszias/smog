@@ -14,12 +14,7 @@ import {
   sourceHash,
   sourceOf,
 } from "../src/server/model";
-import {
-  type Authed,
-  callAs,
-  resetTranslationData,
-  signedUp,
-} from "./helpers";
+import { type Authed, callAs, resetTranslationData, signedUp } from "./helpers";
 
 /** Generous for a loaded CI runner; the measured time is a fraction of it. */
 const BUDGET_MS = 3000;
@@ -50,13 +45,14 @@ beforeAll(async () => {
       })
   );
   expect(rows.length).toBeGreaterThan(5400);
+  const insert = env.DB.prepare(
+    "INSERT OR REPLACE INTO ui_string (locale, key, value, source_hash, updated_at) SELECT json_extract(j.value, '$.l'), json_extract(j.value, '$.k'), json_extract(j.value, '$.v'), json_extract(j.value, '$.h'), 1 FROM json_each(?) AS j"
+  );
+  const chunks: D1PreparedStatement[] = [];
   for (let start = 0; start < rows.length; start += 500) {
-    await env.DB.prepare(
-      "INSERT OR REPLACE INTO ui_string (locale, key, value, source_hash, updated_at) SELECT json_extract(j.value, '$.l'), json_extract(j.value, '$.k'), json_extract(j.value, '$.v'), json_extract(j.value, '$.h'), 1 FROM json_each(?) AS j"
-    )
-      .bind(JSON.stringify(rows.slice(start, start + 500)))
-      .run();
+    chunks.push(insert.bind(JSON.stringify(rows.slice(start, start + 500))));
   }
+  await env.DB.batch(chunks);
 }, 60_000);
 
 describe("a catalogue with every string stored in every language", () => {
@@ -93,9 +89,9 @@ describe("a catalogue with every string stored in every language", () => {
         "coverage"
       )
     );
-    expect(coverage.languages.every((row) => row.translated === row.total)).toBe(
-      true
-    );
+    expect(
+      coverage.languages.every((row) => row.translated === row.total)
+    ).toBe(true);
     expect(coverageMs).toBeLessThan(BUDGET_MS);
     const [file, exportMs] = await timed(() =>
       callAs<{ rows: number }>(translator, "strings.export", {
@@ -116,7 +112,7 @@ describe("a catalogue with every string stored in every language", () => {
       string,
       Record<string, string>
     >;
-    const en = edited.en ?? {};
+    const en = edited.en as Record<string, string>;
     for (const key of Object.keys(en)) {
       en[key] = `${en[key]} !`;
     }

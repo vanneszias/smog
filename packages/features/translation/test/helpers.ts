@@ -173,9 +173,7 @@ export async function resetTranslationData(): Promise<void> {
   resetCatalogueCache();
   await env.DB.batch([
     env.DB.prepare("DELETE FROM ui_string"),
-    env.DB.prepare(
-      "DELETE FROM language WHERE code NOT IN ('nl', 'en', 'fr')"
-    ),
+    env.DB.prepare("DELETE FROM language WHERE code NOT IN ('nl', 'en', 'fr')"),
     env.DB.prepare(
       "UPDATE language SET enabled = 1 WHERE code IN ('nl', 'en', 'fr')"
     ),

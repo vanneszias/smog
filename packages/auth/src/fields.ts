@@ -4,7 +4,7 @@
  * `./session` or anything that references Workers types
  * (`test/client-entries.test.ts` and `tsconfig.client.json` guard that).
  */
-import { LOCALES } from "@smog/config/constants";
+import { localeCodeSchema } from "@smog/config/locale";
 import { z } from "zod";
 
 export type Role = "user" | "admin";
@@ -56,7 +56,9 @@ export const OTP_LENGTH = 6;
 
 /**
  * Our columns on Better Auth's `user` (spec §5.1): `locale` is set by the
- * client (validated `nl|en|fr`), `legacyId` only by the migration.
+ * client (a well-formed language code here; the sign-up hook replaces one
+ * that is not an enabled language with the default, `signUpLocale`),
+ * `legacyId` only by the migration.
  */
 export const USER_ADDITIONAL_FIELDS = {
   legacyId: { input: false, required: false, type: "string" },
@@ -64,7 +66,7 @@ export const USER_ADDITIONAL_FIELDS = {
     input: true,
     required: false,
     type: "string",
-    validator: { input: z.enum(LOCALES).nullish() },
+    validator: { input: localeCodeSchema.nullish() },
   },
 } as const;
 

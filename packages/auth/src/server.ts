@@ -3,6 +3,8 @@ import { expo } from "@better-auth/expo";
 import { passkey } from "@better-auth/passkey";
 import {
   account,
+  defaultLanguageCode,
+  isEnabledLanguage,
   passkey as passkeyTable,
   session,
   user,
@@ -293,6 +295,24 @@ function newUserProfile(
   return { image: null, name };
 }
 
+/**
+ * The `locale` a new account is created with, as a partial row to merge.
+ * Languages are data: a well-formed code that is not an enabled language
+ * (a disabled one, one that never existed, a stale app) becomes the default
+ * language instead of reaching the foreign key as a 500. No locale sent,
+ * nothing to add.
+ */
+async function signUpLocale(
+  db: Db,
+  data: unknown
+): Promise<{ locale?: string | null }> {
+  const locale = localeOf(data);
+  if (locale === null || (await isEnabledLanguage(db, locale))) {
+    return {};
+  }
+  return { locale: await defaultLanguageCode(db) };
+}
+
 /** The only code type a sign-in-only server sends. */
 const SIGN_IN_OTP_TYPE = "sign-in";
 
@@ -492,7 +512,12 @@ export function createAuth(options: CreateAuthOptions) {
                 message: "Sign-up is closed during maintenance",
               });
             }
-            return { data: newUserProfile(data, context?.path) };
+            return {
+              data: {
+                ...newUserProfile(data, context?.path),
+                ...(await signUpLocale(db, data)),
+              },
+            };
           },
         },
         update: {
