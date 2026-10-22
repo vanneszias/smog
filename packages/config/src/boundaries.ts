@@ -29,6 +29,7 @@ export const FEATURE_PACKAGES = [
   "@smog/account",
   "@smog/sponsorships",
   "@smog/admin",
+  "@smog/translation",
 ] as const;
 
 export const BOUNDARIES: Record<string, readonly string[]> = {

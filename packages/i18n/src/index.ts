@@ -13,6 +13,7 @@ export {
   type CatalogueOverlay,
   flattenMessages,
   isShippedLocale,
+  type MessageTree,
   pickOverlay,
   shippedMessages,
 } from "./catalogue";

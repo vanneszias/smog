@@ -1,0 +1,13 @@
+{
+  // The D1 tests (Vitest, workerd), not composite: `test/deps.ts` imports
+  // the real `bumpCatalogVersion` by relative path, as `@smog/api` wires it.
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "types": ["@cloudflare/vitest-plugin/types", "vite/client"]
+  },
+  "files": ["worker-configuration.d.ts"],
+  "include": ["test"]
+}

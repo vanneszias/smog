@@ -121,6 +121,7 @@
         "@smog/rpc": "workspace:*",
         "@smog/sponsorships": "workspace:*",
         "@smog/styles": "workspace:*",
+        "@smog/translation": "workspace:*",
         "@smog/ui-web": "workspace:*",
         "@smog/utils": "workspace:*",
         "@smog/video": "workspace:*",
@@ -200,6 +201,7 @@
         "@smog/lists": "workspace:*",
         "@smog/rpc": "workspace:*",
         "@smog/sponsorships": "workspace:*",
+        "@smog/translation": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -513,6 +515,36 @@
         "@cloudflare/vitest-plugin": "catalog:",
         "@tanstack/react-query": "catalog:",
         "@types/bun": "catalog:",
+        "@types/react": "catalog:",
+        "react": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+        "wrangler": "catalog:",
+      },
+      "peerDependencies": {
+        "@tanstack/react-query": "catalog:",
+        "react": "catalog:",
+      },
+    },
+    "packages/features/translation": {
+      "name": "@smog/translation",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/contract": "catalog:",
+        "@orpc/server": "catalog:",
+        "@smog/admin": "workspace:*",
+        "@smog/auth": "workspace:*",
+        "@smog/config": "workspace:*",
+        "@smog/db": "workspace:*",
+        "@smog/i18n": "workspace:*",
+        "@smog/rpc": "workspace:*",
+        "@smog/utils": "workspace:*",
+        "drizzle-orm": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@cloudflare/vitest-plugin": "catalog:",
+        "@tanstack/react-query": "catalog:",
         "@types/react": "catalog:",
         "react": "catalog:",
         "typescript": "catalog:",
@@ -1929,6 +1961,8 @@
     "@smog/sponsorships": ["@smog/sponsorships@workspace:packages/features/sponsorships"],
 
     "@smog/styles": ["@smog/styles@workspace:packages/styles"],
+
+    "@smog/translation": ["@smog/translation@workspace:packages/features/translation"],
 
     "@smog/ui-native": ["@smog/ui-native@workspace:packages/ui-native"],
 

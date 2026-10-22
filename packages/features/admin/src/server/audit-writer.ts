@@ -1,11 +1,8 @@
 import type { AuditTargetType } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import {
-  type AnyAuditEntry,
-  AuditDataError,
   type AuditSchemas,
   buildAuditStatement,
-  trackAudits,
   writeAuditWith,
 } from "@smog/rpc/audit";
 import {
@@ -61,12 +58,3 @@ export async function writeAudit<A extends WritableAuditAction>(
 ): Promise<void> {
   await writeAuditWith(db, WRITABLE_SCHEMAS, entry);
 }
-
-export {
-  type AnyAuditEntry,
-  AuditDataError,
-  type AuditSchemas,
-  buildAuditStatement,
-  trackAudits,
-  writeAuditWith,
-};

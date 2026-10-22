@@ -42,12 +42,12 @@ export class AuditDataError extends Error {
  * `adminProcedure` gives every call its own client and checks the list
  * after the handler (a mutation must build exactly its mapped action).
  */
-const built = new WeakMap<Db, AuditAction[]>();
+const entriesByDb = new WeakMap<Db, AuditAction[]>();
 
 /** Starts recording the audit entries built with `db`; returns the list. */
 export function trackAudits(db: Db): readonly AuditAction[] {
   const actions: AuditAction[] = [];
-  built.set(db, actions);
+  entriesByDb.set(db, actions);
   return actions;
 }
 
@@ -70,7 +70,7 @@ export function buildAuditStatement(
   if (!parsed.success) {
     throw new AuditDataError(entry.action, parsed.error);
   }
-  built.get(db)?.push(entry.action);
+  entriesByDb.get(db)?.push(entry.action);
   return db.insert(auditLog).values({
     action: entry.action,
     actorId: entry.actorId,

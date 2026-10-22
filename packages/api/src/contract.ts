@@ -7,6 +7,7 @@ import { gesturesContract } from "@smog/gestures/contract";
 import { listsContract } from "@smog/lists/contract";
 import { baseContract, roleSchema, userRolesSchema } from "@smog/rpc/contract";
 import { sponsorshipsContract } from "@smog/sponsorships/contract";
+import { translationSlice } from "@smog/translation/contract";
 import { z } from "zod";
 
 /** The public fields of the signed-in user. */
@@ -77,6 +78,7 @@ export const appContract = {
   lists: listsContract,
   sponsorships: sponsorshipsContract,
   system: systemContract,
+  translation: translationSlice,
 };
 
 export type AppContract = typeof appContract;

@@ -47,6 +47,7 @@
     "@smog/sponsorships": "workspace:*",
     "@smog/styles": "workspace:*",
     "@smog/ui-web": "workspace:*",
+    "@smog/translation": "workspace:*",
     "@smog/utils": "workspace:*",
     "@smog/video": "workspace:*",
     "@tanstack/react-query": "catalog:",
