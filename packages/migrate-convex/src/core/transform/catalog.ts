@@ -305,7 +305,13 @@ export async function catalogTransform(
     ...gestureRows.map((row) => insertRow(gesture, row, [[gesture.legacyId]])),
     ...keywordRows.map((row) =>
       insertRow(gestureKeyword, row, [
-        [gestureKeyword.gestureId, gestureKeyword.keyword],
+        // The primary key since migration 0017 (the importer writes only
+        // the default language: `locale` takes its column default, `nl`).
+        [
+          gestureKeyword.gestureId,
+          gestureKeyword.locale,
+          gestureKeyword.keyword,
+        ],
       ])
     ),
     ...linkRows.map((row) =>

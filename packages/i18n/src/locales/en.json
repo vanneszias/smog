@@ -1038,7 +1038,8 @@
           "publish": "Gesture published",
           "unpublish": "Gesture hidden",
           "delete": "Gesture deleted",
-          "bulk_update": "Gestures bulk-edited"
+          "bulk_update": "Gestures bulk-edited",
+          "recut_done": "Textless video uploaded"
         },
         "category": {
           "create": "Category created",
@@ -1053,7 +1054,9 @@
           "ban": "User banned",
           "unban": "User unbanned",
           "delete": "User deleted",
-          "impersonate": "Signed in as user"
+          "impersonate": "Signed in as user",
+          "role_grant": "Role granted",
+          "role_revoke": "Role revoked"
         },
         "sponsorship": {
           "approve": "Sponsorship approved",
@@ -1079,6 +1082,23 @@
         "dead_letter": {
           "replay": "Dead letter replayed",
           "discard": "Dead letter discarded"
+        },
+        "language": {
+          "create": "Language added",
+          "update": "Language changed"
+        },
+        "translation": {
+          "string_save": "Interface string translated",
+          "string_import": "Interface strings imported",
+          "gesture_save": "Gesture translation saved",
+          "category_save": "Category translation saved",
+          "audio_upload": "Audio uploaded",
+          "audio_delete": "Audio deleted"
+        },
+        "legal": {
+          "draft_save": "Legal text draft saved",
+          "publish": "Legal text published",
+          "restore": "Legal text restored"
         }
       },
       "targetTypes": {
@@ -1090,7 +1110,10 @@
         "list": "List",
         "setting": "Setting",
         "system": "System",
-        "dead_letter": "Dead letter"
+        "dead_letter": "Dead letter",
+        "language": "Language",
+        "ui_string": "Interface string",
+        "legal_text": "Legal text"
       }
     },
     "gestures": {

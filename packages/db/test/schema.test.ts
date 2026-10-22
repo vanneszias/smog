@@ -8,6 +8,7 @@ import {
   consentEvent,
   favorite,
   gesture,
+  gestureKeyword,
   list,
   listItem,
   listShare,
@@ -51,6 +52,13 @@ const TABLES = [
   "render_job",
   "sponsorship_event",
   "sponsorship_token",
+  "language",
+  "ui_string",
+  "gesture_translation",
+  "category_translation",
+  "gesture_audio",
+  "legal_text",
+  "user_role",
 ];
 
 const DUPLICATE_FAVORITE =
@@ -393,5 +401,32 @@ describe("schema", () => {
       with: { gestures: true },
     });
     expect(back?.gestures).toHaveLength(1);
+  });
+
+  it("binds one variable per written column on a keyword or gesture insert (D1 allows 100)", () => {
+    // `locale` and `needs_recut` have SQL defaults: a Drizzle `.default(value)`
+    // binds one more variable per row, which pushed a 30-keyword insert (4 x 30
+    // variables) over D1's limit of 100.
+    const keywords = Array.from({ length: 30 }, (_, position) => ({
+      gestureId: "g",
+      keyword: `k${position}`,
+      position,
+    }));
+    expect(
+      db.insert(gestureKeyword).values(keywords).toSQL().params
+    ).toHaveLength(90);
+    const { params } = db
+      .insert(gesture)
+      .values({
+        description: "",
+        id: "g",
+        name: "n",
+        playbackId: "p",
+        slug: "s",
+        sortName: "n",
+      })
+      .toSQL();
+    // The six values plus `created_at` and `updated_at`; not `needs_recut`.
+    expect(params).toHaveLength(8);
   });
 });

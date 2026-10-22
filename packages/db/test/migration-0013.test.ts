@@ -22,7 +22,7 @@ const ROWS = 30_000;
 const ADMIN_ID = "5eed0003-0000-4000-8000-000000000001";
 
 async function applySeed(): Promise<void> {
-  const statements = env.SEED_SQL.split("\n").filter(
+  const statements = env.LEGACY_SEED_SQL.split("\n").filter(
     (line) => line.trim() !== "" && !line.startsWith("--")
   );
   await db.batch(statements.map((line) => db.prepare(line)));
@@ -89,7 +89,11 @@ describe("migration 0013_dead_letter", () => {
     expect(indexesBefore.results.length).toBe(5);
 
     const started = Date.now();
-    await applyD1Migrations(db, env.TEST_MIGRATIONS);
+    // Only through 0013: later migrations add triggers and rebuild audit_log again.
+    await applyD1Migrations(
+      db,
+      env.TEST_MIGRATIONS.filter((migration) => migration.name < "0014")
+    );
     const elapsedMs = Date.now() - started;
     // Reported in the task; no assertion on speed (CI machines differ).
     console.log(

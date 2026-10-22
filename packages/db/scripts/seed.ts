@@ -242,8 +242,8 @@ export function buildSeedSql(): string {
         ...item.keywords.map((keyword, position) =>
           upsert(
             "gesture_keyword",
-            { gesture_id: gestureId, keyword, position },
-            ["gesture_id", "keyword"]
+            { gesture_id: gestureId, keyword, locale: "nl", position },
+            ["gesture_id", "locale", "keyword"]
           )
         ),
         ...ftsStatements(gestureId)

@@ -1061,7 +1061,8 @@
           "publish": "Geste publié",
           "unpublish": "Geste masqué",
           "delete": "Geste supprimé",
-          "bulk_update": "Gestes modifiés en masse"
+          "bulk_update": "Gestes modifiés en masse",
+          "recut_done": "Vidéo sans texte téléversée"
         },
         "category": {
           "create": "Catégorie créée",
@@ -1076,7 +1077,9 @@
           "ban": "Utilisateur bloqué",
           "unban": "Blocage levé",
           "delete": "Utilisateur supprimé",
-          "impersonate": "Connecté en tant qu’utilisateur"
+          "impersonate": "Connecté en tant qu’utilisateur",
+          "role_grant": "Rôle attribué",
+          "role_revoke": "Rôle retiré"
         },
         "sponsorship": {
           "approve": "Parrainage approuvé",
@@ -1102,6 +1105,23 @@
         "dead_letter": {
           "replay": "Dead letter rejoué",
           "discard": "Dead letter supprimé"
+        },
+        "language": {
+          "create": "Langue ajoutée",
+          "update": "Langue modifiée"
+        },
+        "translation": {
+          "string_save": "Texte d’interface traduit",
+          "string_import": "Textes d’interface importés",
+          "gesture_save": "Traduction du geste enregistrée",
+          "category_save": "Traduction de la catégorie enregistrée",
+          "audio_upload": "Audio téléversé",
+          "audio_delete": "Audio supprimé"
+        },
+        "legal": {
+          "draft_save": "Brouillon de texte juridique enregistré",
+          "publish": "Texte juridique publié",
+          "restore": "Texte juridique restauré"
         }
       },
       "targetTypes": {
@@ -1113,7 +1133,10 @@
         "list": "Liste",
         "setting": "Paramètre",
         "system": "Système",
-        "dead_letter": "Dead letter"
+        "dead_letter": "Dead letter",
+        "language": "Langue",
+        "ui_string": "Texte d’interface",
+        "legal_text": "Texte juridique"
       }
     },
     "gestures": {

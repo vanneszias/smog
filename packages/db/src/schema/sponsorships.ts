@@ -29,6 +29,7 @@ import {
   timestamp,
   updatedAt,
 } from "./columns";
+import { language } from "./language";
 import { gesture } from "./learning";
 
 /** The person who pays; one row per checkout. */
@@ -39,14 +40,15 @@ export const sponsor = sqliteTable(
     name: text("name").notNull(),
     email: text("email").notNull(),
     company: text("company"),
-    locale: text("locale", { enum: LOCALES }).notNull(),
+    locale: text("locale", { enum: LOCALES })
+      .notNull()
+      .references(() => language.code),
     createdAt: createdAt(),
   },
   (t) => [
     check("sponsor_name_length_check", lengthBetween(t.name, 1, 120)),
     check("sponsor_email_length_check", lengthBetween(t.email, 3, 254)),
     check("sponsor_company_length_check", lengthBetween(t.company, 0, 120)),
-    check("sponsor_locale_check", inValues(t.locale, LOCALES)),
     index("sponsor_email_idx").on(t.email),
     // The admin user panel and the account export match sponsors to an
     // account by `lower(email)`: migration 0010, phase 6 task 6.
