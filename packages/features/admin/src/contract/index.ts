@@ -12,6 +12,7 @@
 
 import { ADMIN_PROCEDURES as AUDIT_PROCEDURES, auditSlice } from "./audit";
 import type { AdminProcedureKind } from "./audit-map";
+import type { catalogTranslationContract } from "./catalog-translation";
 import {
   ADMIN_PROCEDURES as CATEGORIES_PROCEDURES,
   categoriesSlice,
@@ -48,6 +49,15 @@ export type {
   AuditWrite,
   ProcedurePath,
 } from "./audit-map";
+
+// biome-ignore lint/performance/noBarrelFile: the contract entry point lists every slice.
+export {
+  CATALOG_TRANSLATION_PROCEDURES,
+  catalogTranslationContract,
+} from "./catalog-translation";
+
+/** Mounted as `catalogTranslation` in `appContract`: open to a translator, see the slice. */
+export type CatalogTranslationContract = typeof catalogTranslationContract;
 
 export const adminContract = {
   ...dashboardSlice,

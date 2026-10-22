@@ -6,6 +6,10 @@ export {
   writeAudit,
 } from "./audit-writer";
 export {
+  type CatalogTranslationRouter,
+  createCatalogTranslationRouter,
+} from "./catalog-translation";
+export {
   type DeadLetterDigestDeps,
   type DeadLetterDigestResult,
   type DigestRecipient,

@@ -1,5 +1,8 @@
 import { accountContract } from "@smog/account/contract";
-import { adminContract } from "@smog/admin/contract";
+import {
+  adminContract,
+  catalogTranslationContract,
+} from "@smog/admin/contract";
 import { ENVIRONMENTS } from "@smog/config/env/worker";
 import { localeCodeSchema } from "@smog/config/locale";
 import { favoritesContract } from "@smog/favorites/contract";
@@ -72,6 +75,7 @@ export const systemContract = {
 export const appContract = {
   account: accountContract,
   admin: adminContract,
+  catalogTranslation: catalogTranslationContract,
   favorites: favoritesContract,
   gestures: gesturesContract,
   lists: listsContract,

@@ -18,6 +18,10 @@ import type { SQL } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import type { Db } from "./client";
 import { category, gesture, language } from "./schema";
+import { ref } from "./sql";
+
+/** The outer `gesture` row's name in every statement that uses these fragments. */
+const OUTER = "gesture";
 
 /** The code of the default language, as a scalar subquery. */
 export const DEFAULT_LANGUAGE_SQL: SQL = sql`(SELECT ${language.code} FROM ${language} WHERE ${language.isDefault} = 1)`;
@@ -27,7 +31,7 @@ export const DEFAULT_LANGUAGE_SQL: SQL = sql`(SELECT ${language.code} FROM ${lan
  * (its name and description are the default text).
  */
 export function gestureUntranslatedSql(locale: string): SQL {
-  return sql`NOT EXISTS (SELECT 1 FROM gesture_translation AS t WHERE t.gesture_id = ${gesture.id} AND t.locale = ${locale})`;
+  return sql`NOT EXISTS (SELECT 1 FROM gesture_translation AS t WHERE t.gesture_id = ${ref(OUTER, gesture.id)} AND t.locale = ${locale})`;
 }
 
 /**
@@ -35,7 +39,7 @@ export function gestureUntranslatedSql(locale: string): SQL {
  * comment). Always false for the default language.
  */
 export function gestureNeedsTranslationSql(locale: string): SQL {
-  return sql`(${locale} <> ${DEFAULT_LANGUAGE_SQL} AND (${gestureUntranslatedSql(locale)} OR (${gesture.description} <> '' AND EXISTS (SELECT 1 FROM gesture_translation AS t WHERE t.gesture_id = ${gesture.id} AND t.locale = ${locale} AND t.description = '')) OR (NOT EXISTS (SELECT 1 FROM gesture_keyword AS k WHERE k.gesture_id = ${gesture.id} AND k.locale = ${locale}) AND EXISTS (SELECT 1 FROM gesture_keyword AS k WHERE k.gesture_id = ${gesture.id} AND k.locale = ${DEFAULT_LANGUAGE_SQL}))))`;
+  return sql`(${locale} <> ${DEFAULT_LANGUAGE_SQL} AND (${gestureUntranslatedSql(locale)} OR (${ref(OUTER, gesture.description)} <> '' AND EXISTS (SELECT 1 FROM gesture_translation AS t WHERE t.gesture_id = ${ref(OUTER, gesture.id)} AND t.locale = ${locale} AND t.description = '')) OR (NOT EXISTS (SELECT 1 FROM gesture_keyword AS k WHERE k.gesture_id = ${ref(OUTER, gesture.id)} AND k.locale = ${locale}) AND EXISTS (SELECT 1 FROM gesture_keyword AS k WHERE k.gesture_id = ${ref(OUTER, gesture.id)} AND k.locale = ${DEFAULT_LANGUAGE_SQL}))))`;
 }
 
 /** What `translationReport` counts for one language. */
@@ -70,10 +74,10 @@ function countWhere(condition: SQL) {
 }
 
 const blankDescription = (locale: string): SQL =>
-  sql`${gesture.description} <> '' AND EXISTS (SELECT 1 FROM gesture_translation AS t WHERE t.gesture_id = ${gesture.id} AND t.locale = ${locale} AND t.description = '')`;
+  sql`${ref(OUTER, gesture.description)} <> '' AND EXISTS (SELECT 1 FROM gesture_translation AS t WHERE t.gesture_id = ${ref(OUTER, gesture.id)} AND t.locale = ${locale} AND t.description = '')`;
 
 const missingKeywords = (locale: string): SQL =>
-  sql`NOT ${gestureUntranslatedSql(locale)} AND NOT EXISTS (SELECT 1 FROM gesture_keyword AS k WHERE k.gesture_id = ${gesture.id} AND k.locale = ${locale}) AND EXISTS (SELECT 1 FROM gesture_keyword AS k WHERE k.gesture_id = ${gesture.id} AND k.locale = ${DEFAULT_LANGUAGE_SQL})`;
+  sql`NOT ${gestureUntranslatedSql(locale)} AND NOT EXISTS (SELECT 1 FROM gesture_keyword AS k WHERE k.gesture_id = ${ref(OUTER, gesture.id)} AND k.locale = ${locale}) AND EXISTS (SELECT 1 FROM gesture_keyword AS k WHERE k.gesture_id = ${ref(OUTER, gesture.id)} AND k.locale = ${DEFAULT_LANGUAGE_SQL})`;
 
 /** The counts of one language (the default language reports zeros). */
 export async function translationReport(
@@ -101,7 +105,7 @@ export async function translationReport(
       db
         .select({
           missing: countWhere(
-            sql`${notDefault} AND NOT EXISTS (SELECT 1 FROM category_translation AS t WHERE t.category_id = ${category.id} AND t.locale = ${locale})`
+            sql`${notDefault} AND NOT EXISTS (SELECT 1 FROM category_translation AS t WHERE t.category_id = ${ref("category", category.id)} AND t.locale = ${locale})`
           ),
           total: sql<number>`count(*)`.mapWith(Number),
         })
