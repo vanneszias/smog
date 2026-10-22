@@ -23,10 +23,10 @@ describe("emailMessageSchema", () => {
     expect(emailMessageSchema.parse(withoutKey)).toEqual(withoutKey);
   });
 
-  it("refuses an unknown template, locale or address and a missing id", () => {
+  it("refuses an unknown template, a malformed locale or address and a missing id", () => {
     for (const bad of [
       { ...EMAIL, template: "transactional/nope" },
-      { ...EMAIL, locale: "de" },
+      { ...EMAIL, locale: "not a locale!" },
       { ...EMAIL, to: "not-an-address" },
       { ...EMAIL, id: undefined },
       { ...EMAIL, props: "x" },
