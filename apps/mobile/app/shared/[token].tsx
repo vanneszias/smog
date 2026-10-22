@@ -176,7 +176,7 @@ export default function SharedListScreen(): ReactElement {
               </Text>
             ) : null}
             {shared.requiresSignIn ? (
-              <View className="gap-2 rounded-lg bg-surface p-4">
+              <View className="gap-2 rounded-lg bg-card p-4">
                 <Text>{t("lists.sharedView.signInToEdit")}</Text>
                 <Button
                   className="self-start"

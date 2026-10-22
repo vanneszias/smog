@@ -32,7 +32,7 @@ function ListRow({
   onOpen: (id: string) => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const muted = useColor("foregroundMuted");
+  const muted = useColor("mutedForeground");
   const shared = list.shares.view || list.shares.edit;
   const { id } = list;
   const open = useCallback(() => onOpen(id), [id, onOpen]);

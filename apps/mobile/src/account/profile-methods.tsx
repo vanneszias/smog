@@ -78,7 +78,7 @@ function Row({
   title: ReactNode;
 }): ReactElement {
   return (
-    <View className="gap-2 rounded-lg border border-border-subtle bg-surface p-4">
+    <View className="gap-2 rounded-lg border border-border-subtle bg-card p-4">
       <View className="flex-row flex-wrap items-center gap-2">{title}</View>
       {description ? (
         <Text size="body-sm" tone="muted">

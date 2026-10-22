@@ -80,7 +80,7 @@ function ReorderableRow({
 }: RowProps): ReactElement {
   const { t } = useTranslation();
   const drag = useReorderableDrag();
-  const muted = useColor("foregroundMuted");
+  const muted = useColor("mutedForeground");
   const moveUp = useCallback(() => onMove(index, index - 1), [index, onMove]);
   const moveDown = useCallback(() => onMove(index, index + 1), [index, onMove]);
   const removeThis = useCallback(() => onRemove(item), [item, onRemove]);

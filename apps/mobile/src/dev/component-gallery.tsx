@@ -441,7 +441,7 @@ function ChoiceSection(): ReactElement {
 
 function SurfacesSection(): ReactElement {
   const { t } = useTranslation();
-  const muted = useColor("foregroundMuted");
+  const muted = useColor("mutedForeground");
   return (
     <>
       <Section name="Card">
@@ -472,7 +472,7 @@ function SurfacesSection(): ReactElement {
         </Card>
       </Section>
       <Section name="ListItem">
-        <View className="overflow-hidden rounded-lg border border-border-subtle bg-surface">
+        <View className="overflow-hidden rounded-lg border border-border-subtle bg-card">
           <ListItem
             description={t("devTools.gallery.sampleText")}
             leading={<Heart color={muted} />}
