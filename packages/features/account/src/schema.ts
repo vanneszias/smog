@@ -16,7 +16,7 @@ import {
   listNameSchema,
   SHARE_ROLES,
 } from "@smog/lists/schema";
-import { roleSchema } from "@smog/rpc/contract";
+import { roleSchema, userRolesSchema } from "@smog/rpc/contract";
 import { z } from "zod";
 
 /** Favorites per import call (the rest stays on the device for the next one). */
@@ -153,6 +153,8 @@ export const meSchema = z.object({
   methods: signInMethodsSchema,
   name: z.string(),
   role: roleSchema,
+  /** translator, teacher and admin, as held now (`user_role`). */
+  roles: userRolesSchema,
 });
 
 /** What a client sends. */

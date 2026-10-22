@@ -62,9 +62,15 @@ function run(db: Database, statements: readonly string[]): unknown[][] {
 
 describe("buildGrantSql", () => {
   test("grants the role and lifts any ban, by the lower-cased email", () => {
-    expect(buildGrantSql("Anna@Smog.test")).toBe(
+    const [grant, mirror, ...rest] = buildGrantStatements("Anna@Smog.test");
+    expect(rest).toEqual([]);
+    expect(grant).toBe(
       "UPDATE user SET role = 'admin', banned = 0, ban_reason = NULL, ban_expires = NULL, updated_at = CAST(unixepoch('subsec') * 1000 AS INTEGER) WHERE email = 'anna@smog.test' RETURNING id, email, role, banned;"
     );
+    expect(mirror).toBe(
+      "INSERT OR IGNORE INTO user_role (user_id, role, granted_by, granted_at) SELECT id, 'admin', NULL, CAST(unixepoch('subsec') * 1000 AS INTEGER) FROM user WHERE email = 'anna@smog.test' RETURNING user_id, role;"
+    );
+    expect(buildGrantSql("Anna@Smog.test")).toBe(`${grant} ${mirror}`);
   });
 
   test("escapes single quotes", () => {
@@ -96,18 +102,22 @@ describe("buildGrantSql with create (ruling 18)", () => {
       create: true,
       id: ID,
     });
-    const [insert, grant, ...rest] = statements;
+    const [insert, grant, mirror, ...rest] = statements;
     expect(rest).toEqual([]);
     expect(
       buildGrantSql(" First@Example.TEST ", { create: true, id: ID })
-    ).toBe(`${insert} ${grant}`);
+    ).toBe(`${insert} ${grant} ${mirror}`);
     expect(insert).toStartWith("INSERT INTO user (");
     expect(insert).toContain("ON CONFLICT (email) DO NOTHING");
-    expect(grant).toBe(buildGrantSql("first@example.test"));
+    expect(grant).toBe(buildGrantStatements("first@example.test")[0]);
 
     const db = migrated();
     const [created, granted] = run(db, statements);
     expect(created).toEqual([{ created_id: ID }]);
+    // The new admin has its row in user_role (the set the guards read).
+    expect(db.query("SELECT user_id, role FROM user_role").all()).toEqual([
+      { role: "admin", user_id: ID },
+    ]);
     expect(granted).toEqual([
       { banned: 0, email: "first@example.test", id: ID, role: "admin" },
     ]);
@@ -170,6 +180,35 @@ describe("buildGrantSql with create (ruling 18)", () => {
     );
     expect(created).toEqual([]);
     expect(users(db)).toHaveLength(2);
+  });
+
+  test("mirrors into user_role without the triggers' help, and keeps the other roles", () => {
+    const db = migrated();
+    insertUser(db, { email: "anna@example.test", id: OTHER_ID, role: "user" });
+    db.run(
+      "INSERT INTO user_role (user_id, role, granted_by, granted_at) VALUES (?, 'translator', NULL, 1)",
+      [OTHER_ID]
+    );
+    run(db, buildGrantStatements("anna@example.test"));
+    const roles = () =>
+      db
+        .query("SELECT role FROM user_role WHERE user_id = ? ORDER BY role")
+        .all(OTHER_ID);
+    expect(roles()).toEqual([{ role: "admin" }, { role: "translator" }]);
+
+    // A legacy `admin` with no row (drift) gets its row from the statement.
+    db.run("DROP TRIGGER user_role_mirror_revoke");
+    db.run("DROP TRIGGER user_role_keep_one_admin_delete");
+    db.run(
+      "DELETE FROM user_role WHERE user_id = ? AND role = 'admin'",
+      [OTHER_ID]
+    );
+    expect(roles()).toEqual([{ role: "translator" }]);
+    run(db, buildGrantStatements("anna@example.test"));
+    expect(roles()).toEqual([{ role: "admin" }, { role: "translator" }]);
+    // Running it again adds nothing.
+    run(db, buildGrantStatements("anna@example.test"));
+    expect(roles()).toHaveLength(2);
   });
 
   test("never sets any role but admin", () => {

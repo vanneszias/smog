@@ -7,20 +7,22 @@ import {
   gesture,
   list,
   passkey,
-  type Role,
   session,
   sponsorship,
   type User,
   user,
   userBanInForce,
+  userRole,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
+import { USER_ROLES, type UserRole } from "@smog/db/enums";
 import { decodeCursorAs, encodeCursor, InvalidCursorError } from "@smog/utils";
 import {
   and,
   count,
   desc,
   eq,
+  getTableColumns,
   gt,
   lt,
   lte,
@@ -28,7 +30,9 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import {
+  type AdminRoleFilter,
   type AdminUser,
   type AdminUserDetail,
   type AdminUserListQuery,
@@ -36,7 +40,11 @@ import {
   USER_SPONSORSHIPS_MAX,
   type UserGuardReason,
 } from "../schema";
-import { auditStatement, writeAudit } from "./audit-writer";
+import {
+  type AuditEntryInput,
+  auditStatement,
+  writeAudit,
+} from "./audit-writer";
 import { type AdminDeps, adminProcedure } from "./procedure";
 import { aliased } from "./sql";
 
@@ -105,7 +113,31 @@ function isBannedNow(row: Pick<User, "banExpires" | "banned">): boolean {
   );
 }
 
-function toAdminUser(row: User): AdminUser {
+/** `group_concat(role)` of `user_role`, as roles in `USER_ROLES` order. */
+function parseRoles(csv: string | null): UserRole[] {
+  const held = csv ? csv.split(",") : [];
+  return USER_ROLES.filter((role) => held.includes(role));
+}
+
+/** The roles as a `group_concat` over the account's `user_role` rows. */
+const rolesCsv = sql<
+  string | null
+>`(SELECT group_concat(ur.role) FROM user_role AS ur WHERE ur.user_id = ${user.id})`;
+
+/**
+ * The `role` filter: `user` is an account holding no role, any other value
+ * an account holding that row (`user_role`'s primary key is a seek).
+ */
+function roleFilter(role: AdminRoleFilter | undefined): SQL | undefined {
+  if (role === undefined) {
+    return;
+  }
+  return role === "user"
+    ? sql`NOT EXISTS (SELECT 1 FROM user_role AS ur WHERE ur.user_id = ${user.id})`
+    : sql`EXISTS (SELECT 1 FROM user_role AS ur WHERE ur.user_id = ${user.id} AND ur.role = ${role})`;
+}
+
+function toAdminUser(row: User, roles: UserRole[]): AdminUser {
   const banned = isBannedNow(row);
   return {
     banExpires: banned ? (row.banExpires?.getTime() ?? null) : null,
@@ -116,7 +148,7 @@ function toAdminUser(row: User): AdminUser {
     emailVerified: row.emailVerified,
     id: row.id,
     name: row.name,
-    role: row.role,
+    roles,
   };
 }
 
@@ -130,11 +162,11 @@ async function listUsers(
   const now = new Date();
   try {
     const rows = await db
-      .select()
+      .select({ ...getTableColumns(user), roles: rolesCsv })
       .from(user)
       .where(
         and(
-          role ? eq(user.role, role) : undefined,
+          roleFilter(role),
           banFilter(banned, now),
           q ? matches(q) : undefined,
           position ? before(position) : undefined
@@ -145,7 +177,9 @@ async function listUsers(
     const page = rows.slice(0, limit);
     const last = page.at(-1);
     return {
-      items: page.map(toAdminUser),
+      items: page.map(({ roles, ...row }) =>
+        toAdminUser(row, parseRoles(roles))
+      ),
       nextCursor:
         rows.length > limit && last
           ? encodeCursor([last.createdAt.getTime(), last.id])
@@ -200,28 +234,43 @@ export function userSponsorshipsQuery(db: Db, userId: string) {
 async function getUser(db: Db, id: string): Promise<AdminUserDetail | null> {
   const now = new Date();
   try {
-    const [rows, providers, passkeys, sessions, favorites, lists, sponsored] =
-      await db.batch([
-        db.select().from(user).where(eq(user.id, id)).limit(1),
-        db
-          .select({ providerId: account.providerId })
-          .from(account)
-          .where(eq(account.userId, id)),
-        db.select({ n: count() }).from(passkey).where(eq(passkey.userId, id)),
-        db
-          .select({ n: count() })
-          .from(session)
-          .where(and(eq(session.userId, id), gt(session.expiresAt, now))),
-        db.select({ n: count() }).from(favorite).where(eq(favorite.userId, id)),
-        db.select({ n: count() }).from(list).where(eq(list.ownerId, id)),
-        userSponsorshipsQuery(db, id),
-      ]);
+    const [
+      rows,
+      providers,
+      passkeys,
+      sessions,
+      favorites,
+      lists,
+      sponsored,
+      held,
+    ] = await db.batch([
+      db.select().from(user).where(eq(user.id, id)).limit(1),
+      db
+        .select({ providerId: account.providerId })
+        .from(account)
+        .where(eq(account.userId, id)),
+      db.select({ n: count() }).from(passkey).where(eq(passkey.userId, id)),
+      db
+        .select({ n: count() })
+        .from(session)
+        .where(and(eq(session.userId, id), gt(session.expiresAt, now))),
+      db.select({ n: count() }).from(favorite).where(eq(favorite.userId, id)),
+      db.select({ n: count() }).from(list).where(eq(list.ownerId, id)),
+      userSponsorshipsQuery(db, id),
+      db
+        .select({ role: userRole.role })
+        .from(userRole)
+        .where(eq(userRole.userId, id)),
+    ]);
     const [row] = rows;
     if (!row) {
       return null;
     }
     return {
-      ...toAdminUser(row),
+      ...toAdminUser(
+        row,
+        USER_ROLES.filter((role) => held.some((item) => item.role === role))
+      ),
       favorites: favorites[0]?.n ?? 0,
       lists: lists[0]?.n ?? 0,
       methods: signInMethods(providers, passkeys[0]?.n ?? 0),
@@ -246,24 +295,24 @@ async function getUser(db: Db, id: string): Promise<AdminUserDetail | null> {
 
 /** What the guards (ruling 7) look at, read before any change. */
 export interface UserActionCheck {
-  action: "ban" | "delete" | "setRole" | "unban";
+  action: "ban" | "delete" | "grantRole" | "revokeRole" | "unban";
   actorId: string;
   /**
    * The admins other than the target whose ban is not in force; read only
-   * for a demotion.
+   * to revoke the admin role.
    */
   otherAdmins: number;
-  /** `setRole`: the role asked for. */
-  role?: Role | undefined;
-  target: { bannedNow: boolean; id: string; role: Role };
+  /** `grantRole` and `revokeRole`: the role asked for. */
+  role?: UserRole | undefined;
+  target: { bannedNow: boolean; id: string; roles: readonly UserRole[] };
 }
 
 /**
  * Why the action is refused, or `null` when it may run (ruling 7): no
  * change to one's own account, no no-op, the last admin in good standing
- * stays one, a banned account is not promoted, and an admin is demoted
- * before a ban or a delete. The read is the fast path: migration 0007's
- * trigger makes the last-admin rule atomic for demotions.
+ * keeps the role, a banned account is not made admin, and an admin loses
+ * the role before a ban or a delete. The read is the fast path: migration
+ * 0020's trigger makes the last-admin rule atomic.
  */
 export function userActionRefusal(
   check: UserActionCheck
@@ -272,24 +321,18 @@ export function userActionRefusal(
   if (target.id === check.actorId) {
     return "self";
   }
+  if (action === "grantRole" || action === "revokeRole") {
+    return roleRefusal(check);
+  }
+  const isAdmin = target.roles.includes("admin");
   switch (action) {
-    case "setRole":
-      if (check.role === target.role) {
-        return "unchanged";
-      }
-      if (check.role === "admin") {
-        return target.bannedNow ? "targetBanned" : null;
-      }
-      return target.role === "admin" && check.otherAdmins < 1
-        ? "lastAdmin"
-        : null;
     case "ban":
-      if (target.role === "admin") {
+      if (isAdmin) {
         return "adminTarget";
       }
       return target.bannedNow ? "alreadyBanned" : null;
     case "delete":
-      return target.role === "admin" ? "adminTarget" : null;
+      return isAdmin ? "adminTarget" : null;
     case "unban":
       return target.bannedNow ? null : "notBanned";
     default:
@@ -297,23 +340,71 @@ export function userActionRefusal(
   }
 }
 
+/** The grant and revoke guards of `userActionRefusal`. */
+function roleRefusal(check: UserActionCheck): UserGuardReason | null {
+  const { role, target } = check;
+  const held = role !== undefined && target.roles.includes(role);
+  if (check.action === "grantRole") {
+    if (held) {
+      return "unchanged";
+    }
+    return role === "admin" && target.bannedNow ? "targetBanned" : null;
+  }
+  if (!held) {
+    return "unchanged";
+  }
+  return role === "admin" && check.otherAdmins < 1 ? "lastAdmin" : null;
+}
+
 async function findUser(db: Db, id: string): Promise<User | undefined> {
   return await db.query.user.findFirst({ where: eq(user.id, id) });
+}
+
+/** The roles the account holds, in `USER_ROLES` order. */
+async function rolesOf(db: Db, userId: string): Promise<UserRole[]> {
+  const rows = await db
+    .select({ role: userRole.role })
+    .from(userRole)
+    .where(eq(userRole.userId, userId));
+  return USER_ROLES.filter((role) => rows.some((row) => row.role === role));
 }
 
 /** The admins other than `targetId` whose ban is not in force. */
 async function otherActiveAdmins(db: Db, targetId: string): Promise<number> {
   const [row] = await db
     .select({ n: count() })
-    .from(user)
+    .from(userRole)
+    .innerJoin(user, eq(user.id, userRole.userId))
     .where(
       and(
-        eq(user.role, "admin"),
+        eq(userRole.role, "admin"),
         sql`${user.id} <> ${targetId}`,
         sql`NOT ${banInForce(new Date())}`
       )
     );
   return row?.n ?? 0;
+}
+
+/** A user write's target as the guards read it: the row, its roles, its ban. */
+async function targetOf(
+  db: Db,
+  id: string
+): Promise<{
+  bannedNow: boolean;
+  id: string;
+  roles: UserRole[];
+  row: User;
+} | null> {
+  const row = await findUser(db, id);
+  if (!row) {
+    return null;
+  }
+  return {
+    bannedNow: isBannedNow(row),
+    id: row.id,
+    roles: await rolesOf(db, id),
+    row,
+  };
 }
 
 async function liveSessions(db: Db, userId: string): Promise<number> {
@@ -330,7 +421,50 @@ async function reread(db: Db, id: string): Promise<AdminUser> {
   if (!row) {
     throw new Error(`[admin] The user ${id} vanished after the change`);
   }
-  return toAdminUser(row);
+  return toAdminUser(row, await rolesOf(db, id));
+}
+
+/** The unique-key failure of a grant that lost the race to the same grant. */
+function isDuplicateRole(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current instanceof Error; depth += 1) {
+    if (current.message.includes("UNIQUE constraint failed: user_role")) {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
+}
+
+/**
+ * One D1 batch: the role change and its audit entry, both or neither (the
+ * change never lands unaudited). The last-admin trigger's abort is
+ * `INVALID_STATE lastAdmin`, a lost race for the same grant `unchanged`.
+ * Roles are read from D1 on every request, so the change applies on the
+ * account's next one.
+ */
+async function changeRoles(
+  db: Db,
+  errors: UserErrors,
+  verb: "grant" | "revoke",
+  change: BatchItem<"sqlite">,
+  entry: AuditEntryInput<"user.role_grant" | "user.role_revoke">
+): Promise<void> {
+  try {
+    await db.batch([change, auditStatement(db, entry)]);
+  } catch (error) {
+    console.error(
+      `[admin] Failed to write the audit entry ${entry.action} for user:${entry.targetId} with its role change (${verb} ${entry.data.role}):`,
+      error
+    );
+    if (isLastAdminAbort(error)) {
+      throw errors.INVALID_STATE({ data: { reason: "lastAdmin" } });
+    }
+    if (isDuplicateRole(error)) {
+      throw errors.INVALID_STATE({ data: { reason: "unchanged" } });
+    }
+    throw error;
+  }
 }
 
 /** The typed errors a user write answers a Better Auth refusal with. */
@@ -448,7 +582,11 @@ export function usersRoutes(_deps: AdminDeps) {
           action: "ban",
           actorId: context.user.id,
           otherAdmins: 0,
-          target: { ...target, bannedNow: isBannedNow(target) },
+          target: {
+            bannedNow: isBannedNow(target),
+            id: target.id,
+            roles: await rolesOf(context.db, target.id),
+          },
         });
         if (reason) {
           throw errors.INVALID_STATE({ data: { reason } });
@@ -488,7 +626,11 @@ export function usersRoutes(_deps: AdminDeps) {
           action: "delete",
           actorId: context.user.id,
           otherAdmins: 0,
-          target: { ...target, bannedNow: isBannedNow(target) },
+          target: {
+            bannedNow: isBannedNow(target),
+            id: target.id,
+            roles: await rolesOf(context.db, target.id),
+          },
         });
         if (reason) {
           throw errors.INVALID_STATE({ data: { reason } });
@@ -564,6 +706,43 @@ export function usersRoutes(_deps: AdminDeps) {
         }
         return detail;
       }),
+      grantRole: procedures.grantRole.handler(
+        async ({ context, errors, input }) => {
+          const target = await targetOf(context.db, input.userId);
+          if (!target) {
+            throw errors.NOT_FOUND();
+          }
+          const reason = userActionRefusal({
+            action: "grantRole",
+            actorId: context.user.id,
+            otherAdmins: 0,
+            role: input.role,
+            target,
+          });
+          if (reason) {
+            throw errors.INVALID_STATE({ data: { reason } });
+          }
+          await changeRoles(
+            context.db,
+            errors,
+            "grant",
+            context.db.insert(userRole).values({
+              grantedAt: new Date(),
+              grantedBy: context.user.id,
+              role: input.role,
+              userId: target.id,
+            }),
+            {
+              action: "user.role_grant",
+              actorId: context.user.id,
+              data: { role: input.role },
+              targetId: target.id,
+              targetType: "user",
+            }
+          );
+          return { user: await reread(context.db, target.id) };
+        }
+      ),
       list: procedures.list.handler(async ({ context, errors, input }) => {
         try {
           return await listUsers(context.db, input);
@@ -576,38 +755,45 @@ export function usersRoutes(_deps: AdminDeps) {
           throw error;
         }
       }),
-      setRole: procedures.setRole.handler(
+      revokeRole: procedures.revokeRole.handler(
         async ({ context, errors, input }) => {
-          const target = await findUser(context.db, input.userId);
+          const target = await targetOf(context.db, input.userId);
           if (!target) {
             throw errors.NOT_FOUND();
           }
-          const demotion = target.role === "admin" && input.role !== "admin";
           const reason = userActionRefusal({
-            action: "setRole",
+            action: "revokeRole",
             actorId: context.user.id,
-            otherAdmins: demotion
-              ? await otherActiveAdmins(context.db, target.id)
-              : 0,
+            otherAdmins:
+              input.role === "admin"
+                ? await otherActiveAdmins(context.db, target.id)
+                : 0,
             role: input.role,
-            target: { ...target, bannedNow: isBannedNow(target) },
+            target,
           });
           if (reason) {
             throw errors.INVALID_STATE({ data: { reason } });
           }
-          await authCall(`set the role of the user ${target.id}`, errors, () =>
-            context.auth.api.setRole({
-              body: { role: input.role, userId: target.id },
-              headers: context.request.headers,
-            })
+          await changeRoles(
+            context.db,
+            errors,
+            "revoke",
+            context.db
+              .delete(userRole)
+              .where(
+                and(
+                  eq(userRole.userId, target.id),
+                  eq(userRole.role, input.role)
+                )
+              ),
+            {
+              action: "user.role_revoke",
+              actorId: context.user.id,
+              data: { role: input.role },
+              targetId: target.id,
+              targetType: "user",
+            }
           );
-          await writeAudit(context.db, {
-            action: "user.role_change",
-            actorId: context.user.id,
-            data: { from: target.role, to: input.role },
-            targetId: target.id,
-            targetType: "user",
-          });
           return { user: await reread(context.db, target.id) };
         }
       ),
@@ -620,7 +806,11 @@ export function usersRoutes(_deps: AdminDeps) {
           action: "unban",
           actorId: context.user.id,
           otherAdmins: 0,
-          target: { ...target, bannedNow: isBannedNow(target) },
+          target: {
+            bannedNow: isBannedNow(target),
+            id: target.id,
+            roles: await rolesOf(context.db, target.id),
+          },
         });
         if (reason) {
           throw errors.INVALID_STATE({ data: { reason } });

@@ -7,6 +7,13 @@
  * - The grant: `UPDATE user SET role = 'admin'` and lifts any ban, by the
  *   lower-cased email. It only ever sets `admin`, so it never demotes, and
  *   0007's `user_keep_one_admin` trigger never fires an abort for it.
+ * - The mirror (phase 10b): `INSERT OR IGNORE INTO user_role … 'admin'`, the
+ *   set of roles the sessions and guards read. Migration 0020's triggers
+ *   already copy a promotion, but the statement makes the grant hold for an
+ *   account whose legacy value said `admin` without a row, and the script
+ *   no longer depends on the triggers. It grants only `admin` (the other
+ *   roles are the admin screen's), never removes a role, and sets
+ *   `granted_by` NULL (a script, not an admin).
  * - `create: true` first inserts the account when no account has that
  *   email: verified, role `admin`, no credential (no `account` row), name
  *   `""`, a new UUID, and `welcomed_at` set (the welcome email is for
@@ -47,7 +54,7 @@ export interface GrantSqlOptions {
 
 /**
  * The statements in order: with `create`, the insert, then always the
- * grant. Each answers with `RETURNING`, so the output shows whether a row
+ * grant and its mirror into `user_role`. Each answers with `RETURNING`, so the output shows whether a row
  * was created and the account's role afterwards.
  */
 export function buildGrantStatements(
@@ -56,14 +63,15 @@ export function buildGrantStatements(
 ): string[] {
   const normalized = quote(normalizeGrantEmail(email));
   const grant = `UPDATE user SET role = 'admin', banned = 0, ban_reason = NULL, ban_expires = NULL, updated_at = ${NOW_MS} WHERE email = ${normalized} RETURNING id, email, role, banned;`;
+  const mirror = `INSERT OR IGNORE INTO user_role (user_id, role, granted_by, granted_at) SELECT id, 'admin', NULL, ${NOW_MS} FROM user WHERE email = ${normalized} RETURNING user_id, role;`;
   if (!create) {
-    return [grant];
+    return [grant, mirror];
   }
   if (!UUID.test(id)) {
     throw new Error(`[adminGrant] Not a UUID: ${JSON.stringify(id)}`);
   }
   const insert = `INSERT INTO user (id, name, email, email_verified, image, created_at, updated_at, role, banned, locale, welcomed_at) VALUES (${quote(id)}, '', ${normalized}, 1, NULL, ${NOW_MS}, ${NOW_MS}, 'admin', 0, NULL, ${NOW_MS}) ON CONFLICT (email) DO NOTHING RETURNING id AS created_id;`;
-  return [insert, grant];
+  return [insert, grant, mirror];
 }
 
 /**

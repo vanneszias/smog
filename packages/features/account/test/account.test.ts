@@ -160,7 +160,22 @@ describe("account.me", () => {
       methods: { apple: false, google: true, passkeys: 2, password: false },
       name: "Anna",
       role: "user",
+      roles: [],
     });
+  });
+
+  it("lists the roles the user holds, in a fixed order", async () => {
+    const holder = await addUser();
+    await env.DB.prepare(
+      "INSERT INTO user_role (user_id, role, granted_at) VALUES (?, 'teacher', 1), (?, 'translator', 2)"
+    )
+      .bind(holder.id, holder.id)
+      .run();
+
+    expect((await getMe(testDb(), holder.id)).roles).toEqual([
+      "translator",
+      "teacher",
+    ]);
   });
 
   it("counts a password only for a credential account that has one", async () => {

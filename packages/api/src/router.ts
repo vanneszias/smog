@@ -44,6 +44,7 @@ const system = os.system.router({
             image: user.image ?? null,
             name: user.name,
             role: roleSchema.parse(user.role),
+            roles: user.roles,
           }
         : null,
     };

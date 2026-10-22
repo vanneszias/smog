@@ -25,6 +25,14 @@ export const baseContract = oc.errors(ERRORS);
 export const roleSchema = z.enum(["user", "admin"]);
 
 /**
+ * The roles a user holds besides being a learner (`@smog/db` `USER_ROLES`,
+ * phase 10b), for contract outputs; `admin` implies the others. A type test
+ * keeps it equal to the auth `UserRole`.
+ */
+export const userRoleSchema = z.enum(["translator", "teacher", "admin"]);
+export const userRolesSchema = z.array(userRoleSchema);
+
+/**
  * The header `requireTurnstile` reads the widget token from. Better Auth's
  * captcha plugin (the `/api/auth/*` endpoints) reads `x-captcha-response`
  * instead; the auth client sends that one.

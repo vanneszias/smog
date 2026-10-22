@@ -3,7 +3,9 @@ import { buildGrantSql, normalizeGrantEmail } from "@smog/config/admin-grant";
 
 /**
  * `bun run admin:grant --env <dev|staging|production> [--create [--yes]] [--dry-run] <email>`:
- * gives an account the `admin` role (spec §6). It runs
+ * gives an account the `admin` role (spec §6): it sets `user.role` and adds
+ * the `admin` row of `user_role`, the set the sessions and guards read (phase
+ * 10b); translator and teacher are granted on the admin users screen. It runs
  * `wrangler d1 execute DB` from `apps/site` (`--local` in dev, `--remote`
  * otherwise); `--dry-run` prints the command instead. It also lifts any
  * ban, so a banned account it recovers can sign in. The role applies on

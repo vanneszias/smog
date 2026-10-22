@@ -4,7 +4,7 @@
  *
  * Client-safe: the roles come from `@smog/db/enums` (no tables).
  */
-import { ROLES } from "@smog/db/enums";
+import { USER_ROLES } from "@smog/db/enums";
 import { z } from "zod";
 import { adminUserSponsorshipSchema } from "./sponsorships";
 
@@ -17,8 +17,18 @@ export const BAN_DAYS_MAX = 365;
 /** The longest search text. */
 export const USER_QUERY_MAX = 200;
 
-export const adminRoleSchema = z.enum(ROLES);
-export type AdminRole = z.infer<typeof adminRoleSchema>;
+/** The roles an admin can grant and revoke (phase 10b): a set per user. */
+export const userRoleSchema = z.enum(USER_ROLES);
+export type AdminRole = z.infer<typeof userRoleSchema>;
+
+/**
+ * The role filter of the list: a role held (`admin` implies the others but
+ * is a row of its own, so it lists admins only), or `user` for accounts
+ * holding no role at all.
+ */
+export const ROLE_FILTERS = ["user", ...USER_ROLES] as const;
+export const adminRoleFilterSchema = z.enum(ROLE_FILTERS);
+export type AdminRoleFilter = z.infer<typeof adminRoleFilterSchema>;
 
 const userIdSchema = z.string().min(1).max(200);
 
@@ -37,7 +47,7 @@ export const adminUserListInputSchema = z.object({
    * (`%` and `_` are no wildcards).
    */
   q: z.string().trim().min(1).max(USER_QUERY_MAX).optional(),
-  role: adminRoleSchema.optional(),
+  role: adminRoleFilterSchema.optional(),
 });
 
 export type AdminUserListInput = z.input<typeof adminUserListInputSchema>;
@@ -57,7 +67,8 @@ export const adminUserSchema = z.object({
   emailVerified: z.boolean(),
   id: z.string(),
   name: z.string(),
-  role: adminRoleSchema,
+  /** translator, teacher and admin, as held now (in that order). */
+  roles: z.array(userRoleSchema),
 });
 
 export type AdminUser = z.infer<typeof adminUserSchema>;
@@ -99,8 +110,9 @@ export const getUserInputSchema = z.object({ id: userIdSchema });
 
 export const userIdInputSchema = z.object({ userId: userIdSchema });
 
-export const setRoleInputSchema = z.object({
-  role: adminRoleSchema,
+/** `grantRole` and `revokeRole`: one role of the set. */
+export const roleInputSchema = z.object({
+  role: userRoleSchema,
   userId: userIdSchema,
 });
 
@@ -122,11 +134,13 @@ export const deleteUserInputSchema = z.object({
 /**
  * Why a user action was refused (`INVALID_STATE` `data.reason`, ruling 7),
  * before anything changed:
- * - `self`: an admin cannot change their own role, ban or delete themselves;
- * - `lastAdmin`: the last admin cannot be demoted;
+ * - `self`: an admin cannot grant or revoke their own roles, ban or delete
+ *   themselves;
+ * - `lastAdmin`: the admin role of the last admin cannot be revoked;
  * - `adminTarget`: an admin must be demoted before a ban or a delete;
- * - `targetBanned`: an account whose ban is in force is not promoted;
- * - `unchanged`: the account already has that role;
+ * - `targetBanned`: an account whose ban is in force is not made admin;
+ * - `unchanged`: the account already holds that role (grant) or does not
+ *   (revoke);
  * - `alreadyBanned` / `notBanned`: the ban is already (not) in force.
  */
 export const USER_GUARD_REASONS = [
