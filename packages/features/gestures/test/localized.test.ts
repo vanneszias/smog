@@ -301,6 +301,9 @@ describe("search in a language", () => {
     expect(await names("pup", "fr")).toEqual([]);
     // A translated gesture is not found by its Dutch name in French.
     expect(await names("hond", "fr")).toEqual([]);
+    // Nor by a Dutch keyword (an exact word of the Dutch row only).
+    expect(await names("hondje", "fr")).toEqual([]);
+    expect(await names("huisdier", "fr")).toEqual([]);
   });
 
   it("still finds an untranslated gesture by its Dutch name, flagged", async () => {

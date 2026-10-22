@@ -68,7 +68,7 @@ function draftOf(translation: Translation | undefined): TextDraft {
  * translated name, or a blank description or no keywords where the default
  * language has some (the same rule as the report and the list filter).
  */
-export function translationNeeded(
+function translationNeeded(
   gesture: TranslatableGesture,
   locale: string
 ): boolean {

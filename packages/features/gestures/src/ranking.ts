@@ -96,7 +96,7 @@ const collators = new Map<string, Intl.Collator>();
  * language). A tag `Intl` refuses (a language added as data with a malformed
  * code) sorts like the default language instead of throwing.
  */
-export function collatorFor(locale: string): Intl.Collator {
+function collatorFor(locale: string): Intl.Collator {
   let collator = collators.get(locale);
   if (!collator) {
     try {
