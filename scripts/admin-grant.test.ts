@@ -199,10 +199,9 @@ describe("buildGrantSql with create (ruling 18)", () => {
     // A legacy `admin` with no row (drift) gets its row from the statement.
     db.run("DROP TRIGGER user_role_mirror_revoke");
     db.run("DROP TRIGGER user_role_keep_one_admin_delete");
-    db.run(
-      "DELETE FROM user_role WHERE user_id = ? AND role = 'admin'",
-      [OTHER_ID]
-    );
+    db.run("DELETE FROM user_role WHERE user_id = ? AND role = 'admin'", [
+      OTHER_ID,
+    ]);
     expect(roles()).toEqual([{ role: "translator" }]);
     run(db, buildGrantStatements("anna@example.test"));
     expect(roles()).toEqual([{ role: "admin" }, { role: "translator" }]);

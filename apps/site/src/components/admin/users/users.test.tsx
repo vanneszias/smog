@@ -102,7 +102,7 @@ describe("user search", () => {
       q: undefined,
       role: undefined,
     });
-    for (const role of ["user", "translator", "teacher", "admin"]) {
+    for (const role of ["user", "translator", "teacher", "admin"] as const) {
       expect(validateUserSearch({ role }).role).toBe(role);
     }
   });

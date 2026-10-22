@@ -4,8 +4,8 @@
  * session cache here, so a change shows in the next session read).
  */
 import { account, passkey, user, userRole } from "@smog/db";
-import { USER_ROLES } from "@smog/db/enums";
 import type { Db } from "@smog/db/client";
+import { USER_ROLES } from "@smog/db/enums";
 import { count, eq } from "drizzle-orm";
 import type { Me, UpdateProfile } from "../schema";
 
@@ -55,7 +55,6 @@ export async function getMe(db: Db, userId: string): Promise<Me> {
     return {
       ...row,
       createdAt: row.createdAt.getTime(),
-      roles: USER_ROLES.filter((role) => roles.some((held) => held.role === role)),
       methods: {
         apple: has("apple"),
         google: has("google"),
@@ -65,6 +64,9 @@ export async function getMe(db: Db, userId: string): Promise<Me> {
             entry.providerId === PASSWORD_PROVIDER && Boolean(entry.password)
         ),
       },
+      roles: USER_ROLES.filter((role) =>
+        roles.some((held) => held.role === role)
+      ),
     };
   } catch (error) {
     if (!(error instanceof AccountNotFoundError)) {
