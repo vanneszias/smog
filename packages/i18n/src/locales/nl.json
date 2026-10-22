@@ -966,6 +966,18 @@
         "none": "Niets in de wachtrij",
         "renderFailed_one": "{{count}} video mislukt",
         "renderFailed_other": "{{count}} video’s mislukt"
+      },
+      "chart": {
+        "title": "In één oogopslag",
+        "description": "De sponsoringpijplijn en de stand van de catalogus.",
+        "sponsorships": "Sponsorings per fase",
+        "catalogue": "Gebaren",
+        "awaitingPayment": "Wacht op betaling",
+        "inReview": "In beoordeling",
+        "rendering": "Wordt gemaakt",
+        "live": "Live",
+        "published": "Gepubliceerd",
+        "hidden": "Verborgen"
       }
     },
     "audit": {
@@ -1934,6 +1946,14 @@
     },
     "crumb": {
       "detail": "Details"
+    },
+    "table": {
+      "columns": "Kolommen",
+      "columnsLabel": "Toon kolommen",
+      "showAll": "Toon alle kolommen",
+      "rowActions": "Acties voor {{name}}",
+      "open": "Openen",
+      "actions": "Acties"
     }
   },
   "sponsorship": {

@@ -38,6 +38,9 @@ import {
   useState,
 } from "react";
 import { useAuditTime } from "../audit-data";
+import { ColumnsMenu, useColumnVisibility } from "../data-table-parts";
+
+const PINNED_COLUMNS = ["received", "actions"] as const;
 
 /** The filters as they live in the URL (`/admin/dead-letters?…`). */
 export interface DeadLetterSearch {
@@ -463,7 +466,7 @@ export function DeadLetterTable({
     });
   }, [refetch]);
 
-  const columns = useMemo<DataTableColumn<DeadLetter>[]>(
+  const allColumns = useMemo<DataTableColumn<DeadLetter>[]>(
     () => [
       {
         cell: (letter) => (
@@ -521,6 +524,11 @@ export function DeadLetterTable({
     ],
     [ask, busy, t, time]
   );
+  const visibility = useColumnVisibility(
+    "dead-letters",
+    allColumns,
+    PINNED_COLUMNS
+  );
 
   let body: ReactNode;
   if (letters.data) {
@@ -535,7 +543,7 @@ export function DeadLetterTable({
       >
         <DataTable
           aria-labelledby={headingId}
-          columns={columns}
+          columns={visibility.columns}
           empty={t("admin.deadLetters.empty")}
           getRowId={letterId}
           rows={letters.data.items}
@@ -561,6 +569,13 @@ export function DeadLetterTable({
         <Heading className="sr-only" id={headingId} level={2}>
           {t("admin.deadLetters.title")}
         </Heading>
+        <div className="flex justify-end">
+          <ColumnsMenu
+            all={allColumns}
+            pinned={PINNED_COLUMNS}
+            visibility={visibility}
+          />
+        </div>
         {body}
       </section>
       <Pager

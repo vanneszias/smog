@@ -966,6 +966,18 @@
         "none": "Nothing waiting",
         "renderFailed_one": "{{count}} video failed",
         "renderFailed_other": "{{count}} videos failed"
+      },
+      "chart": {
+        "title": "At a glance",
+        "description": "The sponsorship pipeline and the state of the catalogue.",
+        "sponsorships": "Sponsorships by stage",
+        "catalogue": "Gestures",
+        "awaitingPayment": "Awaiting payment",
+        "inReview": "In review",
+        "rendering": "Rendering",
+        "live": "Live",
+        "published": "Published",
+        "hidden": "Hidden"
       }
     },
     "audit": {
@@ -1934,6 +1946,14 @@
     },
     "crumb": {
       "detail": "Details"
+    },
+    "table": {
+      "columns": "Columns",
+      "columnsLabel": "Show columns",
+      "showAll": "Show all columns",
+      "rowActions": "Actions for {{name}}",
+      "open": "Open",
+      "actions": "Actions"
     }
   },
   "sponsorship": {

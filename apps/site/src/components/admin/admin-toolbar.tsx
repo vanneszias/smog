@@ -11,7 +11,7 @@ import {
 } from "@smog/ui-web";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Fragment, type ReactNode } from "react";
-import { activeHref, RAIL_GROUPS } from "./admin-rail";
+import { activeHref, RAIL_GROUPS, trimSlash } from "./admin-rail";
 
 interface Crumb {
   href?: string;
@@ -20,7 +20,7 @@ interface Crumb {
 
 /** The trail for a path: Admin, the section and, below it, `new` or a detail. */
 export function crumbsFor(pathname: string): Crumb[] {
-  const path = pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
+  const path = trimSlash(pathname);
   const section = activeHref(path);
   if (!section || section === "/admin") {
     return [{ label: "admin.rail.label" }];

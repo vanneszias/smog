@@ -100,9 +100,16 @@ export const RAIL_GROUPS: readonly RailGroup[] = [
   },
 ];
 
+/** A path without its trailing slash (the root stays `/`). */
+export function trimSlash(pathname: string): string {
+  return pathname.length > 1 && pathname.endsWith("/")
+    ? pathname.slice(0, -1)
+    : pathname;
+}
+
 /** The rail item a path belongs to (the dashboard only on the exact path). */
 export function activeHref(pathname: string): string | undefined {
-  const path = pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
+  const path = trimSlash(pathname);
   if (path === "/admin") {
     return "/admin";
   }

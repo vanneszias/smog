@@ -14,12 +14,23 @@ import {
 } from "@smog/ui-web";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FolderTree, Hand, HandCoins, Plus, Users } from "lucide-react";
-import { type ReactNode, useCallback } from "react";
+import {
+  lazy,
+  type ReactNode,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { AdminPage } from "@/components/admin/admin-page";
 import { AuditEntries } from "@/components/admin/audit-table";
 import { DeadLetterStats } from "@/components/admin/dead-letters/dead-letter-stats";
 import { SponsorshipStats } from "@/components/admin/sponsorships/dashboard-stats";
 import { pageMeta } from "@/lib/head";
+
+// The chart is its own chunk, and only the browser loads it (the Worker's
+// render shows the skeleton).
+const DashboardChart = lazy(() => import("@/components/admin/dashboard-chart"));
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
@@ -107,6 +118,19 @@ function Stats({ data }: { data: Dashboard }): ReactNode {
   );
 }
 
+function ChartSlot({ data }: { data: Dashboard }): ReactNode {
+  const [browser, setBrowser] = useState(false);
+  useEffect(() => setBrowser(true), []);
+  const fallback = <Skeleton className="h-64 w-full" />;
+  return browser ? (
+    <Suspense fallback={fallback}>
+      <DashboardChart data={data} />
+    </Suspense>
+  ) : (
+    fallback
+  );
+}
+
 function RecentAudit({ data }: { data: Dashboard }): ReactNode {
   const { t } = useTranslation();
   return (
@@ -146,6 +170,7 @@ function AdminDashboard(): ReactNode {
     body = (
       <>
         <Stats data={dashboard.data} />
+        <ChartSlot data={dashboard.data} />
         <RecentAudit data={dashboard.data} />
       </>
     );

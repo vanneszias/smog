@@ -989,6 +989,18 @@
         "renderFailed_one": "{{count}} vidéo en échec",
         "renderFailed_many": "{{count}} vidéos en échec",
         "renderFailed_other": "{{count}} vidéos en échec"
+      },
+      "chart": {
+        "title": "En un coup d’œil",
+        "description": "Le parcours des parrainages et l’état du catalogue.",
+        "sponsorships": "Parrainages par étape",
+        "catalogue": "Gestes",
+        "awaitingPayment": "En attente de paiement",
+        "inReview": "En révision",
+        "rendering": "En cours de création",
+        "live": "En ligne",
+        "published": "Publiés",
+        "hidden": "Masqués"
       }
     },
     "audit": {
@@ -1972,6 +1984,14 @@
     },
     "crumb": {
       "detail": "Détails"
+    },
+    "table": {
+      "columns": "Colonnes",
+      "columnsLabel": "Afficher les colonnes",
+      "showAll": "Afficher toutes les colonnes",
+      "rowActions": "Actions pour {{name}}",
+      "open": "Ouvrir",
+      "actions": "Actions"
     }
   },
   "sponsorship": {
