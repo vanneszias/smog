@@ -15,6 +15,12 @@
  * Both parts load in one D1 batch, so the search page's SSR (the search,
  * then the categories) reads D1 at most twice, plus the session.
  *
+ * The snapshot is a per-language projection (phase 10b task 5): names,
+ * keywords and category names in that language, the default text where a
+ * gesture is untranslated. The isolate keeps at most `MAX_LOCALES` of them
+ * (the enabled languages; the least recently used goes first), all keyed by
+ * the one catalog version, so a bump drops every language at once.
+ *
  * Reads never write KV: a missing key is the fixed `INITIAL_CATALOG_VERSION`,
  * and only writers call `bumpCatalogVersion`. Only the resolved snapshot
  * (plain data) is shared between requests, never a promise: in workerd,
@@ -29,6 +35,7 @@ import type { SearchableGesture } from "../ranking";
 import type { Category } from "../schema";
 import {
   categoriesQuery,
+  DEFAULT_LOCALE,
   isPublished,
   listCategories,
   nameOrder,
@@ -57,7 +64,14 @@ interface CatalogSnapshot {
   entries: readonly CatalogEntry[];
 }
 
-let cached: { snapshot: CatalogSnapshot; version: string } | null = null;
+/** Snapshots an isolate keeps: the languages are few, and a snapshot is a few hundred short rows. */
+const MAX_LOCALES = 8;
+
+/** The snapshots of one catalog version, by language (insertion order = least recently used first). */
+let cached: {
+  snapshots: Map<string, CatalogSnapshot>;
+  version: string;
+} | null = null;
 
 /**
  * Starts a new catalog version. A fresh id rather than a counter, so two
@@ -75,14 +89,14 @@ export async function bumpCatalogVersion(kv: KVNamespace): Promise<string> {
   }
 }
 
-async function loadSnapshot(db: Db): Promise<CatalogSnapshot> {
+async function loadSnapshot(db: Db, locale: string): Promise<CatalogSnapshot> {
   const [rows, categories] = await db.batch([
     db
-      .select(projectionColumns)
+      .select(projectionColumns(locale))
       .from(gesture)
       .where(isPublished)
       .orderBy(...nameOrder),
-    categoriesQuery(db),
+    categoriesQuery(db, locale),
   ]);
   return {
     categories,
@@ -97,24 +111,40 @@ async function loadSnapshot(db: Db): Promise<CatalogSnapshot> {
 }
 
 /**
- * The snapshot for the current `catalog:version`, loaded from D1 once per
- * isolate and version. Throws when KV or D1 fails (the callers decide how
- * to go on).
+ * The snapshot of `locale` for the current `catalog:version`, loaded from D1
+ * once per isolate, language and version. Throws when KV or D1 fails (the
+ * callers decide how to go on).
  */
 async function getCatalogSnapshot(
   db: Db,
-  kv: KVNamespace
+  kv: KVNamespace,
+  locale: string
 ): Promise<CatalogSnapshot> {
   try {
     const version =
       (await kv.get(CATALOG_VERSION_KEY, {
         cacheTtl: CATALOG_VERSION_CACHE_TTL,
       })) ?? INITIAL_CATALOG_VERSION;
-    if (cached?.version === version) {
-      return cached.snapshot;
+    const known = cached?.version === version ? cached.snapshots : null;
+    const hit = known?.get(locale);
+    if (known && hit) {
+      // Most recently used last.
+      known.delete(locale);
+      known.set(locale, hit);
+      return hit;
     }
-    const snapshot = await loadSnapshot(db);
-    cached = { snapshot, version };
+    const snapshot = await loadSnapshot(db, locale);
+    // A new version drops every language; the same version adds this one.
+    const snapshots = known ?? new Map<string, CatalogSnapshot>();
+    snapshots.set(locale, snapshot);
+    while (snapshots.size > MAX_LOCALES) {
+      const [oldest] = snapshots.keys();
+      if (oldest === undefined) {
+        break;
+      }
+      snapshots.delete(oldest);
+    }
+    cached = { snapshots, version };
     return snapshot;
   } catch (error) {
     console.error("[gestures] Failed to load the catalog snapshot:", error);
@@ -122,12 +152,13 @@ async function getCatalogSnapshot(
   }
 }
 
-/** The typo tier's projection (see `getCatalogSnapshot`). */
+/** The typo tier's projection in `locale` (see `getCatalogSnapshot`). */
 export async function getCatalogProjection(
   db: Db,
-  kv: KVNamespace
+  kv: KVNamespace,
+  locale: string = DEFAULT_LOCALE
 ): Promise<readonly CatalogEntry[]> {
-  return (await getCatalogSnapshot(db, kv)).entries;
+  return (await getCatalogSnapshot(db, kv, locale)).entries;
 }
 
 /**
@@ -136,14 +167,15 @@ export async function getCatalogProjection(
  */
 export async function getCatalogCategories(
   db: Db,
-  kv: KVNamespace
+  kv: KVNamespace,
+  locale: string = DEFAULT_LOCALE
 ): Promise<Category[]> {
   let snapshot: CatalogSnapshot;
   try {
-    snapshot = await getCatalogSnapshot(db, kv);
+    snapshot = await getCatalogSnapshot(db, kv, locale);
   } catch {
     // getCatalogSnapshot logged it.
-    return await listCategories(db);
+    return await listCategories(db, locale);
   }
   return [...snapshot.categories];
 }

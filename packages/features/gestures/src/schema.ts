@@ -17,6 +17,12 @@ export const categoryRefSchema = z.object({
 export const gestureSummarySchema = z.object({
   /** Published categories only, in category order (`sort_order`, name). */
   categories: z.array(categoryRefSchema),
+  /**
+   * `true` when the viewer's language has no translation of this gesture and
+   * the name (and the rest) is the default language's text. Always `false`
+   * in the default language. The web shows it to translators and admins only.
+   */
+  fallbackUsed: z.boolean(),
   id: z.string(),
   name: z.string(),
   /** The sponsored video's playback id while a sponsorship is live or expiring. */
@@ -54,6 +60,8 @@ export const gestureBySlugSchema = gestureDetailSchema.extend({
 });
 
 export const categorySchema = z.object({
+  /** `true` when the viewer's language has no translated name (the default text). */
+  fallbackUsed: z.boolean(),
   /** Published gestures in the category. */
   gestureCount: z.number().int().nonnegative(),
   name: z.string(),
