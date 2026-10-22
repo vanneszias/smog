@@ -465,6 +465,28 @@
     "description": "Typ om een gebaar te vinden. Gebruik de pijltjestoetsen en Enter.",
     "seeAll": "Toon alle resultaten voor “{{query}}”"
   },
+  "shell": {
+    "explore": "Ontdek",
+    "supportTitle": "Steun SMOG",
+    "supportText": "Toon je naam of logo bij een gebaar."
+  },
+  "mySpace": {
+    "title": "Mijn ruimte",
+    "description": "Je favorieten en lijsten, op dit toestel of in je account.",
+    "sections": "Onderdelen van Mijn ruimte"
+  },
+  "landing": {
+    "continue": "Ga verder waar je bleef",
+    "clearRecent": "Recent bekeken gebaren wissen",
+    "clear": "Wissen",
+    "categoriesIntro": "Bekijk per thema"
+  },
+  "browse": {
+    "filters": "Filters",
+    "selected_one": "{{count}} gekozen",
+    "selected_other": "{{count}} gekozen",
+    "sheetDescription": "Kies een of meer categorieën. De resultaten passen zich meteen aan."
+  },
   "kit": {
     "close": "Sluiten",
     "clear": "Wissen",

@@ -1,6 +1,10 @@
 import type { GestureViewSource } from "@smog/analytics/schema";
 import { COURSE_URL } from "@smog/config/constants";
-import { useGestureViewed, useVideoEnd } from "@smog/gestures/client";
+import {
+  useGestureViewed,
+  useRememberGesture,
+  useVideoEnd,
+} from "@smog/gestures/client";
 import type { GestureDetail, GestureSummary } from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
 import { webAdapter } from "@smog/local-store/web";
@@ -110,6 +114,8 @@ export function GestureDetailView({
   const titleLevel = page ? 1 : 2;
   const sectionLevel = page ? 2 : 3;
   useGestureViewed(gesture.id, viewSource);
+  // Home's "continue where you left off" (this device only).
+  useRememberGesture(gesture.id);
   // video_playback_completed and the course banner, once per visit.
   const { banner: course, onNearEnd } = useVideoEnd<CourseMessageIndex>({
     gestureId: gesture.id,
@@ -121,12 +127,12 @@ export function GestureDetailView({
       <article
         className={cn(
           "grid gap-6",
-          page && "lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-10"
+          page && "lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-12"
         )}
       >
         <div
           className={cn(
-            "mx-auto flex w-full max-w-md flex-col gap-4",
+            "mx-auto flex w-full max-w-lg flex-col gap-4",
             page && "lg:mx-0 lg:max-w-none"
           )}
         >

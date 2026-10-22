@@ -465,6 +465,28 @@
     "description": "Type to find a gesture. Use the arrow keys and Enter.",
     "seeAll": "Show all results for “{{query}}”"
   },
+  "shell": {
+    "explore": "Explore",
+    "supportTitle": "Support SMOG",
+    "supportText": "Show your name or logo with a gesture."
+  },
+  "mySpace": {
+    "title": "My space",
+    "description": "Your favorites and lists, on this device or in your account.",
+    "sections": "My space sections"
+  },
+  "landing": {
+    "continue": "Continue where you left off",
+    "clearRecent": "Clear recently viewed gestures",
+    "clear": "Clear",
+    "categoriesIntro": "Browse by theme"
+  },
+  "browse": {
+    "filters": "Filters",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "sheetDescription": "Choose one or more categories. The results update as you choose."
+  },
   "kit": {
     "close": "Close",
     "clear": "Clear",

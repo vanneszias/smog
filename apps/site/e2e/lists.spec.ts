@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { signInWithApi, stubMux, waitForApp } from "./helpers";
 
 const LIST_NAME = "E2E klas";
-const LIST_URL = /\/lists\?id=/;
+const LIST_URL = /\/my\?.*\bid=/;
 const SHARE_URL = /\/lists\/[\w-]+$/;
 const REMOVE = /verwijderen$/;
 const DRAG = /^Slepen/;

@@ -19,6 +19,9 @@ export const ANDROID_PACKAGE = "be.zias.smog";
 
 export const RECENT_SEARCHES_MAX = 10;
 
+/** Gestures kept for "continue where you left off" (on the device only). */
+export const RECENT_GESTURES_MAX = 6;
+
 export const LOCALES = ["nl", "en", "fr"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "nl";

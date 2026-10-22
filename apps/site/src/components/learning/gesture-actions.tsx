@@ -1,14 +1,6 @@
 import { useTranslation } from "@smog/i18n/react";
-import {
-  FavoriteButton,
-  IconButton,
-  Menu,
-  MenuContent,
-  MenuItem,
-  MenuTrigger,
-  useToast,
-} from "@smog/ui-web";
-import { Ellipsis, QrCode, Share2 } from "lucide-react";
+import { Button, FavoriteButton, useToast } from "@smog/ui-web";
+import { QrCode, Share2 } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
 import { LazyGestureQrDialog } from "@/components/lazy-gesture-qr-dialog";
 import { shareUrl, useSiteUrl } from "@/lib/share";
@@ -23,8 +15,8 @@ interface ActionGesture {
 }
 
 /**
- * The gesture's actions: the heart and "save to list" up front, share and
- * the QR code in the overflow menu (spec §16).
+ * The gesture's actions, all in view (phase 10a): the heart, "save to list",
+ * share and the QR code (spec §16).
  */
 export function GestureActions({
   gesture,
@@ -57,22 +49,12 @@ export function GestureActions({
     <div className="flex flex-wrap items-center gap-2">
       <FavoriteButton active={heart.active} onToggle={heart.onToggle} />
       <SaveToList gestureId={gesture.id} gestureName={gesture.name} />
-      <Menu>
-        <MenuTrigger asChild>
-          <IconButton
-            icon={<Ellipsis />}
-            label={t("gesture.actions", { name: gesture.name })}
-          />
-        </MenuTrigger>
-        <MenuContent align="end">
-          <MenuItem icon={<Share2 />} onSelect={share}>
-            {t("gesture.share")}
-          </MenuItem>
-          <MenuItem icon={<QrCode />} onSelect={openQr}>
-            {t("gesture.qr.open")}
-          </MenuItem>
-        </MenuContent>
-      </Menu>
+      <Button icon={<Share2 />} onClick={share} variant="secondary">
+        {t("gesture.share")}
+      </Button>
+      <Button icon={<QrCode />} onClick={openQr} variant="secondary">
+        {t("gesture.qr.open")}
+      </Button>
       <LazyGestureQrDialog
         gesture={gesture}
         onOpenChange={setQrOpen}

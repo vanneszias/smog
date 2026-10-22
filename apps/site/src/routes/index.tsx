@@ -6,16 +6,24 @@ import {
   useFeaturedGestures,
 } from "@smog/gestures/client";
 import { useTranslation } from "@smog/i18n/react";
-import { Button, ErrorState, Heading, Text } from "@smog/ui-web";
+import {
+  Button,
+  ErrorState,
+  HandIllustration,
+  Heading,
+  Text,
+} from "@smog/ui-web";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
 import { SiteAppBanner } from "@/components/app-banner";
+import { CategoryTiles } from "@/components/learning/category-tiles";
 import {
   GestureGridSkeleton,
   LinkedGestureGrid,
 } from "@/components/learning/gesture-cards";
 import { Page } from "@/components/learning/page";
+import { RecentGestures } from "@/components/learning/recent-gestures";
 import { SearchBox } from "@/components/learning/search-box";
 import { useHearts } from "@/components/learning/use-hearts";
 import { seoHead, shellHead } from "@/lib/head";
@@ -82,7 +90,9 @@ function Featured(): ReactNode {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Heading level={2}>{t("home.featured")}</Heading>
+        <Heading level={2} size="title-2">
+          {t("home.featured")}
+        </Heading>
         <Button asChild variant="ghost">
           <Link to="/gestures">
             {t("home.browseAll")}
@@ -96,32 +106,17 @@ function Featured(): ReactNode {
 }
 
 function Categories(): ReactNode {
-  const { t } = useTranslation();
   const categories = useCategories();
-  if (!categories.data || categories.data.length === 0) {
-    return null;
-  }
-  return (
-    <nav aria-label={t("search.categories")} className="flex flex-col gap-3">
-      <Heading level={2} size="title-3">
-        {t("search.categories")}
-      </Heading>
-      <ul className="flex flex-wrap gap-2">
-        {categories.data.map((category) => (
-          <li key={category.slug}>
-            <Button asChild size="sm" variant="secondary">
-              <Link search={{ category: category.slug }} to="/gestures">
-                {category.name}
-              </Link>
-            </Button>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
+  return <CategoryTiles categories={categories.data ?? []} />;
 }
 
-/** Home (spec §9): the hero with search, the categories, featured gestures. */
+/**
+ * Home (spec §9, phase 10a): the green hero (the title, the big search and
+ * a brand hand), the illustrated categories, "continue where you left off"
+ * (this device's recent gestures), the featured gestures and the one banner
+ * slot. The parts that mount after hydration (recents, the app banner) sit
+ * under what is visible first, so the hero stays put.
+ */
 function Home(): ReactNode {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -140,29 +135,46 @@ function Home(): ReactNode {
   );
 
   return (
-    <Page className="gap-10 md:gap-12">
-      <section className="flex flex-col items-center gap-6 pt-6 text-center md:pt-12">
-        <div className="flex max-w-reading flex-col gap-3">
-          <Heading level={1} size="display">
-            {t("home.title")}
-          </Heading>
-          <Text tone="muted">{t("home.tagline")}</Text>
-        </div>
-        <div className="w-full max-w-reading text-left">
-          <SearchBox
-            action="/gestures"
-            label={t("home.searchLabel")}
-            onSubmit={submit}
-            onValueChange={setText}
-            placeholder={t("home.searchPlaceholder")}
-            value={text}
+    <>
+      <section className="relative overflow-hidden bg-primary text-primary-foreground">
+        <div className="mx-auto grid w-full max-w-content items-center gap-8 px-4 py-10 md:px-6 md:py-16 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:px-8">
+          <div className="flex flex-col gap-6">
+            <div className="flex max-w-reading flex-col gap-3">
+              <Heading
+                className="text-primary-foreground"
+                level={1}
+                size="display"
+              >
+                {t("home.title")}
+              </Heading>
+              <Text className="text-primary-foreground">
+                {t("home.tagline")}
+              </Text>
+            </div>
+            <div className="w-full max-w-reading">
+              <SearchBox
+                action="/gestures"
+                label={t("home.searchLabel")}
+                onSubmit={submit}
+                onValueChange={setText}
+                placeholder={t("home.searchPlaceholder")}
+                value={text}
+              />
+            </div>
+          </div>
+          <HandIllustration
+            className="hidden h-64 justify-self-end text-primary-foreground/25 lg:inline-flex"
+            hand={1}
           />
         </div>
       </section>
-      {/* Under the hero: it mounts after hydration, so the hero stays put (review M6). */}
-      <SiteAppBanner />
-      <Categories />
-      <Featured />
-    </Page>
+      <Page className="gap-10 md:gap-14">
+        <Categories />
+        <RecentGestures />
+        <Featured />
+        {/* The one banner slot: it mounts after hydration, below the fold (review M6). */}
+        <SiteAppBanner />
+      </Page>
+    </>
   );
 }

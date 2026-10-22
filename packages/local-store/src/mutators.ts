@@ -1,4 +1,7 @@
-import { RECENT_SEARCHES_MAX } from "@smog/config/constants";
+import {
+  RECENT_GESTURES_MAX,
+  RECENT_SEARCHES_MAX,
+} from "@smog/config/constants";
 import { newId } from "@smog/utils";
 import type { GuestData, LocalList } from "./schema";
 
@@ -56,6 +59,35 @@ export function addRecentSearch(query: string): Mutator {
 
 export function clearRecentSearches(): Mutator {
   return (data) => ({ ...data, recentSearches: [] });
+}
+
+// Recent gestures
+
+/** Newest first, deduped, the last `RECENT_GESTURES_MAX`; a repeat of the front changes nothing. */
+export function addRecentGesture(gestureId: string): Mutator {
+  return (data) => {
+    const current = data.preferences.recentGestureIds ?? [];
+    if (gestureId === "" || current[0] === gestureId) {
+      return data;
+    }
+    return {
+      ...data,
+      preferences: {
+        ...data.preferences,
+        recentGestureIds: [
+          gestureId,
+          ...current.filter((id) => id !== gestureId),
+        ].slice(0, RECENT_GESTURES_MAX),
+      },
+    };
+  };
+}
+
+export function clearRecentGestures(): Mutator {
+  return (data) => ({
+    ...data,
+    preferences: { ...data.preferences, recentGestureIds: [] },
+  });
 }
 
 // Lists
