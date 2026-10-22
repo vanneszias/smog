@@ -489,12 +489,12 @@ test.describe("keyboard: the sponsor cards", () => {
 test.describe("keyboard: focus is always visible", () => {
   /**
    * The ring: a 2 px shadow (offset 2 px) on the focused control, in the
-   * `focus-ring` colour, or in `sidebar-ring` (white) on the green header.
+   * `ring` colour, or in `sidebar-ring` (white) on the green header.
    */
   async function expectRing(
     page: Page,
     control: Locator,
-    tokenName = "focus-ring"
+    tokenName = "ring"
   ): Promise<void> {
     await control.focus();
     await page.keyboard.press("Shift+Tab");

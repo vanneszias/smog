@@ -61,6 +61,7 @@ describe("retired colour names", () => {
   test("no source uses one", () => {
     const roots = [
       "apps/site/src",
+      "apps/site/e2e",
       "apps/mobile/app",
       "apps/mobile/src",
       ...readdirSync(join(ROOT, "packages/features")).map((name) =>
