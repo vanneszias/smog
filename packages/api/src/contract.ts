@@ -4,11 +4,7 @@ import { ENVIRONMENTS } from "@smog/config/env/worker";
 import { favoritesContract } from "@smog/favorites/contract";
 import { gesturesContract } from "@smog/gestures/contract";
 import { listsContract } from "@smog/lists/contract";
-import {
-  baseContract,
-  roleSchema,
-  userRolesSchema,
-} from "@smog/rpc/contract";
+import { baseContract, roleSchema, userRolesSchema } from "@smog/rpc/contract";
 import { sponsorshipsContract } from "@smog/sponsorships/contract";
 import { z } from "zod";
 

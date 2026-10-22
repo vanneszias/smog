@@ -1,13 +1,22 @@
 import { isContractProcedure, oc } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { ADMIN_PROCEDURE_KINDS } from "@smog/admin/contract";
-import { loadSession } from "@smog/rpc";
+import { loadSession, teacherProcedure, translatorProcedure } from "@smog/rpc";
 import { makeRpcContext, makeSession } from "@smog/rpc/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { appContract } from "../src/contract";
 import { appRouter } from "../src/index";
 
 /*
+ * Phase 10b: roles are a set (translator, teacher, admin; `admin` implies
+ * the others). The levels `translator` and `teacher` are for the procedures
+ * the translation tasks add (a row each, with the same checks as `admin`:
+ * UNAUTHORIZED for a guest, FORBIDDEN for a user or the other role, a pass
+ * for the role and for an admin); until they exist the cross-role tests
+ * below run every admin row as a translator and a teacher (FORBIDDEN) and a
+ * stub router built on `translatorProcedure` / `teacherProcedure` proves the
+ * guards (an admin passes both).
+ *
  * The authorization table (phase 3 review M11, phase 9 task 8): every leaf
  * of the real router, the admin router included, appears in `PROCEDURES`
  * with its level, and the middleware is shown to enforce that level with an
@@ -40,7 +49,15 @@ import { appRouter } from "../src/index";
  * middlewares), so the admin rows need no input.
  */
 
-type Level = "admin" | "public" | "session" | "token" | "verified" | "webhook";
+type Level =
+  | "admin"
+  | "public"
+  | "session"
+  | "teacher"
+  | "token"
+  | "translator"
+  | "verified"
+  | "webhook";
 type AdminKind = "audit" | "exempt" | "read";
 
 interface Row {
@@ -117,8 +134,9 @@ const PROCEDURES: Record<string, Row> = {
     "users.ban": "audit",
     "users.delete": "audit",
     "users.get": "read",
+    "users.grantRole": "audit",
     "users.list": "read",
-    "users.setRole": "audit",
+    "users.revokeRole": "audit",
     "users.unban": "audit",
   }),
   "favorites.add": { input: { gestureId: "g" }, level: "session" },
@@ -203,13 +221,24 @@ function tableProblems(
   };
 }
 
-type Who = "admin" | "anonymous" | "banned" | "user";
+type Who = "admin" | "anonymous" | "banned" | "teacher" | "translator" | "user";
+
+function sessionFor(who: Who) {
+  switch (who) {
+    case "anonymous":
+    case "banned":
+      // A banned user's session is gone (`getSession` reads D1 every time).
+      return null;
+    case "translator":
+    case "teacher":
+      return makeSession("user", [who]);
+    default:
+      return makeSession(who);
+  }
+}
 
 function contextFor(who: Who) {
-  // A banned user's session is gone (`getSession` reads D1 every time).
-  const session =
-    who === "anonymous" || who === "banned" ? null : makeSession(who);
-  return makeRpcContext({ session });
+  return makeRpcContext({ session: sessionFor(who) });
 }
 
 /** The error code a call ends with, or `ok`. */
@@ -278,7 +307,20 @@ describe("the authorization table", () => {
 
   it("uses the oRPC levels only: no procedure claims `verified` or `webhook`", () => {
     const levels = new Set(Object.values(PROCEDURES).map((row) => row.level));
-    expect([...levels].sort()).toEqual(["admin", "public", "session", "token"]);
+    const allowed: Level[] = [
+      "admin",
+      "public",
+      "session",
+      "teacher",
+      "token",
+      "translator",
+    ];
+    for (const level of levels) {
+      expect(allowed).toContain(level);
+    }
+    for (const level of ["admin", "public", "session", "token"] as const) {
+      expect(levels.has(level)).toBe(true);
+    }
   });
 
   it("agrees with the admin kinds: a row per admin procedure, writes audited", () => {
@@ -314,8 +356,12 @@ describe("anonymous calls", () => {
           "UNAUTHORIZED"
         );
       });
-    } else if (row.level === "admin") {
-      it(`${path} (admin) is UNAUTHORIZED`, async () => {
+    } else if (
+      row.level === "admin" ||
+      row.level === "translator" ||
+      row.level === "teacher"
+    ) {
+      it(`${path} (${row.level}) is UNAUTHORIZED`, async () => {
         expect(await outcome(path, "anonymous", undefined)).toBe(
           "UNAUTHORIZED"
         );
@@ -333,9 +379,24 @@ describe("anonymous calls", () => {
 describe("signed-in and admin calls", () => {
   for (const [path, row] of rows) {
     if (row.level === "admin") {
-      it(`${path} (admin) is FORBIDDEN for a user and let through for an admin`, async () => {
+      it(`${path} (admin) is FORBIDDEN for a user, a translator and a teacher, let through for an admin`, async () => {
         expect(await outcome(path, "user", undefined)).toBe("FORBIDDEN");
+        expect(await outcome(path, "translator", undefined)).toBe("FORBIDDEN");
+        expect(await outcome(path, "teacher", undefined)).toBe("FORBIDDEN");
         expect(refusedByGuard(await outcome(path, "admin", undefined))).toBe(
+          false
+        );
+      });
+    } else if (row.level === "translator" || row.level === "teacher") {
+      const holder = row.level;
+      const other = holder === "translator" ? "teacher" : "translator";
+      it(`${path} (${holder}) is FORBIDDEN for a user and the ${other}, let through for the ${holder} and an admin`, async () => {
+        expect(await outcome(path, "user", row.input)).toBe("FORBIDDEN");
+        expect(await outcome(path, other, row.input)).toBe("FORBIDDEN");
+        expect(refusedByGuard(await outcome(path, holder, row.input))).toBe(
+          false
+        );
+        expect(refusedByGuard(await outcome(path, "admin", row.input))).toBe(
           false
         );
       });
@@ -403,6 +464,43 @@ describe("a banned user (through the shared session interceptor)", () => {
       });
     }
   }
+});
+
+describe("the role guards (a stub router on the real builders)", () => {
+  const translate = translatorProcedure.handler(
+    () => "translated"
+  ) as unknown as Parameters<typeof call>[0];
+  const teach = teacherProcedure.handler(
+    () => "taught"
+  ) as unknown as Parameters<typeof call>[0];
+
+  async function code(
+    procedure: Parameters<typeof call>[0],
+    who: Who
+  ): Promise<string> {
+    try {
+      await call(procedure, undefined, { context: contextFor(who) });
+      return "ok";
+    } catch (error) {
+      return (error as { code?: string }).code ?? "ERROR";
+    }
+  }
+
+  it("a translator procedure: guests UNAUTHORIZED, user and teacher FORBIDDEN, translator and admin pass", async () => {
+    expect(await code(translate, "anonymous")).toBe("UNAUTHORIZED");
+    expect(await code(translate, "user")).toBe("FORBIDDEN");
+    expect(await code(translate, "teacher")).toBe("FORBIDDEN");
+    expect(await code(translate, "translator")).toBe("ok");
+    expect(await code(translate, "admin")).toBe("ok");
+  });
+
+  it("a teacher procedure: guests UNAUTHORIZED, user and translator FORBIDDEN, teacher and admin pass", async () => {
+    expect(await code(teach, "anonymous")).toBe("UNAUTHORIZED");
+    expect(await code(teach, "user")).toBe("FORBIDDEN");
+    expect(await code(teach, "translator")).toBe("FORBIDDEN");
+    expect(await code(teach, "teacher")).toBe("ok");
+    expect(await code(teach, "admin")).toBe("ok");
+  });
 });
 
 describe("the admin mount", () => {
