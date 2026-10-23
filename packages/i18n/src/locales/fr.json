@@ -2128,7 +2128,7 @@
           "history": "Historique"
         },
         "documentTitle": "Titre du texte",
-        "markupHint": "Le texte peut contenir du **gras** et des liens [texte du lien](https://example.test). Les liens mènent vers https:, mailto: ou une page du site (/privacy).",
+        "markupHint": "Le texte peut contenir du **gras** et des liens [texte du lien](https://example.test). Les liens mènent vers une adresse https, une adresse mailto ou une page du site (/privacy).",
         "sectionLabel": "Section {{number}}",
         "sectionTitle": "Titre de la section",
         "anchor": "Ancre",
@@ -2157,7 +2157,7 @@
           "shape": "Cette partie du texte n’a pas la forme attendue.",
           "tooLong": "C’est trop long.",
           "tooMany": "Il y en a trop.",
-          "unsafeLink": "Les liens doivent mener vers https:, mailto: ou une page du site."
+          "unsafeLink": "Les liens doivent mener vers une adresse https, une adresse mailto ou une page du site."
         },
         "consentPlaceholder": "L’interrupteur d’analyse s’affiche ici.",
         "effectiveDate": "Date d’entrée en vigueur",
