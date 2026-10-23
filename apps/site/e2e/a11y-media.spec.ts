@@ -101,6 +101,8 @@ test("the name fades in, and does not under prefers-reduced-motion", async ({
 }) => {
   const { context, page } = await newPublicPage(browser, "light", 1280);
   try {
+    // The public contexts of this suite ask for reduced motion by default.
+    await page.emulateMedia({ reducedMotion: "no-preference" });
     await openPublic(page, `/gestures/${made?.slug}`);
     await expect(page.locator(PILL)).toBeVisible();
     const animated = await page

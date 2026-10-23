@@ -439,11 +439,15 @@ test.describe("CSP (enforced in dev)", () => {
       // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
       await openAdmin(page, path);
       await page.waitForLoadState("networkidle");
+      if (path.startsWith("/admin/emails")) {
+        // The email preview's sandboxed srcdoc frame rendered (checked on
+        // its own page: it is no longer the last of ADMIN_PAGES).
+        // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
+        await expect(
+          page.frameLocator("iframe").getByText("482913", { exact: true })
+        ).toBeVisible();
+      }
     }
-    // The email preview's sandboxed srcdoc frame rendered.
-    await expect(
-      page.frameLocator("iframe").getByText("482913", { exact: true })
-    ).toBeVisible();
 
     // A real direct-upload URL is on a `*.mux.com` host (the dev server's
     // Mux fake hands out its own origin): the browser's PUT must pass
