@@ -283,6 +283,8 @@ const TRANSLATION_AUDIT_SCHEMAS = {
   "translation.string_save": z.object({
     key: z.string(),
     locale: z.string(),
+    /** Set when the stored text was saved again unchanged, to publish it (a retry after a failed `i18n:version` bump). */
+    republished: z.literal(true).optional(),
     /** Set when the override was removed (back to the shipped text). */
     reverted: z.literal(true).optional(),
   }),

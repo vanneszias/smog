@@ -306,6 +306,32 @@ describe("saving", () => {
     expect(await i18nVersion()).toBe(before);
   });
 
+  it("saving a stored override again publishes it (a retry after a failed i18n bump), audited as republished", async () => {
+    const first = await save({
+      expectedUpdatedAt: null,
+      key: KEY,
+      locale: "fr",
+      value: "Texte du traducteur",
+    });
+    // The bump failed after the commit: the version is gone from KV.
+    await env.KV.delete("i18n:version");
+    const mark = await auditMark();
+    const again = await save({
+      expectedUpdatedAt: first.cell.updatedAt,
+      key: KEY,
+      locale: "fr",
+      value: "Texte du traducteur",
+    });
+    expect(again.cell.value).toBe("Texte du traducteur");
+    expect(await i18nVersion()).not.toBeNull();
+    const audits = await auditRowsSince(mark);
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      action: "translation.string_save",
+      data: { key: KEY, locale: "fr", republished: true },
+    });
+  });
+
   it("reverts an override to the shipped text, audited", async () => {
     const saved = await save({
       expectedUpdatedAt: null,
