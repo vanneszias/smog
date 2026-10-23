@@ -136,6 +136,7 @@ const PROCEDURES: Record<string, Row> = {
     "gestures.delete": "audit",
     "gestures.get": "read",
     "gestures.list": "read",
+    "gestures.recutDone": "audit",
     "gestures.saveMany": "audit",
     "gestures.setPublished": "audit",
     "gestures.update": "audit",
@@ -217,6 +218,20 @@ const PROCEDURES: Record<string, Row> = {
   // or changing a language needs the admin role. Every change carries an
   // audit kind (`TRANSLATION_PROCEDURE_KINDS`, checked below).
   "translation.coverage": { level: "translator" },
+  // Task 6: a gesture's spoken name. A translator or an admin uploads,
+  // checks and removes it; the file itself never passes through a procedure.
+  "translation.deleteAudio": {
+    input: { gestureId: "00000000-0000-4000-8000-000000000000", locale: "en" },
+    level: "translator",
+  },
+  "translation.finalizeAudio": {
+    input: {
+      gestureId: "00000000-0000-4000-8000-000000000000",
+      key: "audio/00000000-0000-4000-8000-000000000000/en/00000000-0000-4000-8000-000000000001",
+      locale: "en",
+    },
+    level: "translator",
+  },
   "translation.languages.create": { level: "admin" },
   "translation.languages.list": { level: "translator" },
   "translation.languages.update": { level: "admin" },
@@ -258,6 +273,10 @@ const PROCEDURES: Record<string, Row> = {
     input: { kind: "terms", locale: "en", version: 1 },
     level: "translator",
   },
+  "translation.listAudio": {
+    input: { gestureId: "00000000-0000-4000-8000-000000000000" },
+    level: "translator",
+  },
   "translation.strings.export": {
     input: { format: "json" },
     level: "translator",
@@ -273,6 +292,15 @@ const PROCEDURES: Record<string, Row> = {
   },
   "translation.strings.save": {
     input: { expectedUpdatedAt: null, key: "a.b", locale: "en", value: "x" },
+    level: "translator",
+  },
+  "translation.uploadAudio": {
+    input: {
+      contentType: "audio/mpeg",
+      gestureId: "00000000-0000-4000-8000-000000000000",
+      locale: "en",
+      size: 1000,
+    },
     level: "translator",
   },
 };

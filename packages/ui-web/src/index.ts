@@ -263,6 +263,12 @@ export {
   type ListPickerProps,
 } from "./domain/list-picker";
 export {
+  AudioButton,
+  type AudioButtonProps,
+  NameOverlayToggle,
+  type NameOverlayToggleProps,
+} from "./domain/media-controls";
+export {
   SearchResults,
   type SearchResultsProps,
   type SearchResultsState,

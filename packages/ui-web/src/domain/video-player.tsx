@@ -24,6 +24,15 @@ export interface VideoPlayerProps
   autoPlay?: boolean;
   loop?: boolean;
   /**
+   * The gesture's name in the viewer's language, drawn over the top of the
+   * video (a textless video, phase 10b). Leave it out to show none: the
+   * caller does while the picture still has the name burned in
+   * (`needsRecut`) and when the viewer chose to hide it. The overlay is
+   * decoration (`aria-hidden`): the frame's own name (`title`) is the
+   * accessible one, so the name is never read twice.
+   */
+  nameOverlay?: string | undefined;
+  /**
    * When playback reaches the end. Web: never while `loop` is on (a looping
    * media element does not fire `ended`); `onNearEnd` still fires every loop.
    */
@@ -82,6 +91,27 @@ function disableRemotePlayback(
   player?.media?.setAttribute("disableremoteplayback", "");
 }
 
+/**
+ * The name over the video: a solid green pill (`sidebar`, the pair
+ * `sidebar-foreground` on `sidebar` is in `contrast.ts`), so the text is
+ * readable on any frame, light or dark. It fades in, and does not move or
+ * fade when the system asks for reduced motion. Taps go through it to the
+ * player's controls.
+ */
+function NameOverlay({ name }: { name: string }): ReactNode {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center p-3"
+      data-slot="video-name-overlay"
+    >
+      <span className="max-w-full animate-fade-in break-words rounded-full bg-sidebar px-4 py-1.5 text-center font-semibold text-sidebar-foreground text-title-3 shadow-1 motion-reduce:animate-none">
+        {name}
+      </span>
+    </div>
+  );
+}
+
 interface TimeEventTarget {
   currentTime?: number;
   duration?: number;
@@ -98,6 +128,7 @@ export function VideoPlayer({
   autoPlay = false,
   className,
   loop = false,
+  nameOverlay,
   onEnded,
   onNearEnd,
   playbackId,
@@ -179,6 +210,7 @@ export function VideoPlayer({
       ) : (
         poster
       )}
+      {nameOverlay ? <NameOverlay name={nameOverlay} /> : null}
     </section>
   );
 }

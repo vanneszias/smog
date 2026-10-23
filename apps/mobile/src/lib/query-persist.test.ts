@@ -110,9 +110,11 @@ function fillCache(queryClient: QueryClient): void {
   ]);
   queryClient.setQueryData(keys.bySlug, {
     ...HOND,
+    audioPath: null,
     canonicalSlug: "hond",
     description: "",
     keywords: [],
+    needsRecut: false,
     publishedAt: 0,
     sponsor: null,
     updatedAt: 0,
@@ -331,9 +333,11 @@ describe("the offline query cache", () => {
       big,
       {
         ...HOND,
+        audioPath: null,
         canonicalSlug: "groot",
         description: "x".repeat(5000),
         keywords: [],
+        needsRecut: false,
         publishedAt: 0,
         slug: "groot",
         sponsor: null,
@@ -368,9 +372,11 @@ describe("the offline query cache", () => {
         rpc.gestures.bySlug.queryKey({ input: { slug } }),
         {
           ...HOND,
+          audioPath: null,
           canonicalSlug: slug,
           description: "x".repeat(1000),
           keywords: [],
+          needsRecut: false,
           publishedAt: 0,
           slug,
           sponsor: null,

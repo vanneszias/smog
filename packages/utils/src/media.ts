@@ -4,6 +4,17 @@ export const NEAR_END_SECONDS = 5;
 /** A jump back of more than this (seconds) is a new loop or a seek back. */
 const REWIND_SECONDS = 1;
 
+/** `audio/<gestureId>/<locale>/<uuid>`: the R2 key prefix of every gesture clip. */
+export const AUDIO_KEY_PREFIX = "audio/";
+
+/**
+ * The same-origin path a clip is served from (`GET /api/audio/<gestureId>/
+ * <locale>/<uuid>`), for the R2 key `audio/<gestureId>/<locale>/<uuid>`.
+ */
+export function audioPath(key: string): string {
+  return `/api/audio/${key.slice(AUDIO_KEY_PREFIX.length)}`;
+}
+
 /** The HLS stream of a Mux playback id (native players; web uses mux-player). */
 export function muxStreamUrl(playbackId: string): string {
   return `https://stream.mux.com/${encodeURIComponent(playbackId)}.m3u8`;

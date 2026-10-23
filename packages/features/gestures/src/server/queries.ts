@@ -7,13 +7,14 @@
 import {
   category,
   gesture,
+  gestureAudio,
   gestureCategory,
   inList,
   ref,
   sponsorship,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
-import { decodeCursorAs, encodeCursor } from "@smog/utils";
+import { audioPath, decodeCursorAs, encodeCursor } from "@smog/utils";
 import { and, eq, isNotNull, type SQL, sql } from "drizzle-orm";
 import type {
   Category,
@@ -238,6 +239,11 @@ export async function findGestureBySlug(
     const [row] = await db
       .select({
         ...searchableColumns(locale),
+        // The clip of the viewer's language only: a primary-key probe.
+        audioKey: sql<
+          string | null
+        >`(SELECT ${ref("a", gestureAudio.r2Key)} FROM ${gestureAudio} AS a WHERE ${ref("a", gestureAudio.gestureId)} = ${ref(G, gesture.id)} AND ${ref("a", gestureAudio.locale)} = ${locale})`,
+        needsRecut: gesture.needsRecut,
         publishedAt: gesture.publishedAt,
         sponsorName: sponsorship.displayName,
         sponsorUntil: sponsorship.endsAt,
@@ -262,10 +268,17 @@ export async function findGestureBySlug(
     if (!row) {
       return null;
     }
-    const { publishedAt, sponsorName, sponsorUntil, updatedAt, ...detail } =
-      row;
+    const {
+      audioKey,
+      publishedAt,
+      sponsorName,
+      sponsorUntil,
+      updatedAt,
+      ...detail
+    } = row;
     return {
       ...detail,
+      audioPath: audioKey === null ? null : audioPath(audioKey),
       canonicalSlug: detail.slug,
       // `isPublished` guarantees the date; the fallback only satisfies the type.
       publishedAt: (publishedAt ?? updatedAt).getTime(),

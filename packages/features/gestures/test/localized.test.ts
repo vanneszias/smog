@@ -4,6 +4,7 @@ import {
   type Category,
   categoryTranslation,
   type Gesture,
+  gestureAudio,
   gestureKeyword,
   gestureTranslation,
 } from "@smog/db";
@@ -408,5 +409,45 @@ describe("the query plans of a search in a language", () => {
           !sql.toLowerCase().includes("limit"))
     );
     expect(report.scans, report.plans.join("\n")).toEqual([]);
+  });
+});
+
+describe("the detail's spoken name and re-cut flag", () => {
+  async function clip(gesture: Gesture, locale: string): Promise<string> {
+    const key = `audio/${gesture.id}/${locale}/${crypto.randomUUID()}`;
+    await db.insert(gestureAudio).values({
+      contentType: "audio/mpeg",
+      durationMs: 1200,
+      gestureId: gesture.id,
+      locale,
+      r2Key: key,
+      size: 4000,
+    });
+    return `/api/audio/${key.slice("audio/".length)}`;
+  }
+
+  async function read(locale: string) {
+    return await call(
+      gesturesRouter.bySlug,
+      { slug: "hond" },
+      { context: context(locale) }
+    );
+  }
+
+  it("points at the clip of the viewer's language only, never another language's", async () => {
+    const { hond } = await seed();
+    const french = await clip(hond, "fr");
+    expect((await read("fr")).audioPath).toBe(french);
+    expect((await read("en")).audioPath).toBeNull();
+    expect((await read("nl")).audioPath).toBeNull();
+  });
+
+  it("says a video still has the name burned in until the flag is cleared", async () => {
+    const { hond } = await seed();
+    expect((await read("nl")).needsRecut).toBe(true);
+    await env.DB.prepare("UPDATE gesture SET needs_recut = 0 WHERE id = ?")
+      .bind(hond.id)
+      .run();
+    expect((await read("nl")).needsRecut).toBe(false);
   });
 });

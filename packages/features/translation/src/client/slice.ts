@@ -1,6 +1,8 @@
 import { useAuthState } from "@smog/auth/react";
 import {
+  type RpcClient,
   type RpcQueryUtils,
+  useRpcClient,
   useRpcQuery,
   userScopedKey,
 } from "@smog/rpc/react";
@@ -15,6 +17,14 @@ interface TranslationSlice {
 
 export type TranslationQueryUtils =
   RpcQueryUtils<TranslationSlice>["translation"];
+
+/** The typed client for `translation.*` (the audio upload calls it directly). */
+export type TranslationClient = RpcClient<TranslationSlice>["translation"];
+
+/** The client for `translation.*`. */
+export function useTranslationClient(): TranslationClient {
+  return useRpcClient<TranslationSlice>().translation;
+}
 
 /** Other translators edit the same strings: refetch after 30 s. */
 export const TRANSLATION_STALE_TIME = 30_000;

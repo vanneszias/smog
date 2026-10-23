@@ -371,6 +371,51 @@
       "inList": "In de lijst"
     }
   },
+  "media": {
+    "nameOverlay": {
+      "toggle": "Naam in de video tonen"
+    },
+    "audio": {
+      "play": "Uitspraak beluisteren",
+      "stop": "Uitspraak stoppen"
+    },
+    "admin": {
+      "audio": {
+        "title": "Uitspraak (audio)",
+        "description": "Eén fragment per taal: de gesproken naam van het gebaar. MP3 of M4A, hoogstens 1 MB en 10 seconden.",
+        "none": "Nog geen audio",
+        "choose": "Audio kiezen",
+        "replace": "Audio vervangen",
+        "remove": "Audio verwijderen",
+        "saved": "Audio opgeslagen",
+        "removed": "Audio verwijderd",
+        "duration": "{{seconds}} s",
+        "errors": {
+          "format": "Dit is geen geldig MP3- of M4A-bestand.",
+          "duration": "Het fragment is langer dan 10 seconden.",
+          "tooLarge": "Het bestand is groter dan 1 MB.",
+          "missing": "De upload is niet aangekomen. Probeer het opnieuw.",
+          "key": "Deze upload hoort niet bij dit gebaar.",
+          "network": "De upload is mislukt. Controleer je verbinding en probeer het opnieuw.",
+          "generic": "Het opslaan is mislukt. Probeer het opnieuw.",
+          "removeFailed": "Het verwijderen is mislukt. Probeer het opnieuw."
+        }
+      },
+      "recut": {
+        "title": "Video zonder tekst",
+        "description": "Bij dit gebaar staat de naam nog in de video zelf. Upload de video zonder tekst en bevestig het hier: daarna toont de speler de naam in de taal van de kijker.",
+        "needed": "De naam zit nog in de video",
+        "done": "Video zonder tekst geüpload",
+        "doneSaved": "Gemarkeerd als video zonder tekst",
+        "doneFailed": "Markeren is mislukt. Probeer het opnieuw.",
+        "ok": "De video heeft geen tekst in beeld",
+        "filter": "Opnieuw knippen nodig",
+        "badge": "Naam in video",
+        "textless": "De video heeft geen tekst in beeld",
+        "textlessHint": "Zonder vinkje blijft het gebaar op de lijst van opnieuw te knippen video's staan."
+      }
+    }
+  },
   "gesture": {
     "sponsored": "Gesponsord",
     "disclaimer": {

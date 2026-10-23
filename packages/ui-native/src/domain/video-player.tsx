@@ -3,7 +3,9 @@ import { createNearEndTracker, muxStreamUrl } from "@smog/utils";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { View, type ViewProps } from "react-native";
-import { useReducedMotion } from "react-native-reanimated";
+import Animated, { FadeIn, useReducedMotion } from "react-native-reanimated";
+import { Surface } from "../components/surface";
+import { Text } from "../components/text";
 import { cn } from "../lib/cn";
 
 export type VideoAspect = "3:4" | "16:9";
@@ -24,6 +26,16 @@ export interface VideoPlayerProps extends Omit<ViewProps, "children"> {
    */
   isFocused?: boolean;
   loop?: boolean;
+  /**
+   * The gesture's name in the viewer's language, drawn over the top of the
+   * video (a textless video, phase 10b); leave it out to show none (the
+   * picture still carries the name, or the viewer hid it). It is
+   * decoration, hidden from the screen reader: the video's own label
+   * (`title`) is the accessible name, so the name is never read twice. A
+   * solid green pill (`Surface tone="header"`), so it reads on any frame;
+   * it fades in unless the system asks for reduced motion.
+   */
+  nameOverlay?: string | undefined;
   /**
    * On expo-video's `playToEnd`. Whether it fires on every loop is up to the
    * platform player (not verified on a device); `onNearEnd` fires every loop.
@@ -51,6 +63,7 @@ export function VideoPlayer({
   className,
   isFocused = true,
   loop = false,
+  nameOverlay,
   onEnded,
   onNearEnd,
   playbackId,
@@ -129,8 +142,32 @@ export function VideoPlayer({
         player={player}
         style={FILL}
       />
+      {nameOverlay ? (
+        <Animated.View
+          accessibilityElementsHidden
+          className="absolute inset-x-0 top-0 items-center p-3"
+          entering={
+            reducedMotion ? undefined : FadeIn.duration(OVERLAY_FADE_MS)
+          }
+          importantForAccessibility="no-hide-descendants"
+          pointerEvents="none"
+          testID="video-name-overlay"
+        >
+          <Surface
+            className="max-w-full rounded-full px-4 py-1.5"
+            tone="header"
+          >
+            <Text className="text-center" weight="semibold">
+              {nameOverlay}
+            </Text>
+          </Surface>
+        </Animated.View>
+      ) : null}
     </View>
   );
 }
+
+/** The name's fade-in, in ms. */
+const OVERLAY_FADE_MS = 250;
 
 const FILL = { height: "100%", width: "100%" } as const;

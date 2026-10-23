@@ -13,6 +13,12 @@ export interface GestureDraft {
   keywords: string[];
   name: string;
   published: boolean;
+  /**
+   * The video has no text in the picture (a new gesture only: the player
+   * then overlays the name). An existing gesture's flag is the re-cut card's
+   * (`gestures.recutDone`), so it is not one of the merged `DRAFT_FIELDS`.
+   */
+  textless: boolean;
   video: VideoFieldValue | null;
 }
 
@@ -23,6 +29,8 @@ export const EMPTY_DRAFT: GestureDraft = {
   keywords: [],
   name: "",
   published: true,
+  // New videos are cut without the name (phase 10b).
+  textless: true,
   video: null,
 };
 
@@ -33,6 +41,7 @@ export function draftOf(gesture: AdminGestureDetail): GestureDraft {
     keywords: gesture.keywords,
     name: gesture.name,
     published: gesture.publishedAt !== null,
+    textless: !gesture.needsRecut,
     video: {
       muxAssetId: gesture.muxAssetId ?? undefined,
       playbackId: gesture.playbackId,
@@ -199,5 +208,6 @@ export function createInputOf(
     name: draft.name.trim(),
     playbackId: draft.video.playbackId,
     published: draft.published,
+    textless: draft.textless,
   };
 }

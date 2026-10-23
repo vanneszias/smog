@@ -1,3 +1,4 @@
+import { audioRoutes } from "./audio";
 import { languagesRoutes } from "./languages";
 import { legalRoutes } from "./legal";
 import { translationRouterBuilder } from "./procedure";
@@ -10,6 +11,7 @@ import { stringsRoutes } from "./strings";
  */
 export function createTranslationRouter() {
   return translationRouterBuilder.router({
+    ...audioRoutes(),
     ...languagesRoutes(),
     legal: legalRoutes(),
     strings: stringsRoutes(),

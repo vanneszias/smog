@@ -27,12 +27,14 @@ const { useHearts } = await import("./use-hearts");
 const { renderSite } = await import("@/test/render");
 
 const HOND: GestureDetail = {
+  audioPath: null,
   categories: [{ name: "Dieren", slug: "dieren" }],
   description: "Het gebaar voor hond.",
   fallbackUsed: false,
   id: "g-hond",
   keywords: ["huisdier"],
   name: "Hond",
+  needsRecut: false,
   playbackId: "pb-hond",
   slug: "hond",
   sponsor: null,

@@ -1,6 +1,17 @@
 // biome-ignore-all lint/performance/noBarrelFile: the `@smog/translation/client` entry point (site only).
 /** `@smog/translation/client`: TanStack Query hooks over the typed `translation` slice. Never imports ./server. */
 export {
+  type AudioFile,
+  type AudioProblem,
+  AudioUploadError,
+  audioFileProblem,
+  audioProblemOf,
+  audioTypeOf,
+  uploadAudioFile,
+  useAudioActions,
+  useGestureAudio,
+} from "./audio";
+export {
   languageRefusalOf,
   legalConflictOf,
   legalIssuesOf,

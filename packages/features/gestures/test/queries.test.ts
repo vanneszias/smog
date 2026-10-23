@@ -220,6 +220,7 @@ describe("gestures.bySlug", () => {
         { context: context() }
       )
     ).toEqual({
+      audioPath: null,
       canonicalSlug: "hond",
       categories: [{ name: "Dieren", slug: "dieren" }],
       description: "Een hond.",
@@ -227,6 +228,7 @@ describe("gestures.bySlug", () => {
       id: row.id,
       keywords: ["hondje", "huisdier", "blaffen"],
       name: "Hond",
+      needsRecut: true,
       playbackId: row.playbackId,
       // The VideoObject `uploadDate` and `dateModified` (epoch ms).
       publishedAt: row.publishedAt?.getTime(),

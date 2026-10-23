@@ -371,6 +371,51 @@
       "inList": "In the list"
     }
   },
+  "media": {
+    "nameOverlay": {
+      "toggle": "Show the name on the video"
+    },
+    "audio": {
+      "play": "Listen to the pronunciation",
+      "stop": "Stop the pronunciation"
+    },
+    "admin": {
+      "audio": {
+        "title": "Pronunciation (audio)",
+        "description": "One clip per language: the spoken name of the gesture. MP3 or M4A, at most 1 MB and 10 seconds.",
+        "none": "No audio yet",
+        "choose": "Choose audio",
+        "replace": "Replace audio",
+        "remove": "Remove audio",
+        "saved": "Audio saved",
+        "removed": "Audio removed",
+        "duration": "{{seconds}} s",
+        "errors": {
+          "format": "This is not a valid MP3 or M4A file.",
+          "duration": "The clip is longer than 10 seconds.",
+          "tooLarge": "The file is larger than 1 MB.",
+          "missing": "The upload did not arrive. Try again.",
+          "key": "This upload does not belong to this gesture.",
+          "network": "The upload failed. Check your connection and try again.",
+          "generic": "Saving failed. Try again.",
+          "removeFailed": "Removing failed. Try again."
+        }
+      },
+      "recut": {
+        "title": "Video without text",
+        "description": "This gesture's video still has the name in the picture. Upload the video without text and confirm it here: the player then shows the name in the viewer's language.",
+        "needed": "The name is still in the video",
+        "done": "Video without text uploaded",
+        "doneSaved": "Marked as a video without text",
+        "doneFailed": "Marking failed. Try again.",
+        "ok": "The video has no text in the picture",
+        "filter": "Needs re-cut",
+        "badge": "Name in video",
+        "textless": "The video has no text in the picture",
+        "textlessHint": "Without the tick the gesture stays on the list of videos to re-cut."
+      }
+    }
+  },
   "gesture": {
     "sponsored": "Sponsored",
     "disclaimer": {

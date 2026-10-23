@@ -375,6 +375,51 @@
       "inList": "Dans la liste"
     }
   },
+  "media": {
+    "nameOverlay": {
+      "toggle": "Afficher le nom sur la vidéo"
+    },
+    "audio": {
+      "play": "Écouter la prononciation",
+      "stop": "Arrêter la prononciation"
+    },
+    "admin": {
+      "audio": {
+        "title": "Prononciation (audio)",
+        "description": "Un extrait par langue, le nom du geste prononcé. MP3 ou M4A, 1 Mo et 10 secondes au maximum.",
+        "none": "Pas encore d'audio",
+        "choose": "Choisir un audio",
+        "replace": "Remplacer l'audio",
+        "remove": "Supprimer l'audio",
+        "saved": "Audio enregistré",
+        "removed": "Audio supprimé",
+        "duration": "{{seconds}} s",
+        "errors": {
+          "format": "Ce fichier n'est pas un MP3 ou un M4A valide.",
+          "duration": "L'extrait dépasse 10 secondes.",
+          "tooLarge": "Le fichier dépasse 1 Mo.",
+          "missing": "L'envoi n'est pas arrivé. Réessayez.",
+          "key": "Cet envoi n'appartient pas à ce geste.",
+          "network": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
+          "generic": "L'enregistrement a échoué. Réessayez.",
+          "removeFailed": "La suppression a échoué. Réessayez."
+        }
+      },
+      "recut": {
+        "title": "Vidéo sans texte",
+        "description": "La vidéo de ce geste porte encore le nom dans l'image. Envoyez la vidéo sans texte et confirmez-le ici, le lecteur affichera alors le nom dans la langue du spectateur.",
+        "needed": "Le nom est encore dans la vidéo",
+        "done": "Vidéo sans texte envoyée",
+        "doneSaved": "Marqué comme vidéo sans texte",
+        "doneFailed": "Le marquage a échoué. Réessayez.",
+        "ok": "La vidéo n'a pas de texte dans l'image",
+        "filter": "À remonter",
+        "badge": "Nom dans la vidéo",
+        "textless": "La vidéo n'a pas de texte dans l'image",
+        "textlessHint": "Sans la coche, le geste reste dans la liste des vidéos à remonter."
+      }
+    }
+  },
   "gesture": {
     "sponsored": "Sponsorisé",
     "disclaimer": {

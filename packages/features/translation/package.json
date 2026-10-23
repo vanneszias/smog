@@ -7,7 +7,8 @@
     "./schema": "./src/schema/index.ts",
     "./contract": "./src/contract/index.ts",
     "./server": "./src/server/index.ts",
-    "./client": "./src/client/index.ts"
+    "./client": "./src/client/index.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json && tsc -p tsconfig.test.json",
@@ -21,6 +22,8 @@
     "@smog/db": "workspace:*",
     "@smog/i18n": "workspace:*",
     "@smog/rpc": "workspace:*",
+    "@smog/utils": "workspace:*",
+    "aws4fetch": "catalog:",
     "drizzle-orm": "catalog:",
     "zod": "catalog:"
   },

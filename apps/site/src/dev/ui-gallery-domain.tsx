@@ -2,6 +2,7 @@ import { COURSE_URL } from "@smog/config/constants";
 import { useTranslation } from "@smog/i18n/react";
 import {
   AppBanner,
+  AudioButton,
   AuthSidePanel,
   Button,
   Card,
@@ -21,6 +22,7 @@ import {
   ListPicker,
   type ListPickerList,
   ListsEmptyState,
+  NameOverlayToggle,
   OpenInAppBanner,
   SearchResults,
   ShareLink,
@@ -345,6 +347,7 @@ function VideoSample({ title }: { title: string }): ReactNode {
   const { t } = useTranslation();
   const [show, setShow] = useState(false);
   const [nearEnd, setNearEnd] = useState(0);
+  const [overlay, setOverlay] = useState(true);
   const start = useCallback((): void => {
     setShow(true);
   }, []);
@@ -365,6 +368,7 @@ function VideoSample({ title }: { title: string }): ReactNode {
       <VideoPlayer
         autoPlay
         loop
+        nameOverlay={overlay ? title : undefined}
         onNearEnd={onNearEnd}
         playbackId={SAMPLE_PLAYBACK_ID}
         title={title}
@@ -372,6 +376,9 @@ function VideoSample({ title }: { title: string }): ReactNode {
       <p className="text-caption text-muted-foreground">
         onNearEnd × {nearEnd}
       </p>
+      <NameOverlayToggle checked={overlay} onCheckedChange={setOverlay} />
+      {/* Nothing loads until it is pressed; this path has no clip. */}
+      <AudioButton src="/api/audio/gallery/nl/none" />
     </div>
   );
 }

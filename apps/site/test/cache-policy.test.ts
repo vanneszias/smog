@@ -33,6 +33,15 @@ describe("cacheControlFor (P-18), path by path", () => {
     expect(IMMUTABLE).toBe("public, max-age=31536000, immutable");
   });
 
+  it("makes a served audio clip immutable, and nothing else under /api/audio", () => {
+    const clip = "/api/audio/g/fr/u";
+    expect(policy(clip)).toBe(IMMUTABLE);
+    expect(policy(clip, { status: 206 })).toBe(IMMUTABLE);
+    expect(policy(clip, { status: 404 })).toBe(NO_STORE);
+    expect(policy(clip, { status: 416 })).toBe(NO_STORE);
+    expect(policy("/api/audio/upload/g/fr/u")).toBe(NO_STORE);
+  });
+
   it("does not make the unhashed /assets/logo.svg immutable (R-18): a day", () => {
     expect(policy("/assets/logo.svg")).toBe(ONE_DAY);
     expect(policy("/assets/readme.txt")).toBe(ONE_DAY);

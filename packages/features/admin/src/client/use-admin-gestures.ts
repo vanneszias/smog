@@ -142,10 +142,14 @@ export function useAdminGestureMutations() {
   const remove = useMutation(
     rpc.gestures.delete.mutationOptions({ onSuccess: invalidate })
   );
+  const recutDone = useMutation(
+    rpc.gestures.recutDone.mutationOptions({ onSettled: invalidate })
+  );
   return {
     bulkUpdate,
     clearStale,
     create,
+    recutDone,
     remove,
     saveMany,
     setPublished,

@@ -19,6 +19,7 @@ import {
   SegmentedControl,
   Select,
   Skeleton,
+  Switch,
 } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, ChevronsLeft, Hand, X } from "lucide-react";
@@ -46,6 +47,8 @@ export interface GestureListSearch {
   /** Only gestures that still need a translation in this language (a language code). */
   needs?: string | undefined;
   q?: string | undefined;
+  /** Only gestures whose video still has the name burned in (`needsRecut`). */
+  recut?: true | undefined;
   status?: "published" | "unpublished" | undefined;
 }
 
@@ -77,6 +80,7 @@ export function validateGestureListSearch(
         ? search.needs
         : undefined,
     q: text(search.q, GESTURE_NAME_MAX),
+    recut: search.recut === true || search.recut === "true" ? true : undefined,
     status:
       search.status === "published" || search.status === "unpublished"
         ? search.status
@@ -93,6 +97,7 @@ function gestureListInput(search: GestureListSearch): AdminGestureListInput {
     category: search.category ? [search.category] : undefined,
     cursor: search.cursor,
     limit: ADMIN_GESTURE_PAGE_MAX,
+    needsRecut: search.recut,
     needsTranslation: search.needs,
     q: search.q,
     status: search.status ?? "all",
@@ -105,11 +110,12 @@ function Stats({ counts }: { counts: AdminGesturePage["counts"] }): ReactNode {
     { label: t("admin.gestures.stats.total"), value: counts.total },
     { label: t("admin.gestures.stats.published"), value: counts.published },
     { label: t("admin.gestures.stats.hidden"), value: counts.unpublished },
+    { label: t("media.admin.recut.filter"), value: counts.needsRecut },
   ];
   return (
     <dl
       aria-label={t("admin.gestures.stats.label")}
-      className="grid grid-cols-3 gap-2 sm:max-w-reading"
+      className="grid grid-cols-2 gap-2 sm:max-w-reading sm:grid-cols-4"
     >
       {items.map((item) => (
         <div
@@ -181,8 +187,12 @@ function Filters({
     setQuery("");
     onSearchChange({});
   }, [onSearchChange]);
+  const onRecut = useCallback(
+    (checked: boolean) => set({ recut: checked ? true : undefined }),
+    [set]
+  );
   const filtered = Boolean(
-    search.q || search.status || search.category || search.needs
+    search.q || search.status || search.category || search.needs || search.recut
   );
   return (
     <fieldset
@@ -262,6 +272,14 @@ function Filters({
           value={search.needs ?? ALL}
         />
       </Field>
+      <div className="sm:col-span-2 xl:col-span-5">
+        <Switch
+          checked={search.recut === true}
+          disabled={locked}
+          label={t("media.admin.recut.filter")}
+          onCheckedChange={onRecut}
+        />
+      </div>
       <Button
         className="justify-self-start"
         disabled={locked || !(filtered || query)}

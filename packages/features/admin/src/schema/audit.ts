@@ -101,6 +101,24 @@ const CATALOG_TRANSLATION_AUDIT_SCHEMAS = {
   }),
 } satisfies AuditSchemaBlock;
 
+/**
+ * Phase 10b task 6: a gesture's media. `translation.audio_*` are one entry
+ * per clip (`target_type` `gesture`, `target_id` the gesture); no key, no
+ * file name. `gesture.recut_done` says the textless video is uploaded
+ * (`needs_recut` cleared).
+ */
+const MEDIA_AUDIT_SCHEMAS = {
+  "gesture.recut_done": catalogTarget,
+  "translation.audio_delete": catalogTarget.extend({ locale: z.string() }),
+  "translation.audio_upload": catalogTarget.extend({
+    durationMs: z.number().int().positive(),
+    locale: z.string(),
+    /** A clip of this language was there and is replaced. */
+    replaced: z.boolean(),
+    size: z.number().int().positive(),
+  }),
+} satisfies AuditSchemaBlock;
+
 const auditRole = z.enum(ROLES);
 
 /**
@@ -303,6 +321,7 @@ export const AUDIT_DATA_SCHEMAS = {
   ...LEGACY_AUDIT_SCHEMAS,
   ...CATALOG_AUDIT_SCHEMAS,
   ...CATALOG_TRANSLATION_AUDIT_SCHEMAS,
+  ...MEDIA_AUDIT_SCHEMAS,
   ...USER_AUDIT_SCHEMAS,
   ...MAINTENANCE_AUDIT_SCHEMAS,
   ...SPONSORSHIP_AUDIT_SCHEMAS,
