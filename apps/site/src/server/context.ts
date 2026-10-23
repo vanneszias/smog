@@ -3,6 +3,7 @@ import { matchLocale, resolveLocale } from "@smog/i18n";
 import type { RpcContext } from "@smog/rpc";
 import { parseCookie } from "cookie-es";
 import { getAuth, type SiteEnv } from "./auth";
+import { enabledLanguageCodes } from "./catalogue";
 
 /** The client IP Cloudflare saw (`unknown` locally, where there is no edge). */
 export function clientIp(request: Request): string {
@@ -41,8 +42,7 @@ function requestLocale(
 export function createRpcContext(
   request: Request,
   env: SiteEnv,
-  ctx: { waitUntil: (promise: Promise<unknown>) => void },
-  enabledLanguages?: readonly string[]
+  ctx: { waitUntil: (promise: Promise<unknown>) => void }
 ): RpcContext {
   return {
     auth: getAuth(),
@@ -56,9 +56,11 @@ export function createRpcContext(
     },
     ip: clientIp(request),
     kv: env.kv,
-    locale: requestLocale(request, enabledLanguages),
-    localeFor: (accountLocale) =>
-      requestLocale(request, enabledLanguages, accountLocale),
+    // The shipped three until the session is known; `localeFor` then reads the
+    // enabled languages (after the rate limit, not before it).
+    locale: requestLocale(request),
+    localeFor: async (accountLocale) =>
+      requestLocale(request, await enabledLanguageCodes(), accountLocale),
     request,
     session: null,
     waitUntil: (promise) => ctx.waitUntil(promise),

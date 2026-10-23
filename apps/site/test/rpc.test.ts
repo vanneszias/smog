@@ -250,23 +250,23 @@ describe("createRpcContext", () => {
     expect(context.env.ENVIRONMENT).toBe("dev");
   });
 
-  it("localeFor puts the account language between the cookie and Accept-Language", () => {
+  it("localeFor puts the account language between the cookie and Accept-Language", async () => {
     const make = (headers: Record<string, string>) =>
       createRpcContext(new Request(ORIGIN, { headers }), siteEnv(), ctx);
     const browser = { "accept-language": "nl-BE" };
 
     // No cookie: the account's language beats Accept-Language.
-    expect(make(browser).localeFor?.("fr")).toBe("fr");
+    expect(await make(browser).localeFor?.("fr")).toBe("fr");
     // An enabled cookie beats the account.
-    expect(make({ ...browser, cookie: "locale=en" }).localeFor?.("fr")).toBe(
-      "en"
-    );
+    expect(
+      await make({ ...browser, cookie: "locale=en" }).localeFor?.("fr")
+    ).toBe("en");
     // A disabled cookie and a disabled account language fall through.
-    expect(make({ ...browser, cookie: "locale=de" }).localeFor?.("fr")).toBe(
-      "fr"
-    );
-    expect(make(browser).localeFor?.("de")).toBe("nl");
-    expect(make(browser).localeFor?.(null)).toBe("nl");
+    expect(
+      await make({ ...browser, cookie: "locale=de" }).localeFor?.("fr")
+    ).toBe("fr");
+    expect(await make(browser).localeFor?.("de")).toBe("nl");
+    expect(await make(browser).localeFor?.(null)).toBe("nl");
   });
 
   it("falls back to Accept-Language, nl and the unknown IP", () => {
