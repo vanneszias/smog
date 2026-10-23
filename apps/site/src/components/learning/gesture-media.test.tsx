@@ -1,11 +1,23 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { GestureDetail } from "@smog/gestures/schema";
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 
 /** mux-player needs a real browser; the page only has to mount it. */
+let timeUpdate: ((event: { target: unknown }) => void) | undefined;
 mock.module("@mux/mux-player-react", () => ({
-  default: (): ReactNode => <div data-testid="mux" />,
+  default: (props: {
+    onTimeUpdate?: (event: { target: unknown }) => void;
+  }): ReactNode => {
+    timeUpdate = props.onTimeUpdate;
+    return <div data-testid="mux" />;
+  },
 }));
 
 const { GestureDetailView } = await import("./gesture-detail");
@@ -95,5 +107,61 @@ describe("the name over the video and the spoken name (phase 10b)", () => {
     expect(
       screen.queryByRole("button", { name: "Listen to the pronunciation" })
     ).toBeNull();
+  });
+});
+
+describe("the sponsor end card on the gesture page (phase 10b ruling 9)", () => {
+  const SPONSOR = {
+    endCard: true,
+    logoPath: "/api/sponsor-logos/0a1b2c3d-0000-4000-8000-000000000001",
+    name: "Bakkerij JAN nv",
+    until: 1_900_000_000_000,
+  };
+  const card = (): Element | null =>
+    document.querySelector('[data-slot="sponsor-end-card"]');
+  const at = (currentTime: number): void => {
+    act(() => {
+      timeUpdate?.({ target: { currentTime, duration: 20 } });
+    });
+  };
+
+  test("a sponsored video shows the message, the name as typed and the logo over its last seconds", async () => {
+    await renderSite(detailOf({ ...BASE, sponsor: SPONSOR }));
+    await waitFor(() => expect(timeUpdate).toBeDefined());
+    at(10);
+    expect(card()).toBeNull();
+    at(17);
+    expect(card()?.textContent).toBe("Made possible byBakkerij JAN nv");
+    expect(card()?.querySelector("img")?.getAttribute("src")).toBe(
+      SPONSOR.logoPath
+    );
+    at(1);
+    expect(card()).toBeNull();
+  });
+
+  test("shows it over a video that still has the gesture's name burned in too (needs re-cut): the card is the sponsor's, not the name's", async () => {
+    await renderSite(
+      detailOf({ ...BASE, needsRecut: true, sponsor: SPONSOR })
+    );
+    await waitFor(() => expect(timeUpdate).toBeDefined());
+    at(18);
+    expect(card()).not.toBeNull();
+  });
+
+  test("shows none without a sponsor, or over a rendered video that carries the name", async () => {
+    await renderSite(detailOf(BASE));
+    await waitFor(() => expect(timeUpdate).toBeDefined());
+    at(19);
+    expect(card()).toBeNull();
+    cleanup();
+    await renderSite(
+      detailOf({
+        ...BASE,
+        sponsor: { ...SPONSOR, endCard: false, logoPath: null },
+      })
+    );
+    await waitFor(() => expect(timeUpdate).toBeDefined());
+    at(19);
+    expect(card()).toBeNull();
   });
 });

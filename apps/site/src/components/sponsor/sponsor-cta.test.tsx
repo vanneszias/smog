@@ -114,7 +114,12 @@ describe("the gesture's sponsor card (L-17, ruling 13)", () => {
         <Page
           gesture={{
             ...GESTURE,
-            sponsor: { name: "Bakkerij Jansen", until: LIVE_UNTIL },
+            sponsor: {
+              endCard: true,
+              logoPath: null,
+              name: "Bakkerij Jansen",
+              until: LIVE_UNTIL,
+            },
           }}
         />
       ),
