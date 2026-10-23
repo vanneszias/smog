@@ -105,9 +105,10 @@ function disableRemotePlayback(
   player?.media?.setAttribute("disableremoteplayback", "");
 }
 
-type PlayerElement = Pick<Element, "setAttribute"> & {
+interface PlayerElement {
   media?: Element | null;
-};
+  setAttribute: (name: string, value: string) => unknown;
+}
 
 /**
  * Points mux-player's fullscreen button at the frame. mux-player only
