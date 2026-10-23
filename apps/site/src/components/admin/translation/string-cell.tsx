@@ -181,6 +181,7 @@ export function CellEditor({
       >
         <Textarea
           autoFocus
+          lang={language.code}
           onChange={onChange}
           onKeyDown={onKeyDown}
           rows={3}
@@ -251,7 +252,10 @@ export function CellView({
             {t("admin.translation.cell.empty")}
           </span>
         ) : (
-          <span className="line-clamp-4 whitespace-pre-wrap break-words">
+          <span
+            className="line-clamp-4 whitespace-pre-wrap break-words"
+            lang={language.code}
+          >
             {value}
           </span>
         )}

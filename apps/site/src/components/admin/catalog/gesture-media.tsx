@@ -97,9 +97,8 @@ function AudioLanguageRow({
     <li
       className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3"
       data-language={language.code}
-      lang={language.code}
     >
-      <Text className="min-w-24" weight="medium">
+      <Text className="min-w-24" lang={language.code} weight="medium">
         {language.name}
       </Text>
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
