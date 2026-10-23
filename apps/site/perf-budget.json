@@ -3,13 +3,13 @@
   "workerGzip": 5242880,
   "entries": {
     "home": {
-      "gzip": 504000,
+      "gzip": 505000,
       "target": 200000,
       "note": "Target not reached: the shared closure is ~434 kB gzip (the TanStack/React entry 132 kB, @smog/ui-web 104 kB, the three i18n catalogues 70 kB, the zod schemas 26 kB), none of it in this task's files.",
       "routes": [["index.tsx"]]
     },
     "gestures": {
-      "gzip": 505000,
+      "gzip": 506500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home).",
       "routes": [["gestures/index.tsx"]]
@@ -49,7 +49,7 @@
       "routes": [["account.tsx"]]
     },
     "auth": {
-      "gzip": 506000,
+      "gzip": 510500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Covers sign-in, sign-up, forgot and reset password, magic link and verify email.",
       "routes": [
@@ -63,13 +63,13 @@
       ]
     },
     "legal": {
-      "gzip": 525000,
+      "gzip": 500000,
       "target": 300000,
-      "note": "Target not reached: the shared closure (see home). The legal texts (22 kB gzip) load only here since the split.",
+      "note": "Target not reached: the shared closure (see home). The legal texts (22 kB gzip) are read on the server since phase 10b task 7 (D1 rows, the shipped texts only as the fallback), so this entry no longer carries them.",
       "routes": [["privacy.tsx"], ["terms.tsx"]]
     },
     "admin": {
-      "gzip": 524000,
+      "gzip": 527000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). The largest admin screen sets the number.",
       "routes": [
@@ -85,6 +85,7 @@
         ["admin.tsx", "admin/sponsorships/$id.tsx"],
         ["admin.tsx", "admin/sponsorships/index.tsx"],
         ["admin.tsx", "admin/translation/languages.tsx"],
+        ["admin.tsx", "admin/translation/legal.tsx"],
         ["admin.tsx", "admin/translation/strings.tsx"],
         ["admin.tsx", "admin/users.tsx"]
       ]

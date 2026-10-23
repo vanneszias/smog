@@ -35,7 +35,7 @@ import {
   type LegalDocument,
   type LegalKind,
   validateLegalDocument,
-} from "./legal";
+} from "./legal/markup";
 
 export const I18N_VERSION_KEY = "i18n:version";
 /** The version while no writer has bumped it yet. */

@@ -933,7 +933,8 @@
         "translation": "Vertalen"
       },
       "strings": "Teksten",
-      "languages": "Talen"
+      "languages": "Talen",
+      "legal": "Juridische teksten"
     },
     "comingSoon": {
       "title": "Komt in deze fase",
@@ -2058,6 +2059,105 @@
     },
     "translation": {
       "loadError": "De vertaalgegevens konden niet worden geladen.",
+      "legal": {
+        "title": "Juridische teksten",
+        "description": "Het privacybeleid en de gebruiksvoorwaarden, per taal. Publiceren wijzigt de openbare pagina meteen.",
+        "responsibility": "Iedereen die vertaalt kan een juridische tekst publiceren, en die vervangt meteen de openbare pagina. Elke versie blijft bewaard, elke publicatie staat in het auditlogboek en een beheerder kan een eerdere versie herstellen.",
+        "text": "Tekst",
+        "language": "Taal",
+        "kind": {
+          "privacy": "Privacybeleid",
+          "terms": "Gebruiksvoorwaarden"
+        },
+        "dutchPrevails": "De Nederlandse tekst heeft voorrang: de andere talen vermelden dat het vertalingen zijn.",
+        "draftBadge": "Concept",
+        "publishedBadge": "Gepubliceerd: versie {{version}}, geldig vanaf {{date}}",
+        "notPublished": "Niet gepubliceerd",
+        "unsaved": "Niet-opgeslagen wijzigingen",
+        "noText": "Deze taal heeft nog geen juridische tekst, dus bezoekers lezen de Nederlandse. De Nederlandse tekst is het uitgangspunt: vertaal ze, bewaar een concept en publiceer het.",
+        "conflictTitle": "Iemand anders was eerst",
+        "conflict": "Het concept is gewijzigd sinds je het opende. Neem het opgeslagen concept over en doe je wijzigingen opnieuw.",
+        "takeStored": "Opgeslagen concept overnemen",
+        "saveDraft": "Concept bewaren",
+        "publish": "Publiceren",
+        "discardChanges": "Wijzigingen verwerpen",
+        "publishNeeds": "Bewaar het concept zonder fouten om het te publiceren.",
+        "views": "Weergaven van de tekst",
+        "tabs": {
+          "edit": "Bewerken",
+          "preview": "Voorbeeld",
+          "source": "Nederlandse bron",
+          "history": "Geschiedenis"
+        },
+        "documentTitle": "Titel van de tekst",
+        "markupHint": "Tekst mag **vet** en [linktekst](https://example.test) bevatten. Links gaan naar https:, mailto: of een pagina van de site (/privacy).",
+        "sectionLabel": "Sectie {{number}}",
+        "sectionTitle": "Titel van de sectie",
+        "anchor": "Anker",
+        "anchorHint": "Kleine letters, woorden verbonden met koppeltekens, zoals in /privacy#rights. Houd het in elke taal gelijk.",
+        "blockLabel": "{{kind}}, sectie {{section}}, blok {{block}}",
+        "blocks": {
+          "paragraph": "Alinea",
+          "list": "Lijst",
+          "lines": "Adresregels",
+          "consent": "Analyticsschakelaar"
+        },
+        "onePerLine": "Eén item per regel.",
+        "consentHint": "Hier staat de analyticsschakelaar van de pagina. Het privacybeleid heeft er precies één nodig.",
+        "moveUp": "Omhoog verplaatsen: {{label}}",
+        "moveDown": "Omlaag verplaatsen: {{label}}",
+        "removeBlock": "Verwijderen: {{label}}",
+        "removeSection": "Verwijderen: {{label}}",
+        "addBlock": "Blok toevoegen",
+        "addSection": "Sectie toevoegen",
+        "issues": {
+          "badId": "Het anker moet uit kleine letters bestaan, woorden verbonden met koppeltekens.",
+          "consentControl": "Het privacybeleid heeft precies één analyticsschakelaar nodig, de voorwaarden geen enkele.",
+          "duplicateId": "Twee secties hebben hetzelfde anker.",
+          "empty": "Dit mag niet leeg zijn.",
+          "html": "HTML is niet toegestaan. Gebruik gewone tekst met **vet** en links.",
+          "shape": "Dit deel van de tekst heeft niet de verwachte vorm.",
+          "tooLong": "Dit is te lang.",
+          "tooMany": "Dit zijn er te veel.",
+          "unsafeLink": "Links moeten naar https:, mailto: of een pagina van de site gaan."
+        },
+        "consentPlaceholder": "Hier verschijnt de analyticsschakelaar.",
+        "effectiveDate": "Ingangsdatum",
+        "effectiveHint": "De datum waarop de tekst ingaat. De pagina toont ze als laatst bijgewerkt.",
+        "publishTitle": "Deze tekst publiceren",
+        "publishDescription": "De tekst vervangt meteen de openbare pagina voor elke bezoeker.",
+        "publishConfirm": "Publiceren",
+        "restoreTitle": "Versie {{version}} herstellen",
+        "restoreDescription": "Versie {{version}} wordt gekopieerd naar een nieuwe gepubliceerde versie. De geschiedenis blijft bewaard.",
+        "restoreConfirm": "Herstellen",
+        "restore": "Herstellen",
+        "restoreLabel": "Versie {{version}} herstellen",
+        "restoreAdminOnly": "Alleen een beheerder kan een eerdere versie herstellen.",
+        "preview": "Voorbeeld",
+        "previewLabel": "Voorbeeld van versie {{version}}",
+        "previewVersion": "Versie {{version}}",
+        "previewVersionDescription": "Zo las de tekst toen ze gepubliceerd werd.",
+        "versionNumber": "Versie {{version}}",
+        "current": "Actueel",
+        "shipped": "Meegeleverde tekst",
+        "noHistory": "Er is nog geen versie gepubliceerd.",
+        "historyLabel": "Versies van deze tekst",
+        "columns": {
+          "version": "Versie",
+          "effective": "Ingangsdatum",
+          "by": "Gepubliceerd door",
+          "at": "Gepubliceerd",
+          "actions": "Acties"
+        },
+        "sourceHint": "De Nederlandse tekst om uit te vertalen (alleen lezen).",
+        "draftSaved": "Concept bewaard",
+        "published": "Versie {{version}} gepubliceerd",
+        "restored": "Versie {{version}} hersteld",
+        "errors": {
+          "failed": "Dat lukte niet. Probeer het opnieuw.",
+          "load": "De juridische teksten konden niet worden geladen."
+        }
+      },
       "strings": {
         "title": "Teksten",
         "description": "De teksten van de site, de app en de e-mails. Een wijziging is meteen zichtbaar, zonder nieuwe release."

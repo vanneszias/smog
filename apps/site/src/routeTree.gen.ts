@@ -55,6 +55,7 @@ import { Route as AdminSponsorshipsIndexRouteImport } from './routes/admin/spons
 import { Route as AdminSponsorshipsIdRouteImport } from './routes/admin/sponsorships/$id'
 import { Route as AdminTranslationIndexRouteImport } from './routes/admin/translation/index'
 import { Route as AdminTranslationLanguagesRouteImport } from './routes/admin/translation/languages'
+import { Route as AdminTranslationLegalRouteImport } from './routes/admin/translation/legal'
 import { Route as AdminTranslationStringsRouteImport } from './routes/admin/translation/strings'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiLogosKeyRouteImport } from './routes/api/logos/$key'
@@ -296,6 +297,11 @@ const AdminTranslationLanguagesRoute =
     path: '/translation/languages',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminTranslationLegalRoute = AdminTranslationLegalRouteImport.update({
+  id: '/translation/legal',
+  path: '/translation/legal',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminTranslationStringsRoute = AdminTranslationStringsRouteImport.update({
   id: '/translation/strings',
   path: '/translation/strings',
@@ -386,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
+  '/admin/translation/legal': typeof AdminTranslationLegalRoute
   '/admin/translation/strings': typeof AdminTranslationStringsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logos/$key': typeof ApiLogosKeyRoute
@@ -442,6 +449,7 @@ export interface FileRoutesByTo {
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
+  '/admin/translation/legal': typeof AdminTranslationLegalRoute
   '/admin/translation/strings': typeof AdminTranslationStringsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logos/$key': typeof ApiLogosKeyRoute
@@ -500,6 +508,7 @@ export interface FileRoutesById {
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
+  '/admin/translation/legal': typeof AdminTranslationLegalRoute
   '/admin/translation/strings': typeof AdminTranslationStringsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logos/$key': typeof ApiLogosKeyRoute
@@ -559,6 +568,7 @@ export interface FileRouteTypes {
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
     | '/admin/translation/languages'
+    | '/admin/translation/legal'
     | '/admin/translation/strings'
     | '/api/auth/$'
     | '/api/logos/$key'
@@ -615,6 +625,7 @@ export interface FileRouteTypes {
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
     | '/admin/translation/languages'
+    | '/admin/translation/legal'
     | '/admin/translation/strings'
     | '/api/auth/$'
     | '/api/logos/$key'
@@ -672,6 +683,7 @@ export interface FileRouteTypes {
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
     | '/admin/translation/languages'
+    | '/admin/translation/legal'
     | '/admin/translation/strings'
     | '/api/auth/$'
     | '/api/logos/$key'
@@ -1053,6 +1065,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTranslationLanguagesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/translation/legal': {
+      id: '/admin/translation/legal'
+      path: '/translation/legal'
+      fullPath: '/admin/translation/legal'
+      preLoaderRoute: typeof AdminTranslationLegalRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/translation/strings': {
       id: '/admin/translation/strings'
       path: '/translation/strings'
@@ -1131,6 +1150,7 @@ interface AdminRouteChildren {
   AdminGesturesNewRoute: typeof AdminGesturesNewRoute
   AdminSponsorshipsIdRoute: typeof AdminSponsorshipsIdRoute
   AdminTranslationLanguagesRoute: typeof AdminTranslationLanguagesRoute
+  AdminTranslationLegalRoute: typeof AdminTranslationLegalRoute
   AdminTranslationStringsRoute: typeof AdminTranslationStringsRoute
   AdminGesturesIndexRoute: typeof AdminGesturesIndexRoute
   AdminSponsorshipsIndexRoute: typeof AdminSponsorshipsIndexRoute
@@ -1149,6 +1169,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminGesturesNewRoute: AdminGesturesNewRoute,
   AdminSponsorshipsIdRoute: AdminSponsorshipsIdRoute,
   AdminTranslationLanguagesRoute: AdminTranslationLanguagesRoute,
+  AdminTranslationLegalRoute: AdminTranslationLegalRoute,
   AdminTranslationStringsRoute: AdminTranslationStringsRoute,
   AdminGesturesIndexRoute: AdminGesturesIndexRoute,
   AdminSponsorshipsIndexRoute: AdminSponsorshipsIndexRoute,

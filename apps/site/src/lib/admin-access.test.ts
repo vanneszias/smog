@@ -6,8 +6,10 @@ import {
 } from "./admin-access";
 
 describe("what a translator may open", () => {
-  test("only the strings screen (and the translation index that leads to it)", () => {
+  test("only the strings and legal text screens (and the translation index that leads to them)", () => {
     expect(translatorMayOpen(TRANSLATION_HOME)).toBe(true);
+    expect(translatorMayOpen("/admin/translation/legal")).toBe(true);
+    expect(translatorMayOpen("/admin/translation/legal/")).toBe(true);
     expect(translatorMayOpen("/admin/translation/strings/")).toBe(true);
     expect(translatorMayOpen("/admin/translation")).toBe(true);
   });
@@ -20,6 +22,7 @@ describe("what a translator may open", () => {
       "/admin/audit",
       "/admin/gestures/abc",
       "/admin/translationx",
+      "/admin/translation/legal/extra",
       "/admin/translation/strings/extra",
     ]) {
       expect(translatorMayOpen(path), path).toBe(false);

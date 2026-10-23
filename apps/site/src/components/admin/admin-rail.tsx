@@ -27,6 +27,7 @@ import {
   LayoutDashboard,
   Mail,
   MailWarning,
+  Scale,
   ScrollText,
   Settings,
   TextCursorInput,
@@ -85,6 +86,11 @@ export const RAIL_GROUPS: readonly RailGroup[] = [
         href: "/admin/translation/strings",
         icon: <TextCursorInput />,
         label: "admin.rail.strings",
+      },
+      {
+        href: "/admin/translation/legal",
+        icon: <Scale />,
+        label: "admin.rail.legal",
       },
       {
         adminOnly: true,

@@ -1,13 +1,12 @@
-import type { Locale } from "@smog/config/constants";
 import { seoHead, shellHead } from "@/lib/head";
 
 /*
  * The head and search validation of `/privacy` and `/terms`, kept apart
  * from `legal-page.tsx` on purpose: a route's `head` and `validateSearch`
- * stay in its entry-reachable chunk, so importing the page (and with it
- * the three legal texts, ~21 kB gzip) from here would load them on every
- * page (phase 9 task 6). The texts reach the head through the route's
- * lazy `loader` instead (`legalMeta` in `legal-page.tsx`).
+ * stay in its entry-reachable chunk, so importing the page from here would
+ * load it on every page (phase 9 task 6). The texts come from D1 through
+ * the route's `loader` (`getLegalTexts`, a server function), and the head
+ * reads the meta the loader derived (`legalMeta` in `legal-page.tsx`).
  */
 
 /** `/privacy` or `/terms`. */
@@ -24,8 +23,8 @@ export interface LegalMeta {
   title: string;
 }
 
-/** What the route loader returns: every language, a few lines each. */
-export type LegalMetaByLocale = Readonly<Record<Locale, LegalMeta>>;
+/** What the route loader derives: title and description per language it loaded. */
+export type LegalMetaByLocale = Readonly<Record<string, LegalMeta>>;
 
 /** Keeps only `lang=nl` (review I2: reading Dutch changes no setting). */
 export function validateLegalSearch(

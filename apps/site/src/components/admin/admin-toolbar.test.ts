@@ -13,7 +13,11 @@ describe("the admin rail", () => {
       ["content", ["/admin/gestures", "/admin/categories"]],
       [
         "translation",
-        ["/admin/translation/strings", "/admin/translation/languages"],
+        [
+          "/admin/translation/strings",
+          "/admin/translation/legal",
+          "/admin/translation/languages",
+        ],
       ],
       ["community", ["/admin/users", "/admin/sponsorships"]],
       [
@@ -28,13 +32,18 @@ describe("the admin rail", () => {
     ]);
   });
 
-  it("shows a translator the translation group only, without the language list", () => {
+  it("shows a translator the translation group only (strings, legal texts), without the language list", () => {
     expect(
       railFor(false).map((group) => [
         group.id,
         group.items.map((item) => item.href),
       ])
-    ).toEqual([["translation", ["/admin/translation/strings"]]]);
+    ).toEqual([
+      [
+        "translation",
+        ["/admin/translation/strings", "/admin/translation/legal"],
+      ],
+    ]);
     expect(railFor(true)).toBe(RAIL_GROUPS);
   });
 
@@ -44,6 +53,9 @@ describe("the admin rail", () => {
     );
     expect(activeHref("/admin/translation/languages/")).toBe(
       "/admin/translation/languages"
+    );
+    expect(activeHref("/admin/translation/legal")).toBe(
+      "/admin/translation/legal"
     );
   });
 

@@ -19,7 +19,7 @@ import {
   LEGAL_CANONICAL_LOCALE,
   type LegalKind,
   validateLegalDocument,
-} from "@smog/i18n/legal";
+} from "@smog/i18n/legal/markup";
 import { bumpI18nVersion } from "@smog/i18n/server";
 import { markUnchanged } from "@smog/rpc/audit";
 import { and, desc, eq, type SQL, sql } from "drizzle-orm";

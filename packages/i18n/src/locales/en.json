@@ -933,7 +933,8 @@
         "translation": "Translation"
       },
       "strings": "Strings",
-      "languages": "Languages"
+      "languages": "Languages",
+      "legal": "Legal texts"
     },
     "comingSoon": {
       "title": "Coming in this phase",
@@ -2058,6 +2059,105 @@
     },
     "translation": {
       "loadError": "The translation data could not be loaded.",
+      "legal": {
+        "title": "Legal texts",
+        "description": "The privacy notice and the terms, per language. Publishing changes the public page at once.",
+        "responsibility": "Anyone who translates can publish a legal text, and it replaces the public page at once. Every version is kept, every publish is in the audit log, and an admin can restore an earlier version.",
+        "text": "Text",
+        "language": "Language",
+        "kind": {
+          "privacy": "Privacy notice",
+          "terms": "Terms"
+        },
+        "dutchPrevails": "The Dutch text prevails: the other languages carry a notice that they are translations.",
+        "draftBadge": "Draft",
+        "publishedBadge": "Published: version {{version}}, effective {{date}}",
+        "notPublished": "Not published",
+        "unsaved": "Unsaved changes",
+        "noText": "This language has no legal text yet, so visitors read the Dutch one. The Dutch text is the starting point: translate it, save a draft and publish it.",
+        "conflictTitle": "Someone else saved first",
+        "conflict": "The draft changed since you opened it. Take the stored draft, then redo your changes.",
+        "takeStored": "Take the stored draft",
+        "saveDraft": "Save draft",
+        "publish": "Publish",
+        "discardChanges": "Discard changes",
+        "publishNeeds": "Save the draft, without errors, to publish it.",
+        "views": "Views of the text",
+        "tabs": {
+          "edit": "Edit",
+          "preview": "Preview",
+          "source": "Dutch source",
+          "history": "History"
+        },
+        "documentTitle": "Title of the text",
+        "markupHint": "Text may use **bold** and [link text](https://example.test). Links go to https:, mailto: or a page of the site (/privacy).",
+        "sectionLabel": "Section {{number}}",
+        "sectionTitle": "Section title",
+        "anchor": "Anchor",
+        "anchorHint": "Lowercase words joined by hyphens, as in /privacy#rights. Keep it the same in every language.",
+        "blockLabel": "{{kind}}, section {{section}}, block {{block}}",
+        "blocks": {
+          "paragraph": "Paragraph",
+          "list": "List",
+          "lines": "Address lines",
+          "consent": "Analytics switch"
+        },
+        "onePerLine": "One item per line.",
+        "consentHint": "The analytics switch of the page sits here. The privacy notice needs exactly one.",
+        "moveUp": "Move up: {{label}}",
+        "moveDown": "Move down: {{label}}",
+        "removeBlock": "Remove: {{label}}",
+        "removeSection": "Remove: {{label}}",
+        "addBlock": "Add block",
+        "addSection": "Add section",
+        "issues": {
+          "badId": "The anchor must be lowercase words joined by hyphens.",
+          "consentControl": "The privacy notice needs exactly one analytics switch, and the terms none.",
+          "duplicateId": "Two sections share this anchor.",
+          "empty": "This cannot be empty.",
+          "html": "HTML is not allowed. Use plain text with **bold** and links.",
+          "shape": "This part of the text is not in the expected form.",
+          "tooLong": "This is too long.",
+          "tooMany": "There are too many of these.",
+          "unsafeLink": "Links must go to https:, mailto: or a page of the site."
+        },
+        "consentPlaceholder": "The analytics switch shows here.",
+        "effectiveDate": "Effective date",
+        "effectiveHint": "The date the text takes effect. The page shows it as last updated.",
+        "publishTitle": "Publish this text",
+        "publishDescription": "The text replaces the public page for every visitor at once.",
+        "publishConfirm": "Publish",
+        "restoreTitle": "Restore version {{version}}",
+        "restoreDescription": "Version {{version}} is copied into a new published version. The history is kept.",
+        "restoreConfirm": "Restore",
+        "restore": "Restore",
+        "restoreLabel": "Restore version {{version}}",
+        "restoreAdminOnly": "Only an admin can restore an earlier version.",
+        "preview": "Preview",
+        "previewLabel": "Preview version {{version}}",
+        "previewVersion": "Version {{version}}",
+        "previewVersionDescription": "How the text read when it was published.",
+        "versionNumber": "Version {{version}}",
+        "current": "Current",
+        "shipped": "Shipped text",
+        "noHistory": "No version has been published yet.",
+        "historyLabel": "Versions of this text",
+        "columns": {
+          "version": "Version",
+          "effective": "Effective",
+          "by": "Published by",
+          "at": "Published",
+          "actions": "Actions"
+        },
+        "sourceHint": "The Dutch text to translate from (read only).",
+        "draftSaved": "Draft saved",
+        "published": "Version {{version}} published",
+        "restored": "Version {{version}} restored",
+        "errors": {
+          "failed": "That did not work. Try again.",
+          "load": "The legal texts could not be loaded."
+        }
+      },
       "strings": {
         "title": "Strings",
         "description": "The texts of the site, the app and the emails. A change shows at once, without a new release."

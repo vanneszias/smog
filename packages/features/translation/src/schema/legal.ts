@@ -1,6 +1,6 @@
 /** The legal texts' shapes (phase 10b task 7). Client-safe. */
 import { localeCodeSchema } from "@smog/config/locale";
-import { LEGAL_KINDS } from "@smog/i18n/legal";
+import { LEGAL_KINDS } from "@smog/i18n/legal/markup";
 import { z } from "zod";
 
 export const legalKindSchema = z.enum(LEGAL_KINDS);

@@ -941,7 +941,8 @@
         "translation": "Traduction"
       },
       "strings": "Textes",
-      "languages": "Langues"
+      "languages": "Langues",
+      "legal": "Textes juridiques"
     },
     "comingSoon": {
       "title": "Prévu dans cette phase",
@@ -2096,6 +2097,105 @@
     },
     "translation": {
       "loadError": "Les données de traduction n'ont pas pu être chargées.",
+      "legal": {
+        "title": "Textes juridiques",
+        "description": "La politique de confidentialité et les conditions d’utilisation, par langue. Publier modifie aussitôt la page publique.",
+        "responsibility": "Toute personne qui traduit peut publier un texte juridique, et il remplace aussitôt la page publique. Chaque version est conservée, chaque publication figure dans le journal d’audit et un administrateur peut rétablir une version antérieure.",
+        "text": "Texte",
+        "language": "Langue",
+        "kind": {
+          "privacy": "Politique de confidentialité",
+          "terms": "Conditions d’utilisation"
+        },
+        "dutchPrevails": "Le texte néerlandais fait foi\u00a0: les autres langues indiquent qu’il s’agit de traductions.",
+        "draftBadge": "Brouillon",
+        "publishedBadge": "Publié\u00a0: version {{version}}, en vigueur le {{date}}",
+        "notPublished": "Non publié",
+        "unsaved": "Modifications non enregistrées",
+        "noText": "Cette langue n’a pas encore de texte juridique, les visiteurs lisent donc le néerlandais. Le texte néerlandais sert de point de départ\u00a0: traduisez-le, enregistrez un brouillon et publiez-le.",
+        "conflictTitle": "Quelqu’un d’autre a enregistré avant vous",
+        "conflict": "Le brouillon a changé depuis que vous l’avez ouvert. Reprenez le brouillon enregistré, puis refaites vos modifications.",
+        "takeStored": "Reprendre le brouillon enregistré",
+        "saveDraft": "Enregistrer le brouillon",
+        "publish": "Publier",
+        "discardChanges": "Abandonner les modifications",
+        "publishNeeds": "Enregistrez le brouillon, sans erreur, pour le publier.",
+        "views": "Affichages du texte",
+        "tabs": {
+          "edit": "Modifier",
+          "preview": "Aperçu",
+          "source": "Source néerlandaise",
+          "history": "Historique"
+        },
+        "documentTitle": "Titre du texte",
+        "markupHint": "Le texte peut contenir du **gras** et des liens [texte du lien](https://example.test). Les liens mènent vers https:, mailto: ou une page du site (/privacy).",
+        "sectionLabel": "Section {{number}}",
+        "sectionTitle": "Titre de la section",
+        "anchor": "Ancre",
+        "anchorHint": "Des mots en minuscules reliés par des traits d’union, comme dans /privacy#rights. Gardez-la identique dans toutes les langues.",
+        "blockLabel": "{{kind}}, section {{section}}, bloc {{block}}",
+        "blocks": {
+          "paragraph": "Paragraphe",
+          "list": "Liste",
+          "lines": "Lignes d’adresse",
+          "consent": "Interrupteur d’analyse"
+        },
+        "onePerLine": "Un élément par ligne.",
+        "consentHint": "L’interrupteur d’analyse de la page se trouve ici. La politique de confidentialité en exige un seul.",
+        "moveUp": "Monter\u00a0: {{label}}",
+        "moveDown": "Descendre\u00a0: {{label}}",
+        "removeBlock": "Supprimer\u00a0: {{label}}",
+        "removeSection": "Supprimer\u00a0: {{label}}",
+        "addBlock": "Ajouter un bloc",
+        "addSection": "Ajouter une section",
+        "issues": {
+          "badId": "L’ancre doit être composée de mots en minuscules reliés par des traits d’union.",
+          "consentControl": "La politique de confidentialité exige un seul interrupteur d’analyse, les conditions aucun.",
+          "duplicateId": "Deux sections ont la même ancre.",
+          "empty": "Ce champ ne peut pas être vide.",
+          "html": "Le HTML n’est pas autorisé. Utilisez du texte simple avec du **gras** et des liens.",
+          "shape": "Cette partie du texte n’a pas la forme attendue.",
+          "tooLong": "C’est trop long.",
+          "tooMany": "Il y en a trop.",
+          "unsafeLink": "Les liens doivent mener vers https:, mailto: ou une page du site."
+        },
+        "consentPlaceholder": "L’interrupteur d’analyse s’affiche ici.",
+        "effectiveDate": "Date d’entrée en vigueur",
+        "effectiveHint": "La date à laquelle le texte entre en vigueur. La page l’affiche comme dernière mise à jour.",
+        "publishTitle": "Publier ce texte",
+        "publishDescription": "Le texte remplace aussitôt la page publique pour tous les visiteurs.",
+        "publishConfirm": "Publier",
+        "restoreTitle": "Rétablir la version {{version}}",
+        "restoreDescription": "La version {{version}} est copiée dans une nouvelle version publiée. L’historique est conservé.",
+        "restoreConfirm": "Rétablir",
+        "restore": "Rétablir",
+        "restoreLabel": "Rétablir la version {{version}}",
+        "restoreAdminOnly": "Seul un administrateur peut rétablir une version antérieure.",
+        "preview": "Aperçu",
+        "previewLabel": "Aperçu de la version {{version}}",
+        "previewVersion": "Version {{version}}",
+        "previewVersionDescription": "Le texte tel qu’il était lors de sa publication.",
+        "versionNumber": "Version {{version}}",
+        "current": "Actuelle",
+        "shipped": "Texte fourni",
+        "noHistory": "Aucune version n’a encore été publiée.",
+        "historyLabel": "Versions de ce texte",
+        "columns": {
+          "version": "Version",
+          "effective": "En vigueur",
+          "by": "Publié par",
+          "at": "Publié",
+          "actions": "Actions"
+        },
+        "sourceHint": "Le texte néerlandais à traduire (lecture seule).",
+        "draftSaved": "Brouillon enregistré",
+        "published": "Version {{version}} publiée",
+        "restored": "Version {{version}} rétablie",
+        "errors": {
+          "failed": "Cela n’a pas fonctionné. Réessayez.",
+          "load": "Les textes juridiques n’ont pas pu être chargés."
+        }
+      },
       "strings": {
         "title": "Textes",
         "description": "Les textes du site, de l'appli et des e-mails. Une modification est visible immédiatement, sans nouvelle version."

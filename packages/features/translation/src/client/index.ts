@@ -2,11 +2,17 @@
 /** `@smog/translation/client`: TanStack Query hooks over the typed `translation` slice. Never imports ./server. */
 export {
   languageRefusalOf,
+  legalConflictOf,
+  legalIssuesOf,
   stringConflictOf,
   useApplyImport,
   useExportStrings,
   useLanguageActions,
   useLanguages,
+  useLegalActions,
+  useLegalDetail,
+  useLegalOverview,
+  useLegalVersion,
   usePreviewImport,
   useSaveString,
   useTranslationCoverage,
