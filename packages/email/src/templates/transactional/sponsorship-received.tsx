@@ -36,7 +36,6 @@ export const sponsorshipReceived: EmailTemplate<SponsorshipReceivedProps> = {
         </Text>
         <StepsBox
           steps={[
-            t("email.transactional.sponsorshipReceived.stepRender"),
             t("email.transactional.sponsorshipReceived.stepReview"),
             t("email.transactional.sponsorshipReceived.stepLive"),
           ]}

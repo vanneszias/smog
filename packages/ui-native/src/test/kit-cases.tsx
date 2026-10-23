@@ -202,6 +202,7 @@ export const CASES: Record<string, ReactElement> = {
   Spinner: <kit.Spinner testID={ID} />,
   Stepper: <kit.Stepper current={0} steps={[{ label: "One" }]} testID={ID} />,
   Surface: <kit.Surface testID={ID} />,
+  SponsorEndCard: <kit.SponsorEndCard name="Jan" testID={ID} />,
   Switch: <kit.Switch label="Switch" testID={ID} />,
   TabsContent: (
     <kit.Tabs defaultValue="a">

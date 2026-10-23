@@ -196,6 +196,10 @@ export {
 } from "./domain/share-link";
 export type { CategoryRef, GestureCardData } from "./domain/types";
 export {
+  SponsorEndCard,
+  type SponsorEndCardProps,
+} from "./domain/sponsor-end-card";
+export {
   type VideoAspect,
   VideoPlayer,
   type VideoPlayerProps,

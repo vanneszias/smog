@@ -5,14 +5,13 @@ import type { ReactNode } from "react";
 
 /**
  * "What happens next?" after a paid sponsorship (S-14): the payment is
- * confirmed (done), the video is made, an administrator reviews it within
+ * confirmed (done), an administrator reviews it within
  * five working days, and an email follows when it is live.
  */
 export function StatusTimeline(): ReactNode {
   const { t } = useTranslation();
   const steps = [
     { done: true, label: t("sponsor.success.timeline.paid") },
-    { done: false, label: t("sponsor.success.timeline.video") },
     { done: false, label: t("sponsor.success.timeline.review") },
     { done: false, label: t("sponsor.success.timeline.live") },
   ];

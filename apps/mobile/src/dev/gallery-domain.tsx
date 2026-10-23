@@ -252,6 +252,7 @@ function VideoSection(): ReactElement {
   return (
     <Section name="VideoPlayer / CourseBanner">
       <VideoPlayer
+        endCard={{ name: "Bakkerij Jan" }}
         loop
         nameOverlay={overlay ? t("devTools.gallery.gestureHello") : undefined}
         onNearEnd={showBanner}

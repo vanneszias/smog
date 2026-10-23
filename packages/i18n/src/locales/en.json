@@ -371,6 +371,9 @@
       "inList": "In the list"
     }
   },
+  "endCard": {
+    "message": "Made possible by"
+  },
   "media": {
     "nameOverlay": {
       "toggle": "Show the name on the video"
@@ -662,10 +665,9 @@
         "subject": "We have received your sponsorship",
         "preheader": "Thank you! Here is what happens next.",
         "heading": "Sponsorship received",
-        "body": "Thank you for sponsoring {{gesture}}. The video will show the name {{displayName}}.",
+        "body": "Thank you for sponsoring {{gesture}}. The end of the video will show the name {{displayName}}.",
         "nextTitle": "What happens next?",
-        "stepRender": "We make your sponsored video.",
-        "stepReview": "We review the video before it goes online.",
+        "stepReview": "We review your sponsorship before it goes online.",
         "stepLive": "You get an email as soon as your sponsorship is online.",
         "footer": "You get this email because you recently submitted a sponsorship through SMOG & Co."
       },
@@ -682,7 +684,7 @@
         "subject": "Your sponsorship is live!",
         "preheader": "Your sponsored video is online.",
         "heading": "Your sponsorship is live!",
-        "body": "Your sponsored video for {{gesture}} is now online with the name {{displayName}}.",
+        "body": "Your sponsorship of {{gesture}} is now online: the end of the video shows the name {{displayName}}.",
         "button": "View on SMOG",
         "thanks": "Thank you for supporting SMOG!",
         "footer": "We will send you a reminder 30 days before the end, so you can renew."
@@ -702,7 +704,7 @@
         "preheader": "Paid: {{total}}.",
         "heading": "New sponsorship paid",
         "headingRenewal": "Sponsorship renewed",
-        "body": "A sponsorship has been paid. It now waits for its video and then for approval.",
+        "body": "A sponsorship has been paid. It now waits for approval.",
         "bodyRenewal": "A sponsorship has been renewed for a year. No new video or approval is needed.",
         "detailsTitle": "Sponsorship",
         "invoiceTitle": "Invoicing",
@@ -2509,7 +2511,7 @@
     },
     "review": {
       "title": "Review your sponsorship",
-      "description": "This is how your name appears on the selected gestures. The real video is made after payment and checked before it goes online.",
+      "description": "This is how your name appears at the end of the video of the selected gestures. After payment we check your sponsorship before it goes online.",
       "summary": "Sponsorship details",
       "gestures": "Gestures",
       "duration": "Duration",
@@ -2580,7 +2582,6 @@
       "timeline": {
         "title": "What happens next?",
         "paid": "Your payment is confirmed.",
-        "video": "We make your video with your name in it.",
         "review": "An administrator reviews your sponsorship within five working days.",
         "live": "You get an email as soon as it is online."
       },
@@ -2608,7 +2609,7 @@
     },
     "edit": {
       "eyebrow": "Edit your sponsorship",
-      "title": "Update your video",
+      "title": "Update your sponsorship",
       "gesture": "Gesture: {{name}}",
       "expires_one": "Link expires in {{count}} day",
       "expires_other": "Link expires in {{count}} days",
@@ -2617,14 +2618,14 @@
       "submit": "Send for review",
       "submitted": {
         "title": "Sent!",
-        "description": "We make your new video and check it before it goes online. You do not have to pay again."
+        "description": "We check your changes before they go online. You do not have to pay again."
       },
       "failed": "We could not send your change. Please try again."
     },
     "renew": {
       "eyebrow": "Renew your sponsorship",
       "title": "Another year in the video",
-      "description": "Renew your sponsorship for one year. Your video stays as it is.",
+      "description": "Renew your sponsorship for one year. Your name and logo stay as they are.",
       "gesture": "Gesture",
       "name": "Name in video",
       "currentEnd": "Currently runs until",
@@ -2640,8 +2641,8 @@
       "pause": "Pause",
       "showEnding": "Show the ending",
       "loading": "Loading the preview…",
-      "fallbackNote": "The video cannot be played here, so the preview shows a still of the gesture. The final video uses the full clip, with this ending.",
-      "unavailable": "The preview cannot be shown right now. The final video is made with your name and logo as entered."
+      "fallbackNote": "This is how the end of the video looks: a still of the gesture with your name and logo.",
+      "unavailable": "The preview cannot be shown right now. Your name and logo appear as entered at the end of the video."
     }
   },
   "signOutConfirm": {

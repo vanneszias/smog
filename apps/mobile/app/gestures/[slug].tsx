@@ -49,7 +49,7 @@ import {
 import { HeaderActions } from "@/components/header-actions";
 import { SaveToList } from "@/components/save-to-list";
 import { usePreferences } from "@/lib/preferences";
-import { audioUrl, gestureUrl, shareUrl } from "@/lib/site";
+import { apiUrl, gestureUrl, shareUrl } from "@/lib/site";
 import { SponsorCta } from "@/sponsor-cta";
 
 /** Related gestures under the detail (the contract's default is 5). */
@@ -177,6 +177,16 @@ function GestureDetail({
       <VideoPlayer
         autoPlay
         isFocused={isFocused}
+        endCard={
+          gesture.sponsor?.endCard
+            ? {
+                logoSrc: gesture.sponsor.logoPath
+                  ? apiUrl(gesture.sponsor.logoPath)
+                  : null,
+                name: gesture.sponsor.name,
+              }
+            : undefined
+        }
         loop
         nameOverlay={overlayApplies && overlayShown ? gesture.name : undefined}
         onNearEnd={onNearEnd}
@@ -197,7 +207,7 @@ function GestureDetail({
         {/* A clip of this language only; never a fallback. */}
         {gesture.audioPath ? (
           <View className="flex-row">
-            <AudioButton src={audioUrl(gesture.audioPath)} />
+            <AudioButton src={apiUrl(gesture.audioPath)} />
           </View>
         ) : null}
         {overlayApplies ? (

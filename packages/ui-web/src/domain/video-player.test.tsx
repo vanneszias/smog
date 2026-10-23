@@ -144,6 +144,103 @@ describe("VideoPlayer", () => {
     ).toBeNull();
   });
 
+  describe("the sponsor end card", () => {
+    const card = (container: HTMLElement): Element | null =>
+      container.querySelector('[data-slot="sponsor-end-card"]');
+
+    test("shows only in the last seconds, timed from the duration, and hides again after a seek back", async () => {
+      const { container } = renderKit(
+        <VideoPlayer
+          endCard={{ logoSrc: "/api/sponsor-logos/l1", name: "Bakkerij Jan" }}
+          playbackId="pb-1"
+        />
+      );
+      await screen.findByTestId("mux");
+      expect(card(container)).toBeNull();
+      tick(10, 20);
+      expect(card(container)).toBeNull();
+      tick(15.9, 20);
+      expect(card(container)).toBeNull();
+      tick(16, 20);
+      expect(card(container)).not.toBeNull();
+      tick(19.9, 20);
+      expect(card(container)).not.toBeNull();
+      tick(2, 20);
+      expect(card(container)).toBeNull();
+    });
+
+    test("a short video shows it for its last half at most", async () => {
+      const { container } = renderKit(
+        <VideoPlayer endCard={{ name: "Jan" }} playbackId="pb-1" />
+      );
+      await screen.findByTestId("mux");
+      tick(2.9, 6);
+      expect(card(container)).toBeNull();
+      tick(3, 6);
+      expect(card(container)).not.toBeNull();
+    });
+
+    test("waits for a known duration", async () => {
+      const { container } = renderKit(
+        <VideoPlayer endCard={{ name: "Jan" }} playbackId="pb-1" />
+      );
+      await screen.findByTestId("mux");
+      tick(1, Number.NaN);
+      tick(5, 0);
+      expect(card(container)).toBeNull();
+    });
+
+    test("says the message in the viewer's language, the name as typed, and the logo", async () => {
+      const fr = renderKit(
+        <VideoPlayer
+          endCard={{ logoSrc: "/api/sponsor-logos/l1", name: "Bakkerij JAN nv" }}
+          playbackId="pb-1"
+        />,
+        "fr"
+      );
+      await screen.findByTestId("mux");
+      tick(18);
+      const shown = card(fr.container);
+      expect(shown?.textContent).toBe("Rendu possible grâce àBakkerij JAN nv");
+      expect(shown?.getAttribute("aria-hidden")).toBe("true");
+      expect(classesOf(shown)).toContain("pointer-events-none");
+      expect(
+        shown?.querySelector("img")?.getAttribute("src")
+      ).toBe("/api/sponsor-logos/l1");
+      fr.unmount();
+      const nl = renderKit(
+        <VideoPlayer endCard={{ name: "Jan" }} playbackId="pb-1" />,
+        "nl"
+      );
+      await screen.findByTestId("mux");
+      tick(18);
+      expect(card(nl.container)?.textContent).toBe("Mogelijk gemaakt doorJan");
+      // No logo, no image.
+      expect(card(nl.container)?.querySelector("img")).toBeNull();
+    });
+
+    test("fades in unless motion is reduced", async () => {
+      const { container } = renderKit(
+        <VideoPlayer endCard={{ name: "Jan" }} playbackId="pb-1" />
+      );
+      await screen.findByTestId("mux");
+      tick(19);
+      const classes = classesOf(
+        card(container)?.firstElementChild ?? null
+      );
+      expect(classes).toContain("animate-fade-in");
+      expect(classes).toContain("motion-reduce:animate-none");
+      expect(classes).toContain("bg-card");
+    });
+
+    test("shows no card without an end card (no sponsor, or a rendered video)", async () => {
+      const { container } = renderKit(<VideoPlayer playbackId="pb-1" />);
+      await screen.findByTestId("mux");
+      tick(19);
+      expect(card(container)).toBeNull();
+    });
+  });
+
   test("the server render is the poster, without the player", () => {
     const html = renderToString(
       <I18nextProvider i18n={createI18n("en")}>

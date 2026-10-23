@@ -371,6 +371,9 @@
       "inList": "In de lijst"
     }
   },
+  "endCard": {
+    "message": "Mogelijk gemaakt door"
+  },
   "media": {
     "nameOverlay": {
       "toggle": "Naam in de video tonen"
@@ -662,10 +665,9 @@
         "subject": "We hebben je sponsoring ontvangen",
         "preheader": "Bedankt! Zo gaat het nu verder.",
         "heading": "Sponsoring ontvangen",
-        "body": "Bedankt om {{gesture}} te sponsoren. In de video komt de naam {{displayName}}.",
+        "body": "Bedankt om {{gesture}} te sponsoren. Aan het einde van de video komt de naam {{displayName}}.",
         "nextTitle": "Wat gebeurt er nu?",
-        "stepRender": "We maken je gesponsorde video.",
-        "stepReview": "We bekijken de video voor hij online komt.",
+        "stepReview": "We bekijken je sponsoring voor ze online komt.",
         "stepLive": "Je krijgt een e-mail zodra je sponsoring online staat.",
         "footer": "Je krijgt deze e-mail omdat je onlangs een sponsoring hebt ingediend via SMOG & Co."
       },
@@ -682,7 +684,7 @@
         "subject": "Je sponsoring is nu live!",
         "preheader": "Je gesponsorde video staat online.",
         "heading": "Je sponsoring is live!",
-        "body": "Je gesponsorde video bij {{gesture}} staat nu online met de naam {{displayName}}.",
+        "body": "Je sponsoring van {{gesture}} staat nu online: aan het einde van de video staat de naam {{displayName}}.",
         "button": "Bekijk op SMOG",
         "thanks": "Bedankt om SMOG te steunen!",
         "footer": "30 dagen voor het einde sturen we je een herinnering, zodat je kunt verlengen."
@@ -702,7 +704,7 @@
         "preheader": "Betaald: {{total}}.",
         "heading": "Nieuwe sponsoring betaald",
         "headingRenewal": "Sponsoring verlengd",
-        "body": "Er is een sponsoring betaald. Ze wacht nu op de video en daarna op goedkeuring.",
+        "body": "Er is een sponsoring betaald. Ze wacht nu op goedkeuring.",
         "bodyRenewal": "Een sponsoring is verlengd voor een jaar. Er is geen nieuwe video of goedkeuring nodig.",
         "detailsTitle": "Sponsoring",
         "invoiceTitle": "Facturatie",
@@ -2509,7 +2511,7 @@
     },
     "review": {
       "title": "Bekijk je sponsoring",
-      "description": "Zo verschijnt je naam op de geselecteerde gebaren. De echte video wordt na de betaling gemaakt en gecontroleerd voor hij online gaat.",
+      "description": "Zo verschijnt je naam aan het einde van de video van de geselecteerde gebaren. Na de betaling controleren we je sponsoring voor ze online gaat.",
       "summary": "Sponsoringdetails",
       "gestures": "Gebaren",
       "duration": "Duur",
@@ -2580,7 +2582,6 @@
       "timeline": {
         "title": "Wat gebeurt er nu?",
         "paid": "Je betaling is bevestigd.",
-        "video": "We maken je video met je naam erin.",
         "review": "Een beheerder beoordeelt je sponsoring binnen vijf werkdagen.",
         "live": "Je krijgt een e-mail zodra hij online staat."
       },
@@ -2608,7 +2609,7 @@
     },
     "edit": {
       "eyebrow": "Sponsoring aanpassen",
-      "title": "Werk je video bij",
+      "title": "Werk je sponsoring bij",
       "gesture": "Gebaar: {{name}}",
       "expires_one": "Link verloopt over {{count}} dag",
       "expires_other": "Link verloopt over {{count}} dagen",
@@ -2617,14 +2618,14 @@
       "submit": "Ter controle verzenden",
       "submitted": {
         "title": "Verzonden!",
-        "description": "We maken je nieuwe video en controleren hem voor hij online gaat. Je hoeft niet opnieuw te betalen."
+        "description": "We controleren je aanpassing voor ze online gaat. Je hoeft niet opnieuw te betalen."
       },
       "failed": "We konden je aanpassing niet verzenden. Probeer het opnieuw."
     },
     "renew": {
       "eyebrow": "Sponsoring verlengen",
       "title": "Nog een jaar in de video",
-      "description": "Verleng je sponsoring met één jaar. Je video blijft zoals hij is.",
+      "description": "Verleng je sponsoring met één jaar. Je naam en logo blijven zoals ze zijn.",
       "gesture": "Gebaar",
       "name": "Naam in video",
       "currentEnd": "Loopt nu tot",
@@ -2640,8 +2641,8 @@
       "pause": "Pauzeren",
       "showEnding": "Toon het einde",
       "loading": "Voorbeeld laden…",
-      "fallbackNote": "De video kan hier niet worden afgespeeld, dus het voorbeeld toont een stilstaand beeld van het gebaar. De definitieve video gebruikt de volledige clip, met dit einde.",
-      "unavailable": "Het voorbeeld kan nu niet getoond worden. De definitieve video wordt gemaakt met je naam en logo zoals ingevuld."
+      "fallbackNote": "Zo ziet het einde van de video eruit: een stilstaand beeld van het gebaar met je naam en logo.",
+      "unavailable": "Het voorbeeld kan nu niet getoond worden. Je naam en logo verschijnen zoals ingevuld aan het einde van de video."
     }
   },
   "signOutConfirm": {

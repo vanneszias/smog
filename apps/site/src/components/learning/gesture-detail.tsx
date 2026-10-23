@@ -151,6 +151,14 @@ export function GestureDetailView({
           )}
         >
           <VideoPlayer
+            endCard={
+              gesture.sponsor?.endCard
+                ? {
+                    logoSrc: gesture.sponsor.logoPath,
+                    name: gesture.sponsor.name,
+                  }
+                : undefined
+            }
             nameOverlay={
               overlayApplies && nameOverlay.loaded && nameOverlay.shown
                 ? gesture.name
