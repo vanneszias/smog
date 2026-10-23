@@ -2,9 +2,13 @@ import { describe, expect, it } from "bun:test";
 import {
   audioPath,
   createNearEndTracker,
+  END_CARD_SECONDS,
+  endCardStart,
+  isEndCardVisible,
   muxStreamUrl,
   muxThumbnailUrl,
   NEAR_END_SECONDS,
+  sponsorLogoPath,
 } from "./media";
 
 describe("audioPath", () => {
@@ -68,5 +72,39 @@ describe("createNearEndTracker", () => {
     const tracker = createNearEndTracker();
     expect(tracker.update(0, 4)).toBe(true);
     expect(tracker.update(2, 4)).toBe(false);
+  });
+});
+
+describe("sponsorLogoPath", () => {
+  it("serves an R2 logo key from the same-origin route", () => {
+    expect(sponsorLogoPath("logos/0a1b")).toBe("/api/sponsor-logos/0a1b");
+  });
+});
+
+describe("the sponsor end card window", () => {
+  it("starts END_CARD_SECONDS before the end of a longer video", () => {
+    expect(END_CARD_SECONDS).toBe(4);
+    expect(endCardStart(20)).toBe(16);
+    expect(endCardStart(8)).toBe(4);
+  });
+
+  it("never starts before the middle of a short video", () => {
+    expect(endCardStart(6)).toBe(3);
+    expect(endCardStart(3)).toBe(1.5);
+  });
+
+  it("has no window until the duration is known", () => {
+    for (const duration of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(endCardStart(duration)).toBeNull();
+      expect(isEndCardVisible(1, duration)).toBe(false);
+    }
+  });
+
+  it("shows from the start of the window to the end, and hides after a seek back", () => {
+    expect(isEndCardVisible(15.9, 20)).toBe(false);
+    expect(isEndCardVisible(16, 20)).toBe(true);
+    expect(isEndCardVisible(20, 20)).toBe(true);
+    expect(isEndCardVisible(2, 20)).toBe(false);
+    expect(isEndCardVisible(Number.NaN, 20)).toBe(false);
   });
 });

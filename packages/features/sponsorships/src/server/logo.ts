@@ -7,7 +7,7 @@
  */
 import { sponsorship } from "@smog/db";
 import type { Db } from "@smog/db/client";
-import { newId } from "@smog/utils";
+import { LOGO_KEY_PREFIX, newId } from "@smog/utils";
 import { AwsClient } from "aws4fetch";
 import { eq } from "drizzle-orm";
 import {
@@ -23,8 +23,7 @@ export const LOGO_UPLOAD_TTL_MS = 5 * 60 * 1000;
 /** The fallback route, followed by the key's uuid. */
 const LOGO_UPLOAD_PATH = "/api/logos/upload/";
 
-/** `logos/<uuid>`: the R2 key prefix of every sponsor logo. */
-export const LOGO_KEY_PREFIX = "logos/";
+export { LOGO_KEY_PREFIX };
 
 /** What the upload URL needs from the Worker env. */
 export interface LogoUploadEnv {

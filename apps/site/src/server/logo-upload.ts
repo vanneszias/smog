@@ -1,4 +1,5 @@
 import { AuthError, getSession, requireAdminUser } from "@smog/auth";
+import { inList, sponsorship } from "@smog/db";
 import { createDb } from "@smog/db/client";
 import { checkRateLimit, isForeignRequest } from "@smog/rpc";
 import {
@@ -13,6 +14,7 @@ import {
   verifyLogoUpload,
 } from "@smog/sponsorships/server";
 import { readCappedBody } from "@smog/utils";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getAuth, siteEnv } from "./auth";
 import { clientIp } from "./context";
@@ -30,6 +32,10 @@ import { clientIp } from "./context";
  *   `uploadedAt`, once: a URL whose key exists is a 409 (single use).
  * - `GET /api/logos/<uuid>`: an admin session only; logos are private, and
  *   only an image type is echoed (anything else is a download).
+ * - `GET /api/sponsor-logos/<uuid>`: public, for the end card over a gesture
+ *   video (phase 10b ruling 9): only the logo of a `live` or `expiring`
+ *   sponsorship is served, else a 404 (the same one for an unknown id);
+ *   cached for an hour. `RL_API` per IP.
  * - `POST /api/sponsor/reedit-logo` `{ token }`: the one logo an open
  *   re-edit link keeps, for its preview (phase 7 task 9); see below.
  */
@@ -213,6 +219,59 @@ export async function handleReeditLogoRead(
       "content-length": String(logo.bytes.byteLength),
       "content-security-policy": "default-src 'none'; sandbox",
       "content-type": logo.contentType,
+      "cross-origin-resource-policy": "same-origin",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
+/** What the public logo is cached for: a re-edit stores a new key, a sponsorship ends. */
+const SPONSOR_LOGO_CACHE = "public, max-age=3600";
+
+/**
+ * `GET /api/sponsor-logos/<uuid>`: the logo of a running sponsorship (the
+ * end card shows it to every visitor of the gesture). Anything else, a
+ * logo of a pending, rejected or expired sponsorship included, is a 404:
+ * a logo stays private until its sponsorship is live.
+ */
+export async function handleSponsorLogoRead(
+  request: Request,
+  id: string
+): Promise<Response> {
+  const { db, rateLimits } = siteEnv();
+  if (
+    !(await checkRateLimit(
+      rateLimits.RL_API,
+      `${clientIp(request)}:sponsor-logo`
+    ))
+  ) {
+    return json(429, { code: "RATE_LIMITED" });
+  }
+  if (!LOGO_ID.test(id)) {
+    return json(404, { code: "NOT_FOUND" });
+  }
+  const key = `${LOGO_KEY_PREFIX}${id}`;
+  const [running] = await createDb(db)
+    .select({ id: sponsorship.id })
+    .from(sponsorship)
+    .where(
+      and(
+        eq(sponsorship.logoKey, key),
+        inList(sponsorship.status, ["live", "expiring"])
+      )
+    )
+    .limit(1);
+  const object = running ? await media().get(key) : null;
+  const type = object?.httpMetadata?.contentType;
+  if (!(object && isLogoContentType(type))) {
+    return json(404, { code: "NOT_FOUND" });
+  }
+  return new Response(object.body, {
+    headers: {
+      "cache-control": SPONSOR_LOGO_CACHE,
+      "content-length": String(object.size),
+      "content-security-policy": "default-src 'none'; sandbox",
+      "content-type": type,
       "cross-origin-resource-policy": "same-origin",
       "x-content-type-options": "nosniff",
     },

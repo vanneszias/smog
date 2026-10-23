@@ -73,7 +73,12 @@ export async function addSponsorship(
   db: Db,
   gestureId: string,
   status: SponsorshipStatus,
-  values: { displayName?: string; endsAt?: Date; videoPlaybackId?: string }
+  values: {
+    displayName?: string;
+    endsAt?: Date;
+    logoKey?: string;
+    videoPlaybackId?: string;
+  }
 ): Promise<void> {
   const sponsorId = newId();
   await db.insert(sponsor).values({
@@ -87,6 +92,7 @@ export async function addSponsorship(
     endsAt: values.endsAt ?? null,
     gestureId,
     id: newId(),
+    logoKey: values.logoKey ?? null,
     sponsorId,
     status,
     videoPlaybackId: values.videoPlaybackId ?? null,
