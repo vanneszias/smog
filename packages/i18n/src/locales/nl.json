@@ -2609,7 +2609,7 @@
     },
     "edit": {
       "eyebrow": "Sponsoring aanpassen",
-      "title": "Werk je sponsoring bij",
+      "title": "Werk je video bij",
       "gesture": "Gebaar: {{name}}",
       "expires_one": "Link verloopt over {{count}} dag",
       "expires_other": "Link verloopt over {{count}} dagen",
@@ -2625,7 +2625,7 @@
     "renew": {
       "eyebrow": "Sponsoring verlengen",
       "title": "Nog een jaar in de video",
-      "description": "Verleng je sponsoring met één jaar. Je naam en logo blijven zoals ze zijn.",
+      "description": "Verleng je sponsoring met één jaar. Je video blijft zoals hij is.",
       "gesture": "Gebaar",
       "name": "Naam in video",
       "currentEnd": "Loopt nu tot",
@@ -2637,12 +2637,7 @@
     "preview": {
       "label": "Voorbeeld voor {{name}}",
       "picker": "Kies het gebaar voor het voorbeeld",
-      "play": "Afspelen",
-      "pause": "Pauzeren",
-      "showEnding": "Toon het einde",
-      "loading": "Voorbeeld laden…",
-      "fallbackNote": "Zo ziet het einde van de video eruit: een stilstaand beeld van het gebaar met je naam en logo.",
-      "unavailable": "Het voorbeeld kan nu niet getoond worden. Je naam en logo verschijnen zoals ingevuld aan het einde van de video."
+      "caption": "Zo ziet het einde van de video eruit: een stilstaand beeld van het gebaar met je naam en logo."
     }
   },
   "signOutConfirm": {

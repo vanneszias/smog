@@ -2652,7 +2652,7 @@
     },
     "edit": {
       "eyebrow": "Modifier votre parrainage",
-      "title": "Mettez à jour votre parrainage",
+      "title": "Mettez à jour votre vidéo",
       "gesture": "Geste\u00a0: {{name}}",
       "expires_one": "Le lien expire dans {{count}} jour",
       "expires_many": "Le lien expire dans {{count}} jours",
@@ -2669,7 +2669,7 @@
     "renew": {
       "eyebrow": "Prolonger votre parrainage",
       "title": "Une année de plus dans la vidéo",
-      "description": "Prolongez votre parrainage d’un an. Votre nom et votre logo restent tels quels.",
+      "description": "Prolongez votre parrainage d'un an. Votre vidéo reste telle quelle.",
       "gesture": "Geste",
       "name": "Nom dans la vidéo",
       "currentEnd": "En cours jusqu'au",
@@ -2681,12 +2681,7 @@
     "preview": {
       "label": "Aperçu pour {{name}}",
       "picker": "Choisissez le geste à prévisualiser",
-      "play": "Lire",
-      "pause": "Pause",
-      "showEnding": "Voir la fin",
-      "loading": "Chargement de l’aperçu…",
-      "fallbackNote": "Voici à quoi ressemble la fin de la vidéo : une image fixe du geste avec votre nom et votre logo.",
-      "unavailable": "L’aperçu ne peut pas être affiché pour le moment. Votre nom et votre logo apparaissent tels que saisis à la fin de la vidéo."
+      "caption": "Voici à quoi ressemble la fin de la vidéo : une image fixe du geste avec votre nom et votre logo."
     }
   },
   "signOutConfirm": {

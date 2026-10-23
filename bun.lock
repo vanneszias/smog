@@ -101,7 +101,6 @@
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",
-        "@remotion/player": "catalog:",
         "@smog/account": "workspace:*",
         "@smog/admin": "workspace:*",
         "@smog/analytics": "workspace:*",
