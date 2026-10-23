@@ -1,5 +1,5 @@
 import { DEFAULT_LOCALE, type Locale } from "@smog/config/constants";
-import { type Messages, resources } from "./keys";
+import { loadedCatalogue, type MessageTree } from "./store";
 
 /**
  * The editable layer over the shipped catalogues (phase 10b ruling 1): the
@@ -11,21 +11,9 @@ export type CatalogueOverlay = Readonly<
   Record<Locale, Readonly<Record<string, string>>>
 >;
 
-export interface MessageTree {
-  [key: string]: string | MessageTree;
-}
-
-/** The nested messages of the shipped catalogue of `locale`; `{}` for a language that ships none. */
+/** The nested messages of the loaded shipped catalogue of `locale`; `{}` for a language that ships none or whose catalogue is not loaded yet. */
 export function shippedMessages(locale: Locale): MessageTree {
-  const shipped = (resources as Record<string, { translation: Messages }>)[
-    locale
-  ];
-  return (shipped?.translation ?? {}) as unknown as MessageTree;
-}
-
-/** Whether `locale` ships a catalogue in the bundle. */
-export function isShippedLocale(locale: Locale): boolean {
-  return Object.hasOwn(resources, locale);
+  return loadedCatalogue(locale) ?? {};
 }
 
 /** `{ a: { b: "x" } }` to `{ "a.b": "x" }`. */

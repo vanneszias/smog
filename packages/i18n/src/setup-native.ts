@@ -2,6 +2,7 @@ import { getLocales } from "expo-localization";
 import type { i18n } from "i18next";
 import type { CatalogueOverlay } from "./catalogue";
 import { resolveLocale } from "./detect";
+import "./shipped";
 import { createI18n } from "./setup-web";
 
 export interface SetupNativeOptions {

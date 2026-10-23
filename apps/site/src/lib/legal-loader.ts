@@ -1,4 +1,8 @@
-import type { LegalKind } from "@smog/i18n/legal/markup";
+import { ensureCatalogues } from "@smog/i18n";
+import {
+  LEGAL_CANONICAL_LOCALE,
+  type LegalKind,
+} from "@smog/i18n/legal/markup";
 import type { LegalMetaByLocale, LegalSearch } from "@/components/legal-head";
 import { getLegalTexts, type LegalTexts } from "@/server/legal.functions";
 
@@ -37,7 +41,13 @@ export function legalLoader(
     const root = await parentMatchPromise;
     const locale = root.loaderData?.locale ?? "nl";
     const locales = deps.lang ? [...new Set([locale, deps.lang])] : [locale];
-    const texts = await getLegalTexts({ data: { kind, locales } });
+    const [texts] = await Promise.all([
+      getLegalTexts({ data: { kind, locales } }),
+      // The page labels itself in the text's language and the notice in Dutch: the browser holds only the active catalogue.
+      ...[...new Set([...locales, LEGAL_CANONICAL_LOCALE])].map(
+        ensureCatalogues
+      ),
+    ]);
     const { legalMeta } = await import("@/components/legal-page");
     return { meta: legalMeta(texts), texts };
   };
