@@ -691,7 +691,7 @@
         "subject": "Votre parrainage est en ligne\u00a0!",
         "preheader": "Votre vidéo parrainée est en ligne.",
         "heading": "Votre parrainage est en ligne\u00a0!",
-        "body": "Votre parrainage de {{gesture}} est maintenant en ligne : la fin de la vidéo affiche le nom {{displayName}}.",
+        "body": "Votre parrainage de {{gesture}} est maintenant en ligne : la fin de la vidéo affiche le nom {{displayName}}.",
         "button": "Voir sur SMOG",
         "thanks": "Merci de soutenir SMOG\u00a0!",
         "footer": "Nous vous enverrons un rappel 30 jours avant la fin, pour que vous puissiez prolonger."
@@ -2681,7 +2681,7 @@
     "preview": {
       "label": "Aperçu pour {{name}}",
       "picker": "Choisissez le geste à prévisualiser",
-      "caption": "Voici à quoi ressemble la fin de la vidéo : une image fixe du geste avec votre nom et votre logo."
+      "caption": "Voici à quoi ressemble la fin de la vidéo : une image fixe du geste avec votre nom et votre logo."
     }
   },
   "signOutConfirm": {
