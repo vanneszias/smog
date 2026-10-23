@@ -62,6 +62,7 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiLogosKeyRouteImport } from './routes/api/logos/$key'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
+import { Route as ApiSponsorLogosKeyRouteImport } from './routes/api/sponsor-logos/$key'
 import { Route as ApiSponsorReeditLogoRouteImport } from './routes/api/sponsor/reedit-logo'
 import { Route as ApiWebhooksMollieRouteImport } from './routes/api/webhooks/mollie'
 import { Route as ApiWebhooksMuxRouteImport } from './routes/api/webhooks/mux'
@@ -334,6 +335,11 @@ const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   path: '/api/rpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSponsorLogosKeyRoute = ApiSponsorLogosKeyRouteImport.update({
+  id: '/api/sponsor-logos/$key',
+  path: '/api/sponsor-logos/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSponsorReeditLogoRoute = ApiSponsorReeditLogoRouteImport.update({
   id: '/api/sponsor/reedit-logo',
   path: '/api/sponsor/reedit-logo',
@@ -411,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor-logos/$key': typeof ApiSponsorLogosKeyRoute
   '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
@@ -470,6 +477,7 @@ export interface FileRoutesByTo {
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor-logos/$key': typeof ApiSponsorLogosKeyRoute
   '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
@@ -531,6 +539,7 @@ export interface FileRoutesById {
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor-logos/$key': typeof ApiSponsorLogosKeyRoute
   '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
@@ -593,6 +602,7 @@ export interface FileRouteTypes {
     | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor-logos/$key'
     | '/api/sponsor/reedit-logo'
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
@@ -652,6 +662,7 @@ export interface FileRouteTypes {
     | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor-logos/$key'
     | '/api/sponsor/reedit-logo'
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
@@ -712,6 +723,7 @@ export interface FileRouteTypes {
     | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor-logos/$key'
     | '/api/sponsor/reedit-logo'
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
@@ -760,6 +772,7 @@ export interface RootRouteChildren {
   ApiLogosKeyRoute: typeof ApiLogosKeyRoute
   ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
+  ApiSponsorLogosKeyRoute: typeof ApiSponsorLogosKeyRoute
   ApiSponsorReeditLogoRoute: typeof ApiSponsorReeditLogoRoute
   ApiWebhooksMollieRoute: typeof ApiWebhooksMollieRoute
   ApiWebhooksMuxRoute: typeof ApiWebhooksMuxRoute
@@ -1140,6 +1153,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sponsor-logos/$key': {
+      id: '/api/sponsor-logos/$key'
+      path: '/api/sponsor-logos/$key'
+      fullPath: '/api/sponsor-logos/$key'
+      preLoaderRoute: typeof ApiSponsorLogosKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/sponsor/reedit-logo': {
       id: '/api/sponsor/reedit-logo'
       path: '/api/sponsor/reedit-logo'
@@ -1256,6 +1276,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLogosKeyRoute: ApiLogosKeyRoute,
   ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
+  ApiSponsorLogosKeyRoute: ApiSponsorLogosKeyRoute,
   ApiSponsorReeditLogoRoute: ApiSponsorReeditLogoRoute,
   ApiWebhooksMollieRoute: ApiWebhooksMollieRoute,
   ApiWebhooksMuxRoute: ApiWebhooksMuxRoute,
