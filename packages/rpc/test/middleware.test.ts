@@ -192,10 +192,10 @@ describe("rpcHandlerOptions (limitRequests, then loadSession)", () => {
     const auth = { api: { getSession } } as unknown as Auth;
     const handler = new RPCHandler<RpcContext>(
       {
+        locale: publicProcedure.handler(({ context }) => context.locale),
         me: publicProcedure.handler(
           ({ context }) => context.session?.user.id ?? null
         ),
-        locale: publicProcedure.handler(({ context }) => context.locale),
         slug: publicProcedure
           .input(z.object({ slug: z.string().min(2) }))
           .handler(({ input }) => input.slug),

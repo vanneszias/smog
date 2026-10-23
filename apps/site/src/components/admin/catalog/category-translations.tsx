@@ -10,6 +10,9 @@ import {
 import type { LanguageInfo } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Badge,
   Button,
   Card,
@@ -31,6 +34,8 @@ import {
   type FormEvent,
   type ReactNode,
   useCallback,
+  useEffect,
+  useRef,
   useState,
 } from "react";
 import { useLocale } from "@/lib/locale";
@@ -47,7 +52,47 @@ function CategoryRow({
   const { toast } = useToast();
   const { saveCategory } = useCatalogTranslationMutations();
   const stored = row.translation?.name ?? "";
+  const storedAt = row.translation?.updatedAt ?? null;
+  // The row is never remounted: `base` is the stored name the field started
+  // from and `expected` the version a save is checked against. Another
+  // translator's save replaces an untouched field, and for an edited one
+  // offers their name next to the draft (like the strings table).
   const [name, setName] = useState(stored);
+  const [base, setBase] = useState(stored);
+  const [expected, setExpected] = useState<number | null>(storedAt);
+  const [conflict, setConflict] = useState<{
+    theirs: string;
+    updatedAt: number | null;
+  } | null>(null);
+  const field = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (storedAt === expected || storedAt === conflict?.updatedAt) {
+      return;
+    }
+    if (name === stored || name === base) {
+      setName(stored);
+      setBase(stored);
+      setExpected(storedAt);
+      setConflict(null);
+    } else {
+      setConflict({ theirs: stored, updatedAt: storedAt });
+    }
+  }, [base, conflict?.updatedAt, expected, name, stored, storedAt]);
+  const takeTheirs = useCallback(() => {
+    if (conflict) {
+      setName(conflict.theirs);
+      setBase(conflict.theirs);
+      setExpected(conflict.updatedAt);
+      setConflict(null);
+    }
+  }, [conflict]);
+  const keepMine = useCallback(() => {
+    if (conflict) {
+      setBase(conflict.theirs);
+      setExpected(conflict.updatedAt);
+      setConflict(null);
+    }
+  }, [conflict]);
   const onChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => setName(event.target.value),
     []
@@ -61,17 +106,21 @@ function CategoryRow({
       }
       saveCategory
         .mutateAsync({
-          expectedUpdatedAt: row.translation?.updatedAt ?? null,
+          expectedUpdatedAt: expected,
           id: row.id,
           locale: language.code,
           name: trimmed,
         })
-        .then(() =>
+        .then(() => {
+          // The Save button is disabled again: keep the keyboard in the row.
+          if (document.activeElement?.tagName !== "INPUT") {
+            field.current?.focus();
+          }
           toast({
             title: t("admin.catalogTranslation.categories.saved"),
             variant: "success",
-          })
-        )
+          });
+        })
         .catch((error: unknown) => {
           console.error("[admin] Failed to save the category name:", error);
           toast({
@@ -82,24 +131,39 @@ function CategoryRow({
           });
         });
     },
-    [
-      language.code,
-      row.id,
-      row.translation?.updatedAt,
-      saveCategory,
-      t,
-      toast,
-      trimmed,
-    ]
+    [expected, language.code, row.id, saveCategory, t, toast, trimmed]
   );
   const label = t("admin.catalogTranslation.categories.nameIn", {
     language: language.name,
   });
   return (
     <li>
+      {conflict ? (
+        <Alert className="mt-3" variant="warning">
+          <AlertTitle>{t("admin.translation.editor.conflictTitle")}</AlertTitle>
+          <AlertDescription>
+            <span className="block">
+              {t("admin.translation.editor.conflictBody")}
+            </span>
+            <span
+              className="mt-1 block whitespace-pre-wrap break-words font-medium"
+              lang={language.code}
+            >
+              {conflict.theirs}
+            </span>
+            <span className="mt-2 flex flex-wrap gap-2">
+              <Button onClick={takeTheirs} size="sm" variant="secondary">
+                {t("admin.translation.editor.useTheirs")}
+              </Button>
+              <Button onClick={keepMine} size="sm" variant="secondary">
+                {t("admin.translation.editor.keepMine")}
+              </Button>
+            </span>
+          </AlertDescription>
+        </Alert>
+      ) : null}
       <form
         className="flex flex-wrap items-end gap-3 border-border-subtle border-b py-3"
-        lang={language.code}
         noValidate
         onSubmit={submit}
       >
@@ -110,9 +174,11 @@ function CategoryRow({
           <Input
             aria-label={`${label}: ${row.name}`}
             autoComplete="off"
+            lang={language.code}
             maxLength={CATEGORY_NAME_MAX}
             onChange={onChange}
             placeholder={row.name}
+            ref={field}
             value={name}
           />
         </div>
@@ -125,7 +191,7 @@ function CategoryRow({
           aria-label={t("admin.catalogTranslation.categories.saveFor", {
             name: row.name,
           })}
-          disabled={trimmed === "" || trimmed === stored}
+          disabled={trimmed === "" || trimmed === base || conflict !== null}
           icon={<Save />}
           loading={saveCategory.isPending}
           type="submit"
@@ -159,12 +225,7 @@ function LanguageCategories({
   return (
     <ul className="flex max-w-content flex-col">
       {query.data.items.map((row) => (
-        <CategoryRow
-          // A fresh row whenever the stored name changed.
-          key={`${row.id}:${row.translation?.updatedAt ?? 0}`}
-          language={language}
-          row={row}
-        />
+        <CategoryRow key={row.id} language={language} row={row} />
       ))}
     </ul>
   );
@@ -181,6 +242,7 @@ export function CategoryTranslations(): ReactNode {
   const { languages } = useLocale();
   const targets = languages.filter((language) => !language.isDefault);
   const [first] = targets;
+  const [active, setActive] = useState(first?.code ?? "");
   return (
     <Card className="gap-3 sm:p-4">
       <CardContent className="gap-4">
@@ -191,7 +253,7 @@ export function CategoryTranslations(): ReactNode {
           {t("admin.catalogTranslation.categories.description")}
         </Text>
         {first ? (
-          <Tabs defaultValue={first.code}>
+          <Tabs onValueChange={setActive} value={active}>
             <TabsList aria-label={t("admin.catalogTranslation.tabsLabel")}>
               {targets.map((language) => (
                 <TabsTrigger
@@ -204,7 +266,14 @@ export function CategoryTranslations(): ReactNode {
               ))}
             </TabsList>
             {targets.map((language) => (
-              <TabsContent key={language.code} value={language.code}>
+              // Every tab stays mounted (hidden when inactive): an unsaved
+              // name survives a switch to another language and back.
+              <TabsContent
+                forceMount
+                hidden={active !== language.code}
+                key={language.code}
+                value={language.code}
+              >
                 <LanguageCategories language={language} />
               </TabsContent>
             ))}

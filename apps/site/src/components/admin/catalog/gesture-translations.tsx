@@ -11,6 +11,9 @@ import {
 import type { LanguageInfo } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Badge,
   Button,
   Card,
@@ -34,6 +37,8 @@ import {
   type FormEvent,
   type ReactNode,
   useCallback,
+  useEffect,
+  useRef,
   useState,
 } from "react";
 import { useLocale } from "@/lib/locale";
@@ -51,6 +56,14 @@ const EMPTY: TextDraft = { description: "", keywords: [], name: "" };
 
 function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function sameDraft(a: TextDraft, b: TextDraft): boolean {
+  return (
+    a.name === b.name &&
+    a.description === b.description &&
+    sameList(a.keywords, b.keywords)
+  );
 }
 
 function draftOf(translation: Translation | undefined): TextDraft {
@@ -92,19 +105,20 @@ function SourceText({
   const { t } = useTranslation();
   const { source } = gesture;
   return (
-    <div
-      className="flex min-w-0 flex-col gap-3 rounded-md bg-surface-sunken p-4"
-      lang={language.code}
-    >
+    <div className="flex min-w-0 flex-col gap-3 rounded-md bg-surface-sunken p-4">
       <Text size="body-sm" tone="muted" weight="medium">
         {t("admin.catalogTranslation.sourceLabel", { language: language.name })}
       </Text>
-      <Text weight="medium">{source.name}</Text>
+      <Text lang={language.code} weight="medium">
+        {source.name}
+      </Text>
       {source.description ? (
-        <Text size="body-sm">{source.description}</Text>
+        <Text lang={language.code} size="body-sm">
+          {source.description}
+        </Text>
       ) : null}
       {source.keywords.length > 0 ? (
-        <Text size="body-sm" tone="muted">
+        <Text lang={language.code} size="body-sm" tone="muted">
           {source.keywords.join(", ")}
         </Text>
       ) : null}
@@ -126,13 +140,50 @@ function LanguageForm({
   const { toast } = useToast();
   const { saveGesture } = useCatalogTranslationMutations();
   const saved = gesture.translations[language.code];
+  const savedAt = saved?.updatedAt ?? null;
   const [draft, setDraft] = useState<TextDraft>(() => draftOf(saved));
+  // The text the draft started from, and the version (`updatedAt`) a save
+  // is checked against. Another translator's save arrives as a new `saved`:
+  // an untouched form takes it, an edited one keeps the draft and offers
+  // their text (like the strings table); the form is never remounted.
+  const [base, setBase] = useState<TextDraft>(() => draftOf(saved));
+  const [expected, setExpected] = useState<number | null>(savedAt);
+  const [conflict, setConflict] = useState<{
+    theirs: TextDraft;
+    updatedAt: number | null;
+  } | null>(null);
   const [tried, setTried] = useState(false);
-  const base = draftOf(saved);
-  const dirty =
-    draft.name !== base.name ||
-    draft.description !== base.description ||
-    !sameList(draft.keywords, base.keywords);
+  const nameField = useRef<HTMLInputElement>(null);
+  const dirty = !sameDraft(draft, base);
+  useEffect(() => {
+    if (savedAt === expected || savedAt === conflict?.updatedAt) {
+      return;
+    }
+    const theirs = draftOf(saved);
+    if (sameDraft(draft, theirs) || sameDraft(draft, base)) {
+      setDraft(theirs);
+      setBase(theirs);
+      setExpected(savedAt);
+      setConflict(null);
+    } else {
+      setConflict({ theirs, updatedAt: savedAt });
+    }
+  }, [base, conflict?.updatedAt, draft, expected, saved, savedAt]);
+  const takeTheirs = useCallback(() => {
+    if (conflict) {
+      setDraft(conflict.theirs);
+      setBase(conflict.theirs);
+      setExpected(conflict.updatedAt);
+      setConflict(null);
+    }
+  }, [conflict]);
+  const keepMine = useCallback(() => {
+    if (conflict) {
+      setBase(conflict.theirs);
+      setExpected(conflict.updatedAt);
+      setConflict(null);
+    }
+  }, [conflict]);
   const nameMissing = draft.name.trim() === "";
 
   const onName = useCallback(
@@ -162,7 +213,7 @@ function LanguageForm({
       saveGesture
         .mutateAsync({
           description: draft.description,
-          expectedUpdatedAt: saved?.updatedAt ?? null,
+          expectedUpdatedAt: expected,
           id: gesture.id,
           keywords: draft.keywords,
           locale: language.code,
@@ -170,6 +221,10 @@ function LanguageForm({
         })
         .then(() => {
           setTried(false);
+          // The Save button is disabled again: keep the keyboard in the form.
+          if (document.activeElement?.tagName !== "INPUT") {
+            nameField.current?.focus();
+          }
           toast({
             title: t("admin.catalogTranslation.saved"),
             variant: "success",
@@ -190,11 +245,11 @@ function LanguageForm({
     },
     [
       draft,
+      expected,
       gesture.id,
       language.code,
       nameMissing,
       saveGesture,
-      saved?.updatedAt,
       t,
       toast,
     ]
@@ -203,12 +258,43 @@ function LanguageForm({
   return (
     <form
       className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2"
-      lang={language.code}
       noValidate
       onSubmit={submit}
     >
       <SourceText gesture={gesture} language={defaultLanguage} />
       <div className="flex min-w-0 flex-col gap-4">
+        {conflict ? (
+          <Alert variant="warning">
+            <AlertTitle>
+              {t("admin.translation.editor.conflictTitle")}
+            </AlertTitle>
+            <AlertDescription>
+              <span className="block">
+                {t("admin.translation.editor.conflictBody")}
+              </span>
+              <span
+                className="mt-1 block whitespace-pre-wrap break-words font-medium"
+                lang={language.code}
+              >
+                {[
+                  conflict.theirs.name,
+                  conflict.theirs.description,
+                  conflict.theirs.keywords.join(", "),
+                ]
+                  .filter((part) => part !== "")
+                  .join(" / ")}
+              </span>
+              <span className="mt-2 flex flex-wrap gap-2">
+                <Button onClick={takeTheirs} size="sm" variant="secondary">
+                  {t("admin.translation.editor.useTheirs")}
+                </Button>
+                <Button onClick={keepMine} size="sm" variant="secondary">
+                  {t("admin.translation.editor.keepMine")}
+                </Button>
+              </span>
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <Field
           counter={{ count: draft.name.trim().length, max: GESTURE_NAME_MAX }}
           error={
@@ -221,8 +307,10 @@ function LanguageForm({
         >
           <Input
             autoComplete="off"
+            lang={language.code}
             onChange={onName}
             placeholder={gesture.source.name}
+            ref={nameField}
             value={draft.name}
           />
         </Field>
@@ -235,6 +323,7 @@ function LanguageForm({
           optional
         >
           <Textarea
+            lang={language.code}
             onChange={onDescription}
             rows={4}
             value={draft.description}
@@ -248,7 +337,7 @@ function LanguageForm({
         />
         <div>
           <Button
-            disabled={!dirty}
+            disabled={!dirty || conflict !== null}
             icon={<Save />}
             loading={saveGesture.isPending}
             type="submit"
@@ -272,6 +361,7 @@ function TranslationTabs({
   const defaultLanguage = languages.find((language) => language.isDefault);
   const targets = languages.filter((language) => !language.isDefault);
   const [first] = targets;
+  const [active, setActive] = useState(first?.code ?? "");
   if (!(first && defaultLanguage)) {
     return (
       <Text size="body-sm" tone="muted">
@@ -280,7 +370,7 @@ function TranslationTabs({
     );
   }
   return (
-    <Tabs defaultValue={first.code}>
+    <Tabs onValueChange={setActive} value={active}>
       <TabsList aria-label={t("admin.catalogTranslation.tabsLabel")}>
         {targets.map((language) => (
           <TabsTrigger
@@ -304,13 +394,17 @@ function TranslationTabs({
         ))}
       </TabsList>
       {targets.map((language) => (
-        <TabsContent key={language.code} value={language.code}>
+        // Every tab stays mounted (hidden when inactive), so an unsaved
+        // draft survives a switch to another language and back.
+        <TabsContent
+          forceMount
+          hidden={active !== language.code}
+          key={language.code}
+          value={language.code}
+        >
           <LanguageForm
             defaultLanguage={defaultLanguage}
             gesture={gesture}
-            // A fresh form whenever the stored text changed (a save, or
-            // another translator's, loaded after a conflict).
-            key={`${language.code}:${gesture.translations[language.code]?.updatedAt ?? 0}`}
             language={language}
           />
         </TabsContent>
