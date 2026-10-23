@@ -176,7 +176,6 @@ function GestureDetail({
       <ConnectionBanner className="mx-0" />
       <VideoPlayer
         autoPlay
-        isFocused={isFocused}
         endCard={
           gesture.sponsor?.endCard
             ? {
@@ -187,6 +186,7 @@ function GestureDetail({
               }
             : undefined
         }
+        isFocused={isFocused}
         loop
         nameOverlay={overlayApplies && overlayShown ? gesture.name : undefined}
         onNearEnd={onNearEnd}

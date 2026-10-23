@@ -29,7 +29,7 @@ export {
 } from "./lifecycle";
 export {
   isLogoContentType,
-  LOGO_KEY_PREFIX,
+  isRunningLogo,
   r2Origin,
   signLogoUpload,
   sniffLogoType,

@@ -7,12 +7,7 @@ import {
   test,
 } from "@playwright/test";
 import { ADMIN_PAGES, openAdmin, stubMuxMedia } from "./admin";
-import {
-  e2eSeed,
-  signInWithApi,
-  stubMux,
-  waitForApp,
-} from "./helpers";
+import { e2eSeed, signInWithApi, stubMux, waitForApp } from "./helpers";
 import { signInAsAdmin } from "./maintenance";
 import { uploadLogo } from "./sponsorships";
 

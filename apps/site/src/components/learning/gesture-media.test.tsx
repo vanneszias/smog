@@ -140,9 +140,7 @@ describe("the sponsor end card on the gesture page (phase 10b ruling 9)", () => 
   });
 
   test("shows it over a video that still has the gesture's name burned in too (needs re-cut): the card is the sponsor's, not the name's", async () => {
-    await renderSite(
-      detailOf({ ...BASE, needsRecut: true, sponsor: SPONSOR })
-    );
+    await renderSite(detailOf({ ...BASE, needsRecut: true, sponsor: SPONSOR }));
     await waitFor(() => expect(timeUpdate).toBeDefined());
     at(18);
     expect(card()).not.toBeNull();

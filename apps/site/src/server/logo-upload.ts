@@ -1,5 +1,4 @@
 import { AuthError, getSession, requireAdminUser } from "@smog/auth";
-import { inList, sponsorship } from "@smog/db";
 import { createDb } from "@smog/db/client";
 import { checkRateLimit, isForeignRequest } from "@smog/rpc";
 import {
@@ -8,13 +7,12 @@ import {
 } from "@smog/sponsorships/schema";
 import {
   isLogoContentType,
-  LOGO_KEY_PREFIX,
+  isRunningLogo,
   readReeditLogo,
   sniffLogoType,
   verifyLogoUpload,
 } from "@smog/sponsorships/server";
-import { readCappedBody } from "@smog/utils";
-import { and, eq } from "drizzle-orm";
+import { LOGO_KEY_PREFIX, readCappedBody } from "@smog/utils";
 import { z } from "zod";
 import { getAuth, siteEnv } from "./auth";
 import { clientIp } from "./context";
@@ -251,16 +249,7 @@ export async function handleSponsorLogoRead(
     return json(404, { code: "NOT_FOUND" });
   }
   const key = `${LOGO_KEY_PREFIX}${id}`;
-  const [running] = await createDb(db)
-    .select({ id: sponsorship.id })
-    .from(sponsorship)
-    .where(
-      and(
-        eq(sponsorship.logoKey, key),
-        inList(sponsorship.status, ["live", "expiring"])
-      )
-    )
-    .limit(1);
+  const running = await isRunningLogo(createDb(db), key);
   const object = running ? await media().get(key) : null;
   const type = object?.httpMetadata?.contentType;
   if (!(object && isLogoContentType(type))) {

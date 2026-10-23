@@ -201,10 +201,7 @@ describe("sponsorships.reedit.submit", () => {
     expect(tokenRow?.usedAt).not.toBeNull();
     // The end card (phase 10b ruling 9): no render job, no message.
     expect(
-      await db
-        .select()
-        .from(renderJob)
-        .where(eq(renderJob.sponsorshipId, id))
+      await db.select().from(renderJob).where(eq(renderJob.sponsorshipId, id))
     ).toEqual([]);
     expect(messages).toEqual([]);
     const trail = (await eventsOf(db, id)).map((event) => event.type);

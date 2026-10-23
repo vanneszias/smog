@@ -193,7 +193,10 @@ describe("VideoPlayer", () => {
     test("says the message in the viewer's language, the name as typed, and the logo", async () => {
       const fr = renderKit(
         <VideoPlayer
-          endCard={{ logoSrc: "/api/sponsor-logos/l1", name: "Bakkerij JAN nv" }}
+          endCard={{
+            logoSrc: "/api/sponsor-logos/l1",
+            name: "Bakkerij JAN nv",
+          }}
           playbackId="pb-1"
         />,
         "fr"
@@ -204,9 +207,9 @@ describe("VideoPlayer", () => {
       expect(shown?.textContent).toBe("Rendu possible grâce àBakkerij JAN nv");
       expect(shown?.getAttribute("aria-hidden")).toBe("true");
       expect(classesOf(shown)).toContain("pointer-events-none");
-      expect(
-        shown?.querySelector("img")?.getAttribute("src")
-      ).toBe("/api/sponsor-logos/l1");
+      expect(shown?.querySelector("img")?.getAttribute("src")).toBe(
+        "/api/sponsor-logos/l1"
+      );
       fr.unmount();
       const nl = renderKit(
         <VideoPlayer endCard={{ name: "Jan" }} playbackId="pb-1" />,
@@ -225,9 +228,7 @@ describe("VideoPlayer", () => {
       );
       await screen.findByTestId("mux");
       tick(19);
-      const classes = classesOf(
-        card(container)?.firstElementChild ?? null
-      );
+      const classes = classesOf(card(container)?.firstElementChild ?? null);
       expect(classes).toContain("animate-fade-in");
       expect(classes).toContain("motion-reduce:animate-none");
       expect(classes).toContain("bg-card");

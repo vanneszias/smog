@@ -51,7 +51,8 @@ const { mockAudioPlayers } = jest.requireMock("expo-audio") as {
 };
 
 const AUDIO_URL = /^https?:\/\/.+\/api\/audio\/g-hond\/nl\/clip$/;
-const LOGO_URL = /^https?:\/\/.+\/api\/sponsor-logos\/0a1b2c3d-0000-4000-8000-000000000001$/;
+const LOGO_URL =
+  /^https?:\/\/.+\/api\/sponsor-logos\/0a1b2c3d-0000-4000-8000-000000000001$/;
 const LES_1 = /Les 1/;
 const DIEREN_OP_SCHOOL = /Dieren op school/;
 

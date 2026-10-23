@@ -625,7 +625,7 @@ async function eachThemeAndWidth(
         const page = await context.newPage();
         await stubMux(page);
         await stubMuxStream(page);
-              await run(page, (shot) => join(dir, `${shot}-${theme}-${width}.png`));
+        await run(page, (shot) => join(dir, `${shot}-${theme}-${width}.png`));
       } finally {
         await context.close();
       }
@@ -824,7 +824,7 @@ test("axe on the paused, success, link and CTA states in light and dark (review 
       const page = await context.newPage();
       await stubMux(page);
       await stubMuxStream(page);
-          await page.goto("/");
+      await page.goto("/");
       await waitForApp(page);
       await declineConsent(page);
       await stubbedStates(page, async (state) => {

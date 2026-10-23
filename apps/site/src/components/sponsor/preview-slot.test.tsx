@@ -15,11 +15,11 @@ describe("SponsorPreviewSlot (the wizard preview is the end card)", () => {
     await renderSite(() => (
       <div data-testid="page">
         <SponsorPreviewSlot
-        displayName="Bakkerij JAN nv"
-        logo={new File([new Uint8Array([1])], "l.png", { type: "image/png" })}
-        name="Broer"
-        playbackId="pb-1"
-      />
+          displayName="Bakkerij JAN nv"
+          logo={new File([new Uint8Array([1])], "l.png", { type: "image/png" })}
+          name="Broer"
+          playbackId="pb-1"
+        />
       </div>
     ));
     const frame = screen.getByRole("img", { name: "Preview for Broer" });
@@ -28,9 +28,9 @@ describe("SponsorPreviewSlot (the wizard preview is the end card)", () => {
     );
     expect(card()?.textContent).toBe("Made possible byBakkerij JAN nv");
     await waitFor(() =>
-      expect(
-        card()?.querySelector("img")?.getAttribute("src") ?? ""
-      ).toMatch(BLOB_URL)
+      expect(card()?.querySelector("img")?.getAttribute("src") ?? "").toMatch(
+        BLOB_URL
+      )
     );
     // The card is decoration inside a named picture.
     expect(card()?.getAttribute("aria-hidden")).toBe("true");
@@ -40,11 +40,11 @@ describe("SponsorPreviewSlot (the wizard preview is the end card)", () => {
     await renderSite(() => (
       <div data-testid="page">
         <SponsorPreviewSlot
-        displayName="  Jan  "
-        logo={null}
-        name="Broer"
-        playbackId="pb-1"
-      />
+          displayName="  Jan  "
+          logo={null}
+          name="Broer"
+          playbackId="pb-1"
+        />
       </div>
     ));
     expect(card()?.textContent).toBe("Made possible byJan");
@@ -55,14 +55,16 @@ describe("SponsorPreviewSlot (the wizard preview is the end card)", () => {
     await renderSite(() => (
       <div data-testid="page">
         <SponsorPreviewSlot
-        displayName="   "
-        logo={null}
-        name="Broer"
-        playbackId="pb-1"
-      />
+          displayName="   "
+          logo={null}
+          name="Broer"
+          playbackId="pb-1"
+        />
       </div>
     ));
-    expect(screen.getByRole("img", { name: "Preview for Broer" })).toBeDefined();
+    expect(
+      screen.getByRole("img", { name: "Preview for Broer" })
+    ).toBeDefined();
     expect(card()).toBeNull();
   });
 });

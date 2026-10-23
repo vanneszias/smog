@@ -297,7 +297,9 @@ export async function findGestureBySlug(
               // A rendered video (an older sponsorship) has the name burned in.
               endCard: sponsorVideo === null,
               logoPath:
-                sponsorLogoKey === null ? null : sponsorLogoPath(sponsorLogoKey),
+                sponsorLogoKey === null
+                  ? null
+                  : sponsorLogoPath(sponsorLogoKey),
               name: sponsorName,
               until: sponsorUntil.getTime(),
             }

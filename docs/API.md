@@ -46,7 +46,7 @@ same summaries in the request's language.
 | `gestures.categories` | none | published categories (`sort_order`, then the default name; ≤ 100), each `{ name, slug, gestureCount, fallbackUsed }` |
 | `gestures.list` | `{ category?: slug[] (≤ 20, any of), cursor?, limit? (1..100, = 50) }` | `{ items: GestureSummary[], nextCursor }` (name order, keyset) |
 | `gestures.search` | `{ q (≤ 100), category?, limit? (1..50, = 20) }` | `{ items: SearchResult[], total }` (FTS5 candidates ≤ 200, the TS ranking, then the typo tier; an empty `q` is the browse list) |
-| `gestures.bySlug` | `{ slug }` | the gesture, also by its legacy id (`canonicalSlug` then differs); `NOT_FOUND` otherwise |
+| `gestures.bySlug` | `{ slug }` | the gesture, also by its legacy id (`canonicalSlug` then differs); `NOT_FOUND` otherwise. `sponsor` is `null` or `{ name, until, logoPath, endCard }` for the running (`live`, `expiring`) sponsorship: `endCard` is true when its video is the gesture's own (the player draws the sponsor end card over the last seconds, phase 10b task 8), false for an older rendered video that carries the name; `logoPath` is `/api/sponsor-logos/<uuid>` or `null` |
 | `gestures.byIds` | `{ ids (≤ 100) }` | `GestureSummary[]` in the order asked; unknown ids are skipped |
 | `gestures.related` | `{ slug, limit? (1..20, = 5) }` | gestures sharing a category, most shared first |
 | `gestures.sitemap` | none | every published gesture's sitemap entry |

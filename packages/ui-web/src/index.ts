@@ -278,16 +278,16 @@ export {
   ShareLink,
   type ShareLinkProps,
 } from "./domain/share-link";
+export {
+  SponsorEndCard,
+  type SponsorEndCardProps,
+} from "./domain/sponsor-end-card";
 export type {
   CategoryRef,
   GestureCardData,
   KitLinkComponent,
   KitLinkProps,
 } from "./domain/types";
-export {
-  SponsorEndCard,
-  type SponsorEndCardProps,
-} from "./domain/sponsor-end-card";
 export {
   type VideoAspect,
   VideoPlayer,

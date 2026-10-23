@@ -50,7 +50,9 @@ function inLocale(ui: ReactElement, locale: Locale): ReturnType<typeof render> {
 describe("SponsorEndCard", () => {
   it("says the message in the viewer's language with the name as typed", async () => {
     await inLocale(<SponsorEndCard name="Bakkerij JAN nv" />, "fr");
-    expect(screen.getByText("Rendu possible grâce à", HIDDEN)).toBeOnTheScreen();
+    expect(
+      screen.getByText("Rendu possible grâce à", HIDDEN)
+    ).toBeOnTheScreen();
     expect(screen.getByText("Bakkerij JAN nv", HIDDEN)).toBeOnTheScreen();
   });
 
@@ -66,7 +68,9 @@ describe("SponsorEndCard", () => {
     const { rerender } = await renderKit(
       <SponsorEndCard logoSrc="https://example.test/l.png" name="Jan" />
     );
-    expect(screen.getByTestId("sponsor-end-card-logo", HIDDEN).props.source).toEqual({
+    expect(
+      screen.getByTestId("sponsor-end-card-logo", HIDDEN).props.source
+    ).toEqual({
       uri: "https://example.test/l.png",
     });
     const card = screen.getByTestId("sponsor-end-card", HIDDEN);
@@ -80,8 +84,7 @@ describe("SponsorEndCard", () => {
 
 describe("VideoPlayer end card", () => {
   const endCard = { logoSrc: "https://example.test/l.png", name: "Jan" };
-  const card = () =>
-    screen.queryByTestId("sponsor-end-card", HIDDEN);
+  const card = () => screen.queryByTestId("sponsor-end-card", HIDDEN);
 
   it("shows only in the last seconds, timed from the duration, and hides after a seek back", async () => {
     await renderKit(<VideoPlayer endCard={endCard} playbackId="pb-1" />);

@@ -194,11 +194,11 @@ export {
   ShareLink,
   type ShareLinkProps,
 } from "./domain/share-link";
-export type { CategoryRef, GestureCardData } from "./domain/types";
 export {
   SponsorEndCard,
   type SponsorEndCardProps,
 } from "./domain/sponsor-end-card";
+export type { CategoryRef, GestureCardData } from "./domain/types";
 export {
   type VideoAspect,
   VideoPlayer,
