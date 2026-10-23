@@ -36,6 +36,31 @@ describe("inspectAudio", () => {
     });
   });
 
+  it("measures an M4A by its samples, so an understated movie header does not pass", () => {
+    // mvhd says 1 s, the sample tables say 12 minutes.
+    expect(inspectAudio(m4aBytes(1, "soun", { samplesSeconds: 720 }))).toEqual({
+      ok: false,
+      reason: "duration",
+    });
+    // And the other way round: the longest stated length counts.
+    expect(inspectAudio(m4aBytes(12, "soun", { samplesSeconds: 1 }))).toEqual({
+      ok: false,
+      reason: "duration",
+    });
+    expect(inspectAudio(m4aBytes(3, "soun", { samplesSeconds: 3 })).ok).toBe(
+      true
+    );
+  });
+
+  it("refuses an audio track without a time-to-sample table", () => {
+    const bytes = m4aBytes(2);
+    const at = new TextDecoder("latin1").decode(bytes).indexOf("stts");
+    expect(at).toBeGreaterThan(0);
+    // Rename `stts` so the track has none.
+    bytes.set(new TextEncoder().encode("free"), at);
+    expect(inspectAudio(bytes)).toEqual({ ok: false, reason: "format" });
+  });
+
   it("accepts exactly ten seconds", () => {
     expect(inspectAudio(m4aBytes(10)).ok).toBe(true);
   });

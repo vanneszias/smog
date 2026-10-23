@@ -218,6 +218,87 @@ function trackKinds(view: DataView, moov: Box): string[] {
   return kinds;
 }
 
+interface SampleTable {
+  /** `stts` and `stsz` count the same samples. */
+  consistent: boolean;
+  /** The longest of the track's `mdhd` duration and its `stts` sample durations, in ms. */
+  durationMs: number;
+}
+
+/** The version-0 or 1 `mdhd` of a track: its timescale and duration. */
+function mediaHeader(
+  view: DataView,
+  mdhd: Box
+): { duration: number; timescale: number } | null {
+  const length = mdhd.end - mdhd.start;
+  const version = length >= 1 ? view.getUint8(mdhd.start) : -1;
+  if (version === 0 && length >= 20) {
+    return {
+      duration: view.getUint32(mdhd.start + 16),
+      timescale: view.getUint32(mdhd.start + 12),
+    };
+  }
+  if (version === 1 && length >= 32) {
+    return {
+      duration:
+        view.getUint32(mdhd.start + 24) * 2 ** 32 +
+        view.getUint32(mdhd.start + 28),
+      timescale: view.getUint32(mdhd.start + 20),
+    };
+  }
+  return null;
+}
+
+/** Total samples and total ticks of an `stts` (time-to-sample) box, or `null` when it is cut short. */
+function timeToSample(
+  view: DataView,
+  stts: Box
+): { samples: number; ticks: number } | null {
+  if (stts.end - stts.start < 8) {
+    return null;
+  }
+  const entries = view.getUint32(stts.start + 4);
+  if (stts.start + 8 + entries * 8 > stts.end) {
+    return null;
+  }
+  let samples = 0;
+  let ticks = 0;
+  for (let index = 0; index < entries; index += 1) {
+    const count = view.getUint32(stts.start + 8 + index * 8);
+    samples += count;
+    ticks += count * view.getUint32(stts.start + 12 + index * 8);
+  }
+  return { samples, ticks };
+}
+
+/**
+ * The duration the SAMPLES of an audio track add up to (`stbl/stts` over
+ * the `mdhd` timescale), which is what a player plays. `mvhd` is only a
+ * header a file can understate: a 1 MiB AAC stream is up to 15 minutes at a
+ * low bitrate. `null` for a track without a usable sample table.
+ */
+function sampleTable(view: DataView, trak: Box): SampleTable | null {
+  const mdia = child(view, trak, "mdia");
+  const mdhd = mdia ? child(view, mdia, "mdhd") : undefined;
+  const minf = mdia ? child(view, mdia, "minf") : undefined;
+  const stbl = minf ? child(view, minf, "stbl") : undefined;
+  const stts = stbl ? child(view, stbl, "stts") : undefined;
+  const stsz = stbl ? child(view, stbl, "stsz") : undefined;
+  const header = mdhd ? mediaHeader(view, mdhd) : null;
+  const table = stts ? timeToSample(view, stts) : null;
+  if (!(header && header.timescale > 0 && table && stsz)) {
+    return null;
+  }
+  // stsz: version/flags (4), sample_size (4), sample_count (4).
+  const counted =
+    stsz.end - stsz.start >= 12 ? view.getUint32(stsz.start + 8) : -1;
+  return {
+    consistent: counted === table.samples,
+    durationMs:
+      (Math.max(header.duration, table.ticks) / header.timescale) * 1000,
+  };
+}
+
 /** An ISO base media file: `ftyp` first, one `moov` with audio tracks only. */
 function readM4a(bytes: Uint8Array): AudioVerdict {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -233,8 +314,25 @@ function readM4a(bytes: Uint8Array): AudioVerdict {
   if (!kinds.includes("soun") || kinds.some((kind) => kind !== "soun")) {
     return FORMAT;
   }
-  const duration = movieDurationMs(view, moov);
-  return duration === null ? FORMAT : finish("audio/mp4", duration);
+  const movie = movieDurationMs(view, moov);
+  if (movie === null || child(view, moov, "mvex")) {
+    // No header, or a fragmented file (its durations are not in the tables).
+    return FORMAT;
+  }
+  // The longest of every duration the file states, so understating one
+  // header does not hide the real length.
+  let duration = movie;
+  for (const trak of boxes(view, moov.start, moov.end)) {
+    if (trak.type !== "trak") {
+      continue;
+    }
+    const table = sampleTable(view, trak);
+    if (!table?.consistent) {
+      return FORMAT;
+    }
+    duration = Math.max(duration, table.durationMs);
+  }
+  return finish("audio/mp4", duration);
 }
 
 /** The type and the duration of an MP3 or M4A clip; the reason when it is neither or too long. */

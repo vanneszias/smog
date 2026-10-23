@@ -50,10 +50,15 @@ function u32(...values: number[]): Uint8Array {
   return out;
 }
 
-/** An M4A of `seconds` seconds whose only track has the handler `handler` (`soun` for audio). */
+/**
+ * An M4A of `seconds` seconds whose only track has the handler `handler`
+ * (`soun` for audio). `samplesSeconds` makes the sample tables say another
+ * length than the movie header (a file that understates its `mvhd`).
+ */
 export function m4aBytes(
   seconds: number,
-  handler = "soun"
+  handler = "soun",
+  { samplesSeconds = seconds }: { samplesSeconds?: number } = {}
 ): Uint8Array<ArrayBuffer> {
   const timescale = 1000;
   const ftyp = box(
@@ -74,7 +79,20 @@ export function m4aBytes(
     new TextEncoder().encode(handler),
     new Uint8Array(12)
   );
-  const trak = box("trak", box("mdia", hdlr));
+  // AAC: 1024 samples per frame at 44.1 kHz.
+  const sampleRate = 44_100;
+  const frames = Math.floor((samplesSeconds * sampleRate) / 1024);
+  const mdhd = box(
+    "mdhd",
+    u32(0, 0, 0, sampleRate, frames * 1024),
+    new Uint8Array(4)
+  );
+  const stts = box("stts", u32(0, 1, frames, 1024));
+  const stsz = box("stsz", u32(0, 0, frames));
+  const trak = box(
+    "trak",
+    box("mdia", mdhd, hdlr, box("minf", box("stbl", stts, stsz)))
+  );
   const mdat = box("mdat", new Uint8Array(2000));
   // `moov` after `mdat`: the common layout of a file that was not streamed.
   return Uint8Array.from([...ftyp, ...mdat, ...box("moov", mvhd, trak)]);
