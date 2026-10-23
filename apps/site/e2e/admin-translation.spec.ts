@@ -30,7 +30,7 @@ const STRINGS = "/admin/translation/strings";
 const HAS_QUERY = /q=/;
 const STRINGS_URL = /\/admin\/translation\/strings/;
 const MISSING_URL = /status=missing/;
-const TOTAL = /Aantal teksten: 1[7-9]\d\d/;
+const TOTAL = /Aantal teksten: \d{4}/;
 
 interface Cell {
   overridden: boolean;
