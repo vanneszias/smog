@@ -11,14 +11,12 @@ import {
   e2eSeed,
   signInWithApi,
   stubMux,
-  stubMuxRenditions,
   waitForApp,
 } from "./helpers";
 import { signInAsAdmin } from "./maintenance";
 import { uploadLogo } from "./sponsorships";
 
 /** The preview's MP4 (Remotion appends a media fragment). */
-const MUX_MP4 = /^https:\/\/stream\.mux\.com\/[^/]+\/highest\.mp4(?:#.*)?$/;
 
 /**
  * The CSP is enforced in dev (`src/worker/headers.ts`), so this suite sees
@@ -534,7 +532,6 @@ test.describe("CSP (enforced in dev)", () => {
       const answered = hits();
       await stubTurnstile(page, answered);
       await stubMux(page);
-      await stubMuxRenditions(page);
       await page.goto(`/sponsor?gesture=${SLUG}`);
       await waitForApp(page);
       await page
@@ -580,21 +577,11 @@ test.describe("CSP (enforced in dev)", () => {
           .poll(() => answered.get("challenges.cloudflare.com") ?? 0)
           .toBe(2);
       }
-      // The Remotion Player preview (phase 7 ruling 8): its lazy chunk
-      // ('self'), the overlay font ('self'), the MP4 read by mediabunny
-      // (`connect-src` *.mux.com) and played (`media-src`), the blob logo
-      // (`img-src blob:`) and Remotion's injected styles.
+      // The preview is the sponsor end card (phase 10b ruling 9) over the
+      // gesture's poster (`img-src` image.mux.com): the name as typed and
+      // the blob logo (`img-src blob:`); no player, no media, no font.
       const frame = page.getByRole("img", { name: "Voorbeeld voor Paard" });
-      await expect(
-        page.getByRole("button", { name: "Toon het einde" })
-      ).toBeEnabled({ timeout: 30_000 });
-      const video = frame.locator("video");
-      await expect(video).toHaveAttribute("src", MUX_MP4);
-      await expect
-        .poll(() =>
-          video.evaluate((element: HTMLVideoElement) => element.readyState)
-        )
-        .toBeGreaterThanOrEqual(2);
+      await expect(frame.getByText("Mogelijk gemaakt door")).toBeVisible();
       await expect(frame.getByText("CSP Proef")).toBeVisible();
       await expect
         .poll(() =>
@@ -602,16 +589,7 @@ test.describe("CSP (enforced in dev)", () => {
             .locator('img[src^="blob:"]')
             .evaluate((image: HTMLImageElement) => image.naturalWidth)
         )
-        .toBe(1);
-      await expect
-        .poll(() =>
-          page.evaluate(() => document.fonts.check('600 16px "SMOG Overlay"'))
-        )
-        .toBe(true);
-      await page.getByRole("button", { name: "Afspelen" }).click();
-      await expect(
-        page.getByRole("button", { name: "Pauzeren" })
-      ).toBeVisible();
+        .toBe(160);
       await page.waitForLoadState("networkidle");
       expect(await violations(page, csp)).toEqual([]);
       // The logo goes up through the signed same-origin fallback (no R2
@@ -631,7 +609,7 @@ test.describe("CSP (enforced in dev)", () => {
       expect(csp).toEqual([]);
     });
 
-    test("/sponsor/edit#token= keeps the paid logo: the same-origin read, its headers and the blob: image in the Player (fix wave I-2)", async ({
+    test("/sponsor/edit#token= keeps the paid logo: the same-origin read, its headers and the blob: image in the preview (fix wave I-2)", async ({
       page,
     }) => {
       test.setTimeout(120_000);
@@ -661,7 +639,6 @@ test.describe("CSP (enforced in dev)", () => {
       ]);
       const csp = await watchCsp(page);
       await stubMux(page);
-      await stubMuxRenditions(page);
       const read = page.waitForResponse(
         (candidate) =>
           candidate.request().method() === "POST" &&
@@ -689,11 +666,8 @@ test.describe("CSP (enforced in dev)", () => {
         page.getByRole("heading", { level: 1, name: "Werk je video bij" })
       ).toBeVisible();
       const frame = page.getByRole("img", { name: "Voorbeeld voor Paard" });
-      await expect(
-        page.getByRole("button", { name: "Toon het einde" })
-      ).toBeEnabled({ timeout: 30_000 });
       await expect(frame.getByText("Logo Bewaard")).toBeVisible();
-      // The kept logo, drawn by the composition from an object URL
+      // The kept logo, drawn by the end card from an object URL
       // (`img-src blob:`): the 160 × 160 fixture, decoded.
       await expect
         .poll(() =>

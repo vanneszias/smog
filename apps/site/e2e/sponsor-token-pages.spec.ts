@@ -10,7 +10,6 @@ import {
   blockingViolations,
   ORIGIN,
   stubMux,
-  stubMuxRenditions,
   stubMuxStream,
   tabTo,
   waitForApp,
@@ -101,7 +100,6 @@ function linkAnswer(get: string, state: State) {
 async function stub(page: Page, get: string, state: State): Promise<void> {
   await stubMux(page);
   await stubMuxStream(page);
-  await stubMuxRenditions(page);
   await page.route(`**/api/rpc/sponsorships/${get}**`, (route) =>
     route.fulfill(linkAnswer(get, state))
   );
@@ -268,8 +266,8 @@ async function checkStates(
           ).toBeVisible();
           if (state === "valid" && path === "/sponsor/edit") {
             await expect(
-              page.getByRole("button", { name: "Toon het einde" })
-            ).toBeEnabled({ timeout: 30_000 });
+              page.locator('[data-slot="sponsor-end-card"]')
+            ).toBeVisible();
           }
           expect(
             await blockingViolations(page),
