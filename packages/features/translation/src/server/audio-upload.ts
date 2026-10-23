@@ -10,7 +10,7 @@ import { AwsClient } from "aws4fetch";
 import type { AudioUploadResult } from "../schema";
 
 /** A signed upload URL works for 5 minutes (`X-Amz-Expires` 300). */
-export const AUDIO_UPLOAD_TTL_MS = 5 * 60 * 1000;
+const AUDIO_UPLOAD_TTL_MS = 5 * 60 * 1000;
 
 /** The fallback route, followed by the key without its `audio/` prefix. */
 const AUDIO_UPLOAD_PATH = "/api/audio/upload/";

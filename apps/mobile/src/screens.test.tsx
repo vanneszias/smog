@@ -43,6 +43,14 @@ const { mockVideoPlayers } = jest.requireMock("expo-video") as {
   }[];
 };
 
+const { mockAudioPlayers } = jest.requireMock("expo-audio") as {
+  mockAudioPlayers: {
+    play: jest.Mock;
+    replace: jest.Mock;
+  }[];
+};
+
+const AUDIO_URL = /^https?:\/\/.+\/api\/audio\/g-hond\/nl\/clip$/;
 const LES_1 = /Les 1/;
 const DIEREN_OP_SCHOOL = /Dieren op school/;
 
@@ -287,6 +295,66 @@ describe("gesture", () => {
     expect(
       screen.getAllByRole("button", { name: "Kat" }).length
     ).toBeGreaterThan(0);
+  });
+
+  it("keeps the name over the video off while the picture still has it, and offers no audio without a clip", async () => {
+    await renderApp({ initialUrl: "/gestures/hond" });
+    await screen.findByRole("header", { name: "Hond" });
+    expect(
+      screen.queryByTestId("video-name-overlay", {
+        includeHiddenElements: true,
+      })
+    ).toBeNull();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Listen to the pronunciation" })
+    ).toBeNull();
+  });
+
+  it("overlays the name on a textless video, lets the viewer hide it, and plays the language's clip", async () => {
+    await renderApp({
+      initialUrl: "/gestures/hond",
+      routes: {
+        "gestures/bySlug": {
+          audioPath: "/api/audio/g-hond/nl/clip",
+          canonicalSlug: "hond",
+          categories: [],
+          description: "",
+          fallbackUsed: false,
+          id: "g-hond",
+          keywords: [],
+          name: "Hond",
+          needsRecut: false,
+          playbackId: "pb-hond",
+          publishedAt: 0,
+          slug: "hond",
+          sponsor: null,
+          updatedAt: 0,
+        },
+      },
+    });
+    await screen.findByRole("header", { name: "Hond" });
+    expect(
+      screen.getByTestId("video-name-overlay", { includeHiddenElements: true })
+    ).toBeTruthy();
+    await fireEvent.press(
+      screen.getByRole("switch", { name: "Show the name on the video" })
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("video-name-overlay", {
+          includeHiddenElements: true,
+        })
+      ).toBeNull()
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Listen to the pronunciation" })
+    );
+    const player = mockAudioPlayers.at(-1);
+    expect(player?.replace).toHaveBeenCalledWith({
+      uri: expect.stringMatching(AUDIO_URL),
+    });
+    expect(player?.play).toHaveBeenCalled();
   });
 
   it("offers to share the link after a screenshot", async () => {

@@ -6,6 +6,17 @@ function siteUrl(path: string): string {
   return `https://${mobileEnv().EXPO_PUBLIC_SITE_HOST}${path}`;
 }
 
+const TRAILING_SLASHES = /\/+$/;
+
+/**
+ * Where a gesture's spoken name is served from: the site's same-origin
+ * `/api/audio/...` path (`GestureBySlug.audioPath`) on the API origin
+ * (`EXPO_PUBLIC_API_URL`), which is what the audio player needs absolute.
+ */
+export function audioUrl(path: string): string {
+  return `${mobileEnv().EXPO_PUBLIC_API_URL.replace(TRAILING_SLASHES, "")}${path}`;
+}
+
 /** The site's privacy policy (the consent prompt and settings link to it). */
 export function privacyUrl(): string {
   return siteUrl("/privacy");

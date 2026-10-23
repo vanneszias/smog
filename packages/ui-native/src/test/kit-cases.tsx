@@ -46,6 +46,7 @@ export const CASES: Record<string, ReactElement> = {
     <kit.AlertDialog onConfirm={noop} open testID={ID} title="Delete?" />
   ),
   AlertTitle: <kit.AlertTitle testID={ID}>Title</kit.AlertTitle>,
+  AudioButton: <kit.AudioButton src="https://example.test/a.mp3" testID={ID} />,
   Avatar: <kit.Avatar name="Zias" testID={ID} />,
   Badge: <kit.Badge testID={ID}>New</kit.Badge>,
   Button: <kit.Button testID={ID}>Save</kit.Button>,
@@ -154,6 +155,9 @@ export const CASES: Record<string, ReactElement> = {
         <kit.MenuSeparator testID={ID} />
       </kit.MenuContent>
     </kit.Menu>
+  ),
+  NameOverlayToggle: (
+    <kit.NameOverlayToggle checked onCheckedChange={noop} testID={ID} />
   ),
   NoResultsEmptyState: <kit.NoResultsEmptyState testID={ID} />,
   OfflineBanner: <kit.OfflineBanner online={false} testID={ID} />,

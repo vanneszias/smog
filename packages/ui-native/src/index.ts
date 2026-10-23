@@ -145,6 +145,12 @@ export {
   type ToggleProps,
 } from "./components/toggle";
 export {
+  AudioButton,
+  type AudioButtonProps,
+  NameOverlayToggle,
+  type NameOverlayToggleProps,
+} from "./domain/audio-button";
+export {
   CategoryChips,
   type CategoryChipsProps,
 } from "./domain/category-chips";
