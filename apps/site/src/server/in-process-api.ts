@@ -56,7 +56,12 @@ async function renderContext(): Promise<RpcContext> {
     { waitUntil },
     await enabledLanguageCodes()
   );
-  return { ...context, session: await requestSession(request) };
+  const session = await requestSession(request);
+  return {
+    ...context,
+    locale: context.localeFor?.(session?.user.locale ?? null) ?? context.locale,
+    session,
+  };
 }
 
 /**

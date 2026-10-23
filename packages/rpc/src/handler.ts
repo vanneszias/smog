@@ -16,7 +16,11 @@ type HandlerInterceptor = NonNullable<HandlerOptions["interceptors"]>[number];
 export const loadSession: HandlerInterceptor = async (options) => {
   const { context } = options;
   const session = await getSession(context.auth, context.request.headers);
-  return await options.next({ ...options, context: { ...context, session } });
+  const locale = context.localeFor?.(session?.user.locale ?? null);
+  return await options.next({
+    ...options,
+    context: { ...context, locale: locale ?? context.locale, session },
+  });
 };
 
 /**
