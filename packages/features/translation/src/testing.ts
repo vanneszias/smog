@@ -10,7 +10,10 @@ const FRAME_BYTES = 417;
 const FRAME_MS = (1152 / 44_100) * 1000;
 
 /** An MP3 of about `seconds` seconds, with an optional ID3v2 tag in front. */
-export function mp3Bytes(seconds: number, options: { id3?: boolean } = {}) {
+export function mp3Bytes(
+  seconds: number,
+  options: { id3?: boolean } = {}
+): Uint8Array<ArrayBuffer> {
   const frames = Math.max(1, Math.round((seconds * 1000) / FRAME_MS));
   const tag = options.id3
     ? Uint8Array.from([0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, 4, 1, 2, 3, 4])
@@ -48,7 +51,10 @@ function u32(...values: number[]): Uint8Array {
 }
 
 /** An M4A of `seconds` seconds whose only track has the handler `handler` (`soun` for audio). */
-export function m4aBytes(seconds: number, handler = "soun"): Uint8Array {
+export function m4aBytes(
+  seconds: number,
+  handler = "soun"
+): Uint8Array<ArrayBuffer> {
   const timescale = 1000;
   const ftyp = box(
     "ftyp",

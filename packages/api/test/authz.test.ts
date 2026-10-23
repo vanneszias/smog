@@ -231,22 +231,13 @@ const PROCEDURES: Record<string, Row> = {
     },
     level: "translator",
   },
+  "translation.languages.create": { level: "admin" },
+  "translation.languages.list": { level: "translator" },
+  "translation.languages.update": { level: "admin" },
   "translation.listAudio": {
     input: { gestureId: "00000000-0000-4000-8000-000000000000" },
     level: "translator",
   },
-  "translation.uploadAudio": {
-    input: {
-      contentType: "audio/mpeg",
-      gestureId: "00000000-0000-4000-8000-000000000000",
-      locale: "en",
-      size: 1000,
-    },
-    level: "translator",
-  },
-  "translation.languages.create": { level: "admin" },
-  "translation.languages.list": { level: "translator" },
-  "translation.languages.update": { level: "admin" },
   "translation.strings.export": {
     input: { format: "json" },
     level: "translator",
@@ -262,6 +253,15 @@ const PROCEDURES: Record<string, Row> = {
   },
   "translation.strings.save": {
     input: { expectedUpdatedAt: null, key: "a.b", locale: "en", value: "x" },
+    level: "translator",
+  },
+  "translation.uploadAudio": {
+    input: {
+      contentType: "audio/mpeg",
+      gestureId: "00000000-0000-4000-8000-000000000000",
+      locale: "en",
+      size: 1000,
+    },
     level: "translator",
   },
 };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { inspectAudio } from "../src/server/audio-verify";
-import { m4aBytes, mp3Bytes } from "./audio-fixtures";
+import { m4aBytes, mp3Bytes } from "../src/testing";
 
 describe("inspectAudio", () => {
   it("reads an MP3 and its duration from the frames", () => {

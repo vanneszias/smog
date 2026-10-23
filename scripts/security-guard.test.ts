@@ -58,6 +58,7 @@ type Entry = Limit | Unlimited;
 
 const RPC_HANDLER = "packages/rpc/src/handler.ts";
 const LOGO = "apps/site/src/server/logo-upload.ts";
+const AUDIO = "apps/site/src/server/audio.ts";
 
 /**
  * Every non-page route file (`routes/**.ts`, relative to `routes/`). Page
@@ -68,6 +69,8 @@ export const ROUTE_LIMITS: Readonly<Record<string, Entry>> = {
     limiter: "RL_ANALYTICS",
     source: "apps/site/src/routes/api/analytics.ts",
   },
+  "api/audio/$.ts": { limiter: "RL_API", source: AUDIO },
+  "api/audio/upload/$.ts": { limiter: "RL_API", source: AUDIO },
   "api/auth/$.ts": {
     limiter: "RL_AUTH",
     source: "apps/site/src/server/auth-handler.ts",

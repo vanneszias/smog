@@ -6,7 +6,7 @@ import {
   type AudioUploadResult,
 } from "../src/schema";
 import { signAudioUpload, verifyAudioUpload } from "../src/server/audio-upload";
-import { m4aBytes, mp3Bytes } from "./audio-fixtures";
+import { m4aBytes, mp3Bytes } from "../src/testing";
 import {
   type Authed,
   auditMark,
