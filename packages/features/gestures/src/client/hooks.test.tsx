@@ -72,9 +72,11 @@ function fakeApi(calls: Calls) {
         }
         return {
           ...found,
+          audioPath: null,
           canonicalSlug: found.slug,
           description: "",
           keywords: [],
+          needsRecut: false,
           publishedAt: 0,
           sponsor: null,
           updatedAt: 0,

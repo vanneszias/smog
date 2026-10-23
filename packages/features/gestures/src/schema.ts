@@ -43,9 +43,20 @@ export const sponsorCreditSchema = z.object({
  * detail can be cached and prefetched on its own.
  */
 export const gestureDetailSchema = gestureSummarySchema.extend({
+  /**
+   * Where the spoken name in the viewer's language is served from
+   * (`/api/audio/<gestureId>/<locale>/<uuid>`), or `null` when there is no
+   * clip: never another language's (a wrong-language clip is worse than none).
+   */
+  audioPath: z.string().nullable(),
   description: z.string(),
   /** "Related concepts": synonyms, in the editor's order. */
   keywords: z.array(z.string()),
+  /**
+   * The video still has the name burned into the picture (the textless one
+   * is not uploaded yet): the player keeps its name overlay hidden.
+   */
+  needsRecut: z.boolean(),
   related: z.never().optional(),
   sponsor: sponsorCreditSchema.nullable(),
 });

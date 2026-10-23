@@ -217,6 +217,33 @@ const PROCEDURES: Record<string, Row> = {
   // or changing a language needs the admin role. Every change carries an
   // audit kind (`TRANSLATION_PROCEDURE_KINDS`, checked below).
   "translation.coverage": { level: "translator" },
+  // Task 6: a gesture's spoken name. A translator or an admin uploads,
+  // checks and removes it; the file itself never passes through a procedure.
+  "translation.deleteAudio": {
+    input: { gestureId: "00000000-0000-4000-8000-000000000000", locale: "en" },
+    level: "translator",
+  },
+  "translation.finalizeAudio": {
+    input: {
+      gestureId: "00000000-0000-4000-8000-000000000000",
+      key: "audio/00000000-0000-4000-8000-000000000000/en/00000000-0000-4000-8000-000000000001",
+      locale: "en",
+    },
+    level: "translator",
+  },
+  "translation.listAudio": {
+    input: { gestureId: "00000000-0000-4000-8000-000000000000" },
+    level: "translator",
+  },
+  "translation.uploadAudio": {
+    input: {
+      contentType: "audio/mpeg",
+      gestureId: "00000000-0000-4000-8000-000000000000",
+      locale: "en",
+      size: 1000,
+    },
+    level: "translator",
+  },
   "translation.languages.create": { level: "admin" },
   "translation.languages.list": { level: "translator" },
   "translation.languages.update": { level: "admin" },
