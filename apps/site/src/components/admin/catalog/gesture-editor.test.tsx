@@ -47,6 +47,7 @@ function detail(overrides: Partial<AdminGestureDetail> = {}) {
     keywords: ["hallo"],
     muxAssetId: null,
     name: "Zwaaien",
+    needsRecut: false,
     playbackId: "pb-zwaaien",
     publishedAt: 1,
     slug: "zwaaien",

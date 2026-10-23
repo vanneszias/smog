@@ -208,13 +208,14 @@ payment's sponsorships still holds its gesture (a blocking status).
 
 | Procedure | Input | Output | Audit |
 |---|---|---|---|
-| `admin.gestures.list` | `{ q?, status?: "all" \| "published" \| "unpublished" (= "all"), category?: string[] (ids), needsTranslation?: locale, cursor?, limit? (1..100, = 50) }` | `{ items: AdminGestureRow[], nextCursor: string \| null, counts: { total, published, unpublished } }` | read |
+| `admin.gestures.list` | `{ q?, status?: "all" \| "published" \| "unpublished" (= "all"), category?: string[] (ids), needsTranslation?: locale, needsRecut?: boolean (only the gestures whose video still has the name burned in; the counts ignore it), cursor?, limit? (1..100, = 50) }` | `{ items: AdminGestureRow[], nextCursor: string \| null, counts: { total, published, unpublished, needsRecut } }` | read |
 | `admin.gestures.get` | `{ id }` | `AdminGestureDetail` | read |
 | `admin.gestures.checkName` | `{ name, excludeId? }` | `{ duplicates: { id, name, slug }[] }` | read |
-| `admin.gestures.create` | `{ name, description?, keywords?, categoryIds, playbackId, muxAssetId?, published? (= true) }` | `AdminGestureDetail` | `gesture.create` |
+| `admin.gestures.create` | `{ name, description?, keywords?, categoryIds, playbackId, muxAssetId?, published? (= true), textless? (= false: the video has no text in the picture, so the player overlays the name) }` | `AdminGestureDetail` | `gesture.create` |
 | `admin.gestures.update` | `{ id, expectedUpdatedAt, name?, description?, keywords?, categoryIds?, playbackId?, muxAssetId? (null clears) }` | `AdminGestureDetail` | `gesture.update` |
 | `admin.gestures.saveMany` | `{ items: { id, expectedUpdatedAt, patch }[] (1..50) }` | `{ items: AdminGestureRow[] }` | `gesture.update` per row |
 | `admin.gestures.setPublished` | `{ id, published }` | `AdminGestureDetail` | `gesture.publish` / `gesture.unpublish` |
+| `admin.gestures.recutDone` | `{ id }` | `AdminGestureDetail` (`needsRecut` false; `updatedAt` unchanged; clearing a cleared flag writes nothing) | `gesture.recut_done` `{ name, slug }` |
 | `admin.gestures.bulkUpdate` | `{ ids (1..100), published?, addCategoryIds?, removeCategoryIds? }` | `{ updated }` | one `gesture.bulk_update` (`target_id` NULL) |
 | `admin.gestures.delete` | `{ id, confirmName }` | `{ id }` | `gesture.delete` |
 

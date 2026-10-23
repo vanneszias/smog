@@ -687,6 +687,118 @@ describe("admin.gestures.delete", () => {
   });
 });
 
+describe("the re-cut flag (phase 10b)", () => {
+  async function needsRecutOf(id: string): Promise<number | undefined> {
+    const row = await env.DB.prepare(
+      "SELECT needs_recut AS flag FROM gesture WHERE id = ?"
+    )
+      .bind(id)
+      .first<{ flag: number }>();
+    return row?.flag;
+  }
+
+  it("a gesture created without a textless video needs a re-cut, one created with it does not", async () => {
+    const category = await addCategory();
+    const burned = await create({
+      categoryIds: [category.id],
+      name: "Brand A",
+    });
+    const clean = await create({
+      categoryIds: [category.id],
+      name: "Brand B",
+      textless: true,
+    });
+    expect(burned.needsRecut).toBe(true);
+    expect(clean.needsRecut).toBe(false);
+    expect(await needsRecutOf(burned.id)).toBe(1);
+    expect(await needsRecutOf(clean.id)).toBe(0);
+  });
+
+  it("lists only the gestures that need a re-cut, with the count", async () => {
+    const tag = `recut${Date.now()}`;
+    const category = await addCategory(`Recut ${tag}`);
+    const burned = await create({
+      categoryIds: [category.id],
+      name: `${tag} a`,
+    });
+    await create({
+      categoryIds: [category.id],
+      name: `${tag} b`,
+      textless: true,
+    });
+    const page = await callAs<AdminGesturePage>(admin, "gestures.list", {
+      category: [category.id],
+      needsRecut: true,
+    });
+    expect(page.items.map((item) => item.id)).toEqual([burned.id]);
+    expect(page.counts).toMatchObject({ needsRecut: 1, total: 2 });
+    const everything = await callAs<AdminGesturePage>(admin, "gestures.list", {
+      category: [category.id],
+    });
+    expect(everything.items).toHaveLength(2);
+  });
+
+  it("recutDone clears the flag with one audit entry and keeps updatedAt; a second call changes nothing", async () => {
+    const category = await addCategory();
+    const created = await create({
+      categoryIds: [category.id],
+      name: "Brand C",
+    });
+    const mark = await auditMark();
+    const done = await callAs<AdminGestureDetail>(admin, "gestures.recutDone", {
+      id: created.id,
+    });
+    expect(done.needsRecut).toBe(false);
+    expect(done.updatedAt).toBe(created.updatedAt);
+    expect(await needsRecutOf(created.id)).toBe(0);
+    await expectAudit("gestures.recutDone", {
+      actorId: admin.user.id,
+      data: { name: "Brand C", slug: "brand-c" },
+      mark,
+      targetId: created.id,
+      targetType: "gesture",
+    });
+    const again = await auditMark();
+    const second = await callAs<AdminGestureDetail>(
+      admin,
+      "gestures.recutDone",
+      { id: created.id }
+    );
+    expect(second.needsRecut).toBe(false);
+    expect(await auditRowsSince(again)).toEqual([]);
+  });
+
+  it("the re-cut list reads the partial index in catalogue order (no scan of the table, no sort)", async () => {
+    const query = adminGesturesQuery(
+      testDb(),
+      sql`${gesture.needsRecut} = 1`,
+      "all",
+      null,
+      50
+    ).toSQL();
+    const { results } = await env.DB.prepare(`EXPLAIN QUERY PLAN ${query.sql}`)
+      .bind(...query.params)
+      .all<{ detail: string; parent: number }>();
+    expect(
+      results
+        .filter(
+          (row) => row.parent === 0 && !row.detail.startsWith("CORRELATED")
+        )
+        .map((row) => row.detail)
+    ).toEqual(["SCAN gesture USING INDEX gesture_needs_recut_idx"]);
+  });
+
+  it("recutDone is NOT_FOUND for an unknown gesture", async () => {
+    expect(
+      (
+        await failure(
+          callAs(admin, "gestures.recutDone", { id: "no-such-gesture" })
+        )
+      ).code
+    ).toBe("NOT_FOUND");
+  });
+});
+
 describe("admin.gestures reads", () => {
   it("get returns unpublished gestures, NOT_FOUND for unknown ones", async () => {
     const row = await addGesture({ name: "Nog niet klaar", published: false });
@@ -740,7 +852,12 @@ describe("admin.gestures reads", () => {
 
     const all = await list({ category: [category.id] });
     expect(all.items.map((item) => item.id)).toEqual([a.id, b.id, c.id]);
-    expect(all.counts).toEqual({ published: 2, total: 3, unpublished: 1 });
+    expect(all.counts).toEqual({
+      needsRecut: 3,
+      published: 2,
+      total: 3,
+      unpublished: 1,
+    });
     expect(all.items.map((item) => typeof item.description)).toEqual([
       "string",
       "string",

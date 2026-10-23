@@ -78,6 +78,15 @@ export const gesturesSlice = {
       .input(adminGestureListInputSchema)
       .output(adminGesturePageSchema),
     /**
+     * Says the textless video of a gesture is uploaded (`needs_recut` 0:
+     * the player overlays the name from now on), with one
+     * `gesture.recut_done` entry. `NOT_FOUND` for an unknown gesture;
+     * clearing a cleared flag changes nothing and writes no entry.
+     */
+    recutDone: baseContract
+      .input(gestureIdInputSchema)
+      .output(adminGestureDetailSchema),
+    /**
      * The table editor's one save: every row's patch in one batch, all or
      * nothing. Any stale row is `CONFLICT` `stale` with its ids.
      */
@@ -109,6 +118,10 @@ export const ADMIN_PROCEDURES = {
   "gestures.delete": { audit: "gesture.delete" },
   "gestures.get": "read",
   "gestures.list": "read",
+  "gestures.recutDone": {
+    audit: "gesture.recut_done",
+    noop: "the flag is already cleared",
+  },
   "gestures.saveMany": { audit: "gesture.update" },
   "gestures.setPublished": { audit: ["gesture.publish", "gesture.unpublish"] },
   "gestures.update": { audit: "gesture.update" },

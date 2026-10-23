@@ -43,6 +43,7 @@ function row(
     keywords: [],
     muxAssetId: null,
     name,
+    needsRecut: false,
     playbackId: `pb-${id}`,
     publishedAt: 1,
     slug: name.toLowerCase(),
