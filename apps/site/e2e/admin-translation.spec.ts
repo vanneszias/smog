@@ -365,9 +365,14 @@ test.describe("a translator", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Teksten" })
     ).toBeVisible();
-    // The rail: the translation group and the strings, nothing else.
+    // The rail: the translation group (strings, legal texts), nothing else.
     const rail = page.getByRole("navigation", { name: "Beheer" });
-    await expect(rail.getByRole("link", { name: "Teksten" })).toBeVisible();
+    await expect(
+      rail.getByRole("link", { exact: true, name: "Teksten" })
+    ).toBeVisible();
+    await expect(
+      rail.getByRole("link", { name: "Juridische teksten" })
+    ).toBeVisible();
     await Promise.all(
       [
         "Overzicht",

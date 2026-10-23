@@ -190,7 +190,7 @@ export function LegalDocumentView({
       lang={locale}
     >
       <header className="flex max-w-reading flex-col gap-2 lg:col-start-2">
-        <Heading level={1}>{doc.title}</Heading>
+        <Heading level={preview ? 2 : 1}>{doc.title}</Heading>
         <Text size="body-sm" tone="muted">
           {t("legal.lastUpdated", { date: updated, lng: locale })}
         </Text>
@@ -199,7 +199,7 @@ export function LegalDocumentView({
         aria-labelledby={contentsId}
         className="flex flex-col gap-2 lg:sticky lg:top-24 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start"
       >
-        <Heading id={contentsId} level={2} size="title-3">
+        <Heading id={contentsId} level={preview ? 3 : 2} size="title-3">
           {t("legal.contents", { lng: locale })}
         </Heading>
         <ol className="flex list-decimal flex-col gap-1 pl-6 text-body-sm">
@@ -218,7 +218,11 @@ export function LegalDocumentView({
             id={section.id}
             key={section.id}
           >
-            <Heading id={`${section.id}-title`} level={2} size="title-3">
+            <Heading
+              id={`${section.id}-title`}
+              level={preview ? 3 : 2}
+              size="title-3"
+            >
               {index + 1}. {section.title}
             </Heading>
             {section.blocks.map((block, blockIndex) => (

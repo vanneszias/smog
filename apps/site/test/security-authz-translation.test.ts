@@ -145,4 +145,85 @@ describe("a translator", () => {
     });
     await d1.prepare("DELETE FROM ui_string").run();
   });
+
+  it("drafts and publishes a legal text (risk R1) but cannot restore a version", async () => {
+    const worker = await translator();
+    try {
+      const document = {
+        sections: [{ blocks: ["Authz text"], id: "scope", title: "Scope" }],
+        title: "Authz terms",
+      };
+      const saved = await rpc(
+        "translation/legal/save",
+        {
+          content: document,
+          expectedUpdatedAt: null,
+          kind: "terms",
+          locale: "en",
+        },
+        worker.cookie
+      );
+      expect(saved.status).toBe(200);
+      const { draft } = saved.body.json as { draft: { updatedAt: number } };
+      const published = await rpc(
+        "translation/legal/publish",
+        {
+          effectiveDate: "2026-11-01",
+          expectedUpdatedAt: draft.updatedAt,
+          kind: "terms",
+          locale: "en",
+        },
+        worker.cookie
+      );
+      expect(published.status).toBe(200);
+      const restore = await rpc(
+        "translation/legal/restore",
+        {
+          effectiveDate: "2026-11-02",
+          kind: "terms",
+          locale: "en",
+          version: 1,
+        },
+        worker.cookie
+      );
+      expect(restore.status).toBe(403);
+      expect(code(restore)).toBe("FORBIDDEN");
+      const audits = await d1
+        .prepare(
+          "SELECT action, actor_id AS actorId FROM audit_log WHERE target_type = 'legal_text' AND actor_id = ? ORDER BY created_at"
+        )
+        .bind(worker.id)
+        .all<{ action: string; actorId: string }>();
+      expect(audits.results.map((row) => row.action)).toEqual([
+        "legal.draft_save",
+        "legal.publish",
+      ]);
+    } finally {
+      await d1
+        .prepare("DELETE FROM legal_text WHERE version > 1 OR status = 'draft'")
+        .run();
+    }
+  });
+
+  it("keeps the legal procedures from a guest and a plain learner", async () => {
+    expect((await rpc("translation/legal/list", {})).status).toBe(401);
+    const learner = await signedUp();
+    expect(
+      (await rpc("translation/legal/list", {}, learner.cookie)).status
+    ).toBe(403);
+    expect(
+      (
+        await rpc(
+          "translation/legal/publish",
+          {
+            effectiveDate: "2026-11-01",
+            expectedUpdatedAt: 1,
+            kind: "terms",
+            locale: "en",
+          },
+          learner.cookie
+        )
+      ).status
+    ).toBe(403);
+  });
 });

@@ -103,6 +103,10 @@ export type AuditTargetLink =
   | { search: { payment: string; tab: "all" }; to: "/admin/sponsorships" }
   | { search: { user: string }; to: "/admin/users" }
   | { search: { status: "discarded" | "replayed" }; to: "/admin/dead-letters" }
+  | {
+      search: { kind: "privacy" | "terms"; lang: string };
+      to: "/admin/translation/legal";
+    }
   | { to: "/admin/categories" | "/admin/settings" };
 
 /**
@@ -133,6 +137,13 @@ export function auditTargetLink(entry: AuditEntry): AuditTargetLink | null {
         },
         to: "/admin/dead-letters",
       };
+    case "legal_text": {
+      // `<kind>:<locale>:<version>`: the text's editor in that language.
+      const [kind, lang] = id.split(":");
+      return (kind === "privacy" || kind === "terms") && lang
+        ? { search: { kind, lang }, to: "/admin/translation/legal" }
+        : null;
+    }
     case "sponsorship":
       return { params: { id }, to: "/admin/sponsorships/$id" };
     case "payment":
