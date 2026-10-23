@@ -1,6 +1,6 @@
 import type { Locale } from "@smog/config/constants";
-import { resources } from "./keys";
 import { intlTag } from "./languages";
+import { loadedCatalogue } from "./store";
 
 /** The product's time zone, so server (UTC) and device render the same day. */
 const TIME_ZONE = "Europe/Brussels";
@@ -84,8 +84,9 @@ export function formatList(items: readonly string[], locale: Locale): string {
       type: "conjunction",
     }).format(items);
   }
-  const { and } = (resources[locale as keyof typeof resources] ?? resources.nl)
-    .translation.common;
+  const common = (loadedCatalogue(locale) ?? loadedCatalogue("nl"))?.common;
+  const word = typeof common === "object" ? common.and : undefined;
+  const and = typeof word === "string" ? word : "&";
   return items.length <= 1
     ? items.join("")
     : `${items.slice(0, -1).join(", ")} ${and} ${items.at(-1)}`;
