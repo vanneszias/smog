@@ -12,6 +12,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
   useSyncExternalStore,
@@ -104,6 +105,20 @@ function disableRemotePlayback(
   player?.media?.setAttribute("disableremoteplayback", "");
 }
 
+type PlayerElement = Pick<Element, "setAttribute"> & {
+  media?: Element | null;
+};
+
+/**
+ * Points mux-player's fullscreen button at the frame. mux-player only
+ * honours `fullscreen-element` when the player is already inside that
+ * element, and React sets attributes before it inserts the node, so the
+ * attribute is set again here, once the player is in the document.
+ */
+function fullscreenFrame(player: PlayerElement | null, frameId: string): void {
+  player?.setAttribute("fullscreen-element", frameId);
+}
+
 /**
  * The name over the video: a solid green pill (`sidebar`, the pair
  * `sidebar-foreground` on `sidebar` is in `contrast.ts`), so the text is
@@ -141,6 +156,7 @@ export function VideoPlayer({
   autoPlay = false,
   className,
   endCard,
+  id,
   loop = false,
   nameOverlay,
   onEnded,
@@ -150,6 +166,18 @@ export function VideoPlayer({
   ...props
 }: VideoPlayerProps): ReactNode {
   const { t } = useTranslation();
+  // The frame is what goes fullscreen (`fullscreen-element`), so the name
+  // overlay and the sponsor end card, which are siblings of the player, stay
+  // on screen; by default the player fullscreens only itself.
+  const generatedId = useId();
+  const frameId = id ?? generatedId;
+  const attachPlayer = useCallback(
+    (player: PlayerElement | null) => {
+      disableRemotePlayback(player);
+      fullscreenFrame(player, frameId);
+    },
+    [frameId]
+  );
   const mounted = useMounted();
   const [tracker] = useState(createNearEndTracker);
   const [endCardShown, setEndCardShown] = useState(false);
@@ -210,6 +238,7 @@ export function VideoPlayer({
         ASPECT[aspect],
         className
       )}
+      id={frameId}
       {...props}
     >
       {mounted && MuxPlayer ? (
@@ -218,6 +247,7 @@ export function VideoPlayer({
             autoPlay={autoPlay ? "muted" : false}
             disableCookies
             disableTracking
+            fullscreenElement={frameId}
             loop={loop}
             muted={autoPlay}
             onEnded={handleEnded}
@@ -225,7 +255,7 @@ export function VideoPlayer({
             playbackId={playbackId}
             playsInline
             poster={posterUrl}
-            ref={disableRemotePlayback}
+            ref={attachPlayer}
             streamType="on-demand"
             style={PLAYER_STYLE}
           />

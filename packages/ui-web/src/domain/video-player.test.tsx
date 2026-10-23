@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { createI18n } from "@smog/i18n";
 import { I18nextProvider } from "@smog/i18n/react";
 import { act, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import type { ReactNode, RefCallback } from "react";
 import { classesOf, renderKit } from "../test/render";
 
 /**
@@ -18,7 +18,10 @@ let last: MuxProps = {};
 mock.module("@mux/mux-player-react", () => ({
   default: (props: MuxProps): ReactNode => {
     last = props;
-    return <div data-testid="mux" />;
+    // The real element gets its ref after it is inserted into the page.
+    return (
+      <div data-testid="mux" ref={props.ref as RefCallback<HTMLDivElement>} />
+    );
   },
 }));
 
@@ -51,6 +54,29 @@ describe("VideoPlayer", () => {
     // No Mux Data beacons or cookies before analytics consent exists.
     expect(last.disableTracking).toBe(true);
     expect(last.disableCookies).toBe(true);
+  });
+
+  test("fullscreens the frame, so the name overlay and the end card stay on screen", async () => {
+    renderKit(
+      <VideoPlayer nameOverlay="Hond" playbackId="pb-1" title="Hello" />
+    );
+    await screen.findByTestId("mux");
+    const frame = screen.getByRole("region", { name: "Hello" });
+    expect(frame.id).not.toBe("");
+    expect(last.fullscreenElement).toBe(frame.id);
+    // mux-player ignores the attribute set before it is inserted: set again after.
+    expect(screen.getByTestId("mux").getAttribute("fullscreen-element")).toBe(
+      frame.id
+    );
+    // The overlay is inside the element that goes fullscreen.
+    expect(frame.contains(screen.getByText("Hond"))).toBe(true);
+  });
+
+  test("a caller's id is the fullscreen element", async () => {
+    renderKit(<VideoPlayer id="clip" playbackId="pb-1" title="Hello" />);
+    await screen.findByTestId("mux");
+    expect(last.fullscreenElement).toBe("clip");
+    expect(screen.getByRole("region", { name: "Hello" }).id).toBe("clip");
   });
 
   test("defaults: no autoplay, no loop, a 3:4 frame named by a11y.gestureVideo", async () => {
