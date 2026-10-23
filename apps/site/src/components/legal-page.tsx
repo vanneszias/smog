@@ -29,7 +29,7 @@ const ATTACHED = new WeakMap<object, Set<string>>();
  * (`legalLoader`, `LegalWorkspace`); values already in the instance (the
  * overlay) win.
  */
-export function useShippedBundle(locale: Locale): void {
+function useShippedBundle(locale: Locale): void {
   const { i18n } = useTranslation();
   const attached = ATTACHED.get(i18n) ?? new Set<string>();
   ATTACHED.set(i18n, attached);
