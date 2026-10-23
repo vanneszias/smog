@@ -159,6 +159,13 @@ jest.mock("expo-audio", () => {
   const mockAudioPlayers: MockAudioPlayer[] = [];
   return {
     mockAudioPlayers,
+    mockSetAudioMode: jest.fn(() => Promise.resolve()),
+    setAudioModeAsync: (mode: unknown) =>
+      (
+        jest.requireMock("expo-audio") as {
+          mockSetAudioMode: (mode: unknown) => Promise<void>;
+        }
+      ).mockSetAudioMode(mode),
     useAudioPlayer: (source: unknown): MockAudioPlayer => {
       const [player] = react.useState(() => {
         const created = new MockAudioPlayer(source);

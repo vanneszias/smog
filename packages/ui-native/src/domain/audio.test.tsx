@@ -68,6 +68,45 @@ describe("AudioButton (expo-audio)", () => {
     expect(player?.play).toHaveBeenCalledTimes(2);
   });
 
+  it("asks for playback with the silent switch on", async () => {
+    const { mockSetAudioMode } = jest.requireMock<{
+      mockSetAudioMode: jest.Mock;
+    }>("expo-audio");
+    const before = mockAudioPlayers.length;
+    await renderKit(<AudioButton src="https://site.test/api/audio/g/nl/u" />);
+    expect(mockAudioPlayers[before]).toBeDefined();
+    await act(() => {
+      fireEvent.press(screen.getByRole("button", { name: PLAY }));
+    });
+    expect(mockSetAudioMode).toHaveBeenCalledWith({ playsInSilentMode: true });
+  });
+
+  it("a clip of a screen that went away is not stopped by the next one", async () => {
+    const before = mockAudioPlayers.length;
+    const gone = await renderKit(
+      <AudioButton src="https://site.test/api/audio/g/nl/gone" />
+    );
+    const released = mockAudioPlayers[before];
+    await act(() => {
+      fireEvent.press(screen.getByRole("button", { name: PLAY }));
+    });
+    // The screen unmounts: expo-audio releases the player, a later pause throws.
+    await act(() => {
+      gone.unmount();
+    });
+    released?.pause.mockImplementation(() => {
+      throw new Error("released");
+    });
+    await renderKit(
+      <AudioButton src="https://site.test/api/audio/g/nl/next" />
+    );
+    await act(() => {
+      fireEvent.press(screen.getByRole("button", { name: PLAY }));
+    });
+    expect(released?.pause).not.toHaveBeenCalled();
+    expect(mockAudioPlayers[before + 1]?.play).toHaveBeenCalledTimes(1);
+  });
+
   it("plays one clip at a time", async () => {
     const before = mockAudioPlayers.length;
     await renderKit(
