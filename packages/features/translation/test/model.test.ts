@@ -244,6 +244,22 @@ describe("export and import", () => {
     expect(writes[0]?.sourceHash).toBe(sourceHash(source));
   });
 
+  it("refuses a default-language text that changes the shipped placeholders", () => {
+    const { plan, writes } = planImport(
+      [
+        { key: "kit.stepOf", locale: "nl", value: "Stap" },
+        {
+          key: "auth.errors.generic",
+          locale: "nl",
+          value: "Er ging iets mis.",
+        },
+      ],
+      context
+    );
+    expect(plan.problems.map((row) => row.problem)).toEqual(["placeholders"]);
+    expect(writes.map((write) => write.value)).toEqual(["Er ging iets mis."]);
+  });
+
   it("refuses a placeholder mismatch and a too long text", () => {
     const key = "kit.stepOf";
     const { plan, writes } = planImport(

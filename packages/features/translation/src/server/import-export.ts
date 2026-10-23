@@ -34,6 +34,7 @@ import {
   type KeyInfo,
   type ModelLanguage,
   type Overrides,
+  placeholderBase,
   sourceHash,
   sourceOf,
 } from "./model";
@@ -254,7 +255,7 @@ function judge(
   }
   const source = sourceOf(overrides, defaultCode, info);
   const [issue] = validateTranslation(
-    language.isDefault ? entry.value : source,
+    placeholderBase(language, info, source) ?? entry.value,
     entry.value
   ).issues;
   if (issue) {

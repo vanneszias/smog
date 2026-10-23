@@ -234,6 +234,32 @@ describe("saving", () => {
     expect((await list({ locale: "en", status: "invalid" })).total).toBe(0);
   });
 
+  it("holds the default language to the placeholders of the shipped text", async () => {
+    const dropped = await failureOf(
+      callAs(translator, "strings.save", {
+        expectedUpdatedAt: null,
+        key: PLACEHOLDER_KEY,
+        locale: "nl",
+        value: "Stap",
+      })
+    );
+    expect(dropped).toMatchObject({
+      code: "VALIDATION",
+      data: { fieldErrors: { value: ["placeholders"] } },
+    });
+    const added = await failureOf(
+      callAs(translator, "strings.save", {
+        expectedUpdatedAt: null,
+        key: "auth.errors.generic",
+        locale: "nl",
+        value: "Er ging iets mis bij {{step}}",
+      })
+    );
+    expect(added).toMatchObject({
+      data: { fieldErrors: { value: ["placeholders"] } },
+    });
+  });
+
   it("answers CONFLICT with the stored text when somebody saved first", async () => {
     const first = await save({
       expectedUpdatedAt: null,

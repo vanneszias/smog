@@ -10,6 +10,7 @@ import {
   catalogueKeys,
   cellOf,
   isApplicable,
+  placeholderBase,
   sourceHash,
   sourceOf,
 } from "./model";
@@ -22,6 +23,8 @@ import {
 
 /** One key in one language as stored now, with what a save needs to know about it. */
 interface CurrentCell {
+  /** The text whose placeholders a value keeps (`placeholderBase`); `null`: free text. */
+  base: string | null;
   cell: StringCell;
   isDefault: boolean;
   source: string;
@@ -49,6 +52,7 @@ async function currentCell(
   });
   const source = sourceOf(overrides, defaultCode, info);
   return {
+    base: placeholderBase(language, info, source),
     cell: cellOf(overrides, language, info, source),
     isDefault: language.isDefault,
     source,
@@ -79,8 +83,7 @@ function firstProblem(
   value: string
 ): "empty" | "placeholders" | "tooLong" | null {
   return (
-    validateTranslation(current.isDefault ? value : current.source, value)
-      .issues[0]?.code ?? null
+    validateTranslation(current.base ?? value, value).issues[0]?.code ?? null
   );
 }
 
