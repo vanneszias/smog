@@ -11,8 +11,6 @@ import { e2eSeed, signInWithApi, stubMux, waitForApp } from "./helpers";
 import { signInAsAdmin } from "./maintenance";
 import { uploadLogo } from "./sponsorships";
 
-/** The preview's MP4 (Remotion appends a media fragment). */
-
 /**
  * The CSP is enforced in dev (`src/worker/headers.ts`), so this suite sees
  * what production blocks. Each page must load with no violation: the

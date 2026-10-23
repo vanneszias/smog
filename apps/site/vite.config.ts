@@ -119,9 +119,9 @@ export default defineConfig({
     __SMOG_THEME_SCRIPT_HASH__: THEME_SCRIPT_HASH_DEFINE,
   },
   // The client build's manifest (`dist/client/.vite/manifest.json`), for the
-  // deploy guard's entry-chunk check: `remotion` and `mediabunny` load only
-  // in a lazy chunk (phase 7 ruling 1). `public/.assetsignore` keeps it
-  // out of the deployed assets.
+  // deploy guard's performance budgets (every route chunk needs an entry of
+  // `perf-budget.json`). `public/.assetsignore` keeps it out of the deployed
+  // assets.
   environments: { client: { build: { manifest: true } } },
   plugins: [
     i18nLazyCatalogues(),

@@ -29,7 +29,7 @@
     "sponsor": {
       "gzip": 477500,
       "target": 300000,
-      "note": "Target not reached: the shared closure (see home). Remotion and MediaBunny stay lazy (checkClientRenderIsLazy).",
+      "note": "Target not reached: the shared closure (see home). The Remotion Player and MediaBunny left the site in phase 10b tasks 8 and 9.",
       "routes": [["sponsor/index.tsx"]]
     },
     "sponsor-pages": {

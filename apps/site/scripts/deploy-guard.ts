@@ -147,7 +147,7 @@ export function checkServerHasNoVideoPlayer(files: readonly BuiltFile[]): void {
 /**
  * What must never reach the browser bundle (`dist/client`): the secret
  * names (their values live only in the Worker's env: Mux, Mollie, the R2
- * S3 token, the Remotion licence), the Mux Node SDK (`@smog/video` is a thin fetch client,
+ * S3 token), the Mux Node SDK (`@smog/video` is a thin fetch client,
  * Worker only), and `aws4fetch`, the R2 presigner (by its name and its
  * signing algorithm string, which survives minification).
  */
