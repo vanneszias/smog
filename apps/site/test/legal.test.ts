@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { bumpI18nVersion } from "@smog/i18n/server";
 import { describe, expect, it } from "vitest";
+import { askableLocale } from "../src/server/legal.functions";
 
 if (!(env.DB && env.KV)) {
   throw new Error("[test] The DB or KV binding is missing");
@@ -205,5 +206,17 @@ describe("legal texts from D1 (phase 10b task 7)", () => {
     } finally {
       await removeRows("terms", "fr");
     }
+  });
+});
+
+describe("which locales the legal loader reads", () => {
+  it("answers an enabled language or Dutch, and never reads another code", () => {
+    const enabled = ["nl", "en", "fr"];
+    expect(askableLocale("fr", enabled)).toBe("fr");
+    expect(askableLocale("nl", enabled)).toBe("nl");
+    // Not enabled, or made up: the canonical Dutch text, no D1 read of its own.
+    expect(askableLocale("de", enabled)).toBe("nl");
+    expect(askableLocale("zz-Latn-XX", enabled)).toBe("nl");
+    expect(askableLocale("fr", ["nl"])).toBe("nl");
   });
 });

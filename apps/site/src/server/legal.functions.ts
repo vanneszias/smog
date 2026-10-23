@@ -13,6 +13,7 @@ import { type LegalDeps, loadLegalText } from "@smog/i18n/server";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { siteEnv } from "./auth";
+import { enabledLanguageCodes } from "./catalogue";
 
 /** One language's text for the page. */
 export interface LegalText {
@@ -37,6 +38,21 @@ const inputSchema = z.object({
 function legalDeps(): LegalDeps {
   const { db, kv } = siteEnv();
   return { kv, source: legalPublishedSource(createDb(db)) };
+}
+
+/**
+ * The languages a request may read: the enabled ones (the `language` table),
+ * and Dutch, the canonical text. Any other code is answered with the Dutch
+ * text and never reaches D1, so a script cannot grow the read or the cache
+ * with made-up locales.
+ */
+export function askableLocale(
+  locale: string,
+  enabled: readonly string[]
+): string {
+  return locale === LEGAL_CANONICAL_LOCALE || enabled.includes(locale)
+    ? locale
+    : LEGAL_CANONICAL_LOCALE;
 }
 
 /**
@@ -80,8 +96,11 @@ export const getLegalTexts = createServerFn()
     try {
       const deps = legalDeps();
       const locales = [...new Set(data.locales)];
+      const enabled = await enabledLanguageCodes();
       const texts = await Promise.all(
-        locales.map((locale) => textFor(deps, data.kind, locale))
+        locales.map((locale) =>
+          textFor(deps, data.kind, askableLocale(locale, enabled))
+        )
       );
       return Object.fromEntries(
         locales.map((locale, index) => [locale, texts[index] as LegalText])

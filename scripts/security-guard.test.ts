@@ -159,7 +159,7 @@ export const OTHER_ENDPOINTS: Readonly<Record<string, Entry>> = {
   },
   "POST /_serverFn/* (theme, locale, shell reads)": {
     because:
-      "Start server functions that read or set a cookie and read the shell (no D1 except the admin gate, which needs a session)",
+      "Start server functions that read or set a cookie and read the shell, the language list and the published legal text (a few cached D1 reads, keyed by the enabled languages only: an unknown locale never reaches D1); the admin gate needs a session",
     none: true,
   },
   "POST /api/maintenance/bypass": {
