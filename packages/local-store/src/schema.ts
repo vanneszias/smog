@@ -41,6 +41,11 @@ export const guestDataSchema = z.object({
      */
     appBannerDismissedAt: z.number().int().optional(),
     /**
+     * The viewer hid the gesture name over the video (phase 10b). Optional
+     * and additive, so stored v2 data still parses; absent is shown.
+     */
+    hideGestureName: z.boolean().optional(),
+    /**
      * Signed-in user ids that dismissed the guest import prompt on this
      * device, oldest first (at most `IMPORT_DISMISSED_MAX`).
      */

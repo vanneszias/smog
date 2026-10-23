@@ -101,6 +101,49 @@ describe("VideoPlayer", () => {
     expect(onNearEnd).toHaveBeenCalledTimes(2);
   });
 
+  test("draws the name over the video as decoration: the frame's own name is the accessible one", async () => {
+    const { container } = renderKit(
+      <VideoPlayer nameOverlay="Hallo" playbackId="pb-1" title="Hallo" />
+    );
+    await screen.findByTestId("mux");
+    const overlay = container.querySelector('[data-slot="video-name-overlay"]');
+    expect(overlay?.textContent).toBe("Hallo");
+    // Hidden from the accessibility tree: the name is not read twice.
+    expect(overlay?.getAttribute("aria-hidden")).toBe("true");
+    expect(screen.getAllByText("Hallo")).toHaveLength(1);
+    expect(screen.getByRole("region", { name: "Hallo" })).toBeDefined();
+    // Taps reach the player's controls through it.
+    expect(classesOf(overlay)).toContain("pointer-events-none");
+  });
+
+  test("the overlay is readable on any frame (a solid green pill) and fades in unless motion is reduced", async () => {
+    const { container } = renderKit(
+      <VideoPlayer nameOverlay="Hallo" playbackId="pb-1" />
+    );
+    await screen.findByTestId("mux");
+    const pill = container.querySelector(
+      '[data-slot="video-name-overlay"] span'
+    );
+    const classes = classesOf(pill);
+    expect(classes).toContain("bg-sidebar");
+    expect(classes).toContain("text-sidebar-foreground");
+    expect(classes).toContain("animate-fade-in");
+    expect(classes).toContain("motion-reduce:animate-none");
+  });
+
+  test("shows no overlay without a name (a burned-in video, or the viewer hid it)", async () => {
+    const { container } = renderKit(<VideoPlayer playbackId="pb-1" />);
+    await screen.findByTestId("mux");
+    expect(
+      container.querySelector('[data-slot="video-name-overlay"]')
+    ).toBeNull();
+    const empty = renderKit(<VideoPlayer nameOverlay="" playbackId="pb-1" />);
+    await screen.findAllByTestId("mux");
+    expect(
+      empty.container.querySelector('[data-slot="video-name-overlay"]')
+    ).toBeNull();
+  });
+
   test("the server render is the poster, without the player", () => {
     const html = renderToString(
       <I18nextProvider i18n={createI18n("en")}>

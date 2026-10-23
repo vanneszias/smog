@@ -10,6 +10,7 @@ import type { GestureDetail, GestureSummary } from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
 import { webAdapter } from "@smog/local-store/web";
 import {
+  AudioButton,
   Badge,
   Button,
   COURSE_MESSAGE_COUNT,
@@ -18,12 +19,14 @@ import {
   cn,
   ErrorState,
   Heading,
+  NameOverlayToggle,
   Text,
   VideoPlayer,
 } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useCallback } from "react";
 import { SponsorCta } from "@/components/sponsor/sponsor-cta";
+import { useNameOverlayPreference } from "@/lib/name-overlay";
 import { GestureActions } from "./gesture-actions";
 import { GestureGridSkeleton, LinkedGestureGrid } from "./gesture-cards";
 import type { Hearts } from "./use-hearts";
@@ -116,6 +119,10 @@ export function GestureDetailView({
   const showTranslationStatus =
     gesture.fallbackUsed &&
     (roles.includes("admin") || roles.includes("translator"));
+  // The name over the video: only on a textless video (the picture of an
+  // older one already carries it) and unless this viewer hid it.
+  const nameOverlay = useNameOverlayPreference();
+  const overlayApplies = !gesture.needsRecut;
   const page = layout === "page";
   // The page's name is its h1; in the browse panel the page title is.
   const titleLevel = page ? 1 : 2;
@@ -144,6 +151,11 @@ export function GestureDetailView({
           )}
         >
           <VideoPlayer
+            nameOverlay={
+              overlayApplies && nameOverlay.loaded && nameOverlay.shown
+                ? gesture.name
+                : undefined
+            }
             onNearEnd={onNearEnd}
             playbackId={gesture.playbackId}
             title={gesture.name}
@@ -183,6 +195,20 @@ export function GestureDetailView({
               </ul>
             ) : null}
           </div>
+          {gesture.audioPath || overlayApplies ? (
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              {/* A clip of this language only; never a fallback. */}
+              {gesture.audioPath ? (
+                <AudioButton src={gesture.audioPath} />
+              ) : null}
+              {overlayApplies ? (
+                <NameOverlayToggle
+                  checked={nameOverlay.shown}
+                  onCheckedChange={nameOverlay.setShown}
+                />
+              ) : null}
+            </div>
+          ) : null}
           <GestureActions gesture={gesture} hearts={hearts} />
           {appLink}
           {gesture.description ? (
