@@ -3,8 +3,8 @@
  * from it (Phase 6 fix wave, jobs I-1). Mollie's `paidAt` is when the
  * money arrived at Mollie, which can be days before we learn of it (a
  * webhook outage, a key restored, a bank transfer settled by the stale
- * sweep). The windows of the `payment.settled` emails and of the
- * reconciliation therefore start at the payment's first settling
+ * sweep). The window of the `payment.settled` emails therefore starts at
+ * the payment's first settling
  * `sponsorship_event` (`payment_paid`, `revived`, `renewed`,
  * `marked_paid_manually` with `data.paymentId`), and only fall back to
  * `paid_at` for a payment without one (migrated rows, fixtures).

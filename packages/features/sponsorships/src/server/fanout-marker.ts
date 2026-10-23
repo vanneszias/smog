@@ -9,11 +9,13 @@
  *   (Phase 6 fix wave, payments M-2): the webhook that follows a few
  *   seconds later is `already`, and without the marker the sponsor emails
  *   would rest on the email consumer's best-effort KV dedupe alone.
- * The hourly reconciliation re-sends a fan-out that was still lost.
+ * No reconciliation re-sends a fan-out that was still lost any more (the
+ * hourly one was retired with the render pipeline, phase 10b task 9; the gap
+ * is recorded in docs/DECISIONS.md).
  * It is a filter, not a lock: KV may serve a missing key for a minute.
  */
 
-/** How long the marker lives: the reconciliation's 5-minute grace. */
+/** How long the marker lives: five minutes, enough for the webhook that follows a poll. */
 export const FANOUT_MARKER_TTL_S = 5 * 60;
 
 function fanoutKey(paymentId: string): string {
