@@ -12,6 +12,9 @@ const WIDTHS = [390, 1280] as const;
 const THEMES = ["light", "dark"] as const;
 const DARK = /\bdark\b/;
 const MY_URL = /\/my$/;
+/** A shipped language's catalogue chunk (`@smog/i18n`, one per language, phase 10b task 7b). */
+const CATALOGUE_CHUNK =
+  /(?:\/locales\/|\/assets\/)(nl|en|fr)(?:\.json|-[\w-]+\.js)$/;
 
 const PAGES = [
   {
@@ -113,6 +116,48 @@ test.describe("app shell", () => {
     const theme = cookies.find((cookie) => cookie.name === "theme");
     expect(theme?.value).toBe("dark");
     expect(theme?.sameSite).toBe("Lax");
+    expect(errors).toEqual([]);
+  });
+
+  test("only the active language's catalogue loads; a language change fetches the next one without a reload", async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    const catalogues: string[] = [];
+    page.on("request", (request) => {
+      const match = CATALOGUE_CHUNK.exec(new URL(request.url()).pathname);
+      if (match?.[1]) {
+        catalogues.push(match[1]);
+      }
+    });
+    await page.setViewportSize({ height: 900, width: 1280 });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    // The first paint and hydration are in Dutch: that chunk alone.
+    expect(catalogues).toEqual(["nl"]);
+    await page.evaluate(() => {
+      (window as unknown as { __smogNoReload: boolean }).__smogNoReload = true;
+    });
+
+    await page.getByRole("button", { name: "Instellingen" }).click();
+    await page.getByRole("menuitemradio", { name: "English" }).click();
+    await expect(
+      page.getByRole("navigation", { name: "Main navigation" })
+    ).toBeVisible();
+    expect(catalogues).toEqual(["nl", "en"]);
+    // The same document: nothing reloaded.
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { __smogNoReload?: boolean }).__smogNoReload
+      )
+    ).toBe(true);
+
+    // A reload in English loads English only.
+    catalogues.length = 0;
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    expect(catalogues).toEqual(["en"]);
     expect(errors).toEqual([]);
   });
 
