@@ -538,14 +538,8 @@ describe("approve", () => {
     });
   });
 
-  it("is refused without a video, and outside in_review", async () => {
-    const noVideo = await seedCheckout({ status: "in_review" });
+  it("is refused outside in_review", async () => {
     const mark = await auditMark();
-    expect(
-      await failure(
-        callAs(admin, "sponsorships.approve", { id: noVideo.sponsorshipIds[0] })
-      )
-    ).toMatchObject({ code: "INVALID_STATE", data: { reason: "noVideo" } });
     const live = await seedCheckout({
       status: "live",
       videoPlaybackId: "rendered",
@@ -760,7 +754,7 @@ describe("requestChanges and regenerateToken", () => {
 });
 
 describe("markPaid", () => {
-  it("marks a 3-item payment paid: 3 entries, 3 rendering, one payment.settled", async () => {
+  it("marks a 3-item payment paid: 3 entries, 3 in_review, one payment.settled", async () => {
     const seeded = await seedCheckout({ count: 3 });
     const mark = await auditMark();
     await expect(
@@ -775,7 +769,7 @@ describe("markPaid", () => {
     });
     await Promise.all(
       seeded.sponsorshipIds.map(async (id) => {
-        expect((await sponsorshipRow(id)).status).toBe("rendering");
+        expect((await sponsorshipRow(id)).status).toBe("in_review");
         expect(await eventTypes(id)).toEqual(["marked_paid_manually"]);
         await expectAudit("sponsorships.markPaid", {
           actorId: admin.user.id,
@@ -819,7 +813,7 @@ describe("markPaid", () => {
     ).resolves.toMatchObject({ result: "settled" });
     await Promise.all(
       seeded.sponsorshipIds.map(async (id) => {
-        expect((await sponsorshipRow(id)).status).toBe("rendering");
+        expect((await sponsorshipRow(id)).status).toBe("in_review");
         // Mollie's payment, not a manual one: no "paid twice" later.
         expect(await eventTypes(id)).toEqual(["payment_paid"]);
         await expectAudit("sponsorships.markPaid", {
@@ -935,7 +929,7 @@ describe("cancel", () => {
     expect((await paymentRow(seeded.paymentId)).status).toBe("paid");
     await Promise.all(
       seeded.sponsorshipIds.map(async (id) => {
-        expect((await sponsorshipRow(id)).status).toBe("rendering");
+        expect((await sponsorshipRow(id)).status).toBe("in_review");
       })
     );
     // The refused cancel is audited with the settlement (fix round 1, I1).

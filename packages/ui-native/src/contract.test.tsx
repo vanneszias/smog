@@ -120,6 +120,7 @@ const WEB_KIT = [
   "SheetTrigger",
   "Skeleton",
   "Spinner",
+  "SponsorEndCard",
   "Stepper",
   "Switch",
   "Tabs",

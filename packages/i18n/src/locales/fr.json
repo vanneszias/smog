@@ -375,6 +375,9 @@
       "inList": "Dans la liste"
     }
   },
+  "endCard": {
+    "message": "Rendu possible grâce à"
+  },
   "media": {
     "nameOverlay": {
       "toggle": "Afficher le nom sur la vidéo"
@@ -669,10 +672,9 @@
         "subject": "Nous avons bien reçu votre parrainage",
         "preheader": "Merci\u00a0! Voici la suite.",
         "heading": "Parrainage reçu",
-        "body": "Merci de parrainer {{gesture}}. La vidéo affichera le nom {{displayName}}.",
+        "body": "Merci de parrainer {{gesture}}. La fin de la vidéo affichera le nom {{displayName}}.",
         "nextTitle": "Et maintenant\u00a0?",
-        "stepRender": "Nous réalisons votre vidéo parrainée.",
-        "stepReview": "Nous vérifions la vidéo avant sa mise en ligne.",
+        "stepReview": "Nous vérifions votre parrainage avant sa mise en ligne.",
         "stepLive": "Vous recevez un e-mail dès que votre parrainage est en ligne.",
         "footer": "Vous recevez cet e-mail parce que vous avez récemment soumis un parrainage via SMOG & Co."
       },
@@ -689,7 +691,7 @@
         "subject": "Votre parrainage est en ligne\u00a0!",
         "preheader": "Votre vidéo parrainée est en ligne.",
         "heading": "Votre parrainage est en ligne\u00a0!",
-        "body": "Votre vidéo parrainée pour {{gesture}} est maintenant en ligne avec le nom {{displayName}}.",
+        "body": "Votre parrainage de {{gesture}} est maintenant en ligne : la fin de la vidéo affiche le nom {{displayName}}.",
         "button": "Voir sur SMOG",
         "thanks": "Merci de soutenir SMOG\u00a0!",
         "footer": "Nous vous enverrons un rappel 30 jours avant la fin, pour que vous puissiez prolonger."
@@ -709,7 +711,7 @@
         "preheader": "Payé\u00a0: {{total}}.",
         "heading": "Nouveau parrainage payé",
         "headingRenewal": "Parrainage prolongé",
-        "body": "Un parrainage a été payé. Il attend maintenant sa vidéo, puis une approbation.",
+        "body": "Un parrainage a été payé. Il attend maintenant une approbation.",
         "bodyRenewal": "Un parrainage a été prolongé d'un an. Aucune nouvelle vidéo ni approbation n'est nécessaire.",
         "detailsTitle": "Parrainage",
         "invoiceTitle": "Facturation",
@@ -2552,7 +2554,7 @@
     },
     "review": {
       "title": "Vérifiez votre parrainage",
-      "description": "Voici comment votre nom apparaît sur les gestes choisis. La vraie vidéo est réalisée après le paiement et vérifiée avant sa mise en ligne.",
+      "description": "Voici comment votre nom apparaît à la fin de la vidéo des gestes choisis. Après le paiement, nous vérifions votre parrainage avant sa mise en ligne.",
       "summary": "Détails du parrainage",
       "gestures": "Gestes",
       "duration": "Durée",
@@ -2623,7 +2625,6 @@
       "timeline": {
         "title": "Et maintenant\u00a0?",
         "paid": "Votre paiement est confirmé.",
-        "video": "Nous réalisons votre vidéo avec votre nom.",
         "review": "Un administrateur examine votre parrainage dans les cinq jours ouvrables.",
         "live": "Vous recevez un e-mail dès sa mise en ligne."
       },
@@ -2661,7 +2662,7 @@
       "submit": "Envoyer pour vérification",
       "submitted": {
         "title": "Envoyé\u00a0!",
-        "description": "Nous réalisons votre nouvelle vidéo et la vérifions avant sa mise en ligne. Vous n'avez pas à payer à nouveau."
+        "description": "Nous vérifions vos modifications avant leur mise en ligne. Vous n’avez pas à payer à nouveau."
       },
       "failed": "Nous n'avons pas pu envoyer votre modification. Veuillez réessayer."
     },
@@ -2680,12 +2681,7 @@
     "preview": {
       "label": "Aperçu pour {{name}}",
       "picker": "Choisissez le geste à prévisualiser",
-      "play": "Lire",
-      "pause": "Pause",
-      "showEnding": "Voir la fin",
-      "loading": "Chargement de l’aperçu…",
-      "fallbackNote": "La vidéo ne peut pas être lue ici, l’aperçu montre donc une image fixe du geste. La vidéo finale utilise le clip complet, avec cette fin.",
-      "unavailable": "L’aperçu ne peut pas être affiché pour le moment. La vidéo finale est réalisée avec votre nom et votre logo tels que saisis."
+      "caption": "Voici à quoi ressemble la fin de la vidéo : une image fixe du geste avec votre nom et votre logo."
     }
   },
   "signOutConfirm": {

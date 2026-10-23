@@ -59,7 +59,7 @@ describe("settlePayment races", () => {
     }
     expect((await paymentRow(db, seeded.paymentId)).status).toBe("paid");
     for (const trail of await trailsOf(db, seeded.sponsorshipIds)) {
-      expect(trail.status).toBe("rendering");
+      expect(trail.status).toBe("in_review");
       expect(trail.events.map((event) => event.type)).toEqual(["payment_paid"]);
     }
   });
@@ -85,7 +85,7 @@ describe("settlePayment races", () => {
     }
     expect((await paymentRow(db, seeded.paymentId)).status).toBe("paid");
     for (const trail of await trailsOf(db, seeded.sponsorshipIds)) {
-      expect(trail.status).toBe("rendering");
+      expect(trail.status).toBe("in_review");
       // Either payment_paid, or cancelled then revived: never both paths.
       expect([["payment_paid"], ["cancelled", "revived"]]).toContainEqual(
         trail.events.map((event) => event.type)
@@ -116,7 +116,7 @@ describe("settlePayment races", () => {
       "payment_failed",
       "refund_needed",
     ]);
-    expect(freed?.status).toBe("rendering");
+    expect(freed?.status).toBe("in_review");
     expect(freed?.events.map((event) => event.type)).toEqual([
       "payment_failed",
       "revived",
@@ -183,7 +183,7 @@ describe("chargebacks (fix round 1, I-3)", () => {
       ["payment_paid", { paymentId: seeded.paymentId }],
       ["refund_needed", { paymentId: seeded.paymentId, reason: "chargeback" }],
     ]);
-    expect((await sponsorshipRow(db, id)).status).toBe("rendering");
+    expect((await sponsorshipRow(db, id)).status).toBe("in_review");
   });
 
   it("a second chargeback is recorded and emailed under a new key", async () => {

@@ -108,7 +108,7 @@ describe("sponsorships.paymentStatus (S-14, ruling 2)", () => {
     expect((await paymentRow(db, seeded.paymentId)).status).toBe("paid");
     for (const id of seeded.sponsorshipIds) {
       // biome-ignore lint/performance/noAwaitInLoops: one status per row.
-      expect(await statusOf(db, id)).toBe("rendering");
+      expect(await statusOf(db, id)).toBe("in_review");
     }
     expect(queues.events.messages).toEqual([
       { paymentId: seeded.paymentId, type: "payment.settled" },

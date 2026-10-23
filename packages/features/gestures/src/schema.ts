@@ -32,7 +32,18 @@ export const gestureSummarySchema = z.object({
 
 /** The sponsor credited on a gesture while its sponsorship runs. */
 export const sponsorCreditSchema = z.object({
-  /** The display name shown in the video. */
+  /**
+   * Show the end card over the video's last seconds (phase 10b ruling 9):
+   * `false` for an older sponsorship whose rendered video already carries
+   * the name, so it is never shown twice.
+   */
+  endCard: z.boolean(),
+  /**
+   * Where the logo is served from (`/api/sponsor-logos/<uuid>`), or `null`
+   * when the sponsor paid for none.
+   */
+  logoPath: z.string().nullable(),
+  /** The display name, as the sponsor typed it. */
   name: z.string(),
   /** When the sponsorship ends (epoch milliseconds). */
   until: z.number().int(),

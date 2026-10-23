@@ -5,7 +5,12 @@ import {
   type SponsorshipEventType,
   type SponsorshipStatus,
 } from "@smog/db/enums";
-import { TRANSITION_EVENTS, transition } from "./transition-table";
+import {
+  RENDER_NEW_SPONSORSHIPS,
+  TRANSITION_EVENTS,
+  transition,
+  transitionTable,
+} from "./transition-table";
 
 /**
  * The state machine of spec §5.5 and ruling 6, written out independently
@@ -17,11 +22,11 @@ const ALLOWED: readonly [
   SponsorshipEventType,
   SponsorshipStatus,
 ][] = [
-  ["awaiting_payment", "payment_paid", "rendering"],
-  ["awaiting_payment", "marked_paid_manually", "rendering"],
+  ["awaiting_payment", "payment_paid", "in_review"],
+  ["awaiting_payment", "marked_paid_manually", "in_review"],
   ["awaiting_payment", "payment_failed", "cancelled"],
   ["awaiting_payment", "cancelled", "cancelled"],
-  ["cancelled", "revived", "rendering"],
+  ["cancelled", "revived", "in_review"],
   ["rendering", "render_succeeded", "in_review"],
   ["rendering", "render_failed", "render_failed"],
   ["render_failed", "render_retried", "rendering"],
@@ -30,7 +35,7 @@ const ALLOWED: readonly [
   ["changes_requested", "rejected", "rejected"],
   ["in_review", "changes_requested", "changes_requested"],
   ["rejected", "changes_requested", "changes_requested"],
-  ["changes_requested", "resubmitted", "rendering"],
+  ["changes_requested", "resubmitted", "in_review"],
   ["live", "reminder_sent", "expiring"],
   ["expiring", "renewed", "live"],
   ["live", "renewed", "live"],
@@ -90,5 +95,36 @@ describe("transition (spec §5.5)", () => {
     expect(
       transition("awaiting_payment", "toString" as SponsorshipEventType)
     ).toBeNull();
+  });
+});
+
+describe("the end card gate (phase 10b ruling 9)", () => {
+  test("new sponsorships are not rendered", () => {
+    expect(RENDER_NEW_SPONSORSHIPS).toBe(false);
+  });
+
+  test("with the gate on, payment, revival and resubmit render again", () => {
+    const on = transitionTable(true);
+    expect(on.payment_paid.awaiting_payment).toBe("rendering");
+    expect(on.marked_paid_manually.awaiting_payment).toBe("rendering");
+    expect(on.revived.cancelled).toBe("rendering");
+    expect(on.resubmitted.changes_requested).toBe("rendering");
+  });
+
+  test("the gate changes only those four events; render states stay for older rows", () => {
+    const on = transitionTable(true);
+    const off = transitionTable(false);
+    const changed = (Object.keys(on) as (keyof typeof on)[]).filter(
+      (event) => JSON.stringify(on[event]) !== JSON.stringify(off[event])
+    );
+    expect(changed.sort()).toEqual([
+      "marked_paid_manually",
+      "payment_paid",
+      "resubmitted",
+      "revived",
+    ]);
+    expect(off.render_succeeded.rendering).toBe("in_review");
+    expect(off.render_failed.rendering).toBe("render_failed");
+    expect(off.render_retried.render_failed).toBe("rendering");
   });
 });

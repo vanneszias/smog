@@ -13,6 +13,7 @@ import { processEventMessage } from "../src/worker/events-queue";
 import { clearMaintenanceCache } from "../src/worker/maintenance";
 import {
   checkoutVia,
+  forceRendering,
   jobsOf,
   kv,
   leaveQueued,
@@ -116,9 +117,10 @@ describe("the Mollie webhook (ruling 2)", () => {
       code: "OK",
       status: 200,
     });
+    // The end card (phase 10b ruling 9): paid goes straight to review.
     expect(await statusesOf(checkout.sponsorshipIds)).toEqual([
-      "rendering",
-      "rendering",
+      "in_review",
+      "in_review",
     ]);
     expect(queues.events.messages).toEqual([settled(checkout.paymentId)]);
     expect(limit).not.toHaveBeenCalled();
@@ -133,7 +135,7 @@ describe("the Mollie webhook (ruling 2)", () => {
       method: "POST",
     });
     expect((await deliver(request)).status).toBe(200);
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["rendering"]);
+    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["in_review"]);
   });
 
   it("never trusts the body: only Mollie's re-fetched status counts", async () => {
@@ -229,7 +231,7 @@ describe("the Mollie webhook (ruling 2)", () => {
       code: "ENQUEUE_FAILED",
       status: 503,
     });
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["rendering"]);
+    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["in_review"]);
     // Mollie's retry: already paid, and payment.settled goes out again.
     expect((await deliver(form(checkout.mollieId))).status).toBe(200);
     expect(queues.events.messages).toEqual([settled(checkout.paymentId)]);
@@ -312,10 +314,10 @@ describe("the Mollie webhook (ruling 2)", () => {
     await drainEvents({ email: again, now: later });
     expect(again.messages).toEqual([]);
     expect(JSON.stringify(again.messages)).not.toContain(admin.email);
-    expect(await jobsOf(checkout.sponsorshipIds)).toHaveLength(1);
+    expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
   });
 
-  it("a replay and a concurrent storm leave one state and, through the consumer, one render job per item", async () => {
+  it("a replay and a concurrent storm leave one state and, through the consumer, one render job per item on the render path", async () => {
     const checkout = await checkoutVia(fake);
     fake.setStatus(checkout.mollieId, "paid");
     const answers = await Promise.all(
@@ -332,6 +334,12 @@ describe("the Mollie webhook (ruling 2)", () => {
     // job per item, however many messages run.
     expect(queues.events.messages.length).toBeGreaterThanOrEqual(1);
     expect(queues.events.messages.length).toBeLessThanOrEqual(7);
+    // The new flow renders nothing: the same fan-out on rows that are on the
+    // render path (older rows, or the gate on) makes the jobs.
+    await drainEvents();
+    expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
+    await forceRendering(checkout.sponsorshipIds);
+    queues.events.messages.push(settled(checkout.paymentId));
     await drainEvents();
     const jobs = await jobsOf(checkout.sponsorshipIds);
     expect(jobs).toHaveLength(2);
@@ -346,7 +354,7 @@ describe("the Mollie webhook (ruling 2)", () => {
     fake.setStatus(checkout.mollieId, "canceled");
     expect((await deliver(form(checkout.mollieId))).status).toBe(200);
     expect(await paymentStatusOf(checkout.paymentId)).toBe("paid");
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["rendering"]);
+    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["in_review"]);
   });
 
   it("a late payment with its gestures still free is revived", async () => {
@@ -356,7 +364,7 @@ describe("the Mollie webhook (ruling 2)", () => {
     expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["cancelled"]);
     fake.setStatus(checkout.mollieId, "paid");
     expect((await deliver(form(checkout.mollieId))).status).toBe(200);
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["rendering"]);
+    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["in_review"]);
     expect(queues.events.messages).toEqual([settled(checkout.paymentId)]);
   });
 

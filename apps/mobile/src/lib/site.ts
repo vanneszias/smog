@@ -9,11 +9,12 @@ function siteUrl(path: string): string {
 const TRAILING_SLASHES = /\/+$/;
 
 /**
- * Where a gesture's spoken name is served from: the site's same-origin
- * `/api/audio/...` path (`GestureBySlug.audioPath`) on the API origin
- * (`EXPO_PUBLIC_API_URL`), which is what the audio player needs absolute.
+ * A same-origin path the site serves (a gesture's spoken name,
+ * `GestureBySlug.audioPath`, or a sponsor's logo, `sponsor.logoPath`) on
+ * the API origin (`EXPO_PUBLIC_API_URL`): the players and images need it
+ * absolute.
  */
-export function audioUrl(path: string): string {
+export function apiUrl(path: string): string {
   return `${mobileEnv().EXPO_PUBLIC_API_URL.replace(TRAILING_SLASHES, "")}${path}`;
 }
 

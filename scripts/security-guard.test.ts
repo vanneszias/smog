@@ -95,6 +95,7 @@ export const ROUTE_LIMITS: Readonly<Record<string, Entry>> = {
     source: RPC_HANDLER,
   },
   "api/rpc/$.ts": { limiter: "RL_API", source: RPC_HANDLER },
+  "api/sponsor-logos/$key.ts": { limiter: "RL_API", source: LOGO },
   "api/sponsor/reedit-logo.ts": { limiter: "RL_API", source: LOGO },
   "api/webhooks/mollie.ts": {
     limiter: "RL_API",

@@ -87,6 +87,20 @@ function Related({
 }
 
 /**
+ * The sponsor end card over the video's last seconds (phase 10b ruling 9):
+ * none without a running sponsorship, nor over a rendered video that
+ * already carries the name.
+ */
+function endCardOf(
+  gesture: GestureDetail
+): { logoSrc: string | null; name: string } | undefined {
+  const { sponsor } = gesture;
+  return sponsor?.endCard
+    ? { logoSrc: sponsor.logoPath, name: sponsor.name }
+    : undefined;
+}
+
+/**
  * A gesture: the video on top (3:4, the course banner under it when due),
  * then the name, its categories (links to the filtered browse), the
  * actions, description, related concepts, the sponsor card (L-17: the
@@ -151,6 +165,7 @@ export function GestureDetailView({
           )}
         >
           <VideoPlayer
+            endCard={endCardOf(gesture)}
             nameOverlay={
               overlayApplies && nameOverlay.loaded && nameOverlay.shown
                 ? gesture.name

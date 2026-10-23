@@ -18,6 +18,8 @@
  * - a gesture's audio clip, `/api/audio/<gestureId>/<locale>/<uuid>`, when
  *   it is served (200 or 206): a year, immutable (a new key on every
  *   replace);
+ * - a running sponsorship's logo, `/api/sponsor-logos/<uuid>`, when it is
+ *   served (200): an hour (the route sets it itself);
  * - `/api/*`, `/_serverFn/*` (TanStack server functions, session-dependent),
  *   `/webhooks/*`, `/dev/*` and every 5xx (the maintenance page
  *   included): `no-store`.
@@ -38,6 +40,9 @@ export const NO_CACHE = "private, no-cache";
  */
 const AUDIO_PREFIX = "/api/audio/";
 const AUDIO_UPLOAD_PREFIX = "/api/audio/upload/";
+
+/** The logo of a running sponsorship (phase 10b): `server/logo-upload.ts` sets the same hour. */
+const SPONSOR_LOGO_PREFIX = "/api/sponsor-logos/";
 
 /** What Vite writes: `assets/<name>-<8 character hash>.<ext>`, `_`/`-` allowed in both. */
 const HASHED_ASSET = /^\/assets\/.+-[A-Za-z0-9_-]{8}\.(?:css|js|woff2)$/;
@@ -86,6 +91,9 @@ export function cacheControlFor({
     (status === 200 || status === 206)
   ) {
     return IMMUTABLE;
+  }
+  if (pathname.startsWith(SPONSOR_LOGO_PREFIX) && status === 200) {
+    return ONE_HOUR;
   }
   if (
     status >= 500 ||

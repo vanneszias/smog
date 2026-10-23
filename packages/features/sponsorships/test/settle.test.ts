@@ -52,7 +52,7 @@ async function eventTypes(sponsorshipId: string): Promise<string[]> {
 }
 
 describe("settlePayment (ruling 6)", () => {
-  it("paid: the payment is paid and every item goes to rendering, once", async () => {
+  it("paid: the payment is paid and every item goes to in_review (the end card), once", async () => {
     const seeded = await seedCheckout(db, { count: 2 });
     const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 10_000);
     fake.setStatus(mollieId, "paid");
@@ -74,7 +74,7 @@ describe("settlePayment (ruling 6)", () => {
     expect(row.status).toBe("paid");
     expect(row.paidAt).not.toBeNull();
     for (const trail of await trailsOf(db, seeded.sponsorshipIds)) {
-      expect(trail.status).toBe("rendering");
+      expect(trail.status).toBe("in_review");
       expect(trail.events.map((event) => event.type)).toEqual(["payment_paid"]);
     }
   });
@@ -115,7 +115,7 @@ describe("settlePayment (ruling 6)", () => {
     expect((await paymentRow(db, seeded.paymentId)).mollieId).toBe(mollieId);
   });
 
-  it("late paid after canceled, the gesture still free: revived to rendering, once", async () => {
+  it("late paid after canceled, the gesture still free: revived to in_review, once", async () => {
     const seeded = await seedCheckout(db, { count: 2 });
     const mollieId = await molliePaymentFor(db, fake, seeded.paymentId, 10_000);
     fake.setStatus(mollieId, "canceled");
@@ -135,7 +135,7 @@ describe("settlePayment (ruling 6)", () => {
     expect(second?.outcome).toBe("already");
     expect((await paymentRow(db, seeded.paymentId)).status).toBe("paid");
     for (const trail of await trailsOf(db, seeded.sponsorshipIds)) {
-      expect(trail.status).toBe("rendering");
+      expect(trail.status).toBe("in_review");
       expect(trail.events.map((event) => event.type)).toEqual([
         "payment_failed",
         "revived",
@@ -174,7 +174,7 @@ describe("settlePayment (ruling 6)", () => {
         to: admin.email,
       })
     );
-    // The revived item still needs its render: the fan-out goes out.
+    // The revived item goes to review (the end card): nothing renders.
     expect(first?.events).toEqual([
       { paymentId: seeded.paymentId, type: "payment.settled" },
     ]);
@@ -190,7 +190,7 @@ describe("settlePayment (ruling 6)", () => {
       "payment_failed",
       "refund_needed",
     ]);
-    expect(await statusOf(db, freed)).toBe("rendering");
+    expect(await statusOf(db, freed)).toBe("in_review");
     expect(await statusOf(db, taken.sponsorshipIds[0] as string)).toBe(
       "awaiting_payment"
     );

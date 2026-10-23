@@ -14,7 +14,12 @@ import {
   sponsorship,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
-import { audioPath, decodeCursorAs, encodeCursor } from "@smog/utils";
+import {
+  audioPath,
+  decodeCursorAs,
+  encodeCursor,
+  sponsorLogoPath,
+} from "@smog/utils";
 import { and, eq, isNotNull, type SQL, sql } from "drizzle-orm";
 import type {
   Category,
@@ -245,8 +250,10 @@ export async function findGestureBySlug(
         >`(SELECT ${ref("a", gestureAudio.r2Key)} FROM ${gestureAudio} AS a WHERE ${ref("a", gestureAudio.gestureId)} = ${ref(G, gesture.id)} AND ${ref("a", gestureAudio.locale)} = ${locale})`,
         needsRecut: gesture.needsRecut,
         publishedAt: gesture.publishedAt,
+        sponsorLogoKey: sponsorship.logoKey,
         sponsorName: sponsorship.displayName,
         sponsorUntil: sponsorship.endsAt,
+        sponsorVideo: sponsorship.videoPlaybackId,
         updatedAt: gesture.updatedAt,
       })
       .from(gesture)
@@ -271,8 +278,10 @@ export async function findGestureBySlug(
     const {
       audioKey,
       publishedAt,
+      sponsorLogoKey,
       sponsorName,
       sponsorUntil,
+      sponsorVideo,
       updatedAt,
       ...detail
     } = row;
@@ -284,7 +293,16 @@ export async function findGestureBySlug(
       publishedAt: (publishedAt ?? updatedAt).getTime(),
       sponsor:
         sponsorName !== null && sponsorUntil !== null
-          ? { name: sponsorName, until: sponsorUntil.getTime() }
+          ? {
+              // A rendered video (an older sponsorship) has the name burned in.
+              endCard: sponsorVideo === null,
+              logoPath:
+                sponsorLogoKey === null
+                  ? null
+                  : sponsorLogoPath(sponsorLogoKey),
+              name: sponsorName,
+              until: sponsorUntil.getTime(),
+            }
           : null,
       updatedAt: updatedAt.getTime(),
     };

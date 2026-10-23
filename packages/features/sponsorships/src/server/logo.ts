@@ -5,11 +5,11 @@
  * file never passes through a procedure. The checkout verifies the object
  * before anything is written (`verifyLogoObject`, bug 23).
  */
-import { sponsorship } from "@smog/db";
+import { inList, sponsorship } from "@smog/db";
 import type { Db } from "@smog/db/client";
-import { newId } from "@smog/utils";
+import { LOGO_KEY_PREFIX, newId } from "@smog/utils";
 import { AwsClient } from "aws4fetch";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   LOGO_CONTENT_TYPES,
   LOGO_MAX_BYTES,
@@ -22,9 +22,6 @@ export const LOGO_UPLOAD_TTL_MS = 5 * 60 * 1000;
 
 /** The fallback route, followed by the key's uuid. */
 const LOGO_UPLOAD_PATH = "/api/logos/upload/";
-
-/** `logos/<uuid>`: the R2 key prefix of every sponsor logo. */
-export const LOGO_KEY_PREFIX = "logos/";
 
 /** What the upload URL needs from the Worker env. */
 export interface LogoUploadEnv {
@@ -320,6 +317,25 @@ export async function isLogoInUse(db: Db, key: string): Promise<boolean> {
     .select({ id: sponsorship.id })
     .from(sponsorship)
     .where(eq(sponsorship.logoKey, key))
+    .limit(1);
+  return row !== undefined;
+}
+
+/**
+ * Whether `key` is the logo of a running (`live` or `expiring`) sponsorship:
+ * only then is it public (`GET /api/sponsor-logos/<uuid>`, the end card,
+ * phase 10b ruling 9). `logoKey` is indexed (`sponsorship_logo_key_idx`).
+ */
+export async function isRunningLogo(db: Db, key: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: sponsorship.id })
+    .from(sponsorship)
+    .where(
+      and(
+        eq(sponsorship.logoKey, key),
+        inList(sponsorship.status, ["live", "expiring"])
+      )
+    )
     .limit(1);
   return row !== undefined;
 }

@@ -1,6 +1,10 @@
 import type { MuxCSSProperties } from "@mux/mux-player-react";
 import { useTranslation } from "@smog/i18n/react";
-import { createNearEndTracker, muxThumbnailUrl } from "@smog/utils";
+import {
+  createNearEndTracker,
+  isEndCardVisible,
+  muxThumbnailUrl,
+} from "@smog/utils";
 import {
   type ComponentProps,
   lazy,
@@ -13,6 +17,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { cn } from "../lib/cn";
+import { SponsorEndCard } from "./sponsor-end-card";
 
 export type VideoAspect = "3:4" | "16:9";
 
@@ -22,6 +27,14 @@ export interface VideoPlayerProps
   aspect?: VideoAspect;
   /** Starts playing on its own, muted (browsers block sound on autoplay). */
   autoPlay?: boolean;
+  /**
+   * The sponsor end card (phase 10b ruling 9): over the last seconds of the
+   * video, timed from its duration (`endCardStart`), shows "Made possible
+   * by", the name as typed and the logo, in the viewer's language. Leave it
+   * out for a gesture without a running sponsorship, and for one whose
+   * rendered video already carries the name.
+   */
+  endCard?: { logoSrc?: string | null; name: string } | undefined;
   loop?: boolean;
   /**
    * The gesture's name in the viewer's language, drawn over the top of the
@@ -127,6 +140,7 @@ export function VideoPlayer({
   aspect = "3:4",
   autoPlay = false,
   className,
+  endCard,
   loop = false,
   nameOverlay,
   onEnded,
@@ -138,6 +152,8 @@ export function VideoPlayer({
   const { t } = useTranslation();
   const mounted = useMounted();
   const [tracker] = useState(createNearEndTracker);
+  const [endCardShown, setEndCardShown] = useState(false);
+  const hasEndCard = endCard !== undefined;
   const onNearEndRef = useRef(onNearEnd);
   const onEndedRef = useRef(onEnded);
   useEffect(() => {
@@ -148,17 +164,24 @@ export function VideoPlayer({
     // A new video starts a new playthrough.
     if (playbackId) {
       tracker.reset();
+      setEndCardShown(false);
     }
   }, [playbackId, tracker]);
 
   const handleTimeUpdate = useCallback(
     (event: Event | { target: unknown }): void => {
       const target = event.target as TimeEventTarget | null;
-      if (tracker.update(target?.currentTime ?? 0, target?.duration ?? 0)) {
+      const currentTime = target?.currentTime ?? 0;
+      const duration = target?.duration ?? 0;
+      if (tracker.update(currentTime, duration)) {
         onNearEndRef.current?.();
       }
+      if (hasEndCard) {
+        // One render per change: a seek back or the next loop hides it again.
+        setEndCardShown(isEndCardVisible(currentTime, duration));
+      }
     },
-    [tracker]
+    [hasEndCard, tracker]
   );
   const handleEnded = useCallback((): void => {
     tracker.reset();
@@ -211,6 +234,14 @@ export function VideoPlayer({
         poster
       )}
       {nameOverlay ? <NameOverlay name={nameOverlay} /> : null}
+      {endCard && endCardShown ? (
+        // Above the control bar of the player.
+        <SponsorEndCard
+          className="absolute inset-x-3 bottom-16 z-10"
+          logoSrc={endCard.logoSrc}
+          name={endCard.name}
+        />
+      ) : null}
     </section>
   );
 }

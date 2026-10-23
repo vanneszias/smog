@@ -367,6 +367,7 @@ function VideoSample({ title }: { title: string }): ReactNode {
     <div className="flex flex-col gap-2">
       <VideoPlayer
         autoPlay
+        endCard={{ name: "Bakkerij Jan" }}
         loop
         nameOverlay={overlay ? title : undefined}
         onNearEnd={onNearEnd}

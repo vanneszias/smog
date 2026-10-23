@@ -166,7 +166,7 @@ describe("the Mollie webhook on migrated payments", () => {
     expect((await row("04")).status).toBe("in_review");
   });
 
-  it("a retried paid for a migrated awaiting_payment settles it: rendering and one render job", async () => {
+  it("a retried paid for a migrated awaiting_payment settles it: in review, no render job", async () => {
     expect((await row("02")).status).toBe("awaiting_payment");
     molliePayment(
       fake,
@@ -180,17 +180,14 @@ describe("the Mollie webhook on migrated payments", () => {
       now: NOW,
     });
     expect(result?.outcome).toBe("paid");
-    expect((await row("02")).status).toBe("rendering");
+    expect((await row("02")).status).toBe("in_review");
     const fanout = await handlePaymentSettled(db, {
       now: NOW,
       paymentId: result?.paymentId ?? "",
       siteUrl: SITE_URL,
     });
-    const jobs = await renderJobsOf("02");
-    expect(jobs).toHaveLength(1);
-    expect(fanout.events).toEqual([
-      { renderJobId: jobs[0]?.id, type: "render.requested" },
-    ]);
+    expect(await renderJobsOf("02")).toHaveLength(0);
+    expect(fanout.events).toEqual([]);
     // Paid now: the sponsor's and the admins' emails go out.
     expect(fanout.notify.length).toBeGreaterThan(0);
   });
@@ -215,7 +212,7 @@ describe("the Mollie webhook on migrated payments", () => {
     expect((await row("11")).status).toBe("cancelled");
   });
 
-  it("revives a migrated cancelled row whose gesture is free (cancelled → rendering)", async () => {
+  it("revives a migrated cancelled row whose gesture is free (cancelled → in_review)", async () => {
     // The live sponsorship on the gesture expires first.
     await runExpirySweep({ db, mux: null, now: NOW });
     molliePayment(
@@ -230,7 +227,7 @@ describe("the Mollie webhook on migrated payments", () => {
       now: NOW,
     });
     expect(revived?.outcome).toBe("late_revived");
-    expect((await row("11")).status).toBe("rendering");
+    expect((await row("11")).status).toBe("in_review");
   });
 });
 
@@ -258,7 +255,7 @@ describe("the stale sweep on migrated open payments (I4)", () => {
     const result = await sweep(NOW);
     expect(result.settled).toBeGreaterThanOrEqual(1);
     expect((await paymentOf("tr_fixture0003")).status).toBe("paid");
-    expect((await row("03")).status).toBe("rendering");
+    expect((await row("03")).status).toBe("in_review");
   });
 
   it("cancels one still open at Mollie, there and here", async () => {
@@ -372,7 +369,7 @@ describe("the admin's actions and the sweeps on migrated rows", () => {
     expect(rendered.videoPlaybackId).toBe(input.sourcePlaybackId);
   });
 
-  it("a changes_requested row with a paid logo and none stored resubmits, and renders without a logo", async () => {
+  it("a changes_requested row with a paid logo and none stored resubmits straight to review", async () => {
     vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
     const id = await sponsorshipId("15");
     expect((await row("15")).status).toBe("in_review");
@@ -406,14 +403,9 @@ describe("the admin's actions and the sweeps on migrated rows", () => {
       }
     );
     const resubmitted = await row("15");
-    expect(resubmitted.status).toBe("rendering");
-    const [job] = await renderJobsOf("15");
-    expect(
-      renderInputSchema.parse(JSON.parse(job?.input ?? "{}")).logoKey
-    ).toBeNull();
-    expect(events).toEqual([
-      { renderJobId: job?.id, type: "render.requested" },
-    ]);
+    expect(resubmitted.status).toBe("in_review");
+    expect(await renderJobsOf("15")).toHaveLength(0);
+    expect(events).toEqual([]);
   });
 
   it("the old re-edit link opens with its raw token (R-15)", async () => {
@@ -438,7 +430,7 @@ describe("the admin's actions and the sweeps on migrated rows", () => {
     });
   });
 
-  it("a migrated changes_requested row resubmits with its old raw token: rendering, one job, the token used (review M-1)", async () => {
+  it("a migrated changes_requested row resubmits with its old raw token: in review, no job, the token used (review M-1)", async () => {
     vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
     const before = await row("07");
     expect(before.status).toBe("changes_requested");
@@ -465,12 +457,9 @@ describe("the admin's actions and the sweeps on migrated rows", () => {
         path: ["sponsorships", "reedit", "submit"],
       }
     );
-    expect((await row("07")).status).toBe("rendering");
-    const jobs = await renderJobsOf("07");
-    expect(jobs).toHaveLength(1);
-    expect(events).toEqual([
-      { renderJobId: jobs[0]?.id, type: "render.requested" },
-    ]);
+    expect((await row("07")).status).toBe("in_review");
+    expect(await renderJobsOf("07")).toHaveLength(0);
+    expect(events).toEqual([]);
     const stored = await env.DB.prepare(
       "SELECT used_at FROM sponsorship_token WHERE token_hash = ?"
     )
@@ -485,7 +474,6 @@ describe("the admin's actions and the sweeps on migrated rows", () => {
     expect(trail.results.map((event) => event.type)).toEqual([
       "legacy",
       "resubmitted",
-      "render_started",
     ]);
   });
 
