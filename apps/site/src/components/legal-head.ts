@@ -18,7 +18,7 @@ export interface LegalSearch {
 }
 
 /** A page's title and description in one language. */
-export interface LegalMeta {
+interface LegalMeta {
   description: string;
   title: string;
 }

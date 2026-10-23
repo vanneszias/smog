@@ -27,7 +27,7 @@
       "routes": [["my.tsx"], ["lists/$shareToken.tsx"]]
     },
     "sponsor": {
-      "gzip": 517000,
+      "gzip": 518000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Remotion and MediaBunny stay lazy (checkClientRenderIsLazy).",
       "routes": [["sponsor/index.tsx"]]

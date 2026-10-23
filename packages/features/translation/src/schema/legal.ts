@@ -107,9 +107,6 @@ export const legalRestoreInputSchema = textRef.extend({
 });
 export type LegalRestoreInput = z.infer<typeof legalRestoreInputSchema>;
 
-/** The new published version (publish and restore). */
-export const legalPublishedSchema = legalVersionSchema;
-
 /** `CONFLICT` of a save or a publish: the draft changed (or is gone) since the editor opened it. */
 export const legalConflictDataSchema = z.object({
   /** The draft as stored now; `null` when there is none. */

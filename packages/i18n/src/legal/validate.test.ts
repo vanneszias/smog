@@ -87,6 +87,6 @@ describe("validateLegalDocument", () => {
 
   test("returns the parsed document without extra keys", () => {
     const result = validateLegalDocument("terms", { ...doc(["a"]), extra: 1 });
-    expect(result.document).toEqual(doc(["a"]));
+    expect(JSON.stringify(result.document)).toBe(JSON.stringify(doc(["a"])));
   });
 });

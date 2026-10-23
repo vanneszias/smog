@@ -25,7 +25,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { type ChangeEvent, type ReactNode, useCallback, useMemo } from "react";
 
 /** The message of each issue code (shown next to the part it is about). */
-export const LEGAL_ISSUE_MESSAGES = {
+const LEGAL_ISSUE_MESSAGES = {
   badId: "admin.translation.legal.issues.badId",
   consentControl: "admin.translation.legal.issues.consentControl",
   duplicateId: "admin.translation.legal.issues.duplicateId",

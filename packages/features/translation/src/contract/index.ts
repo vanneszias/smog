@@ -27,7 +27,6 @@ import {
   legalConflictDataSchema,
   legalDetailSchema,
   legalOverviewSchema,
-  legalPublishedSchema,
   legalPublishInputSchema,
   legalRefInputSchema,
   legalRestoreInputSchema,
@@ -35,6 +34,7 @@ import {
   legalSaveResultSchema,
   legalVersionContentSchema,
   legalVersionInputSchema,
+  legalVersionSchema,
   stringConflictDataSchema,
   stringSaveInputSchema,
   stringSaveResultSchema,
@@ -95,7 +95,7 @@ export const translationSlice = {
      */
     publish: legalConflictContract
       .input(legalPublishInputSchema)
-      .output(legalPublishedSchema),
+      .output(legalVersionSchema),
     /**
      * Copies an earlier published version into a new published one (the
      * history is never rewritten). Admin only. `NOT_FOUND` for a version
@@ -103,7 +103,7 @@ export const translationSlice = {
      */
     restore: baseContract
       .input(legalRestoreInputSchema)
-      .output(legalPublishedSchema),
+      .output(legalVersionSchema),
     /**
      * Saves the draft (created on the first save, at most one per text).
      * `VALIDATION` (field `content`: see `LEGAL_ISSUE_PREFIX`); `CONFLICT`
