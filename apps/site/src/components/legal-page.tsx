@@ -1,4 +1,4 @@
-import { formatDate, type Locale } from "@smog/i18n";
+import { formatDate, type Locale, shippedMessages } from "@smog/i18n";
 import {
   LEGAL_CANONICAL_LOCALE,
   type LegalBlock,
@@ -18,6 +18,30 @@ import { useLocale } from "@/lib/locale";
 import type { LegalText, LegalTexts } from "@/server/legal.functions";
 
 const EXTERNAL = /^https:\/\//;
+
+const ATTACHED = new WeakMap<object, Set<string>>();
+
+/**
+ * Makes `locale`'s shipped messages available to `t(key, { lng: locale })`.
+ * The browser holds only the active language's catalogue (phase 10b task
+ * 7b), so the instance has no bundle for the Dutch label of the notice or
+ * for the language an admin previews. The caller loads the catalogue first
+ * (`legalLoader`, `LegalWorkspace`); values already in the instance (the
+ * overlay) win.
+ */
+export function useShippedBundle(locale: Locale): void {
+  const { i18n } = useTranslation();
+  const attached = ATTACHED.get(i18n) ?? new Set<string>();
+  ATTACHED.set(i18n, attached);
+  if (attached.has(locale)) {
+    return;
+  }
+  const shipped = shippedMessages(locale);
+  if (Object.keys(shipped).length > 0) {
+    i18n.addResourceBundle(locale, "translation", shipped, true, false);
+    attached.add(locale);
+  }
+}
 
 function legalPath(kind: LegalKind): "/privacy" | "/terms" {
   return kind === "privacy" ? "/privacy" : "/terms";
@@ -130,6 +154,7 @@ function TranslationNotice({
   toggle: boolean;
 }): ReactNode {
   const { t } = useTranslation();
+  useShippedBundle(LEGAL_CANONICAL_LOCALE);
   const to = legalPath(kind);
   return (
     <div
@@ -183,6 +208,7 @@ export function LegalDocumentView({
   preview?: boolean;
 }): ReactNode {
   const { t } = useTranslation();
+  useShippedBundle(locale);
   const updated = formatDate(Date.parse(effectiveDate), locale);
   return (
     <article

@@ -1,4 +1,5 @@
 import { useAuthState } from "@smog/auth/react";
+import { ensureCatalogues } from "@smog/i18n";
 import {
   LEGAL_CANONICAL_LOCALE,
   type LegalDocument,
@@ -46,6 +47,7 @@ import {
   type FormEvent,
   type ReactNode,
   useCallback,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -612,6 +614,28 @@ function WorkspaceBody({
   );
 }
 
+/** Whether the shipped catalogues of `locales` are in memory: the previews label themselves in their own language (the browser holds only the active one). */
+function useCataloguesLoaded(locales: readonly string[]): boolean {
+  const key = locales.join(",");
+  const [loaded, setLoaded] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    Promise.all(key.split(",").map(ensureCatalogues))
+      .catch((error: unknown) => {
+        console.error("[admin] Failed to load a catalogue:", error);
+      })
+      .then(() => {
+        if (live) {
+          setLoaded(key);
+        }
+      });
+    return () => {
+      live = false;
+    };
+  }, [key]);
+  return loaded === key;
+}
+
 /** The editor of one legal text, loaded for (kind, language). */
 export function LegalWorkspace({
   kind,
@@ -623,6 +647,7 @@ export function LegalWorkspace({
   const { t } = useTranslation();
   const detail = useLegalDetail({ kind, locale });
   const actions = useLegalActions();
+  const catalogues = useCataloguesLoaded([locale, LEGAL_CANONICAL_LOCALE]);
   const { refetch } = detail;
   const onRetry = useCallback(() => {
     refetch().catch((error: unknown) => {
@@ -637,7 +662,7 @@ export function LegalWorkspace({
       />
     );
   }
-  if (!detail.data) {
+  if (!(detail.data && catalogues)) {
     return <Skeleton className="h-64 w-full" />;
   }
   return (

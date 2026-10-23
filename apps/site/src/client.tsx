@@ -11,9 +11,20 @@ import { hydrateRoot } from "react-dom/client";
  * failed load is logged and hydration goes on (the keys would show, which is
  * why it is loud).
  */
+const LEGAL_PATH = /^\/(?:privacy|terms)\/?$/;
+
+/** The legal pages label their Dutch link in Dutch (`legal-page`), so a page load there also needs `nl`; a client navigation loads it in the route loader. */
+function catalogueLocales(lang: string, pathname: string): string[] {
+  return LEGAL_PATH.test(pathname) ? [lang, "nl"] : [lang];
+}
+
 async function hydrate(): Promise<void> {
   try {
-    await ensureCatalogues(document.documentElement.lang);
+    await Promise.all(
+      catalogueLocales(document.documentElement.lang, location.pathname).map(
+        ensureCatalogues
+      )
+    );
   } catch (error) {
     console.error("[i18n] Failed to load the catalogue:", error);
   }
