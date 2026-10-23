@@ -97,16 +97,16 @@ describe("approve (ruling 14)", () => {
     expect(event).toMatchObject({ actorId, type: "approved" });
   });
 
-  it("is refused without a video, and from another status", async () => {
-    const noVideo = await one({ status: "in_review" });
+  it("needs no rendered video (the end card), and is refused from another status", async () => {
+    const endCard = await one({ status: "in_review" });
     await expect(
       approveStatements(db, {
         actorId,
         now: NOW,
         siteUrl: SITE_URL,
-        sponsorshipId: noVideo.id,
+        sponsorshipId: endCard.id,
       })
-    ).rejects.toMatchObject({ reason: "noVideo" });
+    ).resolves.toMatchObject({ statements: expect.any(Array) });
     const rendering = await one({ status: "rendering", videoPlaybackId: "p" });
     await expect(
       approveStatements(db, {
@@ -304,7 +304,7 @@ describe("fix round 1 (Minors 2, 5, 9)", () => {
 });
 
 describe("mark paid and cancel act on the whole payment", () => {
-  it("mark paid moves every item to rendering and plans payment.settled", async () => {
+  it("mark paid moves every item to in_review (the end card) and plans payment.settled", async () => {
     const seeded = await seedCheckout(db, { count: 3 });
     const plan = await markPaidStatements(db, {
       actorId,
@@ -326,7 +326,7 @@ describe("mark paid and cancel act on the whole payment", () => {
     expect(row.status).toBe("paid");
     expect(row.paidAt?.getTime()).toBe(NOW.getTime());
     for (const trail of await trailsOf(db, seeded.sponsorshipIds)) {
-      expect(trail.status).toBe("rendering");
+      expect(trail.status).toBe("in_review");
       expect(trail.events[0]).toMatchObject({
         actorId,
         data: { note: "Bank transfer 12/10", paymentId: seeded.paymentId },

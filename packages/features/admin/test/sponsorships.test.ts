@@ -538,14 +538,8 @@ describe("approve", () => {
     });
   });
 
-  it("is refused without a video, and outside in_review", async () => {
-    const noVideo = await seedCheckout({ status: "in_review" });
+  it("is refused outside in_review", async () => {
     const mark = await auditMark();
-    expect(
-      await failure(
-        callAs(admin, "sponsorships.approve", { id: noVideo.sponsorshipIds[0] })
-      )
-    ).toMatchObject({ code: "INVALID_STATE", data: { reason: "noVideo" } });
     const live = await seedCheckout({
       status: "live",
       videoPlaybackId: "rendered",

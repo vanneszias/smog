@@ -492,7 +492,7 @@ describe("runStaleSweep (J-03)", () => {
     expect((await paymentRow(db, seeded.paymentId)).status).toBe("paid");
     for (const id of seeded.sponsorshipIds) {
       // biome-ignore lint/performance/noAwaitInLoops: two rows, in order.
-      expect((await sponsorshipRow(db, id)).status).toBe("rendering");
+      expect((await sponsorshipRow(db, id)).status).toBe("in_review");
     }
     // The settle's fan-out; the reconciliation may re-send it (no consumer
     // creates the render jobs here).
@@ -508,7 +508,7 @@ describe("runStaleSweep (J-03)", () => {
     expect(fake.requests.some((r) => r.method === "DELETE")).toBe(false);
   });
 
-  it("a payment paid at Mollie 8 days ago and settled now still gets its jobs and every email (fix wave, jobs I-1)", async () => {
+  it("a payment paid at Mollie 8 days ago and settled now still gets every email and no render job (fix wave, jobs I-1)", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     await makeAdmin(db);
     const seeded = await staleCheckout();
@@ -532,9 +532,10 @@ describe("runStaleSweep (J-03)", () => {
       paymentId: seeded.paymentId,
       siteUrl: SITE_URL,
     });
+    // The end card (phase 10b ruling 9): no render job.
     expect(
       out.events.filter((event) => event.type === "render.requested")
-    ).toHaveLength(2);
+    ).toEqual([]);
     const templates = out.notify.map((email) => email.template);
     expect(
       templates.filter((t) => t === "transactional/sponsorship-received")

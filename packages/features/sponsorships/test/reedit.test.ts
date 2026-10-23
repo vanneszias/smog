@@ -8,13 +8,11 @@ import { type AnyProcedure, call } from "@orpc/server";
 import { renderJob, sponsorship, sponsorshipToken } from "@smog/db";
 import type { EventMessage, QueueProducer } from "@smog/jobs";
 import { FAKE_MOLLIE_API_KEY } from "@smog/payments/testing";
-import { renderInputSchema } from "@smog/render/contract";
 import { makeRpcContext } from "@smog/rpc/testing";
 import { DAY_MS, newId } from "@smog/utils";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { requestChangesStatements } from "../src/server/lifecycle";
-import { fakeRenderStarter } from "../src/server/render";
 import { createSponsorshipsRouter } from "../src/server/router";
 import { clearBucket } from "./clean";
 import {
@@ -170,7 +168,7 @@ describe("sponsorships.reedit.get", () => {
 });
 
 describe("sponsorships.reedit.submit", () => {
-  it("resubmits: the token used, the new name and logo, one render job, one render.requested", async () => {
+  it("resubmits: the token used, the new name and logo, straight to review, no render job", async () => {
     const { id, token } = await changesRequested();
     const before = await sponsorshipRow(db, id);
     await env.MEDIA.put(before.logoKey as string, PNG, {
@@ -186,7 +184,7 @@ describe("sponsorships.reedit.submit", () => {
 
     expect(result).toEqual({ submitted: true });
     const row = await sponsorshipRow(db, id);
-    expect(row).toMatchObject({ displayName: "Acme NV", status: "rendering" });
+    expect(row).toMatchObject({ displayName: "Acme NV", status: "in_review" });
     // The claimed copy is stored (task 4's claimLogo), not the upload, which
     // is deleted: a still-valid upload URL can no longer change the logo.
     const claimed = row.logoKey as string;
@@ -201,21 +199,17 @@ describe("sponsorships.reedit.submit", () => {
       .from(sponsorshipToken)
       .where(eq(sponsorshipToken.sponsorshipId, id));
     expect(tokenRow?.usedAt).not.toBeNull();
-    const jobs = await db
-      .select()
-      .from(renderJob)
-      .where(eq(renderJob.sponsorshipId, id));
-    expect(jobs).toHaveLength(1);
-    const [job] = jobs;
-    expect(renderInputSchema.parse(job?.input)).toMatchObject({
-      displayName: "Acme NV",
-      logoKey: claimed,
-    });
-    expect(messages).toEqual([
-      { renderJobId: job?.id, type: "render.requested" },
-    ]);
+    // The end card (phase 10b ruling 9): no render job, no message.
+    expect(
+      await db
+        .select()
+        .from(renderJob)
+        .where(eq(renderJob.sponsorshipId, id))
+    ).toEqual([]);
+    expect(messages).toEqual([]);
     const trail = (await eventsOf(db, id)).map((event) => event.type);
-    expect(trail.slice(-2)).toEqual(["resubmitted", "render_started"]);
+    expect(trail.at(-1)).toBe("resubmitted");
+    expect(trail).not.toContain("render_started");
     const resubmitted = (await eventsOf(db, id)).find(
       (event) => event.type === "resubmitted"
     );
@@ -223,13 +217,6 @@ describe("sponsorships.reedit.submit", () => {
       displayNameChanged: true,
       logoChanged: true,
     });
-
-    // The fake render (ruling 7) brings it to the moderation queue.
-    await fakeRenderStarter(db).start({
-      input: renderInputSchema.parse(job?.input),
-      renderJobId: job?.id as string,
-    });
-    expect((await sponsorshipRow(db, id)).status).toBe("in_review");
   });
 
   it("is single use: the second submit is TOKEN_INVALID and changes nothing", async () => {
@@ -242,12 +229,10 @@ describe("sponsorships.reedit.submit", () => {
 
     expect(second).toMatchObject({ code: "TOKEN_INVALID" });
     expect((await sponsorshipRow(db, id)).displayName).toBe("Eerste");
-    expect(messages).toHaveLength(1);
-    const jobs = await db
-      .select()
-      .from(renderJob)
-      .where(eq(renderJob.sponsorshipId, id));
-    expect(jobs).toHaveLength(1);
+    expect(messages).toEqual([]);
+    expect(
+      await db.select().from(renderJob).where(eq(renderJob.sponsorshipId, id))
+    ).toEqual([]);
   });
 
   it("refuses a logo when the sponsorship has none (noLogo), and writes nothing", async () => {
@@ -323,7 +308,7 @@ describe("sponsorships.reedit.submit", () => {
     expect(await env.MEDIA.head(row.logoKey as string)).not.toBeNull();
   });
 
-  it("two concurrent submits of one link: one wins, one job, one message", async () => {
+  it("two concurrent submits of one link: one wins, no job, no message", async () => {
     const { id, token } = await changesRequested(false);
 
     const results = await Promise.all([
@@ -337,12 +322,11 @@ describe("sponsorships.reedit.submit", () => {
         code: expect.stringMatching(REFUSED),
       }),
     ]);
-    const jobs = await db
-      .select()
-      .from(renderJob)
-      .where(eq(renderJob.sponsorshipId, id));
-    expect(jobs).toHaveLength(1);
-    expect(messages).toHaveLength(1);
+    expect(
+      await db.select().from(renderJob).where(eq(renderJob.sponsorshipId, id))
+    ).toEqual([]);
+    expect(messages).toEqual([]);
+    expect((await sponsorshipRow(db, id)).status).toBe("in_review");
   });
 
   it("keeps the logo when none is sent, and refuses a used, expired or unknown link", async () => {

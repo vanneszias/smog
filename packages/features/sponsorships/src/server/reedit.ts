@@ -3,9 +3,9 @@
  * for changes issues (7 days, single use). It edits the display name and,
  * only when a logo was paid for (`payment_item.includes_logo`), the logo;
  * the gesture is locked and nothing is paid again. The submit moves
- * `changes_requested → rendering` (`resubmitted`) and creates the next
- * render job in the same D1 batch as the token's use, then enqueues
- * `render.requested` (ruling 7).
+ * `changes_requested → in_review` (`resubmitted`; with the render gate on,
+ * `→ rendering`, creating the next render job in the same D1 batch as the
+ * token's use and enqueueing `render.requested`, ruling 7).
  *
  * A new logo is claimed as the checkout claims one (`claimLogo`, task 4):
  * its verified bytes are copied to a fresh key, which is the one stored,
@@ -28,6 +28,7 @@ import {
   readTokenLink,
 } from "./token-link";
 import { isStaleTransition, transitionStatements } from "./transition";
+import { RENDER_NEW_SPONSORSHIPS } from "./transition-table";
 
 /** The open re-edit link of a sponsorship waiting for changes. */
 async function openReedit(db: Db, raw: string, now: Date) {
@@ -104,11 +105,15 @@ async function submitReedit(
       await deleteLogo(env.MEDIA, logo.claimed);
     }
   };
-  const job = await createRenderJobStatements(db, {
-    now,
-    resubmitted: { displayName: input.displayName, logoKey: logo.logoKey },
-    sponsorshipId: sponsorship.id,
-  });
+  // End card (phase 10b ruling 9): nothing is rendered, the resubmit goes
+  // to `in_review` and the player shows the new name and logo as an overlay.
+  const job = RENDER_NEW_SPONSORSHIPS
+    ? await createRenderJobStatements(db, {
+        now,
+        resubmitted: { displayName: input.displayName, logoKey: logo.logoKey },
+        sponsorshipId: sponsorship.id,
+      })
+    : { after: [], statements: [] };
   if (!job) {
     await discardClaim();
     throw invalidState("stale");
