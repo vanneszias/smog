@@ -1,10 +1,21 @@
 /** `translation.strings.*` (phase 10b task 4): the strings table, a save, the import and the export. */
-import { jsonList, type Statement, uiString } from "@smog/db";
+import {
+  failWhen,
+  jsonList,
+  type Statement,
+  toGuardFailure,
+  uiString,
+} from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { bumpI18nVersion } from "@smog/i18n/server";
 import { markUnchanged } from "@smog/rpc/audit";
 import { sql } from "drizzle-orm";
-import type { StringRow, StringsListQuery, StringsPage } from "../schema";
+import type {
+  StringFormat,
+  StringRow,
+  StringsListQuery,
+  StringsPage,
+} from "../schema";
 import { auditStatement } from "./audit";
 import {
   buildExport,
@@ -73,7 +84,12 @@ async function listStrings(
   };
 }
 
-/** The upserts of an import: chunks of one `json_each` statement each (D1 binds at most 100 parameters). */
+/**
+ * The upserts of an import: chunks of one `json_each` statement each (D1
+ * binds at most 100 parameters), each behind a guard that fails the batch
+ * when a row it overwrites is no longer the one the plan read (saved by
+ * somebody else since the preview or the read), or a row it adds exists now.
+ */
 function importStatements(
   db: Db,
   writes: readonly PlannedWrite[],
@@ -86,8 +102,16 @@ function importStatements(
       h: write.sourceHash,
       k: write.key,
       l: write.locale,
+      u: write.expectedUpdatedAt,
       v: write.value,
     }));
+    statements.push(
+      failWhen(
+        db,
+        "string-stale",
+        sql`EXISTS (SELECT 1 FROM json_each(${jsonList(chunk)}) AS j WHERE (SELECT s.updated_at FROM ui_string AS s WHERE s.locale = json_extract(j.value, '$.l') AND s.key = json_extract(j.value, '$.k')) IS NOT json_extract(j.value, '$.u'))`
+      )
+    );
     statements.push(
       db
         .insert(uiString)
@@ -107,6 +131,45 @@ function importStatements(
     );
   }
   return statements;
+}
+
+interface ImportRun {
+  actorId: string;
+  format: StringFormat;
+  skipped: number;
+}
+
+/**
+ * Writes the planned rows and their one audit entry in one batch. `false`
+ * when the stale guard stopped it: a text the plan read changed since, and
+ * nothing was written or audited.
+ */
+export async function runImport(
+  db: Db,
+  writes: readonly PlannedWrite[],
+  { actorId, format, skipped }: ImportRun
+): Promise<boolean> {
+  const touched = [...new Set(writes.map((write) => write.locale))];
+  const audit = auditStatement(db, {
+    action: "translation.string_import",
+    actorId,
+    data: { applied: writes.length, format, skipped },
+    targetId: touched.length === 1 ? (touched[0] ?? null) : null,
+    targetType: "ui_string",
+  });
+  try {
+    await db.batch([
+      audit,
+      ...importStatements(db, writes, actorId, new Date()),
+    ]);
+    return true;
+  } catch (error) {
+    if (toGuardFailure(error)?.guard === "string-stale") {
+      return false;
+    }
+    console.error("[translation] Failed to apply an import:", error);
+    throw error;
+  }
 }
 
 /** The `strings` slice of the translation router. */
@@ -150,22 +213,13 @@ export function stringsRoutes() {
           markUnchanged(db);
           return { applied: 0, skipped };
         }
-        const touched = [...new Set(writes.map((write) => write.locale))];
-        const audit = auditStatement(db, {
-          action: "translation.string_import",
+        const done = await runImport(db, writes, {
           actorId: context.user.id,
-          data: { applied: writes.length, format: input.format, skipped },
-          targetId: touched.length === 1 ? (touched[0] ?? null) : null,
-          targetType: "ui_string",
+          format: input.format,
+          skipped,
         });
-        try {
-          await db.batch([
-            audit,
-            ...importStatements(db, writes, context.user.id, new Date()),
-          ]);
-        } catch (error) {
-          console.error("[translation] Failed to apply an import:", error);
-          throw error;
+        if (!done) {
+          throw errors.CONFLICT({ data: { reason: "stale" } });
         }
         await bumpI18nVersion(context.kv);
         return { applied: writes.length, skipped };

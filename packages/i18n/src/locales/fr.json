@@ -2302,6 +2302,7 @@
           "title": "Le fichier est inutilisable",
           "tooLarge": "Le fichier est trop volumineux.",
           "applyFailed": "L'importation a échoué.",
+          "staleImport": "Certains textes ont changé pendant la lecture du fichier. Rien n'a été importé : prévisualisez à nouveau le fichier.",
           "file": {
             "invalidJson": "Ce n'est pas un fichier JSON valide.",
             "invalidCsv": "Ce n'est pas un fichier CSV valide.",

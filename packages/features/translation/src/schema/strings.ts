@@ -120,6 +120,11 @@ export const stringConflictDataSchema = z.object({
 });
 export type StringConflictData = z.infer<typeof stringConflictDataSchema>;
 
+/** An import that lost to a save: a text it would overwrite changed since it was read. */
+export const stringImportConflictDataSchema = z.object({
+  reason: z.literal("stale"),
+});
+
 export const stringsExportInputSchema = z.object({
   format: z.enum(STRING_FORMATS),
   /** One language; omitted: every enabled language. */

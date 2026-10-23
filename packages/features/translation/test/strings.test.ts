@@ -8,6 +8,7 @@ import type {
   StringsImportResult,
   StringsPage,
 } from "../src/schema";
+import { runImport } from "../src/server/strings";
 import {
   type Authed,
   addLanguage,
@@ -459,6 +460,56 @@ describe("import and export", () => {
     expect(result.applied).toBe(2);
     const [audit] = await auditRowsSince(mark);
     expect(audit).toMatchObject({ targetId: null, targetType: "ui_string" });
+  });
+
+  it("writes nothing when a text the file overwrites changed since it was read", async () => {
+    const first = await save({
+      expectedUpdatedAt: null,
+      key: KEY,
+      locale: "en",
+      value: "First text",
+    });
+    const read = first.cell.updatedAt;
+    const write = (expectedUpdatedAt: number | null) => ({
+      expectedUpdatedAt,
+      key: KEY,
+      locale: "en",
+      sourceHash: null,
+      value: "From the file",
+    });
+    const mark = await auditMark();
+    // A second translator saved after the plan read it.
+    await save({
+      expectedUpdatedAt: read,
+      key: KEY,
+      locale: "en",
+      value: "Second text",
+    });
+    const run = {
+      actorId: translator.user.id,
+      format: "json",
+      skipped: 0,
+    } as const;
+    expect(await runImport(testDb(), [write(read)], run)).toBe(false);
+    // A row the plan saw as new that exists now is stale as well.
+    expect(await runImport(testDb(), [write(null)], run)).toBe(false);
+    const stored = (await list({ limit: 200, search: KEY })).items.find(
+      (r) => r.key === KEY
+    );
+    expect(stored?.cells.en?.value).toBe("Second text");
+    expect(await auditRowsSince(mark)).toHaveLength(1);
+    // With the version the plan really read the import goes through.
+    expect(
+      await runImport(
+        testDb(),
+        [write(stored?.cells.en?.updatedAt ?? null)],
+        run
+      )
+    ).toBe(true);
+    expect(
+      (await list({ limit: 200, search: KEY })).items.find((r) => r.key === KEY)
+        ?.cells.en?.value
+    ).toBe("From the file");
   });
 
   it("refuses a file it cannot read, and one over the size cap", async () => {

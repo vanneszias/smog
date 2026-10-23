@@ -216,6 +216,12 @@ export function parseImport(
 
 /** A write the plan holds: the row to upsert. */
 export interface PlannedWrite {
+  /**
+   * The `updatedAt` of the stored row the plan read (`null`: no row). The
+   * apply refuses the whole file when any of them moved since
+   * (`CONFLICT stale`), like a single save.
+   */
+  expectedUpdatedAt: number | null;
   key: string;
   locale: string;
   sourceHash: string | null;
@@ -264,7 +270,8 @@ function judge(
       problem: issue.code === "tooLong" ? "tooLong" : "placeholders",
     };
   }
-  const before = cellOf(overrides, language, info, source).value;
+  const cell = cellOf(overrides, language, info, source);
+  const before = cell.value;
   if (before === entry.value) {
     return { kind: "unchanged" };
   }
@@ -272,6 +279,7 @@ function judge(
     before,
     kind: "write",
     write: {
+      expectedUpdatedAt: cell.updatedAt,
       key: entry.key,
       locale: entry.locale,
       sourceHash: language.isDefault ? null : sourceHash(source),
