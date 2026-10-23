@@ -220,6 +220,44 @@ const PROCEDURES: Record<string, Row> = {
   "translation.languages.create": { level: "admin" },
   "translation.languages.list": { level: "translator" },
   "translation.languages.update": { level: "admin" },
+  // Phase 10b task 7: the legal texts. A translator drafts and publishes
+  // (the owner's choice, risk R1), only an admin restores.
+  "translation.legal.get": {
+    input: { kind: "terms", locale: "en" },
+    level: "translator",
+  },
+  "translation.legal.list": { level: "translator" },
+  "translation.legal.publish": {
+    input: {
+      effectiveDate: "2026-11-01",
+      expectedUpdatedAt: 1,
+      kind: "terms",
+      locale: "en",
+    },
+    level: "translator",
+  },
+  "translation.legal.restore": {
+    input: {
+      effectiveDate: "2026-11-01",
+      kind: "terms",
+      locale: "en",
+      version: 1,
+    },
+    level: "admin",
+  },
+  "translation.legal.save": {
+    input: {
+      content: {},
+      expectedUpdatedAt: null,
+      kind: "terms",
+      locale: "en",
+    },
+    level: "translator",
+  },
+  "translation.legal.version": {
+    input: { kind: "terms", locale: "en", version: 1 },
+    level: "translator",
+  },
   "translation.strings.export": {
     input: { format: "json" },
     level: "translator",
@@ -386,7 +424,11 @@ describe("the authorization table", () => {
       translationRows
         .filter(([, row]) => row.level === "admin")
         .map(([path]) => path)
-    ).toEqual(["translation.languages.create", "translation.languages.update"]);
+    ).toEqual([
+      "translation.languages.create",
+      "translation.languages.update",
+      "translation.legal.restore",
+    ]);
   });
 
   it("agrees with the admin kinds: a row per admin procedure, writes audited", () => {

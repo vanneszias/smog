@@ -6,7 +6,9 @@
  * - the strings, the language list and the coverage need the `translator`
  *   role (an `admin` passes: `UNAUTHORIZED` for guests, `FORBIDDEN` for
  *   everybody else, the roles read from D1 on every request);
- * - creating or changing a language needs the `admin` role.
+ * - creating or changing a language needs the `admin` role;
+ * - the legal texts: a translator or an admin drafts and publishes (risk
+ *   R1, the owner's choice), only an admin restores an earlier version.
  * Every mutation writes its audit entry in the same D1 batch as the change
  * and then bumps `i18n:version` (the runtime catalogue's cache key), so an
  * edit shows without a deploy.
@@ -22,6 +24,17 @@ import {
   languageRowSchema,
   languagesListSchema,
   languageUpdateInputSchema,
+  legalConflictDataSchema,
+  legalDetailSchema,
+  legalOverviewSchema,
+  legalPublishInputSchema,
+  legalRefInputSchema,
+  legalRestoreInputSchema,
+  legalSaveInputSchema,
+  legalSaveResultSchema,
+  legalVersionContentSchema,
+  legalVersionInputSchema,
+  legalVersionSchema,
   stringConflictDataSchema,
   stringSaveInputSchema,
   stringSaveResultSchema,
@@ -45,6 +58,10 @@ const languageUpdateContract = baseContract.errors({
   INVALID_STATE: { data: languageInvalidStateDataSchema, status: 409 },
 });
 
+const legalConflictContract = baseContract.errors({
+  CONFLICT: { data: legalConflictDataSchema, status: 409 },
+});
+
 export const translationSlice = {
   /** Translation coverage per enabled language (translator or admin). */
   coverage: baseContract.output(coverageSchema),
@@ -63,6 +80,43 @@ export const translationSlice = {
     update: languageUpdateContract
       .input(languageUpdateInputSchema)
       .output(languageRowSchema),
+  },
+  legal: {
+    /** One text for the editor: the draft, the published text, the Dutch source and the history (translator or admin). `NOT_FOUND` for a language that is not enabled. */
+    get: baseContract.input(legalRefInputSchema).output(legalDetailSchema),
+    /** Every text (kind and enabled language) with its published version and whether a draft exists (translator or admin). */
+    list: baseContract.output(legalOverviewSchema),
+    /**
+     * Makes the draft the current text: renumbers it after the highest
+     * published version, sets the effective date, audits and bumps
+     * `i18n:version` (translator or admin, risk R1). `NOT_FOUND` without a
+     * draft or for a language that is not enabled; `CONFLICT` when the
+     * draft changed since `expectedUpdatedAt`.
+     */
+    publish: legalConflictContract
+      .input(legalPublishInputSchema)
+      .output(legalVersionSchema),
+    /**
+     * Copies an earlier published version into a new published one (the
+     * history is never rewritten). Admin only. `NOT_FOUND` for a version
+     * that is not published.
+     */
+    restore: baseContract
+      .input(legalRestoreInputSchema)
+      .output(legalVersionSchema),
+    /**
+     * Saves the draft (created on the first save, at most one per text).
+     * `VALIDATION` (field `content`: see `LEGAL_ISSUE_PREFIX`); `CONFLICT`
+     * when the draft changed since `expectedUpdatedAt`; `NOT_FOUND` for a
+     * language that is not enabled.
+     */
+    save: legalConflictContract
+      .input(legalSaveInputSchema)
+      .output(legalSaveResultSchema),
+    /** The text of one published version, for the history preview (translator or admin). `NOT_FOUND` for an unknown or unpublished version. */
+    version: baseContract
+      .input(legalVersionInputSchema)
+      .output(legalVersionContentSchema),
   },
   strings: {
     /** The catalogue as a file, for one language or all enabled ones (read). */
@@ -110,6 +164,15 @@ const KINDS = {
     audit: "language.update",
     noop: "asking for what is stored changes nothing",
   },
+  "legal.get": "read",
+  "legal.list": "read",
+  "legal.publish": { audit: "legal.publish" },
+  "legal.restore": { audit: "legal.restore" },
+  "legal.save": {
+    audit: "legal.draft_save",
+    noop: "saving the draft's text again changes nothing",
+  },
+  "legal.version": "read",
   "strings.export": "read",
   "strings.import": {
     audit: "translation.string_import",

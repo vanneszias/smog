@@ -431,7 +431,7 @@ test.describe("CSP (enforced in dev)", () => {
   test("the admin pages, a Mux direct upload and the email preview have no violation", async ({
     page,
   }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
     const csp = await watchCsp(page);
     await stubMuxMedia(page);
     await signInAsAdmin(page.request);
@@ -440,7 +440,9 @@ test.describe("CSP (enforced in dev)", () => {
       await openAdmin(page, path);
       await page.waitForLoadState("networkidle");
     }
-    // The email preview's sandboxed srcdoc frame rendered.
+    // The email preview's sandboxed srcdoc frame rendered (open it again:
+    // it is no longer the last admin page, phase 10b added screens after it).
+    await openAdmin(page, "/admin/emails?template=auth/otp");
     await expect(
       page.frameLocator("iframe").getByText("482913", { exact: true })
     ).toBeVisible();

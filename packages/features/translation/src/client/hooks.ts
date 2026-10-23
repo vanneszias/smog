@@ -13,7 +13,11 @@ import {
 import { z } from "zod";
 import {
   type LanguageRefusal,
+  LEGAL_ISSUE_PREFIX,
+  type LegalConflictData,
+  type LegalTextRef,
   languageInvalidStateDataSchema,
+  legalConflictDataSchema,
   type StringConflictData,
   type StringsListInput,
   type StringsPage,
@@ -169,4 +173,88 @@ export function useTranslationCoverage() {
     staleTime: TRANSLATION_STALE_TIME,
   });
   return useQuery({ ...options, queryKey: scoped(options.queryKey) });
+}
+
+/** The stored draft a legal save or publish lost to (`CONFLICT`), else `null`. */
+export function legalConflictOf(error: unknown): LegalConflictData | null {
+  const { code, data } = errorParts(error);
+  if (code !== "CONFLICT") {
+    return null;
+  }
+  const parsed = legalConflictDataSchema.safeParse(data);
+  return parsed.success ? parsed.data : null;
+}
+
+/** The place and code of every issue a refused legal text carries (`VALIDATION`), else `[]`. */
+export function legalIssuesOf(
+  error: unknown
+): { code: string; path: string }[] {
+  const { code, data } = errorParts(error);
+  if (code !== "VALIDATION") {
+    return [];
+  }
+  const parsed = validationDataSchema.safeParse(data);
+  if (!parsed.success) {
+    return [];
+  }
+  return Object.entries(parsed.data.fieldErrors).flatMap(([key, codes]) =>
+    key.startsWith(LEGAL_ISSUE_PREFIX)
+      ? (codes ?? []).map((issue) => ({
+          code: issue,
+          path: key.slice(LEGAL_ISSUE_PREFIX.length),
+        }))
+      : []
+  );
+}
+
+/** Every legal text with its published version and whether a draft exists. */
+export function useLegalOverview() {
+  const rpc = useTranslationRpc();
+  const scoped = useTranslationKey();
+  const options = rpc.legal.list.queryOptions({
+    staleTime: TRANSLATION_STALE_TIME,
+  });
+  return useQuery({ ...options, queryKey: scoped(options.queryKey) });
+}
+
+/** One text for the editor: draft, published text, Dutch source and history. */
+export function useLegalDetail(ref: LegalTextRef) {
+  const rpc = useTranslationRpc();
+  const scoped = useTranslationKey();
+  const options = rpc.legal.get.queryOptions({
+    input: ref,
+    staleTime: TRANSLATION_STALE_TIME,
+  });
+  return useQuery({ ...options, queryKey: scoped(options.queryKey) });
+}
+
+/** The text of one earlier version (the history preview), fetched when asked for. */
+export function useLegalVersion(ref: LegalTextRef, version: number | null) {
+  const rpc = useTranslationRpc();
+  const scoped = useTranslationKey();
+  const options = rpc.legal.version.queryOptions({
+    input: { ...ref, version: version ?? 1 },
+    staleTime: TRANSLATION_STALE_TIME,
+  });
+  return useQuery({
+    ...options,
+    enabled: version !== null,
+    queryKey: scoped(options.queryKey),
+  });
+}
+
+/** Save the draft, publish it, restore an earlier version: each refetches the legal queries when it settles. */
+export function useLegalActions() {
+  const rpc = useTranslationRpc();
+  const invalidate = useInvalidateTranslation();
+  const save = useMutation(
+    rpc.legal.save.mutationOptions({ onSettled: invalidate })
+  );
+  const publish = useMutation(
+    rpc.legal.publish.mutationOptions({ onSettled: invalidate })
+  );
+  const restore = useMutation(
+    rpc.legal.restore.mutationOptions({ onSettled: invalidate })
+  );
+  return { publish, restore, save };
 }

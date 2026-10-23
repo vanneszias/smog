@@ -6,8 +6,10 @@ import {
   type CatalogueSource,
   I18N_VERSION_KEY,
   INITIAL_I18N_VERSION,
+  type LegalSource,
   loadCatalogue,
   loadLanguages,
+  loadLegalText,
   resetCatalogueCache,
 } from "./server";
 import { createI18n } from "./setup-web";
@@ -191,5 +193,63 @@ describe("loadCatalogue", () => {
     expect(loaded.locale).toBe("en");
     expect(loaded.overlay).toEqual({});
     error.mockRestore();
+  });
+});
+
+describe("loadLegalText", () => {
+  const document = {
+    sections: [{ blocks: ["Text"], id: "scope", title: "Scope" }],
+    title: "Terms",
+  };
+
+  function legalSource(rows: Record<string, unknown>) {
+    const calls = { published: 0 };
+    const source: LegalSource = {
+      published: (kind, locale) => {
+        calls.published += 1;
+        const row = rows[`${kind}:${locale}`];
+        return Promise.resolve(
+          row === undefined
+            ? null
+            : { content: row, effectiveDate: "2026-11-01", version: 2 }
+        );
+      },
+    };
+    return { calls, source };
+  }
+
+  test("returns the published row, validated, once per version", async () => {
+    const { calls, source } = legalSource({ "terms:nl": document });
+    const first = await loadLegalText({ kv, source }, "terms", "nl");
+    expect(first).toEqual({
+      document,
+      effectiveDate: "2026-11-01",
+      version: 2,
+    });
+    await loadLegalText({ kv, source }, "terms", "nl");
+    expect(calls.published).toBe(1);
+  });
+
+  test("a bump of the i18n version reads the row again", async () => {
+    const { calls, source } = legalSource({ "terms:nl": document });
+    await loadLegalText({ kv, source }, "terms", "nl");
+    await bumpI18nVersion(kv);
+    await loadLegalText({ kv, source }, "terms", "nl");
+    expect(calls.published).toBe(2);
+  });
+
+  test("no row, a row that does not validate or a failing source gives null (the shipped text shows)", async () => {
+    const { source } = legalSource({ "terms:fr": { title: "x" } });
+    expect(await loadLegalText({ kv, source }, "terms", "nl")).toBeNull();
+    const logged = spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await loadLegalText({ kv, source }, "terms", "fr")).toBeNull();
+    const failing: LegalSource = {
+      published: () => Promise.reject(new Error("d1 down")),
+    };
+    expect(
+      await loadLegalText({ kv, source: failing }, "terms", "en")
+    ).toBeNull();
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
   });
 });

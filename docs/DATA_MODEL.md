@@ -588,7 +588,7 @@ The spoken name of a gesture in one language: `gesture_id` (CASCADE), `locale`, 
 
 #### `legal_text` (migration 0019)
 
-One row per (kind, language, version), history kept: `id`, `kind` (`privacy`, `terms`), `locale`, `version` (>= 1), `content` (the `LegalDocument` JSON of `@smog/i18n`), `effective_date` (ISO date), `status` (`draft`, `published`), `updated_by`/`updated_at`, `published_by`/`published_at` (set exactly when published: a CHECK). Unique `(kind, locale, version)`; at most one draft per (kind, locale) (`legal_text_draft_uq`); `legal_text_published_idx` (kind, locale, version) WHERE status = 'published' serves the current text. The migration seeds version 1 of both kinds in nl, en and fr from the texts shipped in `@smog/i18n` (effective 2026-09-30), which stay the fallback.
+One row per (kind, language, version), history kept: `id`, `kind` (`privacy`, `terms`), `locale`, `version` (>= 1), `content` (the `LegalDocument` JSON of `@smog/i18n`), `effective_date` (ISO date), `status` (`draft`, `published`), `updated_by`/`updated_at`, `published_by`/`published_at` (set exactly when published: a CHECK). Unique `(kind, locale, version)`; at most one draft per (kind, locale) (`legal_text_draft_uq`); `legal_text_published_idx` (kind, locale, version) WHERE status = 'published' serves the current text. The migration seeds version 1 of both kinds in nl, en and fr from the texts shipped in `@smog/i18n` (effective 2026-09-30), which stay the fallback. A draft keeps a provisional `version` (after every existing row) until it is published, when it is renumbered after the highest published version (task 7).
 
 #### `user_role` (migration 0020)
 
@@ -599,7 +599,7 @@ One row per (kind, language, version), history kept: `id`, `kind` (`privacy`, `t
 
 #### New audit kinds (migration 0023)
 
-`AUDIT_ACTIONS` gained `user.role_grant`, `user.role_revoke`, `language.create`, `language.update`, `translation.string_save`, `translation.string_import`, `translation.gesture_save`, `translation.category_save`, `translation.audio_upload`, `translation.audio_delete`, `gesture.recut_done`, `legal.draft_save`, `legal.publish`, `legal.restore`, and `AUDIT_TARGET_TYPES` gained `language` (the code), `ui_string` (`<locale>:<key>`) and `legal_text` (the id).
+`AUDIT_ACTIONS` gained `user.role_grant`, `user.role_revoke`, `language.create`, `language.update`, `translation.string_save`, `translation.string_import`, `translation.gesture_save`, `translation.category_save`, `translation.audio_upload`, `translation.audio_delete`, `gesture.recut_done`, `legal.draft_save`, `legal.publish`, `legal.restore`, and `AUDIT_TARGET_TYPES` gained `language` (the code), `ui_string` (`<locale>:<key>`) and `legal_text` (`<kind>:<locale>:<version>`, task 7).
 
 #### Rebuilding a table that other tables reference
 
