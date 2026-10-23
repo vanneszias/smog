@@ -177,7 +177,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     );
     // The value cards come from the constants (bug 24).
     expect(screen.getByText("€50.00")).toBeDefined();
-    expect(screen.getByText("5 sec")).toBeDefined();
+    expect(screen.getByText("4 sec")).toBeDefined();
     expect(screen.getByText("+€10.00")).toBeDefined();
     expect(
       screen.getByText("2 available gestures shown · 0 selected")

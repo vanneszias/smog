@@ -499,7 +499,7 @@ describe("SponsorshipDetail", () => {
       "/api/logos/0b5c9c3e-6d1f-4c39-a7d2-2f7e5d1c9a10"
     );
     expect(screen.getByText("Invoice requested")).toBeTruthy();
-    expect(screen.getByText("Fake render (no overlay)")).toBeTruthy();
+    expect(screen.queryByText("Fake render (no overlay)")).toBeNull();
     // The trail names the actor, the system, and the reason.
     const trail = screen.getByRole("list", { name: "History" });
     expect(trail.textContent).toContain("Ada Admin");
