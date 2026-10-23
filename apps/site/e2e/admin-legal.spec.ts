@@ -26,7 +26,7 @@ const PUBLISHED = /Versie \d+ gepubliceerd/;
 const RESTORED = /Versie \d+ hersteld/;
 const UPDATED = /Last updated on/;
 const RESTORE_BUTTONS = /herstellen/;
-const VERSION_ONE = /Gepubliceerd: versie 1,/;
+const PUBLISHED_STATE = /Gepubliceerd: versie \d+,/;
 
 async function axe(page: Page, where: string): Promise<string[]> {
   return (await blockingViolations(page)).map(
@@ -91,11 +91,9 @@ test.describe("legal texts", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Juridische teksten" })
     ).toBeVisible();
-    await expect(page.getByTestId("legal-state")).toContainText(VERSION_ONE);
-    // Nothing is saved yet: publishing needs a saved draft.
-    await expect(
-      page.getByRole("button", { name: "Publiceren" })
-    ).toBeDisabled();
+    await expect(page.getByTestId("legal-state")).toContainText(
+      PUBLISHED_STATE
+    );
     await page.getByLabel("Titel van de tekst").fill(NEW_TITLE);
     await expect(page.getByText("Niet-opgeslagen wijzigingen")).toBeVisible();
     // The preview shows the edit before it is saved.

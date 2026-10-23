@@ -248,13 +248,18 @@ function HistoryRow({
   );
 }
 
+/** The three writes. They live in the parent, which stays mounted when a new published version restarts the editor, so their result callbacks still run. */
+type LegalActions = ReturnType<typeof useLegalActions>;
+
 interface WorkspaceBodyProps {
+  actions: LegalActions;
   detail: LegalDetail;
   kind: LegalKind;
   locale: string;
 }
 
 function WorkspaceBody({
+  actions,
   detail,
   kind,
   locale,
@@ -263,7 +268,7 @@ function WorkspaceBody({
   const { toast } = useToast();
   const { user } = useAuthState();
   const isAdmin = user?.roles.includes("admin") ?? false;
-  const { publish, restore, save } = useLegalActions();
+  const { publish, restore, save } = actions;
   const stored = useMemo(
     () => documentOf(kind, detail.draft?.content),
     [detail.draft?.content, kind]
@@ -617,6 +622,7 @@ export function LegalWorkspace({
 }): ReactNode {
   const { t } = useTranslation();
   const detail = useLegalDetail({ kind, locale });
+  const actions = useLegalActions();
   const { refetch } = detail;
   const onRetry = useCallback(() => {
     refetch().catch((error: unknown) => {
@@ -636,6 +642,7 @@ export function LegalWorkspace({
   }
   return (
     <WorkspaceBody
+      actions={actions}
       detail={detail.data}
       // A new published version (a publish, or a restore by an admin) starts the editor again from the stored text.
       key={`${kind}:${locale}:${detail.data.published?.version ?? 0}`}
