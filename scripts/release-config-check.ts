@@ -4,9 +4,7 @@ import { PRODUCTION_LAUNCH_ORIGIN } from "@smog/config/constants";
 import {
   ENVIRONMENTS,
   type Environment,
-  RENDER_MODES,
-  type RenderMode,
-  requiredWorkerConfig,
+  REQUIRED_WORKER_CONFIG,
   workerSecretsSchema,
   workerVarsSchema,
 } from "@smog/config/env/worker";
@@ -53,9 +51,7 @@ interface Workflow {
 
 const DEPLOY_COMMAND = "bun -F @smog/site deploy";
 /** The CI lanes, each a `release:check:<lane>` script (phase 7 ruling 16). */
-const RELEASE_LANES = ["core", "tests", "mobile", "render"];
-/** The render gate's flag, a GitHub environment variable (phase 7 ruling 2). */
-const RENDER_FLAG = "SMOG_RENDER_PIPELINE";
+const RELEASE_LANES = ["core", "tests", "mobile"];
 const ENSURE_COMMAND = "scripts/ensure-cloudflare-resources.ts";
 /** The deploy config check (phase 8 ruling 1). */
 const CONFIG_CHECK_COMMAND = "scripts/check-deploy-config.ts";
@@ -119,79 +115,6 @@ function envMentions(value: unknown, key: string): boolean {
   return isRecord(value) && key in value;
 }
 
-/** The image tag `scripts/release-check-render.ts` runs in CI. */
-const RENDER_CI_IMAGE = "smog-renderer:ci";
-
-/**
- * The render lane's build in `ci.yml` (phase 7 task 4 review, minor 8):
- * the `render` leg builds the image with `docker/build-push-action`
- * (`load: true`, linux/amd64, the Dockerfile, the tag the lane runs), and
- * the shared `release:check` step tells the lane not to build again.
- */
-export function checkRenderLaneBuild(source: string): string[] {
-  const file = "ci.yml";
-  const workflow = parseWorkflow(source, file);
-  if (typeof workflow === "string") {
-    return [workflow];
-  }
-  const errors: string[] = [];
-  const steps = workflow.jobs?.["release-check"]?.steps ?? [];
-  const build = steps.find((step) =>
-    step.uses?.startsWith("docker/build-push-action@")
-  );
-  if (build) {
-    const expected: Record<string, unknown> = {
-      file: "packages/render/container/Dockerfile",
-      load: true,
-      platforms: "linux/amd64",
-      tags: RENDER_CI_IMAGE,
-    };
-    for (const [key, value] of Object.entries(expected)) {
-      if (build.with?.[key] !== value) {
-        errors.push(
-          `${file}: the render image build needs with.${key}: ${String(value)}`
-        );
-      }
-    }
-    if (!build.if?.includes("matrix.check == 'render'")) {
-      errors.push(
-        `${file}: the render image build must run in the render leg only`
-      );
-    }
-  } else {
-    errors.push(
-      `${file}: the render leg must build the image with docker/build-push-action`
-    );
-  }
-  // `.render-out` is a dot directory, which upload-artifact skips unless
-  // told otherwise (the first CI run uploaded nothing).
-  const artifact = steps.find(
-    (step) =>
-      (step.uses?.startsWith("actions/upload-artifact@") ?? false) &&
-      String(step.with?.path ?? "").includes("packages/render/.render-out")
-  );
-  if (artifact?.with?.["include-hidden-files"] !== true) {
-    errors.push(
-      `${file}: the render lane's artifact upload needs include-hidden-files: true for packages/render/.render-out`
-    );
-  }
-  const lane = steps.find((step) =>
-    step.run?.includes("bun run release:check:")
-  );
-  const noBuild = lane?.env?.SMOG_RENDER_NO_BUILD;
-  if (
-    !(
-      typeof noBuild === "string" &&
-      noBuild.includes("matrix.check == 'render'")
-    )
-  ) {
-    errors.push(
-      `${file}: the release:check step must pass SMOG_RENDER_NO_BUILD for the render leg`
-    );
-  }
-  return errors;
-}
-
 export function checkCiWorkflow(source: string): string[] {
   const file = "ci.yml";
   const workflow = parseWorkflow(source, file);
@@ -203,7 +126,7 @@ export function checkCiWorkflow(source: string): string[] {
   const lanes = gate?.strategy?.matrix?.check ?? [];
   if (!sameList(lanes, RELEASE_LANES)) {
     errors.push(
-      `${file}: release:check matrix must include core, tests, mobile and render`
+      `${file}: release:check matrix must include core, tests and mobile`
     );
   }
   if (gate?.strategy?.["fail-fast"] !== false) {
@@ -517,7 +440,6 @@ function checkDeploySteps(
   errors.push(...checkSecretsStep(steps, file));
   errors.push(...checkEnsureStep(steps, migrations, file));
   errors.push(...checkConfigCheckStep(steps, file));
-  errors.push(...checkRenderFlag(steps, file));
   if (
     steps.some(
       (step) => step.run !== undefined && RAW_WRANGLER_DEPLOY.test(step.run)
@@ -724,25 +646,6 @@ function checkConfigCheckStep(steps: Step[], file: string): string[] {
   return errors;
 }
 
-/**
- * The render gate's flag reaches the two steps that read it (phase 7
- * ruling 2): the resources step (its Workflows and Containers probes) and
- * the deploy (the build's `config` hook). It is the GitHub environment
- * variable, so `staging` and `production` each have their own.
- */
-function checkRenderFlag(steps: Step[], file: string): string[] {
-  const expected = `\${{ vars.${RENDER_FLAG} }}`;
-  return [ENSURE_COMMAND, DEPLOY_COMMAND].flatMap((command) => {
-    const step = steps[findStepIndex(steps, command)];
-    if (!step || step.env?.[RENDER_FLAG] === expected) {
-      return [];
-    }
-    return [
-      `${file}: the "${step.name ?? command}" step must pass ${RENDER_FLAG}: ${expected} (the render gate)`,
-    ];
-  });
-}
-
 /** The deploy config check's step of `deploy.yml` alone (phase 8 ruling 1). */
 export function checkDeployConfigStep(source: string): string[] {
   const workflow = parseWorkflow(source, "deploy.yml");
@@ -921,8 +824,8 @@ function checkQueues(
  * `smog-<env>-email` and `smog-<env>-sponsorship-events` with their
  * producers and consumers (each with its `…-dlq`, and a consumer for each
  * DLQ since phase 9), the R2 bucket
- * `smog-<env>-media` as `MEDIA` (and `vars.MEDIA_BUCKET`), `RENDER_MODE`,
- * and the four `CRON` schedules of `@smog/jobs`.
+ * `smog-<env>-media` as `MEDIA` (and `vars.MEDIA_BUCKET`), no `RENDER_MODE`
+ * (retired, phase 10b task 9), and the four `CRON` schedules of `@smog/jobs`.
  */
 export function checkWranglerResources(source: string): string[] {
   const file = "apps/site/wrangler.jsonc";
@@ -949,12 +852,10 @@ export function checkWranglerResources(source: string): string[] {
     if (vars.MEDIA_BUCKET !== bucket) {
       errors.push(`${where}: vars.MEDIA_BUCKET must be ${bucket}`);
     }
-    if (!(RENDER_MODES as readonly unknown[]).includes(vars.RENDER_MODE)) {
+    if ("RENDER_MODE" in vars) {
       errors.push(
-        `${where}: vars.RENDER_MODE must be one of ${RENDER_MODES.join(", ")}`
+        `${where}: vars.RENDER_MODE must be removed (the render pipeline is retired)`
       );
-    } else if (vars.RENDER_MODE === "local" && name !== "dev") {
-      errors.push(`${where}: vars.RENDER_MODE=local is dev only`);
     }
     const triggers = isRecord(env.triggers) ? env.triggers : {};
     const listed = asArray(triggers.crons).map(String);
@@ -967,7 +868,7 @@ export function checkWranglerResources(source: string): string[] {
   return errors;
 }
 
-/** Keys only the render gate may add (phase 7 ruling 2). */
+/** Keys only the retired render pipeline used (phase 7 ruling 2). */
 const RENDER_GATE_KEYS = [
   "workflows",
   "containers",
@@ -977,10 +878,8 @@ const RENDER_GATE_KEYS = [
 
 /**
  * `wrangler.jsonc` declares no Workflow, container, Durable Object or DO
- * migration, at the top or in an env: `apps/site/render-config.ts` adds
- * them at build time only when the env's render mode needs them, so
- * staging's deployed config stays as it is until the owner turns the
- * pipeline on.
+ * migration, at the top or in an env: the render pipeline that added them
+ * at build time is retired (phase 10b task 9).
  */
 export function checkWranglerRenderKeys(source: string): string[] {
   const file = "apps/site/wrangler.jsonc";
@@ -1001,7 +900,7 @@ export function checkWranglerRenderKeys(source: string): string[] {
   return scopes.flatMap(([prefix, scope]) =>
     RENDER_GATE_KEYS.filter((key) => key in scope).map(
       (key) =>
-        `${file}: ${prefix}${key} is not allowed: the render gate adds it at build time (apps/site/render-config.ts)`
+        `${file}: ${prefix}${key} is not allowed: the render pipeline is retired (phase 10b task 9)`
     )
   );
 }
@@ -1009,18 +908,19 @@ export function checkWranglerRenderKeys(source: string): string[] {
 const RENDER_CLASSES = ["RenderSponsorshipVideo", "SmogRenderer"] as const;
 
 /**
- * `src/worker.ts` exports the Workflow and the Container classes, always:
- * the gate binds them only for some builds, and a Durable Object class
- * that was deployed once must stay exported.
+ * `src/worker.ts` no longer exports the Workflow and Container classes of
+ * the retired render pipeline (phase 10b task 9). Neither was ever bound in
+ * a deployed env (staging ran `fake`, production never got the flag), so no
+ * Durable Object migration (`deleted_classes`) is needed.
  */
 export function checkRenderClassExports(source: string): string[] {
   // The module's real exports (Bun's parser): comments and strings never count.
   const exported = new Set(
     new Bun.Transpiler({ loader: "ts" }).scan(source).exports
   );
-  return RENDER_CLASSES.filter((name) => !exported.has(name)).map(
+  return RENDER_CLASSES.filter((name) => exported.has(name)).map(
     (name) =>
-      `apps/site/src/worker.ts: must export ${name} (a class deployed once must stay exported; the render gate binds it)`
+      `apps/site/src/worker.ts: must not export ${name} (the render pipeline is retired)`
   );
 }
 
@@ -1048,8 +948,6 @@ export function checkReleaseScripts(source: string): string[] {
 
 /** The staging build and its deploy guard, offline, on every push. */
 const STAGING_DRY_RUN = "bun -F @smog/site deploy:dry";
-/** The same with staging forced to `container` (the gate-on path). */
-const GATE_ON_DRY_RUN = "bun -F @smog/site deploy:dry:render";
 /**
  * The deploy config check on staging's files, without wrangler (phase 8
  * ruling 1). Production is not checked offline: its placeholders are
@@ -1060,15 +958,13 @@ const OFFLINE_CONFIG_CHECK = `bun ${CONFIG_CHECK_COMMAND} --env staging --offlin
 /**
  * `release:check:core` builds the staging config and runs the deploy guard
  * (`deploy:dry`: `vite build`, the guard, `wrangler deploy --dry-run`; no
- * credentials and no network), so a render gate regression fails CI before
- * a develop push deploys it; and the gate-on dry run (`deploy:dry:render`,
- * fix wave C-1), so the `container` path is built and guarded on every push
- * before the owner flips staging; and, after the dry run, the deploy config
- * check of staging's files (`--offline`, phase 8 ruling 1).
+ * credentials and no network), so a regression fails CI before a develop
+ * push deploys it; and, after the dry run, the deploy config check of
+ * staging's files (`--offline`, phase 8 ruling 1).
  */
 function checkStagingDryRun(core: string): string[] {
   const commands = core.split("&&").map((command) => command.trim());
-  const errors = [STAGING_DRY_RUN, GATE_ON_DRY_RUN, OFFLINE_CONFIG_CHECK]
+  const errors = [STAGING_DRY_RUN, OFFLINE_CONFIG_CHECK]
     .filter((wanted) => !commands.includes(wanted))
     .map((wanted) => `package.json: release:check:core must run \`${wanted}\``);
   const dryRun = commands.indexOf(STAGING_DRY_RUN);
@@ -1082,32 +978,16 @@ function checkStagingDryRun(core: string): string[] {
 }
 
 /**
- * The parts each site dry run needs (phase 7 fix wave, infra C-1):
- * - `deploy:dry` is staging with `SMOG_RENDER_PIPELINE=1` (so a `container`
- *   staging builds instead of failing on the missing flag) and
- *   `--containers-rollout=none` (so wrangler's dry run neither needs Docker
- *   nor builds the image);
- * - `deploy:dry:render` forces `container` with `SMOG_DRY_RENDER_MODE`,
- *   runs the guard with `--dry-run` (the only guard run that accepts the
- *   override) and the same offline wrangler dry run.
+ * The parts the site dry run needs: staging, and wrangler's own `--dry-run`
+ * (no credentials, no network). The render-era `SMOG_RENDER_PIPELINE=1`,
+ * `--containers-rollout=none` and `deploy:dry:render` are gone (phase 10b
+ * task 9).
  */
 const SITE_DRY_RUN_PARTS: Record<string, readonly string[]> = {
-  "deploy:dry": [
-    "CLOUDFLARE_ENV=staging",
-    "SMOG_RENDER_PIPELINE=1",
-    "--dry-run",
-    "--containers-rollout=none",
-  ],
-  "deploy:dry:render": [
-    "CLOUDFLARE_ENV=staging",
-    "SMOG_RENDER_PIPELINE=1",
-    "SMOG_DRY_RENDER_MODE=container",
-    "deploy-guard.ts --dry-run",
-    "--dry-run --containers-rollout=none",
-  ],
+  "deploy:dry": ["CLOUDFLARE_ENV=staging", "--dry-run"],
 };
 
-/** `apps/site/package.json`: both dry runs carry every part they need. */
+/** `apps/site/package.json`: the dry run carries every part it needs. */
 export function checkSiteDryRuns(source: string): string[] {
   const manifest: unknown = JSON.parse(source);
   const scripts =
@@ -1121,7 +1001,7 @@ export function checkSiteDryRuns(source: string): string[] {
       .filter((part) => !script.includes(part))
       .map(
         (part) =>
-          `apps/site/package.json: ${name} must pass \`${part}\` (a staging dry run that works once staging is container)`
+          `apps/site/package.json: ${name} must pass \`${part}\` (a staging dry run)`
       );
   });
 }
@@ -1131,23 +1011,6 @@ type RequiredLists = Record<
   { secrets: readonly string[]; vars: readonly string[] }
 >;
 
-/** Each env's `vars.RENDER_MODE` in `wrangler.jsonc` (`fake` when unset). */
-function renderModes(wrangler: string): Record<Environment, RenderMode> {
-  const config: unknown = Bun.JSONC.parse(wrangler);
-  const envs = isRecord(config) && isRecord(config.env) ? config.env : {};
-  const modeOf = (name: Environment): RenderMode => {
-    const env = envs[name];
-    const mode =
-      isRecord(env) && isRecord(env.vars) ? env.vars.RENDER_MODE : undefined;
-    return RENDER_MODES.find((candidate) => candidate === mode) ?? "fake";
-  };
-  return {
-    dev: modeOf("dev"),
-    production: modeOf("production"),
-    staging: modeOf("staging"),
-  };
-}
-
 /** `KEY=` or `# KEY=` at the start of a `.dev.vars.example` line. */
 function documentsKey(devVarsExample: string, key: string): boolean {
   return devVarsExample
@@ -1156,11 +1019,9 @@ function documentsKey(devVarsExample: string, key: string): boolean {
 }
 
 /**
- * The required worker config (phase 6 ruling 12, phase 7 ruling 11). By
- * default it is `requiredWorkerConfig(env, RENDER_MODE)` at each env's mode
- * in `wrangler.jsonc`, so flipping an env to `container` requires the Mux
- * trio; a given `required` list must still cover what each env's mode
- * needs. Each key is in the env schema, each secret is documented in
+ * The required worker config (phase 6 ruling 12). By default it is
+ * `REQUIRED_WORKER_CONFIG`; a given `required` list must still cover it.
+ * Each key is in the env schema, each secret is documented in
  * `.dev.vars.example`, and each var is named in that env's
  * `wrangler.jsonc` vars (empty means "set before launch").
  */
@@ -1175,20 +1036,11 @@ export function checkRequiredConfig({
 }): string[] {
   const config: unknown = Bun.JSONC.parse(wrangler);
   const envs = isRecord(config) && isRecord(config.env) ? config.env : {};
-  const modes = renderModes(wrangler);
-  const byMode: RequiredLists = {
-    dev: requiredWorkerConfig("dev", modes.dev),
-    production: requiredWorkerConfig("production", modes.production),
-    staging: requiredWorkerConfig("staging", modes.staging),
-  };
-  const lists = required ?? byMode;
+  const lists = required ?? REQUIRED_WORKER_CONFIG;
   const uncovered = ENVIRONMENTS.flatMap((name) =>
-    byMode[name].secrets
+    REQUIRED_WORKER_CONFIG[name].secrets
       .filter((key) => !lists[name].secrets.includes(key))
-      .map(
-        (key) =>
-          `REQUIRED_WORKER_CONFIG.${name}: RENDER_MODE=${modes[name]} needs ${key}`
-      )
+      .map((key) => `REQUIRED_WORKER_CONFIG.${name} must list ${key}`)
   );
   return [...uncovered, ...checkRequiredLists(lists, envs, devVarsExample)];
 }
@@ -1724,7 +1576,6 @@ export function checkReleaseConfig(
   warnings.push(...eas.warnings);
   return [
     ...checkCiWorkflow(read(".github/workflows/ci.yml")),
-    ...checkRenderLaneBuild(read(".github/workflows/ci.yml")),
     ...checkE2eJob({
       ci: read(".github/workflows/ci.yml"),
       playwrightConfig: read("apps/site/playwright.config.ts"),

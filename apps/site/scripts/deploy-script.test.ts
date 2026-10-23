@@ -36,17 +36,7 @@ describe("deploy scripts", () => {
     const dry = scripts()["deploy:dry"] ?? "";
     expect(dry).toContain("bun run deploy ");
     expect(dry).toContain("--dry-run");
-    expect(dry).toContain("--containers-rollout=none");
-  });
-
-  it("deploy:dry:render (the gate-on path) runs turbo before vite build and the guard", () => {
-    const render = steps(scripts()["deploy:dry:render"]);
-    const turbo = render.findIndex((step) => step.endsWith(TURBO_STEP));
-    const vite = render.indexOf("vite build");
-    const guard = render.indexOf("bun scripts/deploy-guard.ts --dry-run");
-    expect(turbo).toBeGreaterThan(-1);
-    expect(vite).toBe(turbo + 1);
-    expect(guard).toBe(vite + 1);
+    expect(dry).not.toContain("--containers-rollout");
   });
 
   it("the turbo step exits 0, whether or not a dependency has a build task", async () => {

@@ -46,25 +46,11 @@
   // dev and the tests emulate all of them locally. New secrets
   // (MOLLIE_API_KEY, R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY) are optional
   // and degrade cleanly; see `.dev.vars.example`.
-  // Phase 7, the render gate: RENDER_MODE `fake` completes renders with the
-  // gesture's own video (dev and staging); `container` renders in the
-  // SmogRenderer Container through the RenderSponsorshipVideo Workflow
-  // (production); `local` (dev only) uses the render server on this machine.
-  // This file declares no `workflows`, `containers`, Durable Object binding
-  // or DO migration, here or in an env (release-config-check refuses them):
-  // `render-config.ts` adds them at build time (the Vite plugin's `config`
-  // hook), the Workflow for `local`/`container` and the container block for
-  // `container`, which also needs SMOG_RENDER_PIPELINE=1 (a GitHub
-  // environment variable the owner sets once the env's token can deploy
-  // Workflows and Containers; without it a `container` build fails). The
-  // deploy guard checks the built config. Dev's local mode:
-  // `SMOG_DEV_RENDER_MODE=local bun dev` (and `bun -F @smog/site
-  // render:local-loop` runs one real render end to end). Production's mode
-  // is already `container`, so a production build fails until the
-  // `production` environment has SMOG_RENDER_PIPELINE=1. The owner's flip
-  // for staging, in order: the token permissions, the flag, then
-  // `RENDER_MODE: "container"` below, with the env's own Mux secrets
-  // (docs/PROGRESS.md, owner actions).
+  // The render pipeline (Workflow, Container, RENDER_MODE) was retired in
+  // phase 10b task 9: this file declares no `workflows`, `containers`,
+  // Durable Object binding or migration, and the deploy guard refuses a
+  // built config that has one. Sponsor names are an end card over the
+  // gesture's own video.
   // D1 migrations live in packages/db/migrations (drizzle-kit + hand-written
   // FTS5); `bun -F @smog/db migrate:dev` applies them to the local dev D1.
   "env": {
@@ -73,7 +59,6 @@
         "SITE_URL": "http://localhost:5173",
         "ENVIRONMENT": "dev",
         "MEDIA_BUCKET": "smog-dev-media",
-        "RENDER_MODE": "fake",
         "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
         "EMAIL_REPLY_TO": "info@smog.vlaanderen"
       },
@@ -159,7 +144,6 @@
         "SITE_URL": "https://smog-site-staging.zias.workers.dev",
         "ENVIRONMENT": "staging",
         "MEDIA_BUCKET": "smog-staging-media",
-        "RENDER_MODE": "fake",
         // Empty until staging gets R2 tokens: logos use the signed fallback.
         "R2_ACCOUNT_ID": "",
         "EMAIL_FROM": "SMOG & Co <info@smog.zias.be>",
@@ -264,7 +248,6 @@
         "SITE_URL": "https://smog-site-production.zias.workers.dev",
         "ENVIRONMENT": "production",
         "MEDIA_BUCKET": "smog-production-media",
-        "RENDER_MODE": "container",
         // Empty until launch, and required by then: the R2 account id of
         // the presigned logo upload, and the real Turnstile widget's site
         // key. `scripts/check-deploy-config.ts` refuses a production deploy

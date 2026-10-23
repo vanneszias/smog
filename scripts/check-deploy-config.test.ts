@@ -245,49 +245,16 @@ describe("checkDeployConfig: SITE_URL", () => {
   });
 });
 
-describe("checkDeployConfig: the render mode", () => {
-  test("staging container adds the Mux trio", () => {
-    const wrangler = stagingVars({ RENDER_MODE: "container" });
-    const { errors } = checkDeployConfig({
-      env: "staging",
-      secrets: STAGING_SECRETS,
-      wrangler,
-    });
-    expect(errors).toHaveLength(3);
-    for (const key of MUX_TRIO) {
-      expect(errors.join("\n")).toContain(key);
-    }
-    expect(
-      checkDeployConfig({
-        env: "staging",
-        secrets: [...STAGING_SECRETS, ...MUX_TRIO],
-        wrangler,
-      }).errors
-    ).toEqual([]);
-  });
-
-  test("an unset RENDER_MODE is fake (no Mux needed)", () => {
-    const wrangler = wranglerWith((config) => {
-      Reflect.deleteProperty(envBlock(config, "staging").vars, "RENDER_MODE");
-    });
-    expect(
-      checkDeployConfig({
-        env: "staging",
-        secrets: STAGING_SECRETS,
-        wrangler,
-      }).errors
-    ).toEqual([]);
-  });
-
-  test("local and unknown modes are refused outside dev", () => {
-    for (const mode of ["local", "bogus"]) {
+describe("checkDeployConfig: what each env needs", () => {
+  test("a stale RENDER_MODE var is ignored (the render pipeline is retired)", () => {
+    for (const RENDER_MODE of ["fake", "container", "bogus"]) {
       expect(
         checkDeployConfig({
           env: "staging",
-          secrets: null,
-          wrangler: stagingVars({ RENDER_MODE: mode }),
+          secrets: STAGING_SECRETS,
+          wrangler: stagingVars({ RENDER_MODE }),
         }).errors
-      ).toEqual([expect.stringContaining("RENDER_MODE")]);
+      ).toEqual([]);
     }
   });
 

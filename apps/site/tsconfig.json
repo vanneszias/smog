@@ -12,7 +12,6 @@
     "src",
     "test",
     "build-defines.ts",
-    "render-config.ts",
     "vite.config.ts",
     "vitest.config.ts"
   ]

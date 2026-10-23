@@ -2,9 +2,7 @@ import { join } from "node:path";
 import {
   PROVIDER_SECRET_GROUPS,
   RECOMMENDED_WORKER_CONFIG,
-  RENDER_MODES,
-  type RenderMode,
-  requiredWorkerConfig,
+  REQUIRED_WORKER_CONFIG,
 } from "@smog/config/env/worker";
 import {
   type CommandRunner,
@@ -21,9 +19,8 @@ import {
  * 1). `deploy.yml` runs it right after `bun install`, before anything is
  * created, migrated or built:
  *
- * - from `apps/site/wrangler.jsonc` `env.<env>`: the render mode (unset is
- *   `fake`; `local` is dev only), every var `requiredWorkerConfig(env,
- *   mode)` needs (non-empty), `SITE_URL` (a bare `https:` origin that is
+ * - from `apps/site/wrangler.jsonc` `env.<env>`: every var
+ *   `REQUIRED_WORKER_CONFIG[env]` needs (non-empty), `SITE_URL` (a bare `https:` origin that is
  *   not a placeholder: a workers.dev host is
  *   `<script>.<subdomain>.workers.dev`), and the exact KV and D1
  *   placeholder ids;
@@ -101,26 +98,6 @@ function filled(value: unknown): boolean {
   return typeof value === "string" && value.trim() !== "";
 }
 
-function renderModeOf(
-  env: DeployEnv,
-  vars: Record<string, unknown>,
-  errors: string[]
-): RenderMode {
-  const mode = vars.RENDER_MODE ?? "fake";
-  if (!RENDER_MODES.includes(mode as RenderMode)) {
-    errors.push(
-      `env.${env}.vars.RENDER_MODE is ${JSON.stringify(mode)}: it must be one of ${RENDER_MODES.join(", ")}`
-    );
-    return "fake";
-  }
-  if (mode === "local") {
-    errors.push(
-      `env.${env}.vars.RENDER_MODE is local, which is dev only (the render server on a developer's machine)`
-    );
-  }
-  return mode as RenderMode;
-}
-
 function siteUrlProblem(value: unknown): string | null {
   if (typeof value !== "string" || value === "") {
     return "is empty";
@@ -150,10 +127,9 @@ function checkFile(
   env: DeployEnv,
   target: Record<string, unknown>,
   errors: string[]
-): RenderMode {
+): void {
   const vars = isRecord(target.vars) ? target.vars : {};
-  const mode = renderModeOf(env, vars, errors);
-  for (const key of requiredWorkerConfig(env, mode).vars) {
+  for (const key of REQUIRED_WORKER_CONFIG[env].vars) {
     if (!filled(vars[key])) {
       errors.push(
         `env.${env}.vars.${key} is empty: it is required in ${env} (wrangler.jsonc)`
@@ -180,18 +156,16 @@ function checkFile(
       );
     }
   }
-  return mode;
 }
 
 function checkSecrets(
   env: DeployEnv,
-  mode: RenderMode,
   vars: Record<string, unknown>,
   secrets: readonly string[],
   result: DeployConfigResult
 ): void {
   const has = new Set(secrets);
-  for (const key of requiredWorkerConfig(env, mode).secrets) {
+  for (const key of REQUIRED_WORKER_CONFIG[env].secrets) {
     if (!has.has(key)) {
       result.errors.push(
         `the secret ${key} is not set in ${env}: wrangler secret put ${key} --env ${env}`
@@ -257,10 +231,10 @@ export function checkDeployConfig({
     result.errors.push(`wrangler.jsonc has no env.${env}`);
     return result;
   }
-  const mode = checkFile(env, target, result.errors);
+  checkFile(env, target, result.errors);
   if (secrets !== null) {
     const vars = isRecord(target.vars) ? target.vars : {};
-    checkSecrets(env, mode, vars, secrets, result);
+    checkSecrets(env, vars, secrets, result);
   }
   return result;
 }

@@ -1,124 +1,89 @@
 import { afterAll, describe, expect, it } from "bun:test";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
-  CLIENT_LAZY_MARKERS,
-  checkClientRenderIsLazy,
-  RENDERER_SERVER_MARKERS,
+  checkNoRenderConfig,
+  checkNoRenderStack,
+  RENDER_STACK_MARKERS,
 } from "./deploy-guard";
 
 /**
- * A client manifest as Vite writes it: the entry statically imports a
- * shared chunk, and lazily a route and the wizard's preview. The preview
- * imports Remotion; the route and the preview share a chunk.
+ * The render pipeline is retired (phase 10b task 9): no build may carry its
+ * stack (Remotion, its renderer and bundler, mediabunny) or its Cloudflare
+ * config (Workflow, container, Durable Object, migration, `RENDER_MODE`).
  */
-const MANIFEST = {
-  "_remotion.js": { file: "assets/remotion.js", name: "remotion" },
-  "_route-shared.js": { file: "assets/route-shared.js" },
-  "_shared.js": { file: "assets/shared.js", name: "shared" },
-  "_styles.css": { file: "assets/styles.css" },
-  "src/client.tsx": {
-    dynamicImports: [
-      "src/components/sponsor/sponsor-preview.tsx",
-      "src/routes/sponsor.tsx?tsr-split=component",
-    ],
-    file: "assets/main.js",
-    imports: ["_shared.js"],
-    isEntry: true,
-  },
-  "src/components/sponsor/sponsor-preview.tsx": {
-    file: "assets/sponsor-preview.js",
-    imports: ["_remotion.js", "_route-shared.js", "_shared.js"],
-    isDynamicEntry: true,
-  },
-  "src/routes/sponsor.tsx?tsr-split=component": {
-    file: "assets/route.js",
-    imports: ["_route-shared.js", "_shared.js"],
-    isDynamicEntry: true,
-  },
-};
 
-const REMOTION = CLIENT_LAZY_MARKERS.find(({ name }) => name === "remotion");
-const MEDIABUNNY = CLIENT_LAZY_MARKERS.find(
-  ({ name }) => name === "mediabunny"
-);
-
-function client(contents: Record<string, string>) {
-  return Object.entries(contents).map(([file, content]) => ({
-    content,
-    path: join("dist", "client", file),
-  }));
+function file(path: string, content: string) {
+  return { content, path: join("dist", path) };
 }
 
-describe("checkClientRenderIsLazy (phase 7 ruling 1)", () => {
-  it("allows Remotion and mediabunny in a lazy chunk", () => {
+describe("checkNoRenderStack", () => {
+  it("passes a build without the render stack", () => {
     expect(() =>
-      checkClientRenderIsLazy(
-        MANIFEST,
-        client({
-          "assets/main.js": "import('./sponsor-preview.js')",
-          "assets/remotion.js": `${REMOTION?.marker} ${MEDIABUNNY?.marker}`,
-          "assets/shared.js": "export const a = 1",
-          "assets/sponsor-preview.js": `x(${JSON.stringify(REMOTION?.marker)})`,
-        })
-      )
+      checkNoRenderStack([
+        file("client/assets/main.js", "export const a = 1"),
+        file("server/index.js", "export default {}"),
+      ])
     ).not.toThrow();
   });
 
-  it("refuses them anywhere else: an entry, its imports, a lazy route, a chunk the route shares with the preview", () => {
-    for (const { marker, name } of CLIENT_LAZY_MARKERS) {
-      for (const file of [
-        "assets/main.js",
-        "assets/shared.js",
-        "assets/route.js",
-        "assets/route-shared.js",
-        "assets/unlisted.js",
-      ]) {
+  it("refuses every marker, in the Worker build and in the browser build", () => {
+    for (const { marker, name } of RENDER_STACK_MARKERS) {
+      for (const path of ["server/index.js", "client/assets/lazy.js"]) {
         expect(() =>
-          checkClientRenderIsLazy(
-            MANIFEST,
-            client({
-              "assets/main.js": "import('./sponsor-preview.js')",
-              "assets/remotion.js": "",
-              "assets/shared.js": "",
-              [file]: `x(${JSON.stringify(marker)})`,
-            })
-          )
-        ).toThrow(`${name}: ${join("dist", "client", file)}`);
+          checkNoRenderStack([file(path, `x(${JSON.stringify(marker)})`)])
+        ).toThrow(`${name}: ${join("dist", path)}`);
       }
     }
-    expect(CLIENT_LAZY_MARKERS.map(({ name }) => name)).toEqual([
+  });
+
+  it("names Remotion, its renderer and bundler, and mediabunny", () => {
+    expect([...new Set(RENDER_STACK_MARKERS.map(({ name }) => name))]).toEqual([
       "remotion",
+      "@remotion/renderer",
+      "@remotion/bundler",
       "mediabunny",
     ]);
   });
+});
 
-  it("refuses a manifest without an entry", () => {
-    expect(() => checkClientRenderIsLazy({}, [])).toThrow(
-      "no entry chunk in dist/client/.vite/manifest.json"
-    );
-    expect(() => checkClientRenderIsLazy(null, [])).toThrow(
-      "no entry chunk in dist/client/.vite/manifest.json"
-    );
+describe("checkNoRenderConfig", () => {
+  it("passes a built config without render bindings", () => {
+    expect(() =>
+      checkNoRenderConfig({
+        d1_databases: [{ binding: "DB" }],
+        vars: { ENVIRONMENT: "staging" },
+      })
+    ).not.toThrow();
+    expect(() =>
+      checkNoRenderConfig({ migrations: [], vars: {} })
+    ).not.toThrow();
   });
 
-  it("finds each marker in the installed package it names", () => {
-    const sources: Record<string, string> = {
-      // The browser build of each (their `exports` `browser` condition).
-      mediabunny: "mediabunny/dist/modules/src/input.js",
-      remotion: "remotion/dist/esm/index.mjs",
-    };
-    const modules = new URL("../../../node_modules/", import.meta.url);
-    for (const { marker, name } of CLIENT_LAZY_MARKERS) {
-      const file = new URL(sources[name] ?? "", modules);
-      expect(readFileSync(file, "utf8")).toContain(marker);
+  it("refuses a Workflow, a container, a Durable Object binding, a migration and RENDER_MODE", () => {
+    const error = (() => {
+      try {
+        checkNoRenderConfig({
+          containers: [{ class_name: "SmogRenderer" }],
+          durable_objects: { bindings: [{ name: "RENDERER" }] },
+          migrations: [{ tag: "renderer-v1" }],
+          vars: { RENDER_MODE: "fake" },
+          workflows: [{ binding: "RENDER_WORKFLOW" }],
+        });
+        return "";
+      } catch (failure) {
+        return String(failure);
+      }
+    })();
+    for (const what of [
+      "workflows",
+      "containers",
+      "Durable Object bindings",
+      "migrations",
+      "a RENDER_MODE var",
+    ]) {
+      expect(error).toContain(`the build must have no ${what}`);
     }
   });
 });
@@ -127,7 +92,7 @@ describe("deploy-guard --bundle on a built tree (fixture)", () => {
   const root = mkdtempSync(join(tmpdir(), "smog-guard-"));
   afterAll(() => rmSync(root, { force: true, recursive: true }));
 
-  // Only the render-stack checks are under test here: one generous entry.
+  // Only the render-stack check is under test here: one generous entry.
   writeFileSync(
     join(root, "perf-budget.json"),
     JSON.stringify({
@@ -171,31 +136,27 @@ describe("deploy-guard --bundle on a built tree (fixture)", () => {
     };
   }
 
+  const remotion = RENDER_STACK_MARKERS[0].marker;
+
   const clean = {
-    "client/.vite/manifest.json": JSON.stringify(MANIFEST),
-    "client/assets/main.js": "import('./sponsor-preview.js')",
-    "client/assets/remotion.js": REMOTION?.marker ?? "",
-    "client/assets/route-shared.js": "",
-    "client/assets/route.js": "",
-    "client/assets/shared.js": "",
-    "client/assets/sponsor-preview.js": MEDIABUNNY?.marker ?? "",
+    "client/.vite/manifest.json": JSON.stringify({
+      "src/client.tsx": { file: "assets/main.js", isEntry: true },
+    }),
+    "client/assets/main.js": "export const a = 1",
     "server/index.js": "export default {}",
   };
 
-  it("passes a tree with the render stack only in a lazy client chunk", () => {
+  it("passes a tree without the render stack", () => {
     const { code, output } = guard(tree("clean", clean));
     expect(output).toContain("deploy-guard: bundle ok");
     expect(code).toBe(0);
   });
 
   it("fails a dist/server chunk that contains Remotion", () => {
-    const server = RENDERER_SERVER_MARKERS.find(
-      ({ name }) => name === "remotion"
-    );
     const { code, output } = guard(
       tree("server", {
         ...clean,
-        "server/assets/sponsor-preview.js": `x(${JSON.stringify(server?.marker)})`,
+        "server/assets/sponsor-preview.js": `x(${JSON.stringify(remotion)})`,
       })
     );
     expect(code).toBe(1);
@@ -204,14 +165,14 @@ describe("deploy-guard --bundle on a built tree (fixture)", () => {
     );
   });
 
-  it("fails an entry chunk that contains Remotion", () => {
+  it("fails a browser chunk that contains Remotion", () => {
     const { code, output } = guard(
       tree("entry", {
         ...clean,
-        "client/assets/shared.js": REMOTION?.marker ?? "",
+        "client/assets/main.js": remotion,
       })
     );
     expect(code).toBe(1);
-    expect(output).toContain("outside the sponsor preview's lazy chunks");
+    expect(output).toContain("retired render stack");
   });
 });
