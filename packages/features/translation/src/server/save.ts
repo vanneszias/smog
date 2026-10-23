@@ -1,5 +1,11 @@
 /** Saving or reverting one interface string (phase 10b task 4), with the `CONFLICT` rule. */
-import { failWhen, ref, toGuardFailure, uiString } from "@smog/db";
+import {
+  failWhen,
+  ref,
+  type Statement,
+  toGuardFailure,
+  uiString,
+} from "@smog/db";
 import type { Db } from "@smog/db/client";
 import { validateTranslation } from "@smog/i18n";
 import { markUnchanged } from "@smog/rpc/audit";
@@ -10,6 +16,7 @@ import {
   catalogueKeys,
   cellOf,
   isApplicable,
+  placeholderBase,
   sourceHash,
   sourceOf,
 } from "./model";
@@ -22,6 +29,8 @@ import {
 
 /** One key in one language as stored now, with what a save needs to know about it. */
 interface CurrentCell {
+  /** The text whose placeholders a value keeps (`placeholderBase`); `null`: free text. */
+  base: string | null;
   cell: StringCell;
   isDefault: boolean;
   source: string;
@@ -49,6 +58,7 @@ async function currentCell(
   });
   const source = sourceOf(overrides, defaultCode, info);
   return {
+    base: placeholderBase(language, info, source),
     cell: cellOf(overrides, language, info, source),
     isDefault: language.isDefault,
     source,
@@ -79,8 +89,7 @@ function firstProblem(
   value: string
 ): "empty" | "placeholders" | "tooLong" | null {
   return (
-    validateTranslation(current.isDefault ? value : current.source, value)
-      .issues[0]?.code ?? null
+    validateTranslation(current.base ?? value, value).issues[0]?.code ?? null
   );
 }
 
@@ -104,6 +113,38 @@ async function runSave(
 interface SaveContext {
   actorId: string;
   db: Db;
+}
+
+/**
+ * The text is stored already: this is a retry of a save whose
+ * `i18n:version` bump failed after the commit (it answered an error).
+ * Nothing to write, but the text must be published: one audited
+ * "republished" entry, and the caller bumps like after a `saved`.
+ */
+async function republish(
+  { actorId, db }: SaveContext,
+  { key, locale }: StringSaveInput,
+  guard: Statement
+): Promise<SaveOutcome> {
+  const done = await runSave(db, [
+    guard,
+    auditStatement(db, {
+      action: "translation.string_save",
+      actorId,
+      data: { key, locale, republished: true },
+      targetId: `${locale}:${key}`,
+      targetType: "ui_string",
+    }),
+  ]);
+  const latest = await currentCell(db, locale, key);
+  if (!latest) {
+    throw new Error(
+      `[translation] Failed to read back the string ${locale}:${key}`
+    );
+  }
+  return done
+    ? { cell: latest.cell, kind: "saved" }
+    : { current: latest.cell, kind: "conflict" };
 }
 
 /**
@@ -157,6 +198,9 @@ export async function saveString(
       current.cell.value === value &&
       !(current.cell.overridden && current.cell.stale)
     ) {
+      if (current.cell.overridden) {
+        return await republish({ actorId, db }, input, guard);
+      }
       markUnchanged(db);
       return { cell: current.cell, kind: "unchanged" };
     }

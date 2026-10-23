@@ -72,6 +72,18 @@ export const gestureDetailSchema = gestureSummarySchema.extend({
   sponsor: sponsorCreditSchema.nullable(),
 });
 
+/**
+ * Whether the page draws the gesture's name over the video: only on the
+ * textless video, so not while it still has the name in the picture
+ * (`needsRecut`) and not over a sponsor-rendered video, which has the
+ * name burned in as well (`sponsor.endCard === false`).
+ */
+export function nameOverlayApplies(
+  gesture: Pick<GestureDetail, "needsRecut" | "sponsor">
+): boolean {
+  return !gesture.needsRecut && gesture.sponsor?.endCard !== false;
+}
+
 /** `bySlug`: the detail plus the slug to redirect to (a legacy id or old slug). */
 export const gestureBySlugSchema = gestureDetailSchema.extend({
   canonicalSlug: z.string(),

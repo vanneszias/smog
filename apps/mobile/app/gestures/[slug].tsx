@@ -9,7 +9,7 @@ import {
   useRememberGesture,
   useVideoEnd,
 } from "@smog/gestures/client";
-import type { GestureBySlug } from "@smog/gestures/schema";
+import { type GestureBySlug, nameOverlayApplies } from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
 import {
   AudioButton,
@@ -165,7 +165,7 @@ function GestureDetail({
   // The name over the video: only on a textless video (an older one has
   // the name in the picture) and unless this viewer hid it.
   const [preferences, setPreferences] = usePreferences();
-  const overlayApplies = !gesture.needsRecut;
+  const overlayApplies = nameOverlayApplies(gesture);
   const overlayShown = preferences.hideGestureName !== true;
   const setOverlayShown = useCallback(
     (shown: boolean) => setPreferences({ hideGestureName: !shown }),

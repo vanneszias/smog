@@ -3,7 +3,6 @@ import { RPCHandler } from "@orpc/server/fetch";
 import { appRouter } from "@smog/api";
 import { type RpcContext, rpcHandlerOptions } from "@smog/rpc";
 import { siteEnv } from "./auth";
-import { enabledLanguageCodes } from "./catalogue";
 import { createRpcContext } from "./context";
 import { apiDocsEnabled } from "./dev-tools";
 import { referenceHeaders, referenceScriptResponse } from "./openapi-reference";
@@ -111,12 +110,7 @@ async function serve(
   if (capped instanceof Response) {
     return capped;
   }
-  const context = createRpcContext(
-    capped.request,
-    siteEnv(),
-    { waitUntil },
-    await enabledLanguageCodes()
-  );
+  const context = createRpcContext(capped.request, siteEnv(), { waitUntil });
   try {
     const { matched, response } = await handler.handle(capped.request, {
       context,

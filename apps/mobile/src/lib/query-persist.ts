@@ -49,6 +49,36 @@ const PUBLIC_PROCEDURES = [
 ] as const;
 const USER_PROCEDURES = ["favorites.ids", "favorites.list"] as const;
 
+/**
+ * The language the persisted gesture answers are in, kept in the same
+ * cache file (one write, so it cannot be older or newer than the answers it
+ * describes). Not an oRPC query: `<PreferencesRoot />` sets it.
+ */
+export const CACHE_LANGUAGE_KEY = ["app", "cacheLanguage"] as const;
+
+function isCacheLanguage(queryKey: QueryKey): boolean {
+  return (
+    queryKey[0] === CACHE_LANGUAGE_KEY[0] &&
+    queryKey[1] === CACHE_LANGUAGE_KEY[1]
+  );
+}
+
+/**
+ * Records the language the app asks for and says whether the cache it
+ * restored was written for another one (a device language changed while
+ * the app was closed, or an app killed within the write throttle after an
+ * in-app switch): then the localized answers are in the old language and the
+ * caller resets them.
+ */
+export function reconcileCacheLanguage(
+  queryClient: QueryClient,
+  wanted: string
+): boolean {
+  const written = queryClient.getQueryData<string>(CACHE_LANGUAGE_KEY);
+  queryClient.setQueryData(CACHE_LANGUAGE_KEY, wanted);
+  return written !== undefined && written !== wanted;
+}
+
 /** `["gestures","list"]` from an oRPC key (`[path, { input, type }]`). */
 function procedureOf(queryKey: QueryKey): string | undefined {
   const [path] = queryKey;
@@ -72,6 +102,9 @@ function scopedUser(queryKey: QueryKey): string | undefined {
 function shouldPersistQuery(query: Query): boolean {
   if (!defaultShouldDehydrateQuery(query)) {
     return false;
+  }
+  if (isCacheLanguage(query.queryKey)) {
+    return true;
   }
   const procedure = procedureOf(query.queryKey);
   if (
@@ -254,6 +287,9 @@ export function createPersistOptions({
  * would be collected after 5 minutes and dropped from the next write.
  */
 export function keepPersistedQueries(queryClient: QueryClient): void {
+  queryClient.setQueryDefaults(CACHE_LANGUAGE_KEY, {
+    gcTime: QUERY_CACHE_MAX_AGE,
+  });
   for (const procedure of [...PUBLIC_PROCEDURES, ...USER_PROCEDURES]) {
     queryClient.setQueryDefaults([procedure.split(".")], {
       gcTime: QUERY_CACHE_MAX_AGE,

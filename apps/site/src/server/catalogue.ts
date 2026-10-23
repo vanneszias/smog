@@ -10,7 +10,7 @@ import {
 import { siteEnv } from "./auth";
 
 /** The KV version, the D1 queries and the isolate cache of the runtime catalogue (`@smog/i18n/server`). */
-export function catalogueDeps(): CatalogueDeps {
+function catalogueDeps(): CatalogueDeps {
   const { db, kv } = siteEnv();
   return { kv, source: uiCatalogueSource(createDb(db)) };
 }

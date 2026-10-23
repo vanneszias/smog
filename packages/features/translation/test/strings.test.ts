@@ -8,6 +8,7 @@ import type {
   StringsImportResult,
   StringsPage,
 } from "../src/schema";
+import { runImport } from "../src/server/strings";
 import {
   type Authed,
   addLanguage,
@@ -234,6 +235,32 @@ describe("saving", () => {
     expect((await list({ locale: "en", status: "invalid" })).total).toBe(0);
   });
 
+  it("holds the default language to the placeholders of the shipped text", async () => {
+    const dropped = await failureOf(
+      callAs(translator, "strings.save", {
+        expectedUpdatedAt: null,
+        key: PLACEHOLDER_KEY,
+        locale: "nl",
+        value: "Stap",
+      })
+    );
+    expect(dropped).toMatchObject({
+      code: "VALIDATION",
+      data: { fieldErrors: { value: ["placeholders"] } },
+    });
+    const added = await failureOf(
+      callAs(translator, "strings.save", {
+        expectedUpdatedAt: null,
+        key: "auth.errors.generic",
+        locale: "nl",
+        value: "Er ging iets mis bij {{step}}",
+      })
+    );
+    expect(added).toMatchObject({
+      data: { fieldErrors: { value: ["placeholders"] } },
+    });
+  });
+
   it("answers CONFLICT with the stored text when somebody saved first", async () => {
     const first = await save({
       expectedUpdatedAt: null,
@@ -277,6 +304,32 @@ describe("saving", () => {
     });
     expect(await auditRowsSince(mark)).toHaveLength(0);
     expect(await i18nVersion()).toBe(before);
+  });
+
+  it("saving a stored override again publishes it (a retry after a failed i18n bump), audited as republished", async () => {
+    const first = await save({
+      expectedUpdatedAt: null,
+      key: KEY,
+      locale: "fr",
+      value: "Texte du traducteur",
+    });
+    // The bump failed after the commit: the version is gone from KV.
+    await env.KV.delete("i18n:version");
+    const mark = await auditMark();
+    const again = await save({
+      expectedUpdatedAt: first.cell.updatedAt,
+      key: KEY,
+      locale: "fr",
+      value: "Texte du traducteur",
+    });
+    expect(again.cell.value).toBe("Texte du traducteur");
+    expect(await i18nVersion()).not.toBeNull();
+    const audits = await auditRowsSince(mark);
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      action: "translation.string_save",
+      data: { key: KEY, locale: "fr", republished: true },
+    });
   });
 
   it("reverts an override to the shipped text, audited", async () => {
@@ -433,6 +486,56 @@ describe("import and export", () => {
     expect(result.applied).toBe(2);
     const [audit] = await auditRowsSince(mark);
     expect(audit).toMatchObject({ targetId: null, targetType: "ui_string" });
+  });
+
+  it("writes nothing when a text the file overwrites changed since it was read", async () => {
+    const first = await save({
+      expectedUpdatedAt: null,
+      key: KEY,
+      locale: "en",
+      value: "First text",
+    });
+    const read = first.cell.updatedAt;
+    const write = (expectedUpdatedAt: number | null) => ({
+      expectedUpdatedAt,
+      key: KEY,
+      locale: "en",
+      sourceHash: null,
+      value: "From the file",
+    });
+    const mark = await auditMark();
+    // A second translator saved after the plan read it.
+    await save({
+      expectedUpdatedAt: read,
+      key: KEY,
+      locale: "en",
+      value: "Second text",
+    });
+    const run = {
+      actorId: translator.user.id,
+      format: "json",
+      skipped: 0,
+    } as const;
+    expect(await runImport(testDb(), [write(read)], run)).toBe(false);
+    // A row the plan saw as new that exists now is stale as well.
+    expect(await runImport(testDb(), [write(null)], run)).toBe(false);
+    const stored = (await list({ limit: 200, search: KEY })).items.find(
+      (r) => r.key === KEY
+    );
+    expect(stored?.cells.en?.value).toBe("Second text");
+    expect(await auditRowsSince(mark)).toHaveLength(1);
+    // With the version the plan really read the import goes through.
+    expect(
+      await runImport(
+        testDb(),
+        [write(stored?.cells.en?.updatedAt ?? null)],
+        run
+      )
+    ).toBe(true);
+    expect(
+      (await list({ limit: 200, search: KEY })).items.find((r) => r.key === KEY)
+        ?.cells.en?.value
+    ).toBe("From the file");
   });
 
   it("refuses a file it cannot read, and one over the size cap", async () => {

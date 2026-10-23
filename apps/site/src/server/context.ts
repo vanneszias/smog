@@ -1,8 +1,9 @@
 import { createDb } from "@smog/db/client";
-import { resolveLocale } from "@smog/i18n";
+import { matchLocale, resolveLocale } from "@smog/i18n";
 import type { RpcContext } from "@smog/rpc";
 import { parseCookie } from "cookie-es";
 import { getAuth, type SiteEnv } from "./auth";
+import { enabledLanguageCodes } from "./catalogue";
 
 /** The client IP Cloudflare saw (`unknown` locally, where there is no edge). */
 export function clientIp(request: Request): string {
@@ -17,13 +18,17 @@ export function clientIp(request: Request): string {
  */
 function requestLocale(
   request: Request,
-  enabled?: readonly string[]
+  enabled?: readonly string[],
+  accountLocale: string | null = null
 ): RpcContext["locale"] {
   const cookies = parseCookie(request.headers.get("cookie") ?? "");
+  const cookie = cookies.locale ?? null;
   return resolveLocale(
     {
       acceptLanguage: request.headers.get("accept-language"),
-      cookie: cookies.locale ?? null,
+      cookie,
+      // This browser's choice (an enabled cookie) first; else the account's.
+      preference: matchLocale(cookie, enabled) ? null : accountLocale,
     },
     enabled
   );
@@ -37,8 +42,7 @@ function requestLocale(
 export function createRpcContext(
   request: Request,
   env: SiteEnv,
-  ctx: { waitUntil: (promise: Promise<unknown>) => void },
-  enabledLanguages?: readonly string[]
+  ctx: { waitUntil: (promise: Promise<unknown>) => void }
 ): RpcContext {
   return {
     auth: getAuth(),
@@ -52,7 +56,11 @@ export function createRpcContext(
     },
     ip: clientIp(request),
     kv: env.kv,
-    locale: requestLocale(request, enabledLanguages),
+    // The shipped three until the session is known; `localeFor` then reads the
+    // enabled languages (after the rate limit, not before it).
+    locale: requestLocale(request),
+    localeFor: async (accountLocale) =>
+      requestLocale(request, await enabledLanguageCodes(), accountLocale),
     request,
     session: null,
     waitUntil: (promise) => ctx.waitUntil(promise),

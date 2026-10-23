@@ -1,8 +1,12 @@
 import { useTranslation } from "@smog/i18n/react";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import {
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+} from "expo-audio";
 import Square from "lucide-react-native/icons/square";
 import Volume2 from "lucide-react-native/icons/volume-2";
-import { type ReactElement, useCallback, useRef } from "react";
+import { type ReactElement, useCallback, useEffect, useRef } from "react";
 import { Button, type ButtonProps } from "../components/button";
 import { Switch } from "../components/switch";
 
@@ -12,6 +16,17 @@ interface Playing {
 
 /** The clip playing now in the app: one at a time (a new one stops it). */
 let active: Playing | null = null;
+
+/**
+ * A spoken name is the point of the button: it plays with the iOS silent
+ * switch on too (expo-audio follows the OS default session otherwise and
+ * the press would do nothing audible). Idempotent, set on each play.
+ */
+function playInSilentMode(): void {
+  setAudioModeAsync({ playsInSilentMode: true }).catch((error: unknown) => {
+    console.error("[audioButton] Failed to set the audio mode:", error);
+  });
+}
 
 export interface AudioButtonProps
   extends Omit<ButtonProps, "children" | "icon" | "loading" | "onPress"> {
@@ -42,14 +57,30 @@ export function AudioButton({
     player.pause();
   };
 
+  // The screen went away: this button is not the active clip any more, and
+  // the next press elsewhere must not pause a released player.
+  useEffect(
+    () => () => {
+      if (active === handle.current) {
+        active = null;
+      }
+    },
+    []
+  );
+
   const toggle = useCallback((): void => {
     if (playing) {
       player.pause();
       return;
     }
-    active?.stop();
+    try {
+      active?.stop();
+    } catch (error) {
+      console.error("[audioButton] Failed to stop the other clip:", error);
+    }
     active = handle.current;
     try {
+      playInSilentMode();
       if (loaded.current === src) {
         // A clip that ended starts over.
         player.seekTo(0).catch((error: unknown) => {

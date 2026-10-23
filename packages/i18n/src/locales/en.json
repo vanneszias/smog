@@ -2267,6 +2267,7 @@
           "title": "The file cannot be used",
           "tooLarge": "The file is too large.",
           "applyFailed": "Importing failed.",
+          "staleImport": "Some texts changed while the file was being read. Nothing was imported: preview the file again.",
           "file": {
             "invalidJson": "This is not a valid JSON file.",
             "invalidCsv": "This is not a valid CSV file.",

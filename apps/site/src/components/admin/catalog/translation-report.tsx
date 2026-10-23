@@ -22,12 +22,11 @@ function LanguageReport({
   );
   const done = gestures.needsTranslation === 0 && categories.missing === 0;
   return (
-    <li
-      className="flex flex-col gap-1 rounded-lg border border-border-subtle bg-card px-3 py-2"
-      lang={report.locale}
-    >
+    <li className="flex flex-col gap-1 rounded-lg border border-border-subtle bg-card px-3 py-2">
       <div className="flex flex-wrap items-center gap-2">
-        <Text weight="medium">{name}</Text>
+        <Text lang={report.locale} weight="medium">
+          {name}
+        </Text>
         <Badge variant={done ? "success" : "warning"}>
           {done
             ? t("admin.catalogTranslation.report.allDone")

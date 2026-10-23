@@ -70,8 +70,10 @@ describe("GestureTranslations", () => {
     expect(within(english).getByText("Needs translation")).toBeDefined();
     // The default language is the source, not a tab.
     expect(screen.queryByRole("tab", { name: DUTCH_TAB })).toBeNull();
-    expect(screen.getByText("Source (Nederlands)")).toBeDefined();
-    expect(screen.getByText("Een trouwe hond.")).toBeDefined();
+    expect(screen.getAllByText("Source (Nederlands)").length).toBeGreaterThan(
+      0
+    );
+    expect(screen.getAllByText("Een trouwe hond.").length).toBeGreaterThan(0);
     await openTab(FRENCH_TAB);
     const name = (await screen.findByRole("textbox", {
       name: "Name in Français",
@@ -184,6 +186,124 @@ describe("GestureTranslations", () => {
       )
     ).toBeDefined();
   });
+
+  test("a lost save keeps the typed draft, offers their text and saves over it on request", async () => {
+    let theirs = false;
+    const newer = {
+      ...GESTURE,
+      translations: {
+        fr: {
+          description: "Un chien fidèle.",
+          keywords: ["toutou"],
+          name: "Médor",
+          updatedAt: 2000,
+        },
+      },
+    };
+    const { calls } = await renderSite(
+      () => (
+        <div data-testid="page">
+          <GestureTranslations gestureId="g1" />
+        </div>
+      ),
+      {
+        api: {
+          "catalogTranslation/gestures/get": () => (theirs ? newer : GESTURE),
+          "catalogTranslation/gestures/save": (input: unknown) => {
+            if (
+              (input as { expectedUpdatedAt: number }).expectedUpdatedAt ===
+              1000
+            ) {
+              theirs = true;
+              return rpcError("CONFLICT", 409, { reason: "stale" });
+            }
+            return { updatedAt: 3000 };
+          },
+        },
+      }
+    );
+    await openTab(FRENCH_TAB);
+    const name = (await screen.findByRole("textbox", {
+      name: "Name in Français",
+    })) as HTMLInputElement;
+    fireEvent.change(name, { target: { value: "Toutou" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save translation" }));
+    expect(await screen.findByText("Somebody was first")).toBeDefined();
+    // Same node, same text: the form was not remounted.
+    expect(
+      screen.getByRole("textbox", {
+        name: "Name in Français",
+      }) as HTMLInputElement
+    ).toBe(name);
+    expect(name.value).toBe("Toutou");
+    expect(screen.getByText("Médor / Un chien fidèle. / toutou")).toBeDefined();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Save translation",
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Save mine anyway" }));
+    expect(screen.queryByText("Somebody was first")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Save translation" }));
+    await waitFor(() =>
+      expect(
+        saves(calls, "catalogTranslation/gestures/save").map(
+          (input) => (input as { expectedUpdatedAt: number }).expectedUpdatedAt
+        )
+      ).toEqual([1000, 2000])
+    );
+  });
+
+  test("an unsaved draft survives a switch to another tab and back", async () => {
+    await renderSite(
+      () => (
+        <div data-testid="page">
+          <GestureTranslations gestureId="g1" />
+        </div>
+      ),
+      { api: { "catalogTranslation/gestures/get": GESTURE } }
+    );
+    await openTab(FRENCH_TAB);
+    const name = (await screen.findByRole("textbox", {
+      name: "Name in Français",
+    })) as HTMLInputElement;
+    fireEvent.change(name, { target: { value: "Toutou" } });
+    await openTab(ENGLISH_TAB);
+    await screen.findByRole("textbox", { name: "Name in English" });
+    await openTab(FRENCH_TAB);
+    const again = (await screen.findByRole("textbox", {
+      name: "Name in Français",
+    })) as HTMLInputElement;
+    expect(again.value).toBe("Toutou");
+  });
+
+  test("keeps the keyboard in the form after a save", async () => {
+    await renderSite(
+      () => (
+        <div data-testid="page">
+          <GestureTranslations gestureId="g1" />
+        </div>
+      ),
+      {
+        api: {
+          "catalogTranslation/gestures/get": GESTURE,
+          "catalogTranslation/gestures/save": { updatedAt: 2000 },
+        },
+      }
+    );
+    await openTab(FRENCH_TAB);
+    const name = await screen.findByRole("textbox", {
+      name: "Name in Français",
+    });
+    fireEvent.change(name, { target: { value: "Chien fidèle" } });
+    const save = screen.getByRole("button", { name: "Save translation" });
+    save.focus();
+    fireEvent.click(save);
+    await screen.findByText("Translation saved.");
+    expect(document.activeElement).toBe(name);
+  });
 });
 
 describe("CategoryTranslations", () => {
@@ -253,6 +373,60 @@ describe("CategoryTranslations", () => {
     expect(saves(calls, "catalogTranslation/categories/save")).toEqual([
       { expectedUpdatedAt: null, id: "c2", locale: "fr", name: "Nourriture" },
     ]);
+  });
+
+  test("a typed name survives a tab switch and a lost save, and the other name is offered", async () => {
+    let theirs = false;
+    const answer = () =>
+      theirs
+        ? {
+            ...LIST,
+            items: [
+              LIST.items[0],
+              {
+                ...LIST.items[1],
+                needsTranslation: false,
+                translation: { name: "Repas", updatedAt: 800 },
+              },
+            ],
+          }
+        : LIST;
+    await renderSite(
+      () => (
+        <div data-testid="page">
+          <CategoryTranslations />
+        </div>
+      ),
+      {
+        api: {
+          "catalogTranslation/categories/list": answer,
+          "catalogTranslation/categories/save": () => {
+            theirs = true;
+            return rpcError("CONFLICT", 409, { reason: "stale" });
+          },
+        },
+      }
+    );
+    await openTab(FRENCH_TAB);
+    const eten = (await screen.findByRole("textbox", {
+      name: "Name in Français: Eten",
+    })) as HTMLInputElement;
+    fireEvent.change(eten, { target: { value: "Nourriture" } });
+    await openTab(ENGLISH_TAB);
+    await openTab(FRENCH_TAB);
+    expect(
+      (
+        (await screen.findByRole("textbox", {
+          name: "Name in Français: Eten",
+        })) as HTMLInputElement
+      ).value
+    ).toBe("Nourriture");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save the translation of Eten" })
+    );
+    expect(await screen.findByText("Somebody was first")).toBeDefined();
+    expect(eten.value).toBe("Nourriture");
+    expect(screen.getByText("Repas")).toBeDefined();
   });
 });
 

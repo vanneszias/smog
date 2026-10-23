@@ -235,6 +235,9 @@ export interface LoadedLegal {
   version: number;
 }
 
+/** Most (kind, locale) rows kept for one i18n version. */
+const LEGAL_CACHE_MAX = 200;
+
 /** Resolved rows of one i18n version (data only: see the module note). */
 let legalCached: {
   rows: Map<string, LoadedLegal | null>;
@@ -259,6 +262,10 @@ export async function loadLegalText(
       legalCached = { rows: new Map(), version };
     }
     const { rows } = legalCached;
+    if (rows.size >= LEGAL_CACHE_MAX) {
+      // Bounded by kinds x languages in practice; a cap all the same.
+      rows.clear();
+    }
     const key = `${kind}:${locale}`;
     if (rows.has(key)) {
       return rows.get(key) ?? null;

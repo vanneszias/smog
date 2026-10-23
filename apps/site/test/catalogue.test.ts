@@ -3,7 +3,7 @@ import { createI18n } from "@smog/i18n";
 import { bumpI18nVersion } from "@smog/i18n/server";
 import { afterEach, describe, expect, it } from "vitest";
 import { siteEnv } from "../src/server/auth";
-import { catalogueDeps, emailOverlay } from "../src/server/catalogue";
+import { emailOverlay } from "../src/server/catalogue";
 import { createRpcContext } from "../src/server/context";
 import { ORIGIN } from "./helpers";
 
@@ -159,15 +159,13 @@ describe("the overlay behind the i18n version", () => {
       )
       .run();
     await publishEdit();
-    const { loadLanguages } = await import("@smog/i18n/server");
-    const codes = (await loadLanguages(catalogueDeps())).map(
-      (language) => language.code
-    );
     const request = new Request(ORIGIN, { headers: { cookie: "locale=de" } });
     const ctx = { waitUntil: () => undefined };
-    expect(createRpcContext(request, siteEnv(), ctx, codes).locale).toBe("de");
-    // Without the data, the shipped three only.
-    expect(createRpcContext(request, siteEnv(), ctx).locale).toBe("nl");
+    const context = createRpcContext(request, siteEnv(), ctx);
+    // Before the session is known (and the rate limit passed), the shipped three only.
+    expect(context.locale).toBe("nl");
+    // `localeFor` reads the enabled languages, so the added one counts.
+    expect(await context.localeFor?.(null)).toBe("de");
   });
 });
 

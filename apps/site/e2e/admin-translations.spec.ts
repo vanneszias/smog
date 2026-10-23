@@ -109,7 +109,9 @@ test("the filter lists what needs French, the editor's French tab saves it, the 
   await expect(
     card.getByRole("heading", { name: "Vertalingen" })
   ).toBeVisible();
-  await expect(card.getByText("Bron (Nederlands)")).toBeVisible();
+  await expect(
+    card.getByRole("tabpanel").getByText("Bron (Nederlands)")
+  ).toBeVisible();
   const french = card.getByRole("tab", { name: "Français" });
   await expect(french.getByText("Vertaling nodig")).toBeVisible();
   await french.click();

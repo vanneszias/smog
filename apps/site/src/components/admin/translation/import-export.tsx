@@ -221,6 +221,15 @@ function needsLanguageChoice(file: FileState): boolean {
   }
 }
 
+/** Whether an apply lost to a save (`CONFLICT stale`: nothing was written). */
+function isImportStale(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === "CONFLICT"
+  );
+}
+
 /** The dry-run diff of an import: the counts, what changes and what is refused. */
 function PlanView({ plan }: { plan: ImportPlan }): ReactNode {
   const { t } = useTranslation();
@@ -369,9 +378,13 @@ export function ImportDialog(): ReactNode {
         locale: locale === FROM_FILE ? undefined : locale,
       },
       {
-        onError: () =>
+        onError: (error) =>
           toast({
-            title: t("admin.translation.import.errors.applyFailed"),
+            title: t(
+              isImportStale(error)
+                ? "admin.translation.import.errors.staleImport"
+                : "admin.translation.import.errors.applyFailed"
+            ),
             variant: "danger",
           }),
         onSuccess: (result) => {

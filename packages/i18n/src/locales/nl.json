@@ -2267,6 +2267,7 @@
           "title": "Het bestand kan niet worden gebruikt",
           "tooLarge": "Het bestand is te groot.",
           "applyFailed": "Het importeren is niet gelukt.",
+          "staleImport": "Enkele teksten zijn gewijzigd terwijl het bestand werd gelezen. Er is niets geïmporteerd: bekijk het bestand opnieuw.",
           "file": {
             "invalidJson": "Dit is geen geldig JSON-bestand.",
             "invalidCsv": "Dit is geen geldig CSV-bestand.",

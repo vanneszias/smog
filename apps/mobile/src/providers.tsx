@@ -8,11 +8,14 @@ import {
 } from "@smog/auth/react";
 import { isLocalizedQuery } from "@smog/gestures/client";
 import { languageCodes, registerLanguages } from "@smog/i18n";
-import { deviceLocaleTags, setupNative } from "@smog/i18n/native";
+import { setupNative } from "@smog/i18n/native";
 import { I18nextProvider } from "@smog/i18n/react";
 import { createLocalStore, type LocalStore } from "@smog/local-store";
 import { nativeAdapter } from "@smog/local-store/native";
-import { LocalStoreProvider } from "@smog/local-store/react";
+import {
+  LocalStoreProvider,
+  useLocalStoreInstance,
+} from "@smog/local-store/react";
 import { PurgeOtherUsers, purgeOtherUsers, RpcProvider } from "@smog/rpc/react";
 import {
   QueryClient,
@@ -39,7 +42,7 @@ import {
 import { createMobileApiClient } from "@/lib/api";
 import { appScheme } from "@/lib/app-scheme";
 import { AuthClientProvider } from "@/lib/auth-client";
-import { useRuntimeCatalogue, wantedLocale } from "@/lib/catalogue";
+import { useRuntimeCatalogue } from "@/lib/catalogue";
 import { mobileEnv } from "@/lib/env";
 import { connectQueryToDevice } from "@/lib/network";
 import { usePreferences } from "@/lib/preferences";
@@ -48,6 +51,7 @@ import {
   createPersistOptions,
   keepPersistedQueries,
   type PersistStorage,
+  reconcileCacheLanguage,
 } from "@/lib/query-persist";
 import { setRequestedLocale } from "@/lib/request-locale";
 
@@ -131,10 +135,43 @@ function PreferencesRoot({ children }: { children: ReactNode }): ReactElement {
   // already carry it; a later change drops the cached answers, which are in
   // the old language, and the active queries refetch.
   const queryClient = useQueryClient();
-  const device = useMemo(deviceLocaleTags, []);
-  const wanted = wantedLocale(locale, device);
+  const { languages, overlay, wanted } = useRuntimeCatalogue();
   const applied = useRef<string | null | undefined>(undefined);
   setRequestedLocale(wanted);
+  // The restored cache may be in another language than the one wanted now
+  // (the device language changed while the app was closed): once the cache
+  // is restored and the stored choice is known, reset it like a switch.
+  const restoring = useIsRestoring();
+  const store = useLocalStoreInstance();
+  const [prefsRead, setPrefsRead] = useState(false);
+  useEffect(() => {
+    let live = true;
+    store.ready
+      .catch((error: unknown) => {
+        console.error("[preferences] Failed to read the device store:", error);
+      })
+      .finally(() => {
+        if (live) {
+          setPrefsRead(true);
+        }
+      });
+    return () => {
+      live = false;
+    };
+  }, [store]);
+  const reconciled = useRef(false);
+  useEffect(() => {
+    if (restoring || !prefsRead) {
+      return;
+    }
+    const outdated = reconcileCacheLanguage(queryClient, wanted);
+    if (outdated && !reconciled.current) {
+      queryClient.resetQueries({ predicate: isLocalizedQuery }).catch(() => {
+        // A failed refetch shows its own error state.
+      });
+    }
+    reconciled.current = true;
+  }, [prefsRead, queryClient, restoring, wanted]);
   useEffect(() => {
     if (applied.current !== undefined && applied.current !== wanted) {
       queryClient.resetQueries({ predicate: isLocalizedQuery }).catch(() => {
@@ -146,7 +183,6 @@ function PreferencesRoot({ children }: { children: ReactNode }): ReactElement {
   // The bundled catalogue first (offline works from it), then the enabled
   // languages and the ui_string overlay of the last `system.i18n` answer: a
   // language change or a fresh answer hot-swaps the instance.
-  const { languages, overlay } = useRuntimeCatalogue();
   registerLanguages(languages);
   const i18n = useMemo(
     () =>

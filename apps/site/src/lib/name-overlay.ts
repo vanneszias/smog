@@ -32,6 +32,11 @@ export function useNameOverlayPreference(): NameOverlayPreference {
       })
       .catch((error: unknown) => {
         console.error("[nameOverlay] Failed to load the local store:", error);
+        // The saved choice stays unknown, which reads as the default
+        // (shown): a failed read must not hide the name for good.
+        if (active) {
+          setLoaded(true);
+        }
       });
     return () => {
       active = false;

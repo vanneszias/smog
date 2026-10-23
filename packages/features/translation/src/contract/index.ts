@@ -44,6 +44,7 @@ import {
   legalVersionInputSchema,
   legalVersionSchema,
   stringConflictDataSchema,
+  stringImportConflictDataSchema,
   stringSaveInputSchema,
   stringSaveResultSchema,
   stringsExportInputSchema,
@@ -56,6 +57,10 @@ import {
 
 const saveContract = baseContract.errors({
   CONFLICT: { data: stringConflictDataSchema, status: 409 },
+});
+
+const importContract = baseContract.errors({
+  CONFLICT: { data: stringImportConflictDataSchema, status: 409 },
 });
 
 const languageCreateContract = baseContract.errors({
@@ -150,9 +155,11 @@ export const translationSlice = {
     /**
      * Writes an import file: only the rows the preview marks as changes
      * (an invalid row is skipped, and counted). `VALIDATION` for a file
-     * that cannot be read. One audit entry with the row count.
+     * that cannot be read; `CONFLICT stale` (nothing written) when a text the
+     * file would overwrite was saved by somebody else since it was read: preview
+     * again. One audit entry with the row count.
      */
-    import: baseContract
+    import: importContract
       .input(stringsImportInputSchema)
       .output(stringsImportResultSchema),
     /** One page of the strings table with its filters. */

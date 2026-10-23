@@ -188,6 +188,26 @@ function issuesOf(source: string, value: string): StringIssue[] {
   return validateTranslation(source, value).issues;
 }
 
+/**
+ * The text whose `{{placeholders}}` a value for (`language`, `info`) must
+ * keep. A translation keeps the default language's text. The default
+ * language's own text keeps the SHIPPED text of the key (an edit that drops
+ * `{{minutes}}` would print a raw `{{x}}` or lose data for the majority
+ * language and flip every translation of the key to "placeholders"); a key
+ * with no shipped text has no base, so the value is its own (free text).
+ */
+export function placeholderBase(
+  language: ModelLanguage,
+  info: KeyInfo,
+  source: string
+): string | null {
+  if (!language.isDefault) {
+    return source;
+  }
+  const shipped = shippedFlat(language.code)[info.key];
+  return shipped && shipped.trim() !== "" ? shipped : null;
+}
+
 /** One language's cell for a key. */
 export function cellOf(
   overrides: Overrides,
@@ -227,7 +247,7 @@ export function cellOf(
     override.sourceHash !== sourceHash(source);
   return {
     applicable: true,
-    issues: language.isDefault ? [] : issuesOf(source, value),
+    issues: issuesOf(placeholderBase(language, info, source) ?? value, value),
     missing: false,
     overridden,
     stale,
