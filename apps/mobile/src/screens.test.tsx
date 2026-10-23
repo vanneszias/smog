@@ -325,7 +325,7 @@ describe("gesture", () => {
           keywords: [],
           name: "Hond",
           needsRecut: false,
-          playbackId: "pb-hond",
+          playbackId: "hond-video",
           publishedAt: 0,
           slug: "hond",
           sponsor: null,

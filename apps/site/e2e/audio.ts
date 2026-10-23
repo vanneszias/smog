@@ -10,8 +10,7 @@ import { ORIGIN } from "./helpers";
  * never registers anything with a spec.
  */
 
-export const SAMPLE_PLAYBACK_ID =
-  "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
+const SAMPLE_PLAYBACK_ID = "VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU";
 
 export function letters(length: number): string {
   return Array.from(

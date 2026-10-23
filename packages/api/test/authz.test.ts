@@ -136,6 +136,7 @@ const PROCEDURES: Record<string, Row> = {
     "gestures.delete": "audit",
     "gestures.get": "read",
     "gestures.list": "read",
+    "gestures.recutDone": "audit",
     "gestures.saveMany": "audit",
     "gestures.setPublished": "audit",
     "gestures.update": "audit",

@@ -442,7 +442,6 @@ test.describe("CSP (enforced in dev)", () => {
       if (path.startsWith("/admin/emails")) {
         // The email preview's sandboxed srcdoc frame rendered (checked on
         // its own page: it is no longer the last of ADMIN_PAGES).
-        // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
         await expect(
           page.frameLocator("iframe").getByText("482913", { exact: true })
         ).toBeVisible();
