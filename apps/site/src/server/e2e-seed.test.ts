@@ -55,6 +55,25 @@ describe("the e2e seed endpoint's operations", () => {
     ).toBe(false);
   });
 
+  test("grants a translator or teacher role with one bound statement, and never admin", () => {
+    expect(
+      e2eSeedSchema.safeParse({
+        email: "a@smog.test",
+        op: "grantRole",
+        role: "admin",
+      }).success
+    ).toBe(false);
+    const { db, seen } = recordingDb();
+    seedStatement(db, {
+      email: "a@smog.test",
+      op: "grantRole",
+      role: "translator",
+    });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.sql).toContain("INSERT OR IGNORE INTO user_role");
+    expect(seen[0]?.values).toEqual(["translator", "a@smog.test"]);
+  });
+
   test("takes exactly the audit target types the database allows", () => {
     const entry = (targetType: string) =>
       e2eSeedSchema.safeParse({

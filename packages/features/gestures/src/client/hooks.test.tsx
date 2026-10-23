@@ -36,7 +36,14 @@ import {
 
 function summary(name: string): GestureSummary {
   const slug = name.toLowerCase();
-  return { categories: [], id: `id-${slug}`, name, playbackId: "p", slug };
+  return {
+    categories: [],
+    fallbackUsed: false,
+    id: `id-${slug}`,
+    name,
+    playbackId: "p",
+    slug,
+  };
 }
 
 const CATALOGUE = ["Aap", "Beer", "Hond", "Kat", "Vogel"].map(summary);
@@ -65,16 +72,23 @@ function fakeApi(calls: Calls) {
         }
         return {
           ...found,
+          audioPath: null,
           canonicalSlug: found.slug,
           description: "",
           keywords: [],
+          needsRecut: false,
           publishedAt: 0,
           sponsor: null,
           updatedAt: 0,
         };
       }),
       categories: os.categories.handler(() => [
-        { gestureCount: 5, name: "Dieren", slug: "dieren" },
+        {
+          fallbackUsed: false,
+          gestureCount: 5,
+          name: "Dieren",
+          slug: "dieren",
+        },
       ]),
       list: os.list.handler(({ input }) => {
         calls.list.push({ category: input.category, cursor: input.cursor });
@@ -210,7 +224,7 @@ describe("useCategories", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([
-      { gestureCount: 5, name: "Dieren", slug: "dieren" },
+      { fallbackUsed: false, gestureCount: 5, name: "Dieren", slug: "dieren" },
     ]);
     expect(staleTimeOf(queryClient, "categories")).toBe(CATEGORIES_STALE_TIME);
     expect(CATEGORIES_STALE_TIME).toBe(60 * 60_000);

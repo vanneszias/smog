@@ -119,3 +119,70 @@ jest.mock("expo-video", () => {
       react.createElement(View, props),
   };
 });
+
+type AudioListener = () => void;
+
+// expo-audio is a native module. The mock player keeps what was played
+// (`mockAudioPlayers` holds every player created, newest last) and tells
+// `useAudioPlayerStatus` when it starts, pauses or ends (`finish()`).
+jest.mock("expo-audio", () => {
+  const react = jest.requireActual<typeof import("react")>("react");
+  class MockAudioPlayer {
+    listeners = new Set<AudioListener>();
+    playing = false;
+    source: unknown;
+    constructor(source: unknown) {
+      this.source = source;
+    }
+    notify(): void {
+      for (const listener of this.listeners) {
+        listener();
+      }
+    }
+    finish(): void {
+      this.playing = false;
+      this.notify();
+    }
+    pause = jest.fn((): void => {
+      this.playing = false;
+      this.notify();
+    });
+    play = jest.fn((): void => {
+      this.playing = true;
+      this.notify();
+    });
+    replace = jest.fn((source: unknown): void => {
+      this.source = source;
+    });
+    seekTo = jest.fn(() => Promise.resolve());
+  }
+  const mockAudioPlayers: MockAudioPlayer[] = [];
+  return {
+    mockAudioPlayers,
+    mockSetAudioMode: jest.fn(() => Promise.resolve()),
+    setAudioModeAsync: (mode: unknown) =>
+      (
+        jest.requireMock("expo-audio") as {
+          mockSetAudioMode: (mode: unknown) => Promise<void>;
+        }
+      ).mockSetAudioMode(mode),
+    useAudioPlayer: (source: unknown): MockAudioPlayer => {
+      const [player] = react.useState(() => {
+        const created = new MockAudioPlayer(source);
+        mockAudioPlayers.push(created);
+        return created;
+      });
+      return player;
+    },
+    useAudioPlayerStatus: (player: MockAudioPlayer): { playing: boolean } => {
+      const [, rerender] = react.useReducer((count: number) => count + 1, 0);
+      react.useEffect(() => {
+        player.listeners.add(rerender);
+        return () => {
+          player.listeners.delete(rerender);
+        };
+      }, [player]);
+      return { playing: player.playing };
+    },
+  };
+});

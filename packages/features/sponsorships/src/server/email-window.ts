@@ -3,8 +3,8 @@
  * from it (Phase 6 fix wave, jobs I-1). Mollie's `paidAt` is when the
  * money arrived at Mollie, which can be days before we learn of it (a
  * webhook outage, a key restored, a bank transfer settled by the stale
- * sweep). The windows of the `payment.settled` emails and of the
- * reconciliation therefore start at the payment's first settling
+ * sweep). The window of the `payment.settled` emails therefore starts at
+ * the payment's first settling
  * `sponsorship_event` (`payment_paid`, `revived`, `renewed`,
  * `marked_paid_manually` with `data.paymentId`), and only fall back to
  * `paid_at` for a payment without one (migrated rows, fixtures).
@@ -45,12 +45,6 @@ function firstSettledAtSql(paymentId: SQL | string): SQL<number | null> {
     number | null
   >`(SELECT min(${ref("se", sponsorshipEvent.createdAt)}) FROM ${paymentItem} AS ${sql.raw("pi")} INNER JOIN ${sponsorshipEvent} AS ${sql.raw("se")} ON ${ref("se", sponsorshipEvent.sponsorshipId)} = ${ref("pi", paymentItem.sponsorshipId)} WHERE ${ref("pi", paymentItem.paymentId)} = ${paymentId} AND ${ref("se", sponsorshipEvent.type)} IN (${SETTLING_LIST}) AND json_extract(${ref("se", sponsorshipEvent.data)}, '$.paymentId') = ${paymentId})`;
 }
-
-/**
- * When the payment's window starts (ms): its first settling event, else
- * `paid_at`, else `updated_at`, for the outer query's `payment` row.
- */
-export const SETTLED_AT_SQL = sql<number>`coalesce(${firstSettledAtSql(ref("payment", payment.id))}, ${payment.paidAt}, ${payment.updatedAt})`;
 
 /** When we first applied `paymentId` (see the module comment), or `null`. */
 export async function firstSettledAt(

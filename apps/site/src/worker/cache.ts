@@ -15,6 +15,11 @@
  *   (the legacy `/assets/logo.svg`): a day;
  * - `/robots.txt`, `/sitemap.xml`, the web manifest: an hour;
  * - documents: `private, no-cache` (each carries its CSP nonce);
+ * - a gesture's audio clip, `/api/audio/<gestureId>/<locale>/<uuid>`, when
+ *   it is served (200 or 206): a year, immutable (a new key on every
+ *   replace);
+ * - a running sponsorship's logo, `/api/sponsor-logos/<uuid>`, when it is
+ *   served (200): an hour (the route sets it itself);
  * - `/api/*`, `/_serverFn/*` (TanStack server functions, session-dependent),
  *   `/webhooks/*`, `/dev/*` and every 5xx (the maintenance page
  *   included): `no-store`.
@@ -25,6 +30,19 @@ export const ONE_DAY = "public, max-age=86400";
 export const ONE_HOUR = "public, max-age=3600";
 export const NO_STORE = "no-store";
 export const NO_CACHE = "private, no-cache";
+
+/**
+ * A gesture's spoken name, `GET /api/audio/<gestureId>/<locale>/<uuid>`
+ * (phase 10b): the key changes on every replace, so a successful answer
+ * (200, or 206 for a `Range`) is immutable. The upload route and every
+ * error answer stay `no-store`. The route sets the same value itself
+ * (`server/audio.ts`); this row keeps the table the one list.
+ */
+const AUDIO_PREFIX = "/api/audio/";
+const AUDIO_UPLOAD_PREFIX = "/api/audio/upload/";
+
+/** The logo of a running sponsorship (phase 10b): `server/logo-upload.ts` sets the same hour. */
+const SPONSOR_LOGO_PREFIX = "/api/sponsor-logos/";
 
 /** What Vite writes: `assets/<name>-<8 character hash>.<ext>`, `_`/`-` allowed in both. */
 const HASHED_ASSET = /^\/assets\/.+-[A-Za-z0-9_-]{8}\.(?:css|js|woff2)$/;
@@ -67,6 +85,16 @@ export function cacheControlFor({
   pathname,
   status,
 }: CacheContext): string | undefined {
+  if (
+    pathname.startsWith(AUDIO_PREFIX) &&
+    !pathname.startsWith(AUDIO_UPLOAD_PREFIX) &&
+    (status === 200 || status === 206)
+  ) {
+    return IMMUTABLE;
+  }
+  if (pathname.startsWith(SPONSOR_LOGO_PREFIX) && status === 200) {
+    return ONE_HOUR;
+  }
   if (
     status >= 500 ||
     UNCACHED_PREFIXES.some((prefix) => pathname.startsWith(prefix))

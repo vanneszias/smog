@@ -1,14 +1,20 @@
 import type { GestureViewSource } from "@smog/analytics/schema";
+import { useAuthState } from "@smog/auth/react";
 import { COURSE_URL } from "@smog/config/constants";
 import {
   useGestureViewed,
   useRememberGesture,
   useVideoEnd,
 } from "@smog/gestures/client";
-import type { GestureDetail, GestureSummary } from "@smog/gestures/schema";
+import {
+  type GestureDetail,
+  type GestureSummary,
+  nameOverlayApplies,
+} from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
 import { webAdapter } from "@smog/local-store/web";
 import {
+  AudioButton,
   Badge,
   Button,
   COURSE_MESSAGE_COUNT,
@@ -17,12 +23,14 @@ import {
   cn,
   ErrorState,
   Heading,
+  NameOverlayToggle,
   Text,
   VideoPlayer,
 } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useCallback } from "react";
 import { SponsorCta } from "@/components/sponsor/sponsor-cta";
+import { useNameOverlayPreference } from "@/lib/name-overlay";
 import { GestureActions } from "./gesture-actions";
 import { GestureGridSkeleton, LinkedGestureGrid } from "./gesture-cards";
 import type { Hearts } from "./use-hearts";
@@ -83,6 +91,20 @@ function Related({
 }
 
 /**
+ * The sponsor end card over the video's last seconds (phase 10b ruling 9):
+ * none without a running sponsorship, nor over a rendered video that
+ * already carries the name.
+ */
+function endCardOf(
+  gesture: GestureDetail
+): { logoSrc: string | null; name: string } | undefined {
+  const { sponsor } = gesture;
+  return sponsor?.endCard
+    ? { logoSrc: sponsor.logoPath, name: sponsor.name }
+    : undefined;
+}
+
+/**
  * A gesture: the video on top (3:4, the course banner under it when due),
  * then the name, its categories (links to the filtered browse), the
  * actions, description, related concepts, the sponsor card (L-17: the
@@ -109,6 +131,16 @@ export function GestureDetailView({
   viewSource: GestureViewSource;
 }): ReactNode {
   const { t } = useTranslation();
+  // Only translators and admins see that the text is still the default
+  // language's (a learner just reads it).
+  const roles = useAuthState().user?.roles ?? [];
+  const showTranslationStatus =
+    gesture.fallbackUsed &&
+    (roles.includes("admin") || roles.includes("translator"));
+  // The name over the video: only on a textless video (the picture of an
+  // older one already carries it) and unless this viewer hid it.
+  const nameOverlay = useNameOverlayPreference();
+  const overlayApplies = nameOverlayApplies(gesture);
   const page = layout === "page";
   // The page's name is its h1; in the browse panel the page title is.
   const titleLevel = page ? 1 : 2;
@@ -137,6 +169,12 @@ export function GestureDetailView({
           )}
         >
           <VideoPlayer
+            endCard={endCardOf(gesture)}
+            nameOverlay={
+              overlayApplies && nameOverlay.loaded && nameOverlay.shown
+                ? gesture.name
+                : undefined
+            }
             onNearEnd={onNearEnd}
             playbackId={gesture.playbackId}
             title={gesture.name}
@@ -154,6 +192,11 @@ export function GestureDetailView({
             <Heading level={titleLevel} size="title-1">
               {gesture.name}
             </Heading>
+            {showTranslationStatus ? (
+              <Badge variant="warning">
+                {t("admin.catalogTranslation.needs")}
+              </Badge>
+            ) : null}
             {gesture.categories.length > 0 ? (
               <ul
                 aria-label={t("search.categories")}
@@ -171,6 +214,20 @@ export function GestureDetailView({
               </ul>
             ) : null}
           </div>
+          {gesture.audioPath || overlayApplies ? (
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              {/* A clip of this language only; never a fallback. */}
+              {gesture.audioPath ? (
+                <AudioButton src={gesture.audioPath} />
+              ) : null}
+              {overlayApplies ? (
+                <NameOverlayToggle
+                  checked={nameOverlay.shown}
+                  onCheckedChange={nameOverlay.setShown}
+                />
+              ) : null}
+            </div>
+          ) : null}
           <GestureActions gesture={gesture} hearts={hearts} />
           {appLink}
           {gesture.description ? (

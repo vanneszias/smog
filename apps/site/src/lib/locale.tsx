@@ -1,7 +1,9 @@
-import type { Locale } from "@smog/i18n";
+import type { LanguageInfo, Locale } from "@smog/i18n";
 import { createContext, type ReactNode, useContext } from "react";
 
 interface LocaleValue {
+  /** The enabled languages in menu order, each with its own name. */
+  languages: readonly LanguageInfo[];
   locale: Locale;
   setLocale: (locale: Locale) => void;
 }

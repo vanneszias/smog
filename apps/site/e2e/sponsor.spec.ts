@@ -21,7 +21,6 @@ import {
   ORIGIN,
   settleForShot,
   stubMux,
-  stubMuxRenditions,
   stubMuxStream,
   tabTo,
   waitForApp,
@@ -43,8 +42,9 @@ const P_120_00 = /120,00/;
  * (`@smog/payments/testing/server`, playwright.config.ts).
  *
  * The paid test checks the admin review queue (`admin.sponsorships.list`)
- * until both sponsorships are `in_review`, which proves the webhook, the
- * `payment.settled` fan-out and the fake render.
+ * until both sponsorships are `in_review`, which proves the webhook and the
+ * `payment.settled` fan-out: no render states (phase 10b ruling 9, the end
+ * card replaces the render).
  *
  * Run alone with a dev server you started yourself (`reuseExistingServer`),
  * that server needs the Mollie fake's `SMOG_DEV_MOLLIE_*` env (see
@@ -82,8 +82,8 @@ const REEDIT_TOKEN = "e2eReeditTokenForTheSponsorSpec_0123456789a";
 const DAY = 86_400_000;
 const MOLLIE_FAKE = `http://localhost:${process.env.E2E_MOLLIE_PORT ?? 4020}`;
 /**
- * An opaque 160 × 160 PNG logo (a green ring on white), so the preview's
- * logo box shows what the render would draw.
+ * An opaque 160 × 160 PNG logo (a green ring on white), so the end card's
+ * logo box shows what the player will draw.
  */
 const PNG = readFileSync(join(import.meta.dirname, "fixtures", "logo.png"));
 const SUCCESS_URL = /\/sponsor\/success\?payment=/;
@@ -146,7 +146,6 @@ async function declineConsent(page: Page): Promise<void> {
 
 async function openWizard(page: Page, path = "/sponsor"): Promise<void> {
   await stubMux(page);
-  await stubMuxRenditions(page);
   await page.goto(path);
   await waitForApp(page);
   await declineConsent(page);
@@ -208,25 +207,18 @@ async function fillDetails(
   ).toBeVisible();
 }
 
-/** The overlay's fixed first line (content, Dutch in every language). */
-const INTRO = "Met de warme steun van:";
+/** The end card's message (the catalogue, Dutch here). */
+const INTRO = "Mogelijk gemaakt door";
 const PICKER = "Kies het gebaar voor het voorbeeld";
-const HIGHEST_MP4 = /^https:\/\/stream\.mux\.com\/[^/]+\/highest\.mp4(?:#.*)?$/;
-/** The Player's lazy module: Vite's dev source, or the built chunk. */
-const PREVIEW_MODULE =
-  /\/(?:src\/components\/sponsor\/sponsor-preview\.tsx|assets\/sponsor-preview-[^/]+\.js)(?:\?.*)?$/;
-const UNAVAILABLE = "Het voorbeeld kan nu niet getoond worden.";
 
 /** The sponsor preview's frame, named by its gesture. */
 function preview(page: Page, gesture: string) {
   return page.getByRole("img", { name: `Voorbeeld voor ${gesture}` });
 }
 
-/** The Player has mounted: its kit controls are enabled. */
+/** The preview shows the end card over the poster. */
 async function previewReady(page: Page): Promise<void> {
-  await expect(
-    page.getByRole("button", { name: "Toon het einde" })
-  ).toBeEnabled({ timeout: 30_000 });
+  await expect(page.locator('[data-slot="sponsor-end-card"]')).toBeVisible();
 }
 
 /** Pays (or fails) on the fake's hosted checkout page. */
@@ -377,15 +369,9 @@ test("keyboard only: the cards, the selection bar, the dropzone's button and the
     page.getByRole("heading", { level: 1, name: "Bekijk je sponsoring" })
   ).toBeFocused();
   await expect(current).toContainText("Voorbeeld en betalen");
-  // The preview (phase 7 ruling 8): the kit controls, then the picker.
+  // The preview is the end card over the poster (phase 10b ruling 9): no
+  // controls, only the picker.
   await previewReady(page);
-  const play = page.getByRole("button", { name: "Afspelen" });
-  await tabTo(page, play);
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("button", { name: "Pauzeren" })).toBeFocused();
-  await expect(play).toBeFocused({ timeout: 10_000 });
-  await tabTo(page, page.getByRole("button", { name: "Toon het einde" }));
-  await page.keyboard.press("Enter");
   await expect(preview(page, "Blij").getByText(INTRO)).toBeVisible();
   const picker = page.getByRole("toolbar", { name: PICKER });
   await tabTo(page, picker.getByRole("button", { name: "Blij" }));
@@ -405,7 +391,7 @@ test("keyboard only: the cards, the selection bar, the dropzone's button and the
   await expect(page.getByLabel(NAAM_IN_DE_VIDEO)).toHaveValue("Bakkerij Toets");
 });
 
-test("the review step plays the gesture's MP4 in the Player, with the overlay (S-10)", async ({
+test("the review step shows the end card over the gesture's poster: the message, the name as typed, the logo (S-10)", async ({
   page,
 }) => {
   await openWizard(page);
@@ -413,98 +399,29 @@ test("the review step plays the gesture's MP4 in the Player, with the overlay (S
   await fillDetails(page, { logo: true });
   const frame = preview(page, "Broer");
   await previewReady(page);
-  const video = frame.locator("video");
-  await expect(video).toHaveAttribute("src", HIGHEST_MP4);
-  await expect
-    .poll(() =>
-      video.evaluate((element: HTMLVideoElement) => element.readyState)
-    )
-    .toBeGreaterThanOrEqual(2);
-  // Paused on the last frame: the result shows at once, the logo too.
+  // The poster, no player and no media (the end card replaces the render).
+  await expect(
+    frame.locator('img[src^="https://image.mux.com/"]').first()
+  ).toBeVisible();
+  await expect(page.locator("video")).toHaveCount(0);
   await expect(frame.getByText(INTRO)).toBeVisible();
   await expect(frame.getByText("Bakkerij Jansen")).toBeVisible();
   await expect(frame.locator('img[src^="blob:"]')).toBeVisible();
-  await expect(
-    page.getByText("De video kan hier niet worden afgespeeld", { exact: false })
-  ).toHaveCount(0);
-  // Play replays the 2 s clip from the start, then it is paused again.
-  await page.getByRole("button", { name: "Afspelen" }).click();
-  await expect(page.getByRole("button", { name: "Pauzeren" })).toBeVisible();
-  await expect
-    .poll(() =>
-      video.evaluate((element: HTMLVideoElement) => element.currentTime)
-    )
-    .toBeGreaterThan(0.5);
-  await expect(page.getByRole("button", { name: "Afspelen" })).toBeVisible({
-    timeout: 10_000,
-  });
-  await page.getByRole("button", { name: "Toon het einde" }).click();
-  await expect(frame.getByText(INTRO)).toBeVisible();
-  await expect(frame.getByText("Bakkerij Jansen")).toBeVisible();
-  // One Player at a time: the picker switches it, the focus stays.
+  // One preview at a time: the picker switches it, the focus stays.
   const picker = page.getByRole("toolbar", { name: PICKER });
   const zus = picker.getByRole("button", { name: "Zus" });
   await zus.click();
   await expect(zus).toHaveAttribute("aria-pressed", "true");
   await expect(zus).toBeFocused();
   await expect(preview(page, "Zus")).toBeVisible();
-  await previewReady(page);
-  await expect(page.locator("video")).toHaveCount(1);
-});
-
-test("an MP4 that does not load: the image fallback, the overlay and the note", async ({
-  page,
-}) => {
-  await openWizard(page);
-  await stubMuxRenditions(page, { abort: true });
-  await choose(page, ["Blij"]);
-  await fillDetails(page);
-  const frame = preview(page, "Blij");
-  await previewReady(page);
+  await expect(preview(page, "Zus").getByText("Bakkerij Jansen")).toBeVisible();
+  // The name updates the card as it is typed.
+  await page.getByRole("button", { name: "Terug naar details" }).click();
+  await page.getByLabel(NAAM_IN_DE_VIDEO).fill("Nieuwe Naam BV");
+  await page.getByRole("button", { name: "Doorgaan naar voorbeeld" }).click();
   await expect(
-    page.getByText(
-      "De video kan hier niet worden afgespeeld, dus het voorbeeld toont een stilstaand beeld van het gebaar.",
-      { exact: false }
-    )
+    preview(page, "Broer").getByText("Nieuwe Naam BV")
   ).toBeVisible();
-  await expect(frame.locator("video")).toHaveCount(0);
-  await expect(
-    frame.locator('img[src^="https://image.mux.com/"][src*="width=720"]')
-  ).toBeVisible();
-  await expect(frame.getByText(INTRO)).toBeVisible();
-  await expect(frame.getByText("Bakkerij Jansen")).toBeVisible();
-  expect(await blockingViolations(page)).toEqual([]);
-});
-
-test("the Player's module does not load: the poster and a note, and the payment still goes (fix wave I-1)", async ({
-  page,
-}) => {
-  await openWizard(page);
-  // A deploy replaced the hashed chunk, or the connection dropped it.
-  let refused = 0;
-  await page.route(PREVIEW_MODULE, async (route) => {
-    refused += 1;
-    await route.abort();
-  });
-  await choose(page, ["Mama"]);
-  await fillDetails(page);
-  await expect(page.getByText(UNAVAILABLE, { exact: false })).toBeVisible();
-  expect(refused).toBeGreaterThan(0);
-  const frame = preview(page, "Mama");
-  await expect(
-    frame.locator('img[src^="https://image.mux.com/"]')
-  ).toBeVisible();
-  await expect(frame.locator("video")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Afspelen" })).toHaveCount(0);
-  expect(await blockingViolations(page)).toEqual([]);
-  // The review step is whole: the payment goes to the checkout.
-  await payAtMollie(page, "Fail");
-  await expect(
-    page.getByRole("heading", {
-      level: 1,
-      name: "De betaling is niet gelukt",
-    })
-  ).toBeVisible({ timeout: 30_000 });
 });
 
 test("the review step's preview is accessible at 390 and 1280, light and dark", async ({
@@ -585,7 +502,7 @@ test("pays for 2 gestures with a logo and an invoice; the success page shows pai
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Broer, Zus")).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
-  // The webhook, `payment.settled`, the consumer and the fake render ran:
+  // The webhook, `payment.settled`, and the consumer ran:
   // both wait in the admin review queue (task 6's API, its own session).
   await signInAsAdmin(request);
   await expect
@@ -616,7 +533,6 @@ test("a failed payment frees the gestures, and Try again keeps the selection", a
 
 test("the re-edit link: a new name, sent for review", async ({ page }) => {
   await stubMux(page);
-  await stubMuxRenditions(page);
   await page.goto(`/sponsor/edit#token=${REEDIT_TOKEN}`);
   await waitForApp(page);
   await expect(
@@ -624,10 +540,12 @@ test("the re-edit link: a new name, sent for review", async ({ page }) => {
   ).toBeVisible();
   const name = page.getByLabel(NAAM_IN_DE_VIDEO);
   await expect(name).toHaveValue("Oude Naam");
-  // One gesture, one Player, the name updating it as it is typed.
+  // One gesture, one end card, the name updating it as it is typed.
   const frame = preview(page, "Dankjewel");
   await previewReady(page);
-  await expect(frame.locator("video")).toHaveAttribute("src", HIGHEST_MP4);
+  await expect(
+    frame.locator('img[src^="https://image.mux.com/"]').first()
+  ).toBeVisible();
   await expect(frame.getByText("Oude Naam")).toBeVisible();
   await expect(page.getByRole("toolbar", { name: PICKER })).toHaveCount(0);
   await name.fill("Nieuwe Naam");
@@ -707,7 +625,6 @@ async function eachThemeAndWidth(
         const page = await context.newPage();
         await stubMux(page);
         await stubMuxStream(page);
-        await stubMuxRenditions(page);
         await run(page, (shot) => join(dir, `${shot}-${theme}-${width}.png`));
       } finally {
         await context.close();
@@ -730,7 +647,6 @@ async function stubbedStates(
   await page.unrouteAll({ behavior: "ignoreErrors" });
   await stubMux(page);
   await stubMuxStream(page);
-  await stubMuxRenditions(page);
   await answer(page, "availability", {
     checkoutEnabled: false,
     items: [],
@@ -743,7 +659,6 @@ async function stubbedStates(
   await page.unrouteAll({ behavior: "ignoreErrors" });
   await stubMux(page);
   await stubMuxStream(page);
-  await stubMuxRenditions(page);
 
   for (const [status, kind, title] of [
     ["paid", "initial", "Betaling geslaagd!"],
@@ -773,7 +688,7 @@ async function stubbedStates(
     hasLogo: true,
   });
   // The kept logo, as the route answers it (fix wave I-2): the re-edit
-  // preview shows the logo the render keeps.
+  // preview shows the logo the end card keeps.
   await page.route("**/api/sponsor/reedit-logo", (route) =>
     route.fulfill({
       body: PNG,
@@ -909,7 +824,6 @@ test("axe on the paused, success, link and CTA states in light and dark (review 
       const page = await context.newPage();
       await stubMux(page);
       await stubMuxStream(page);
-      await stubMuxRenditions(page);
       await page.goto("/");
       await waitForApp(page);
       await declineConsent(page);

@@ -2,18 +2,19 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { legalHead, validateLegalSearch } from "@/components/legal-head";
 import { LegalPage } from "@/components/legal-page";
+import { legalDeps, legalLoader } from "@/lib/legal-loader";
 
 export const Route = createFileRoute("/privacy")({
   component: Privacy,
-  head: ({ loaderData, matches }) => legalHead(matches, "privacy", loaderData),
-  // The texts load on demand: a lazy import keeps them out of every other page.
-  loader: async () => {
-    const { legalMeta } = await import("@/components/legal-page");
-    return legalMeta("privacy");
-  },
+  head: ({ loaderData, matches }) =>
+    legalHead(matches, "privacy", loaderData?.meta),
+  // The published text comes from D1: an edit shows without a deploy.
+  loader: legalLoader("privacy"),
+  loaderDeps: legalDeps,
   validateSearch: validateLegalSearch,
 });
 
 function Privacy(): ReactNode {
-  return <LegalPage kind="privacy" search={Route.useSearch()} />;
+  const { texts } = Route.useLoaderData();
+  return <LegalPage kind="privacy" search={Route.useSearch()} texts={texts} />;
 }

@@ -53,9 +53,10 @@ async function mapped<T>(
  */
 export function createListsRouter(deps: ListsRouterDeps) {
   const os = implementRpc(listsContract);
-  const withDb = (db: Parameters<FindGestureSummaries>[0]) => ({
+  const withDb = (db: Parameters<FindGestureSummaries>[0], locale: string) => ({
     db,
     findSummaries: deps.findSummaries,
+    locale,
   });
 
   return os.router({
@@ -88,7 +89,7 @@ export function createListsRouter(deps: ListsRouterDeps) {
       .use(requireUser)
       .handler(({ context, errors, input }) =>
         mapped(errors, () =>
-          getList(withDb(context.db), context.user.id, input.id)
+          getList(withDb(context.db, context.locale), context.user.id, input.id)
         )
       ),
 
@@ -146,7 +147,7 @@ export function createListsRouter(deps: ListsRouterDeps) {
         ),
       get: os.shared.get.handler(({ context, errors, input }) =>
         mapped(errors, () =>
-          getSharedList(withDb(context.db), {
+          getSharedList(withDb(context.db, context.locale), {
             locale: context.locale,
             token: input.token,
           })

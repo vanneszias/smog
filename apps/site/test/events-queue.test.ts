@@ -4,7 +4,6 @@ import {
   FAKE_MOLLIE_API_KEY,
   type FakeMollie,
 } from "@smog/payments/testing";
-import { fakeRenderStarter } from "@smog/sponsorships/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { siteEnv } from "../src/server/auth";
 import { handleMollieWebhook } from "../src/server/mollie-webhook";
@@ -18,7 +17,6 @@ import {
   checkoutVia,
   jobsOf,
   kv,
-  leaveQueued,
   makeAdmin,
   recordingQueue,
   statusesOf,
@@ -84,22 +82,22 @@ function deps(overrides: Partial<EventsDeps> = {}): EventsDeps {
   return {
     db,
     queues: { email: recordingQueue(), events: recordingQueue() },
-    renderStarter: fakeRenderStarter(db),
     siteUrl: ORIGIN,
     ...overrides,
   };
 }
 
 describe("the events consumer, end to end on the real queues", () => {
-  it("payment.settled → render jobs, fake render → in_review, and one set of emails even when it runs twice", async () => {
+  it("payment.settled → in_review with no render job (the end card), and one set of emails even when it runs twice", async () => {
     const admin = await makeAdmin();
     const sponsor = `${crypto.randomUUID()}@smog.test`;
     const checkout = await checkoutVia(fake, { email: sponsor });
     fake.setStatus(checkout.mollieId, "paid");
     expect(await webhook(checkout.mollieId)).toBe(200);
 
-    // The Worker's own consumers: the events queue renders (RENDER_MODE
-    // is `fake` in dev) and the email queue sends to the dev mailbox.
+    // The Worker's own consumers: the events queue renders nothing (the
+    // sponsor message is an overlay, phase 10b ruling 9) and the email
+    // queue sends to the dev mailbox.
     await eventually(async () => {
       expect(await statusesOf(checkout.sponsorshipIds)).toEqual([
         "in_review",
@@ -110,9 +108,7 @@ describe("the events consumer, end to end on the real queues", () => {
       expect(await mailTo(sponsor)).toHaveLength(4);
     });
     await waitForMail(admin.email);
-    expect(
-      (await jobsOf(checkout.sponsorshipIds)).map((j) => j.status)
-    ).toEqual(["succeeded", "succeeded"]);
+    expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
 
     // A duplicate payment.settled (a replayed webhook, a redelivery).
     const again = { email: recordingQueue(), events: recordingQueue() };
@@ -126,8 +122,8 @@ describe("the events consumer, end to end on the real queues", () => {
         deps({ queues: again })
       )
     ).toEqual({ action: "ack" });
-    expect(await jobsOf(checkout.sponsorshipIds)).toHaveLength(2);
-    // Nothing is rendering any more, so no render is requested again; the
+    expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
+    // Nothing is rendering, so no render is requested; the
     // emails carry the same keys, which the email consumer skips.
     expect(again.events.messages).toEqual([]);
     const { email } = realQueues();
@@ -153,60 +149,28 @@ describe("the events consumer, end to end on the real queues", () => {
 });
 
 describe("processEventMessage", () => {
-  it("render.requested hands a queued job to the starter; once completed, a second request is a no-op", async () => {
+  it("acks a legacy render.requested without acting (the render pipeline is retired)", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const checkout = await checkoutVia(fake, { count: 1 });
-    fake.setStatus(checkout.mollieId, "paid");
     const requested = recordingQueue();
-    const consumer = deps({
-      queues: { email: recordingQueue(), events: requested },
-      renderStarter: leaveQueued(),
-    });
-    const settledQueues = { email: recordingQueue(), events: recordingQueue() };
-    await handleMollieWebhook(
-      new Request(`${ORIGIN}/api/webhooks/mollie`, {
-        body: `id=${checkout.mollieId}`,
-        method: "POST",
-      }),
-      {
-        db,
-        kv: kv(),
-        limit: () => Promise.resolve(true),
-        mollie: fake.mollie,
-        queues: settledQueues,
-      }
-    );
-    const [settled] = settledQueues.events.messages;
-    await processEventMessage(
-      { attempts: 1, body: settled, id: "s" },
-      consumer
-    );
-    const [request] = requested.messages;
-    expect(request).toMatchObject({ type: "render.requested" });
     expect(
       await processEventMessage(
-        { attempts: 1, body: request, id: "r" },
-        consumer
+        {
+          attempts: 1,
+          body: {
+            renderJobId: "queued-before-retirement",
+            type: "render.requested",
+          },
+          id: "r",
+        },
+        deps({ queues: { email: recordingQueue(), events: requested } })
       )
     ).toEqual({ action: "ack" });
-    expect(
-      (await jobsOf(checkout.sponsorshipIds)).map((j) => j.status)
-    ).toEqual(["queued"]);
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["rendering"]);
-
-    // The fake starter completes it; a second request is a no-op.
-    const fakeRender = deps();
-    await processEventMessage(
-      { attempts: 1, body: request, id: "r2" },
-      fakeRender
+    expect(requested.messages).toEqual([]);
+    expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining("queued before the render pipeline was retired")
     );
-    await processEventMessage(
-      { attempts: 1, body: request, id: "r3" },
-      fakeRender
-    );
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["in_review"]);
-    expect(
-      (await jobsOf(checkout.sponsorshipIds)).map((j) => j.status)
-    ).toEqual(["succeeded"]);
   });
 
   it("retries a failing message with backoff (the DLQ follows max_retries)", async () => {
@@ -235,25 +199,13 @@ describe("processEventMessage", () => {
       await processEventMessage({ attempts: 3, body, id: "b" }, noQueues)
     ).toEqual({ action: "retry", delaySeconds: 120 });
     expect(eventRetryDelaySeconds(10)).toBe(3600);
-    // The retries created the job once.
-    expect(await jobsOf(checkout.sponsorshipIds)).toHaveLength(1);
   });
 
-  it("acks an invalid message and a render.requested for an unknown job", async () => {
+  it("acks an invalid message", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     expect(
       await processEventMessage(
         { attempts: 1, body: { x: 1 }, id: "x" },
-        deps()
-      )
-    ).toEqual({ action: "ack" });
-    expect(
-      await processEventMessage(
-        {
-          attempts: 1,
-          body: { renderJobId: "missing", type: "render.requested" },
-          id: "y",
-        },
         deps()
       )
     ).toEqual({ action: "ack" });
@@ -316,7 +268,6 @@ describe("enqueue fails → 503 → Mollie retries → exactly one effect (I-3)"
   async function consume(messages: readonly unknown[]) {
     const consumer = deps({
       queues: { email: realQueues().email, events: recordingQueue() },
-      renderStarter: leaveQueued(),
     });
     for (const [index, body] of messages.entries()) {
       // biome-ignore lint/performance/noAwaitInLoops: one message at a time.
@@ -328,7 +279,7 @@ describe("enqueue fails → 503 → Mollie retries → exactly one effect (I-3)"
     }
   }
 
-  it("a paid payment whose first events enqueue fails: one job per item, 2n sponsor emails, one per admin", async () => {
+  it("a paid payment whose first events enqueue fails: no render job, 2n sponsor emails, one per admin", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const admin = await makeAdmin();
     const sponsor = `${crypto.randomUUID()}@smog.test`;
@@ -348,7 +299,7 @@ describe("enqueue fails → 503 → Mollie retries → exactly one effect (I-3)"
     await consume(events.messages);
     // The message delivered twice (a redelivery): no second effect.
     await consume(events.messages);
-    expect(await jobsOf(checkout.sponsorshipIds)).toHaveLength(2);
+    expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
     await settleMailbox([sponsor, admin.email]);
     expect(await realMail(sponsor)).toHaveLength(4);
     expect(await realMail(admin.email)).toHaveLength(1);
@@ -386,7 +337,7 @@ describe("enqueue fails → 503 → Mollie retries → exactly one effect (I-3)"
     expect(retry.status).toBe(200);
     expect(events.messages).toHaveLength(2);
     await consume(events.messages);
-    expect(await jobsOf(late.sponsorshipIds)).toHaveLength(1);
+    expect(await jobsOf(late.sponsorshipIds)).toEqual([]);
     expect(await statusesOf(late.sponsorshipIds)).toContain("cancelled");
     await settleMailbox([sponsor, admin.email]);
     // The revived item's two emails; the admin: the new sponsorship (the

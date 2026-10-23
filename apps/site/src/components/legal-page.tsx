@@ -1,12 +1,11 @@
-import { formatDate, type Locale } from "@smog/i18n";
+import { formatDate, type Locale, shippedMessages } from "@smog/i18n";
 import {
   LEGAL_CANONICAL_LOCALE,
-  LEGAL_EFFECTIVE_DATE,
   type LegalBlock,
+  type LegalDocument,
   type LegalKind,
-  legalDocument,
   parseLegalInline,
-} from "@smog/i18n/legal";
+} from "@smog/i18n/legal/markup";
 import { useTranslation } from "@smog/i18n/react";
 import { Button, Card, Heading, Text, TextLink } from "@smog/ui-web";
 import { Link, type LinkProps } from "@tanstack/react-router";
@@ -14,14 +13,35 @@ import { Languages } from "lucide-react";
 import type { ReactNode } from "react";
 import { AnalyticsSwitch } from "@/components/consent-banner";
 import { Page } from "@/components/learning/page";
-import type {
-  LegalMeta,
-  LegalMetaByLocale,
-  LegalSearch,
-} from "@/components/legal-head";
+import type { LegalMetaByLocale, LegalSearch } from "@/components/legal-head";
 import { useLocale } from "@/lib/locale";
+import type { LegalText, LegalTexts } from "@/server/legal.functions";
 
 const EXTERNAL = /^https:\/\//;
+
+const ATTACHED = new WeakMap<object, Set<string>>();
+
+/**
+ * Makes `locale`'s shipped messages available to `t(key, { lng: locale })`.
+ * The browser holds only the active language's catalogue (phase 10b task
+ * 7b), so the instance has no bundle for the Dutch label of the notice or
+ * for the language an admin previews. The caller loads the catalogue first
+ * (`legalLoader`, `LegalWorkspace`); values already in the instance (the
+ * overlay) win.
+ */
+function useShippedBundle(locale: Locale): void {
+  const { i18n } = useTranslation();
+  const attached = ATTACHED.get(i18n) ?? new Set<string>();
+  ATTACHED.set(i18n, attached);
+  if (attached.has(locale)) {
+    return;
+  }
+  const shipped = shippedMessages(locale);
+  if (Object.keys(shipped).length > 0) {
+    i18n.addResourceBundle(locale, "translation", shipped, true, false);
+    attached.add(locale);
+  }
+}
 
 function legalPath(kind: LegalKind): "/privacy" | "/terms" {
   return kind === "privacy" ? "/privacy" : "/terms";
@@ -65,7 +85,13 @@ function Inline({ text }: { text: string }): ReactNode {
   });
 }
 
-function Block({ block }: { block: LegalBlock }): ReactNode {
+function Block({
+  block,
+  preview,
+}: {
+  block: LegalBlock;
+  preview: boolean;
+}): ReactNode {
   const { t } = useTranslation();
   if (typeof block === "string") {
     return (
@@ -98,7 +124,14 @@ function Block({ block }: { block: LegalBlock }): ReactNode {
   }
   return (
     <Card aria-label={t("legal.consentControl")} className="p-4" role="group">
-      <AnalyticsSwitch />
+      {preview ? (
+        // The editor's preview never changes the editor's own consent.
+        <Text size="body-sm" tone="muted">
+          {t("admin.translation.legal.consentPlaceholder")}
+        </Text>
+      ) : (
+        <AnalyticsSwitch />
+      )}
     </Card>
   );
 }
@@ -113,11 +146,15 @@ function Block({ block }: { block: LegalBlock }): ReactNode {
 function TranslationNotice({
   dutch,
   kind,
+  toggle,
 }: {
   dutch: boolean;
   kind: LegalKind;
+  /** Whether the visitor chose the Dutch text and can go back (not the case when the language has no text of its own). */
+  toggle: boolean;
 }): ReactNode {
   const { t } = useTranslation();
+  useShippedBundle(LEGAL_CANONICAL_LOCALE);
   const to = legalPath(kind);
   return (
     <div
@@ -131,13 +168,14 @@ function TranslationNotice({
       <Text className="flex-1" size="body-sm">
         {t(dutch ? "legal.readingDutch" : "legal.translationNotice")}
       </Text>
-      {dutch ? (
+      {dutch && toggle ? (
         <Button asChild size="md" variant="secondary">
           <Link search={{}} to={to}>
             {t("legal.showTranslation")}
           </Link>
         </Button>
-      ) : (
+      ) : null}
+      {dutch ? null : (
         <Button asChild size="md" variant="secondary">
           {/* The label is Dutch, like the text it opens (review M1). */}
           <Link lang="nl" search={{ lang: "nl" }} to={to}>
@@ -150,93 +188,136 @@ function TranslationNotice({
 }
 
 /**
- * `/privacy` and `/terms` (spec §9, inventory P-07, P-08): one source per
- * language (`@smog/i18n/legal`), kit typography, numbered sections with
- * anchors and a contents list. Dutch prevails, so en and fr carry a
- * translation notice, and `?lang=nl` shows the Dutch text in place (the
- * article gets `lang="nl"`; the site language stays).
+ * The text itself: numbered sections with anchors and a contents list, in
+ * kit typography. Shared by the public pages and the translation editor's
+ * preview (`preview` swaps the live analytics switch for a placeholder).
+ */
+export function LegalDocumentView({
+  contentsId,
+  doc,
+  effectiveDate,
+  locale,
+  preview = false,
+}: {
+  contentsId: string;
+  doc: LegalDocument;
+  /** ISO date shown as "last updated". */
+  effectiveDate: string;
+  /** The language the text is written in. */
+  locale: Locale;
+  preview?: boolean;
+}): ReactNode {
+  const { t } = useTranslation();
+  useShippedBundle(locale);
+  const updated = formatDate(Date.parse(effectiveDate), locale);
+  return (
+    <article
+      className="grid gap-8 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-x-12"
+      lang={locale}
+    >
+      <header className="flex max-w-reading flex-col gap-2 lg:col-start-2">
+        <Heading level={preview ? 2 : 1}>{doc.title}</Heading>
+        <Text size="body-sm" tone="muted">
+          {t("legal.lastUpdated", { date: updated, lng: locale })}
+        </Text>
+      </header>
+      <nav
+        aria-labelledby={contentsId}
+        className="flex flex-col gap-2 lg:sticky lg:top-24 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start"
+      >
+        <Heading id={contentsId} level={preview ? 3 : 2} size="title-3">
+          {t("legal.contents", { lng: locale })}
+        </Heading>
+        <ol className="flex list-decimal flex-col gap-1 pl-6 text-body-sm">
+          {doc.sections.map((section) => (
+            <li key={section.id}>
+              <TextLink href={`#${section.id}`}>{section.title}</TextLink>
+            </li>
+          ))}
+        </ol>
+      </nav>
+      <div className="flex max-w-reading flex-col gap-8 lg:col-start-2">
+        {doc.sections.map((section, index) => (
+          <section
+            aria-labelledby={`${section.id}-title`}
+            className="flex scroll-mt-20 flex-col gap-3"
+            id={section.id}
+            key={section.id}
+          >
+            <Heading
+              id={`${section.id}-title`}
+              level={preview ? 3 : 2}
+              size="title-3"
+            >
+              {index + 1}. {section.title}
+            </Heading>
+            {section.blocks.map((block, blockIndex) => (
+              // The blocks are static text: their order is their identity.
+              // biome-ignore lint/suspicious/noArrayIndexKey: see above
+              <Block block={block} key={blockIndex} preview={preview} />
+            ))}
+          </section>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+/**
+ * `/privacy` and `/terms` (spec §9, inventory P-07, P-08): the published
+ * text of the visitor's language (`texts`, from D1 through
+ * `getLegalTexts`, the shipped text when D1 has no usable row). Dutch
+ * prevails, so every other language carries a translation notice, and
+ * `?lang=nl` shows the Dutch text in place (the article gets `lang="nl"`;
+ * the site language stays).
  */
 export function LegalPage({
   kind,
   search,
+  texts,
 }: {
   kind: LegalKind;
   search: LegalSearch;
+  texts: LegalTexts;
 }): ReactNode {
-  const { t } = useTranslation();
   const { locale } = useLocale();
   const dutch = search.lang === LEGAL_CANONICAL_LOCALE;
-  const textLocale: Locale = dutch ? LEGAL_CANONICAL_LOCALE : locale;
-  const doc = legalDocument(textLocale, kind);
-  const updated = formatDate(Date.parse(LEGAL_EFFECTIVE_DATE), textLocale);
-  const contentsId = `${kind}-contents`;
+  const asked = dutch ? LEGAL_CANONICAL_LOCALE : locale;
+  const text: LegalText | undefined =
+    texts[asked] ?? texts[LEGAL_CANONICAL_LOCALE];
+  if (!text) {
+    throw new Error(`[legal] No ${kind} text loaded for ${asked}`);
+  }
+  // A language without a text of its own reads the Dutch one.
+  const showsDutch = text.locale === LEGAL_CANONICAL_LOCALE;
   return (
     <Page className="gap-8">
       {locale === LEGAL_CANONICAL_LOCALE ? null : (
-        <TranslationNotice dutch={dutch} kind={kind} />
+        <TranslationNotice dutch={showsDutch} kind={kind} toggle={dutch} />
       )}
-      <article
-        className="grid gap-8 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-x-12"
-        lang={textLocale}
-      >
-        <header className="flex max-w-reading flex-col gap-2 lg:col-start-2">
-          <Heading level={1}>{doc.title}</Heading>
-          <Text size="body-sm" tone="muted">
-            {t("legal.lastUpdated", { date: updated, lng: textLocale })}
-          </Text>
-        </header>
-        <nav
-          aria-labelledby={contentsId}
-          className="flex flex-col gap-2 lg:sticky lg:top-24 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start"
-        >
-          <Heading id={contentsId} level={2} size="title-3">
-            {t("legal.contents", { lng: textLocale })}
-          </Heading>
-          <ol className="flex list-decimal flex-col gap-1 pl-6 text-body-sm">
-            {doc.sections.map((section) => (
-              <li key={section.id}>
-                <TextLink href={`#${section.id}`}>{section.title}</TextLink>
-              </li>
-            ))}
-          </ol>
-        </nav>
-        <div className="flex max-w-reading flex-col gap-8 lg:col-start-2">
-          {doc.sections.map((section, index) => (
-            <section
-              aria-labelledby={`${section.id}-title`}
-              className="flex scroll-mt-20 flex-col gap-3"
-              id={section.id}
-              key={section.id}
-            >
-              <Heading id={`${section.id}-title`} level={2} size="title-3">
-                {index + 1}. {section.title}
-              </Heading>
-              {section.blocks.map((block, blockIndex) => (
-                // The blocks are static text: their order is their identity.
-                // biome-ignore lint/suspicious/noArrayIndexKey: see above
-                <Block block={block} key={blockIndex} />
-              ))}
-            </section>
-          ))}
-        </div>
-      </article>
+      <LegalDocumentView
+        contentsId={`${kind}-contents`}
+        doc={text.document}
+        effectiveDate={text.effectiveDate}
+        locale={text.locale}
+      />
     </Page>
   );
 }
 
-/** Title and first paragraph of the text in every language (the route loader). */
-export function legalMeta(kind: LegalKind): LegalMetaByLocale {
-  const meta = (locale: Locale): LegalMeta => {
-    const doc = legalDocument(locale, kind);
-    const first = doc.sections[0]?.blocks.find(
-      (block): block is string => typeof block === "string"
-    );
-    const description = first
-      ? parseLegalInline(first)
-          .map((part) => part.text)
-          .join("")
-      : doc.title;
-    return { description, title: doc.title };
-  };
-  return { en: meta("en"), fr: meta("fr"), nl: meta("nl") };
+/** Title and first paragraph of each loaded text (the route loader). */
+export function legalMeta(texts: LegalTexts): LegalMetaByLocale {
+  return Object.fromEntries(
+    Object.entries(texts).map(([locale, { document: doc }]) => {
+      const first = doc.sections[0]?.blocks.find(
+        (block): block is string => typeof block === "string"
+      );
+      const description = first
+        ? parseLegalInline(first)
+            .map((part) => part.text)
+            .join("")
+        : doc.title;
+      return [locale, { description, title: doc.title }];
+    })
+  );
 }

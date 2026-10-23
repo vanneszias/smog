@@ -104,6 +104,26 @@ function routeKey(
   return chunks.has(key) ? key : undefined;
 }
 
+/** A shipped language's catalogue chunk (`@smog/i18n`, phase 10b task 7b), one per language. */
+const CATALOGUE_CHUNK = /\/i18n\/src\/locales\/[^/]+\.json$/;
+
+/** The key of the largest catalogue chunk, `undefined` for a build that has none (the catalogues are in the entry). */
+function largestCatalogue(
+  chunks: Map<string, ManifestFile>,
+  sizeOf: (key: string) => { gzip: number }
+): string | undefined {
+  let largest: string | undefined;
+  for (const key of chunks.keys()) {
+    if (
+      CATALOGUE_CHUNK.test(key) &&
+      (largest === undefined || sizeOf(key).gzip > sizeOf(largest).gzip)
+    ) {
+      largest = key;
+    }
+  }
+  return largest;
+}
+
 /** gzip bytes of a built file's text; the size every budget is measured in. */
 export function gzipSize(content: string): number {
   return gzipSync(content).length;
@@ -153,6 +173,12 @@ export function measureEntries(
         roots.push(key);
       }
       const keys = [...closure(chunks, roots)];
+      // The active language's catalogue is a lazy chunk the page cannot
+      // render without: count the largest one (the worst case of a visit).
+      const catalogue = largestCatalogue(chunks, sizeOf);
+      if (catalogue && !keys.includes(catalogue)) {
+        keys.push(catalogue);
+      }
       const total = keys.reduce(
         (sum, key) => ({
           gzip: sum.gzip + sizeOf(key).gzip,

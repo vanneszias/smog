@@ -203,7 +203,7 @@ describe("admin.users.list", () => {
       banned: false,
       banReason: null,
       emailVerified: false,
-      role: "user",
+      roles: [],
     });
   });
 
@@ -260,6 +260,12 @@ describe("admin.users.list", () => {
       name: `${word} c`,
     });
     const plain = await makeUser(db, { name: `${word} d` });
+    const translator = await makeUser(db, { name: `${word} e` });
+    await env.DB.prepare(
+      "INSERT INTO user_role (user_id, role, granted_at) VALUES (?, 'translator', 1), (?, 'teacher', 1)"
+    )
+      .bind(translator.id, translator.id)
+      .run();
 
     const ids = async (input: object) =>
       (
@@ -269,10 +275,21 @@ describe("admin.users.list", () => {
         .sort();
 
     expect(await ids({ role: "admin" })).toEqual([promoted.id]);
+    expect(await ids({ role: "translator" })).toEqual([translator.id]);
+    expect(await ids({ role: "teacher" })).toEqual([translator.id]);
     expect(await ids({ banned: true })).toEqual([banned.id]);
+    // `user` is an account holding no role.
     expect(await ids({ banned: false, role: "user" })).toEqual(
       [expired.id, plain.id].sort()
     );
+    expect(await ids({ role: "user" })).toEqual(
+      [banned.id, expired.id, plain.id].sort()
+    );
+    const listed = await callAs<AdminUserPage>(admin, "users.list", {
+      q: word,
+      role: "translator",
+    });
+    expect(listed.items[0]?.roles).toEqual(["translator", "teacher"]);
     const page = await callAs<AdminUserPage>(admin, "users.list", {
       q: word,
     });
@@ -333,7 +350,7 @@ describe("admin.users.get", () => {
       lists: 1,
       methods: ["credential"],
       name: "Mia Member",
-      role: "user",
+      roles: [],
       // The expired session does not count.
       sessions: 1,
     });
@@ -381,22 +398,75 @@ describe("admin.users.get", () => {
   });
 });
 
-describe("admin.users.setRole", () => {
-  it("promotes through auth.api, audits { from, to }, and the next call has the role", async () => {
+async function rolesIn(id: string): Promise<string[]> {
+  const { results } = await env.DB.prepare(
+    "SELECT role FROM user_role WHERE user_id = ? ORDER BY role"
+  )
+    .bind(id)
+    .all<{ role: string }>();
+  return results.map((row) => row.role);
+}
+
+describe("admin.users.grantRole", () => {
+  it("grants translator and teacher, audits each, and the next request has them", async () => {
+    const member = await signedUp("user");
+    const mark = await auditMark();
+    const result = await callAs<{ user: AdminUser }>(admin, "users.grantRole", {
+      role: "translator",
+      userId: member.user.id,
+    });
+    expect(result.user).toMatchObject({
+      id: member.user.id,
+      roles: ["translator"],
+    });
+    await expectAudit("users.grantRole", {
+      actorId: admin.user.id,
+      data: { role: "translator" },
+      mark,
+      targetId: member.user.id,
+      targetType: "user",
+    });
+    const second = await auditMark();
+    await callAs(admin, "users.grantRole", {
+      role: "teacher",
+      userId: member.user.id,
+    });
+    expect(await rolesIn(member.user.id)).toEqual(["teacher", "translator"]);
+    // Neither role is the legacy admin value, nor an admin's door.
+    expect((await userRow(member.user.id))?.role).toBe("user");
+    await expect(callAs(member, "dashboard")).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expectAudit("users.grantRole", {
+      actorId: admin.user.id,
+      data: { role: "teacher" },
+      mark: second,
+      targetId: member.user.id,
+      targetType: "user",
+    });
+    const stored = await env.DB.prepare(
+      "SELECT granted_by AS grantedBy FROM user_role WHERE user_id = ? AND role = 'teacher'"
+    )
+      .bind(member.user.id)
+      .first<{ grantedBy: string }>();
+    expect(stored?.grantedBy).toBe(admin.user.id);
+  });
+
+  it("grants admin: the legacy value follows, and the next admin call works", async () => {
     const member = await signedUp("user");
     await expect(callAs(member, "dashboard")).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
     const mark = await auditMark();
-    const result = await callAs<{ user: AdminUser }>(admin, "users.setRole", {
+    const result = await callAs<{ user: AdminUser }>(admin, "users.grantRole", {
       role: "admin",
       userId: member.user.id,
     });
-    expect(result.user).toMatchObject({ id: member.user.id, role: "admin" });
+    expect(result.user.roles).toEqual(["admin"]);
     expect((await userRow(member.user.id))?.role).toBe("admin");
-    await expectAudit("users.setRole", {
+    await expectAudit("users.grantRole", {
       actorId: admin.user.id,
-      data: { from: "user", to: "admin" },
+      data: { role: "admin" },
       mark,
       targetId: member.user.id,
       targetType: "user",
@@ -404,21 +474,124 @@ describe("admin.users.setRole", () => {
     await expect(callAs(member, "dashboard")).resolves.toBeDefined();
   });
 
-  it("demotes: the demoted admin's next admin call is FORBIDDEN", async () => {
+  it("refuses one's own account and a role already held, writing nothing", async () => {
+    const target = await makeUser(testDb());
+    await callAs(admin, "users.grantRole", {
+      role: "teacher",
+      userId: target.id,
+    });
+    const mark = await auditMark();
+    await expectRefused(
+      callAs(admin, "users.grantRole", {
+        role: "translator",
+        userId: admin.user.id,
+      }),
+      "self"
+    );
+    await expectRefused(
+      callAs(admin, "users.grantRole", { role: "teacher", userId: target.id }),
+      "unchanged"
+    );
+    expect(await auditRowsSince(mark)).toEqual([]);
+  });
+
+  it("is NOT_FOUND for an unknown account", async () => {
+    expect(
+      await failure(
+        callAs(admin, "users.grantRole", { role: "admin", userId: "missing" })
+      )
+    ).toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("a failed audit write fails the call and the role is not granted", async () => {
+    const target = await makeUser(testDb());
+    const mark = await auditMark();
+    await expectAuditFailure("users.grantRole", "user.role_grant", target.id, {
+      role: "translator",
+      userId: target.id,
+    });
+    expect(await rolesIn(target.id)).toEqual([]);
+    expect(await auditRowsSince(mark)).toEqual([]);
+  });
+
+  it("refuses to make an account admin whose ban is in force; a translator role is fine", async () => {
+    const target = await makeUser(testDb(), { banned: true, banReason: "x" });
+    await expectRefused(
+      callAs(admin, "users.grantRole", { role: "admin", userId: target.id }),
+      "targetBanned"
+    );
+    expect(await rolesIn(target.id)).toEqual([]);
+    await callAs(admin, "users.grantRole", {
+      role: "translator",
+      userId: target.id,
+    });
+    expect(await rolesIn(target.id)).toEqual(["translator"]);
+  });
+
+  it("a translator or teacher cannot grant roles", async () => {
+    const translator = await signedUp("user");
+    await callAs(admin, "users.grantRole", {
+      role: "translator",
+      userId: translator.user.id,
+    });
+    const target = await makeUser(testDb());
+    await expect(
+      callAs(translator, "users.grantRole", {
+        role: "admin",
+        userId: target.id,
+      })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(await rolesIn(target.id)).toEqual([]);
+  });
+});
+
+describe("admin.users.revokeRole", () => {
+  it("removes a role at once: the account's next request has lost it", async () => {
+    const member = await signedUp("user");
+    await callAs(admin, "users.grantRole", {
+      role: "translator",
+      userId: member.user.id,
+    });
+    await callAs(admin, "users.grantRole", {
+      role: "teacher",
+      userId: member.user.id,
+    });
+    const mark = await auditMark();
+    const result = await callAs<{ user: AdminUser }>(
+      admin,
+      "users.revokeRole",
+      {
+        role: "translator",
+        userId: member.user.id,
+      }
+    );
+    expect(result.user.roles).toEqual(["teacher"]);
+    expect(await rolesIn(member.user.id)).toEqual(["teacher"]);
+    await expectAudit("users.revokeRole", {
+      actorId: admin.user.id,
+      data: { role: "translator" },
+      mark,
+      targetId: member.user.id,
+      targetType: "user",
+    });
+  });
+
+  it("demotes an admin: the demoted admin's next admin call is FORBIDDEN", async () => {
     const other = await signedUp("admin", "Otto Other");
     await expect(callAs(other, "dashboard")).resolves.toBeDefined();
     const mark = await auditMark();
-    await callAs(admin, "users.setRole", {
-      role: "user",
+    await callAs(admin, "users.revokeRole", {
+      role: "admin",
       userId: other.user.id,
     });
-    await expectAudit("users.setRole", {
+    await expectAudit("users.revokeRole", {
       actorId: admin.user.id,
-      data: { from: "admin", to: "user" },
+      data: { role: "admin" },
       mark,
       targetId: other.user.id,
       targetType: "user",
     });
+    expect((await userRow(other.user.id))?.role).toBe("user");
     await expect(callAs(other, "dashboard")).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
@@ -427,15 +600,21 @@ describe("admin.users.setRole", () => {
     });
   });
 
-  it("refuses the admin's own role and an unchanged role, writing nothing", async () => {
+  it("refuses the admin's own roles and a role not held, writing nothing", async () => {
     const target = await makeUser(testDb());
     const mark = await auditMark();
     await expectRefused(
-      callAs(admin, "users.setRole", { role: "user", userId: admin.user.id }),
+      callAs(admin, "users.revokeRole", {
+        role: "admin",
+        userId: admin.user.id,
+      }),
       "self"
     );
     await expectRefused(
-      callAs(admin, "users.setRole", { role: "user", userId: target.id }),
+      callAs(admin, "users.revokeRole", {
+        role: "translator",
+        userId: target.id,
+      }),
       "unchanged"
     );
     expect((await userRow(admin.user.id))?.role).toBe("admin");
@@ -445,54 +624,71 @@ describe("admin.users.setRole", () => {
   it("is NOT_FOUND for an unknown account", async () => {
     expect(
       await failure(
-        callAs(admin, "users.setRole", { role: "admin", userId: "missing" })
+        callAs(admin, "users.revokeRole", { role: "admin", userId: "missing" })
       )
     ).toMatchObject({ code: "NOT_FOUND" });
   });
 
-  it("logs and rethrows a failed audit write after the role changed", async () => {
+  it("a failed audit write fails the call and the role stays", async () => {
     const target = await makeUser(testDb());
-    const mark = await auditMark();
-    await expectAuditFailure("users.setRole", "user.role_change", target.id, {
-      role: "admin",
+    await callAs(admin, "users.grantRole", {
+      role: "teacher",
       userId: target.id,
     });
-    // The change came first (ruling 5): it happened, and the admin saw an error.
-    expect((await userRow(target.id))?.role).toBe("admin");
+    const mark = await auditMark();
+    await expectAuditFailure(
+      "users.revokeRole",
+      "user.role_revoke",
+      target.id,
+      {
+        role: "teacher",
+        userId: target.id,
+      }
+    );
+    expect(await rolesIn(target.id)).toEqual(["teacher"]);
     expect(await auditRowsSince(mark)).toEqual([]);
   });
 
-  it("refuses to promote an account whose ban is in force", async () => {
-    const target = await makeUser(testDb(), { banned: true, banReason: "x" });
-    await expectRefused(
-      callAs(admin, "users.setRole", { role: "admin", userId: target.id }),
-      "targetBanned"
-    );
-    expect((await userRow(target.id))?.role).toBe("user");
-  });
-
-  it("demotes an admin whose ban is in force", async () => {
+  it("revokes the admin role of an admin whose ban is in force", async () => {
     const target = await makeUser(testDb(), {
       banned: true,
       banReason: "x",
       role: "admin",
     });
-    await callAs(admin, "users.setRole", { role: "user", userId: target.id });
+    await callAs(admin, "users.revokeRole", {
+      role: "admin",
+      userId: target.id,
+    });
     expect((await userRow(target.id))?.role).toBe("user");
+    expect(await rolesIn(target.id)).toEqual([]);
   });
 });
 
 describe("the guards (ruling 7)", () => {
   const actorId = "actor";
-  const plain = { bannedNow: false, id: "target", role: "user" as const };
-  const otherAdmin = { ...plain, role: "admin" as const };
+  const plain = {
+    bannedNow: false,
+    id: "target",
+    roles: [] as const,
+  };
+  const otherAdmin = { ...plain, roles: ["admin"] as const };
+  const translator = { ...plain, roles: ["translator"] as const };
 
   it.each([
     [
-      "own role",
+      "own grant",
       {
-        action: "setRole",
-        role: "user",
+        action: "grantRole",
+        role: "translator",
+        target: { ...plain, id: actorId },
+      },
+      "self",
+    ],
+    [
+      "own revoke",
+      {
+        action: "revokeRole",
+        role: "admin",
         target: { ...otherAdmin, id: actorId },
       },
       "self",
@@ -504,19 +700,29 @@ describe("the guards (ruling 7)", () => {
       "self",
     ],
     [
-      "same role",
-      { action: "setRole", role: "user", target: plain },
+      "a role already held",
+      { action: "grantRole", role: "translator", target: translator },
+      "unchanged",
+    ],
+    [
+      "a role not held",
+      { action: "revokeRole", role: "teacher", target: translator },
       "unchanged",
     ],
     [
       "last admin",
-      { action: "setRole", otherAdmins: 0, role: "user", target: otherAdmin },
+      {
+        action: "revokeRole",
+        otherAdmins: 0,
+        role: "admin",
+        target: otherAdmin,
+      },
       "lastAdmin",
     ],
     [
-      "promote a banned account",
+      "admin for a banned account",
       {
-        action: "setRole",
+        action: "grantRole",
         role: "admin",
         target: { ...plain, bannedNow: true },
       },
@@ -543,18 +749,41 @@ describe("the guards (ruling 7)", () => {
   });
 
   it.each([
-    ["promote", { action: "setRole", role: "admin", target: plain }],
+    ["grant admin", { action: "grantRole", role: "admin", target: plain }],
     [
-      "demote with another admin",
-      { action: "setRole", otherAdmins: 1, role: "user", target: otherAdmin },
+      "grant translator to a banned account",
+      {
+        action: "grantRole",
+        role: "translator",
+        target: { ...plain, bannedNow: true },
+      },
     ],
+    [
+      "revoke admin with another admin",
+      {
+        action: "revokeRole",
+        otherAdmins: 1,
+        role: "admin",
+        target: otherAdmin,
+      },
+    ],
+    [
+      "revoke translator, the last admin being elsewhere",
+      {
+        action: "revokeRole",
+        otherAdmins: 0,
+        role: "translator",
+        target: translator,
+      },
+    ],
+    ["ban a translator", { action: "ban", target: translator }],
     ["ban", { action: "ban", target: plain }],
     [
-      "demote a banned admin",
+      "revoke admin from a banned admin",
       {
-        action: "setRole",
+        action: "revokeRole",
         otherAdmins: 1,
-        role: "user",
+        role: "admin",
         target: { ...otherAdmin, bannedNow: true },
       },
     ],
@@ -842,7 +1071,7 @@ describe("audit-write failures after the change (ruling 5)", () => {
 
 describe("Better Auth's refusals are typed, not a 500", () => {
   it.each([
-    [403, "YOU_ARE_NOT_ALLOWED_TO_CHANGE_USERS_ROLE", { code: "FORBIDDEN" }],
+    [403, "YOU_ARE_NOT_ALLOWED_TO_BAN_USERS", { code: "FORBIDDEN" }],
     [404, "USER_NOT_FOUND", { code: "NOT_FOUND" }],
     [
       400,
@@ -857,49 +1086,20 @@ describe("Better Auth's refusals are typed, not a 500", () => {
       // Silenced: the refusal is logged.
     });
     try {
-      const context = await contextWithAuthApi("setRole", () =>
+      const context = await contextWithAuthApi("banUser", () =>
         Promise.reject(apiError(status, code))
       );
       await expect(
         call(
-          procedureAt("users.setRole"),
-          { role: "admin", userId: target.id },
-          { context, path: ["admin", "users", "setRole"] }
+          procedureAt("users.ban"),
+          { reason: "Spam", userId: target.id },
+          { context, path: ["admin", "users", "ban"] }
         )
       ).rejects.toMatchObject(expected);
     } finally {
       logged.mockRestore();
     }
     expect(await auditRowsSince(mark)).toEqual([]);
-  });
-
-  it("the last-admin trigger's abort is INVALID_STATE lastAdmin", async () => {
-    const target = await makeUser(testDb());
-    // What D1 raises when migration 0007's trigger aborts the update.
-    const context = await contextWithAuthApi("setRole", () =>
-      Promise.reject(
-        new Error("D1_ERROR: last_admin: SQLITE_CONSTRAINT", {
-          cause: new Error("last_admin"),
-        })
-      )
-    );
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {
-      // Silenced.
-    });
-    try {
-      await expect(
-        call(
-          procedureAt("users.setRole"),
-          { role: "admin", userId: target.id },
-          { context, path: ["admin", "users", "setRole"] }
-        )
-      ).rejects.toMatchObject({
-        code: "INVALID_STATE",
-        data: { reason: "lastAdmin" },
-      });
-    } finally {
-      logged.mockRestore();
-    }
   });
 });
 

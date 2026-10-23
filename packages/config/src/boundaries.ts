@@ -3,7 +3,7 @@
  * `scripts/check-boundaries.ts`.
  *
  * - A plain entry (`@smog/db`) allows the package and every subpath.
- * - A subpath entry (`@smog/render/contract`) allows the package as a
+ * - A subpath entry (`@smog/analytics/native`) allows the package as a
  *   dependency, but only that subpath (and deeper) in imports.
  * - `@smog/feature:*` stands for every package in `FEATURE_PACKAGES`, and
  *   the same pattern followed by `/schema` or `/contract` means that
@@ -29,6 +29,7 @@ export const FEATURE_PACKAGES = [
   "@smog/account",
   "@smog/sponsorships",
   "@smog/admin",
+  "@smog/translation",
 ] as const;
 
 export const BOUNDARIES: Record<string, readonly string[]> = {
@@ -40,7 +41,14 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/jobs/cron",
     `${FEATURE_PATTERN}/schema`,
   ],
-  "@smog/api": ["@smog/rpc", FEATURE_PATTERN, "@smog/config"],
+  // `system.i18n` reads the language list and the ui_string overlay.
+  "@smog/api": [
+    "@smog/rpc",
+    FEATURE_PATTERN,
+    "@smog/config",
+    "@smog/db",
+    "@smog/i18n",
+  ],
   "@smog/mobile": [
     "@smog/api/client",
     "@smog/auth/expo",
@@ -65,7 +73,6 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/rpc",
     "@smog/db",
     "@smog/jobs",
-    "@smog/render",
     "@smog/analytics",
     "@smog/email",
     "@smog/payments",
@@ -88,9 +95,6 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/video",
     "@smog/email",
     "@smog/jobs",
-    "@smog/render/contract",
-    // The fake renderer, for the sponsorships tests (phase 7 ruling 1).
-    "@smog/render/testing",
     "@smog/analytics/server",
     // Client hooks track through `useAnalytics()` (a no-op without a provider).
     "@smog/analytics/react",
@@ -121,7 +125,6 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/email",
     "@smog/payments",
     "@smog/video",
-    "@smog/render/contract",
     "@smog/config",
     "@smog/utils",
   ],
@@ -130,7 +133,7 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
   // on (a test asserts no entry lists it). Its runtime needs the data
   // packages and the feature schemas. The rest is for its integration
   // tests only, which drive the real services: the feature servers,
-  // `@smog/auth`, `@smog/rpc`, and the Mollie and render fakes the
+  // `@smog/auth`, `@smog/rpc`, and the Mollie fake the
   // sponsorship services take. `src/core` is held tighter by its own test
   // (`packages/migrate-convex/test/core-rules.test.ts`).
   "@smog/migrate-convex": [
@@ -144,16 +147,8 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/auth",
     "@smog/rpc",
     "@smog/payments",
-    "@smog/render/contract",
-    "@smog/render/testing",
   ],
   "@smog/payments": ["@smog/config", "@smog/utils"],
-  "@smog/render": [
-    "@smog/config",
-    "@smog/utils",
-    "@smog/styles",
-    "@smog/brand",
-  ],
   "@smog/rpc": ["@smog/auth", "@smog/db", "@smog/config", "@smog/utils"],
   "@smog/styles": ["@smog/config"],
   "@smog/ui-native": [
@@ -176,7 +171,7 @@ function isFeature(name: string): boolean {
   return (FEATURE_PACKAGES as readonly string[]).includes(name);
 }
 
-/** Splits `@smog/render/contract` into `["@smog/render", "contract"]`. */
+/** Splits `@smog/analytics/native` into `["@smog/analytics", "native"]`. */
 export function splitSpecifier(specifier: string): [string, string] {
   const [scope, name, ...rest] = specifier.split("/");
   return [`${scope}/${name}`, rest.join("/")];

@@ -24,6 +24,7 @@ export const GESTURES_INPUTS: ProcedureInputs = {
   },
   "gestures.get": ({ gesture }) => ({ id: gesture.id }),
   "gestures.list": () => ({}),
+  "gestures.recutDone": ({ gesture }) => ({ id: gesture.id }),
   "gestures.saveMany": async () => {
     const row = await addGesture();
     return {

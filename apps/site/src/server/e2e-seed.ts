@@ -56,6 +56,12 @@ export const e2eSeedSchema = z.discriminatedUnion("op", [
     op: z.literal("setRole"),
     role: z.enum(["admin", "user"]),
   }),
+  /** Gives a user a role besides `user` (a translator for the translation screens' spec); `admin` has `setRole`. */
+  z.object({
+    email,
+    op: z.literal("grantRole"),
+    role: z.enum(["teacher", "translator"]),
+  }),
   /** A `legacy` audit entry by a deleted actor, dated now. */
   z.object({
     data: z.record(z.string(), z.unknown()),
@@ -154,7 +160,7 @@ export function e2eSeedEnabled(environment: Environment): boolean {
 
 type SingleSeed = Extract<
   E2eSeed,
-  { op: "legacyAuditEntry" | "legacyId" | "setRole" }
+  { op: "grantRole" | "legacyAuditEntry" | "legacyId" | "setRole" }
 >;
 
 const NOW_MS = "CAST(unixepoch('subsec') * 1000 AS INTEGER)";
@@ -450,6 +456,12 @@ export function seedStatement(
     case "setRole":
       return db
         .prepare("UPDATE user SET role = ? WHERE email = ?")
+        .bind(seed.role, seed.email);
+    case "grantRole":
+      return db
+        .prepare(
+          "INSERT OR IGNORE INTO user_role (user_id, role, granted_at) SELECT id, ?, CAST(unixepoch('subsec') * 1000 AS INTEGER) FROM user WHERE email = ?"
+        )
         .bind(seed.role, seed.email);
     case "legacyAuditEntry":
       return db

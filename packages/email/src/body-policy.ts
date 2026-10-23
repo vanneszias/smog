@@ -32,7 +32,6 @@ export const EMAIL_BODY_CLASS: {
   // has no account, so erasure by recipient could never remove them.
   "transactional/admin-new-sponsorship": "secret",
   "transactional/admin-refund-needed": "link",
-  "transactional/admin-render-failed": "link",
   "transactional/payment-confirmed": "none",
   // The renewal link carries the raw sponsorship token.
   "transactional/renewal-reminder": "secret",

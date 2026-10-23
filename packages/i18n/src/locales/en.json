@@ -92,7 +92,8 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "gestures": "Gestures",
-    "legal": "Legal"
+    "legal": "Legal",
+    "translation": "Translation"
   },
   "theme": {
     "label": "Theme",
@@ -370,6 +371,54 @@
       "inList": "In the list"
     }
   },
+  "endCard": {
+    "message": "Made possible by"
+  },
+  "media": {
+    "nameOverlay": {
+      "toggle": "Show the name on the video"
+    },
+    "audio": {
+      "play": "Listen to the pronunciation",
+      "stop": "Stop the pronunciation"
+    },
+    "admin": {
+      "audio": {
+        "title": "Pronunciation (audio)",
+        "description": "One clip per language: the spoken name of the gesture. MP3 or M4A, at most 1 MB and 10 seconds.",
+        "none": "No audio yet",
+        "choose": "Choose audio",
+        "replace": "Replace audio",
+        "remove": "Remove audio",
+        "saved": "Audio saved",
+        "removed": "Audio removed",
+        "duration": "{{seconds}} s",
+        "errors": {
+          "format": "This is not a valid MP3 or M4A file.",
+          "duration": "The clip is longer than 10 seconds.",
+          "tooLarge": "The file is larger than 1 MB.",
+          "missing": "The upload did not arrive. Try again.",
+          "key": "This upload does not belong to this gesture.",
+          "network": "The upload failed. Check your connection and try again.",
+          "generic": "Saving failed. Try again.",
+          "removeFailed": "Removing failed. Try again."
+        }
+      },
+      "recut": {
+        "title": "Video without text",
+        "description": "This gesture's video still has the name in the picture. Upload the video without text and confirm it here: the player then shows the name in the viewer's language.",
+        "needed": "The name is still in the video",
+        "done": "Video without text uploaded",
+        "doneSaved": "Marked as a video without text",
+        "doneFailed": "Marking failed. Try again.",
+        "ok": "The video has no text in the picture",
+        "filter": "Needs re-cut",
+        "badge": "Name in video",
+        "textless": "The video has no text in the picture",
+        "textlessHint": "Without the tick the gesture stays on the list of videos to re-cut."
+      }
+    }
+  },
   "gesture": {
     "sponsored": "Sponsored",
     "disclaimer": {
@@ -616,10 +665,9 @@
         "subject": "We have received your sponsorship",
         "preheader": "Thank you! Here is what happens next.",
         "heading": "Sponsorship received",
-        "body": "Thank you for sponsoring {{gesture}}. The video will show the name {{displayName}}.",
+        "body": "Thank you for sponsoring {{gesture}}. The end of the video will show the name {{displayName}}.",
         "nextTitle": "What happens next?",
-        "stepRender": "We make your sponsored video.",
-        "stepReview": "We review the video before it goes online.",
+        "stepReview": "We review your sponsorship before it goes online.",
         "stepLive": "You get an email as soon as your sponsorship is online.",
         "footer": "You get this email because you recently submitted a sponsorship through SMOG & Co."
       },
@@ -636,7 +684,7 @@
         "subject": "Your sponsorship is live!",
         "preheader": "Your sponsored video is online.",
         "heading": "Your sponsorship is live!",
-        "body": "Your sponsored video for {{gesture}} is now online with the name {{displayName}}.",
+        "body": "Your sponsorship of {{gesture}} is now online: the end of the video shows the name {{displayName}}.",
         "button": "View on SMOG",
         "thanks": "Thank you for supporting SMOG!",
         "footer": "We will send you a reminder 30 days before the end, so you can renew."
@@ -656,18 +704,11 @@
         "preheader": "Paid: {{total}}.",
         "heading": "New sponsorship paid",
         "headingRenewal": "Sponsorship renewed",
-        "body": "A sponsorship has been paid. It now waits for its video and then for approval.",
+        "body": "A sponsorship has been paid. It now waits for approval.",
         "bodyRenewal": "A sponsorship has been renewed for a year. No new video or approval is needed.",
         "detailsTitle": "Sponsorship",
         "invoiceTitle": "Invoicing",
         "button": "View in the admin"
-      },
-      "adminRenderFailed": {
-        "subject": "Video failed for {{gesture}}",
-        "preheader": "The video for {{displayName}} could not be made.",
-        "heading": "Video failed",
-        "body": "The sponsored video could not be made, even after retrying. Check the sponsorship in the admin.",
-        "button": "View the sponsorship"
       },
       "adminRefundNeeded": {
         "subject": "Refund needed for payment {{paymentId}}",
@@ -700,13 +741,12 @@
       },
       "adminDeadLetter": {
         "subject": "Dead letters need attention",
-        "preheader": "Messages could not be delivered, or a video has been failed for over a day.",
+        "preheader": "Messages could not be delivered.",
         "heading": "Dead letters need attention",
-        "body": "Some messages could not be delivered after every retry, or a video has been failed for more than 24 hours. Replay or discard them in the admin.",
+        "body": "Some messages could not be delivered after every retry. Replay or discard them in the admin.",
         "emailOpen": "Emails waiting",
         "eventsOpen": "Sponsorship events waiting",
         "lost": "Messages lost while the database was down",
-        "renderFailed": "Videos failed for over 24 hours",
         "types": "Waiting by type",
         "button": "Open dead letters"
       }
@@ -928,8 +968,12 @@
       "groups": {
         "content": "Content",
         "community": "Community",
-        "operations": "Operations"
-      }
+        "operations": "Operations",
+        "translation": "Translation"
+      },
+      "strings": "Strings",
+      "languages": "Languages",
+      "legal": "Legal texts"
     },
     "comingSoon": {
       "title": "Coming in this phase",
@@ -964,10 +1008,6 @@
         "inReview_other": "to review",
         "awaitingPayment_one": "{{count}} awaiting payment",
         "awaitingPayment_other": "{{count}} awaiting payment",
-        "rendering_one": "{{count}} video being made",
-        "rendering_other": "{{count}} videos being made",
-        "renderFailed_one": "{{count}} video failed",
-        "renderFailed_other": "{{count}} videos failed",
         "live_one": "{{count}} live",
         "live_other": "{{count}} live",
         "expiring_one": "{{count}} ending soon",
@@ -983,9 +1023,7 @@
         "events_one": "{{count}} event waiting",
         "events_other": "{{count}} events waiting",
         "oldest": "Oldest from {{date}}",
-        "none": "Nothing waiting",
-        "renderFailed_one": "{{count}} video failed",
-        "renderFailed_other": "{{count}} videos failed"
+        "none": "Nothing waiting"
       },
       "chart": {
         "title": "At a glance",
@@ -994,7 +1032,6 @@
         "catalogue": "Gestures",
         "awaitingPayment": "Awaiting payment",
         "inReview": "In review",
-        "rendering": "Rendering",
         "live": "Live",
         "published": "Published",
         "hidden": "Hidden"
@@ -1038,7 +1075,8 @@
           "publish": "Gesture published",
           "unpublish": "Gesture hidden",
           "delete": "Gesture deleted",
-          "bulk_update": "Gestures bulk-edited"
+          "bulk_update": "Gestures bulk-edited",
+          "recut_done": "Textless video uploaded"
         },
         "category": {
           "create": "Category created",
@@ -1053,7 +1091,9 @@
           "ban": "User banned",
           "unban": "User unbanned",
           "delete": "User deleted",
-          "impersonate": "Signed in as user"
+          "impersonate": "Signed in as user",
+          "role_grant": "Role granted",
+          "role_revoke": "Role revoked"
         },
         "sponsorship": {
           "approve": "Sponsorship approved",
@@ -1079,6 +1119,23 @@
         "dead_letter": {
           "replay": "Dead letter replayed",
           "discard": "Dead letter discarded"
+        },
+        "language": {
+          "create": "Language added",
+          "update": "Language changed"
+        },
+        "translation": {
+          "string_save": "Interface string translated",
+          "string_import": "Interface strings imported",
+          "gesture_save": "Gesture translation saved",
+          "category_save": "Category translation saved",
+          "audio_upload": "Audio uploaded",
+          "audio_delete": "Audio deleted"
+        },
+        "legal": {
+          "draft_save": "Legal text draft saved",
+          "publish": "Legal text published",
+          "restore": "Legal text restored"
         }
       },
       "targetTypes": {
@@ -1090,7 +1147,10 @@
         "list": "List",
         "setting": "Setting",
         "system": "System",
-        "dead_letter": "Dead letter"
+        "dead_letter": "Dead letter",
+        "language": "Language",
+        "ui_string": "Interface string",
+        "legal_text": "Legal text"
       }
     },
     "gestures": {
@@ -1353,6 +1413,47 @@
       "countWithPublished_one": "{{count}} gesture · {{published}} published",
       "countWithPublished_other": "{{count}} gestures · {{published}} published"
     },
+    "catalogTranslation": {
+      "title": "Translations",
+      "description": "Translate the name, description and keywords for each language. The text in the default language is shown next to it.",
+      "sourceLabel": "Source ({{language}})",
+      "tabsLabel": "Language of the translation",
+      "noLanguages": "No other languages are enabled.",
+      "needs": "Needs translation",
+      "translated": "Translated",
+      "fields": {
+        "name": "Name in {{language}}",
+        "description": "Description in {{language}}",
+        "keywords": "Keywords in {{language}}"
+      },
+      "fallbackHint": "Until a translation exists, visitors see the text in the default language.",
+      "save": "Save translation",
+      "saved": "Translation saved.",
+      "saveFailed": "The translation could not be saved.",
+      "stale": "Someone else just saved this translation. The latest text has been loaded: check it and save again.",
+      "nameRequired": "Enter a name.",
+      "loadFailed": "The translations could not be loaded.",
+      "report": {
+        "title": "Translations by language",
+        "gestures": "{{needs}} of {{total}} gestures need a translation",
+        "categories": "{{missing}} of {{total}} categories have no translated name yet",
+        "detail": "Missing a name: {{name}}, a description: {{description}}, keywords: {{keywords}}",
+        "allDone": "Everything is translated",
+        "show": "Show what still needs translating"
+      },
+      "filter": {
+        "label": "Needs translation in",
+        "none": "No filter"
+      },
+      "categories": {
+        "title": "Names by language",
+        "description": "Translate the name of each category. Visitors see the translated name in the filters and on the gesture cards.",
+        "nameIn": "Name in {{language}}",
+        "save": "Save",
+        "saveFor": "Save the translation of {{name}}",
+        "saved": "Name saved."
+      }
+    },
     "mux": {
       "title": "Video",
       "label": "Video",
@@ -1439,7 +1540,9 @@
       },
       "roles": {
         "user": "User",
-        "admin": "Admin"
+        "admin": "Admin",
+        "translator": "Translator",
+        "teacher": "Teacher"
       },
       "columns": {
         "name": "Name",
@@ -1470,12 +1573,13 @@
         "banUntil": "Banned until",
         "banForever": "No end date",
         "actions": "Actions",
-        "self": "This is your own account. Another admin has to change its role, ban it or delete it.",
+        "self": "This is your own account. Another admin has to change its roles, ban it or delete it.",
         "adminTarget": "Remove the admin role before you ban or delete this account.",
         "bannedTarget": "Lift the ban before you make this account an admin.",
         "notFound": "This account no longer exists.",
         "sponsorships": "Sponsorships",
-        "noSponsorships": "No sponsorships with this email address."
+        "noSponsorships": "No sponsorships with this email address.",
+        "roles": "Roles"
       },
       "methods": {
         "credential": "Password",
@@ -1483,17 +1587,27 @@
         "apple": "Apple",
         "passkey": "Passkey"
       },
-      "promote": {
-        "action": "Make admin",
-        "title": "Make {{name}} an admin?",
-        "description": "Admins can change the catalogue, the accounts and the settings. It applies from their next page.",
-        "done": "{{name}} is now an admin."
+      "roleSection": {
+        "title": "Roles",
+        "description": "A person can hold several roles. An admin can do everything the other roles can.",
+        "none": "No role: a learner.",
+        "help": {
+          "translator": "Translates names, keywords, screens and legal texts.",
+          "teacher": "Records and checks the sign videos.",
+          "admin": "Manages the catalogue, accounts, sponsorships and settings."
+        }
       },
-      "demote": {
-        "action": "Remove admin role",
-        "title": "Remove the admin role of {{name}}?",
-        "description": "They lose access to the admin at once.",
-        "done": "{{name}} is no longer an admin."
+      "grant": {
+        "action": "Add role: {{role}}",
+        "title": "Give {{name}} the role {{role}}?",
+        "description": "It applies from their next page.",
+        "done": "{{name}} now has the role {{role}}."
+      },
+      "revoke": {
+        "action": "Remove role: {{role}}",
+        "title": "Remove the role {{role}} from {{name}}?",
+        "description": "They lose what the role allows at once.",
+        "done": "{{name}} no longer has the role {{role}}."
       },
       "ban": {
         "action": "Ban",
@@ -1588,7 +1702,6 @@
         "sponsorshipLive": "Sponsorship live",
         "renewalReminder": "Renewal reminder",
         "adminNewSponsorship": "New sponsorship (admin)",
-        "adminRenderFailed": "Render failed (admin)",
         "adminRefundNeeded": "Refund needed (admin)",
         "weMoved": "We moved",
         "adminDeadLetter": "Dead letters (admin)"
@@ -1617,7 +1730,6 @@
         "awaiting": "Awaiting payment",
         "refund": "Refund needed",
         "closed": "Closed",
-        "rendering": "Rendering/failed",
         "live": "Live/ending"
       },
       "filters": {
@@ -1689,7 +1801,6 @@
         "originalOf": "Original video of {{name}}",
         "sponsored": "Sponsored video",
         "sponsoredOf": "Sponsored video of {{name}}",
-        "fakeRender": "Fake render (no overlay)",
         "noVideo": "No video yet.",
         "facts": "Details",
         "gesture": "Gesture",
@@ -1708,8 +1819,8 @@
         "title": "Actions",
         "notes": {
           "awaitingPayment": "Awaiting payment. Mark it paid or cancel it on the payment below.",
-          "rendering": "The video is being made. Then the sponsorship moves to Review.",
-          "renderFailed": "The video failed. The error is under Render jobs; retry the render when the cause is fixed or was temporary.",
+          "rendering": "This sponsorship was waiting for a video that is no longer made. It moves to Review within the hour.",
+          "renderFailed": "This sponsorship was waiting for a video that is no longer made. It moves to Review within the hour.",
           "closed": "This sponsorship is closed."
         }
       },
@@ -1755,13 +1866,13 @@
         "action": "Mark paid",
         "note": "Bank reference",
         "noteHint": "Goes into the history, e.g. the transfer’s reference.",
-        "done": "Marked paid. The videos are being made.",
+        "done": "Marked paid. The sponsorships are now waiting for review.",
         "settled": "Mollie already had this payment: it is settled as paid.",
         "refundNeeded": "Mollie already had this payment, but it needs a refund. Check the payment below.",
-        "lateFailure": "The payment is marked paid, but the videos may not have started. The hourly check starts any that are missing; check back in an hour.",
+        "lateFailure": "The payment is marked paid, but the confirmation emails may not have been sent. Check the payment and tell the sponsor yourself if needed.",
         "title": "Mark {{amount}} from {{name}} as paid?",
-        "description_one": "Only for a bank transfer you received. This payment covers {{gestures}}: its video gets made.",
-        "description_other": "Only for a bank transfer you received. This payment covers {{gestures}}: each one gets its video made."
+        "description_one": "Only for a bank transfer you received. This payment covers {{gestures}}: it goes to review.",
+        "description_other": "Only for a bank transfer you received. This payment covers {{gestures}}: each one goes to review."
       },
       "cancel": {
         "action": "Cancel payment",
@@ -1865,19 +1976,7 @@
           "running": "Running",
           "succeeded": "Succeeded",
           "failed": "Failed"
-        },
-        "hint": {
-          "sourceTooLong": "The gesture's video is longer than 2 minutes, the most a sponsored video can be. Shorten or replace the gesture's video, then retry.",
-          "workflowNeverStarted": "The render never started within 6 hours. Check the last deploy and the Workflows dashboard, then retry.",
-          "rendererBusy": "No renderer was free for an hour. Retry when fewer videos are being made."
         }
-      },
-      "retryRender": {
-        "action": "Retry render",
-        "title": "Make the video for {{name}} on {{gesture}} again?",
-        "description": "A new render starts with the current name and logo. The sponsorship goes back to Making the video and moves to Review when the video is ready. No email is sent.",
-        "done": "The video is being made again (attempt {{attempt}}).",
-        "announce": "Render retried: attempt {{attempt}} started for {{name}}."
       },
       "tokens": {
         "title": "Links",
@@ -1974,6 +2073,254 @@
       "rowActions": "Actions for {{name}}",
       "open": "Open",
       "actions": "Actions"
+    },
+    "translation": {
+      "loadError": "The translation data could not be loaded.",
+      "legal": {
+        "title": "Legal texts",
+        "description": "The privacy notice and the terms, per language. Publishing changes the public page at once.",
+        "responsibility": "Anyone who translates can publish a legal text, and it replaces the public page at once. Every version is kept, every publish is in the audit log, and an admin can restore an earlier version.",
+        "text": "Text",
+        "language": "Language",
+        "kind": {
+          "privacy": "Privacy notice",
+          "terms": "Terms"
+        },
+        "dutchPrevails": "The Dutch text prevails: the other languages carry a notice that they are translations.",
+        "draftBadge": "Draft",
+        "publishedBadge": "Published: version {{version}}, effective {{date}}",
+        "notPublished": "Not published",
+        "unsaved": "Unsaved changes",
+        "noText": "This language has no legal text yet, so visitors read the Dutch one. The Dutch text is the starting point: translate it, save a draft and publish it.",
+        "conflictTitle": "Someone else saved first",
+        "conflict": "The draft changed since you opened it. Take the stored draft, then redo your changes.",
+        "takeStored": "Take the stored draft",
+        "saveDraft": "Save draft",
+        "publish": "Publish",
+        "discardChanges": "Discard changes",
+        "publishNeeds": "Save the draft, without errors, to publish it.",
+        "views": "Views of the text",
+        "tabs": {
+          "edit": "Edit",
+          "preview": "Preview",
+          "source": "Dutch source",
+          "history": "History"
+        },
+        "documentTitle": "Title of the text",
+        "markupHint": "Text may use **bold** and [link text](https://example.test). Links go to https:, mailto: or a page of the site (/privacy).",
+        "sectionLabel": "Section {{number}}",
+        "sectionTitle": "Section title",
+        "anchor": "Anchor",
+        "anchorHint": "Lowercase words joined by hyphens, as in /privacy#rights. Keep it the same in every language.",
+        "blockLabel": "{{kind}}, section {{section}}, block {{block}}",
+        "blocks": {
+          "paragraph": "Paragraph",
+          "list": "List",
+          "lines": "Address lines",
+          "consent": "Analytics switch"
+        },
+        "onePerLine": "One item per line.",
+        "consentHint": "The analytics switch of the page sits here. The privacy notice needs exactly one.",
+        "moveUp": "Move up: {{label}}",
+        "moveDown": "Move down: {{label}}",
+        "removeBlock": "Remove: {{label}}",
+        "removeSection": "Remove: {{label}}",
+        "addBlock": "Add block",
+        "addSection": "Add section",
+        "issues": {
+          "badId": "The anchor must be lowercase words joined by hyphens.",
+          "consentControl": "The privacy notice needs exactly one analytics switch, and the terms none.",
+          "duplicateId": "Two sections share this anchor.",
+          "empty": "This cannot be empty.",
+          "html": "HTML is not allowed. Use plain text with **bold** and links.",
+          "shape": "This part of the text is not in the expected form.",
+          "tooLong": "This is too long.",
+          "tooMany": "There are too many of these.",
+          "unsafeLink": "Links must go to https:, mailto: or a page of the site."
+        },
+        "consentPlaceholder": "The analytics switch shows here.",
+        "effectiveDate": "Effective date",
+        "effectiveHint": "The date the text takes effect. The page shows it as last updated.",
+        "publishTitle": "Publish this text",
+        "publishDescription": "The text replaces the public page for every visitor at once.",
+        "publishConfirm": "Publish",
+        "restoreTitle": "Restore version {{version}}",
+        "restoreDescription": "Version {{version}} is copied into a new published version. The history is kept.",
+        "restoreConfirm": "Restore",
+        "restore": "Restore",
+        "restoreLabel": "Restore version {{version}}",
+        "restoreAdminOnly": "Only an admin can restore an earlier version.",
+        "preview": "Preview",
+        "previewLabel": "Preview version {{version}}",
+        "previewVersion": "Version {{version}}",
+        "previewVersionDescription": "How the text read when it was published.",
+        "versionNumber": "Version {{version}}",
+        "current": "Current",
+        "shipped": "Shipped text",
+        "noHistory": "No version has been published yet.",
+        "historyLabel": "Versions of this text",
+        "columns": {
+          "version": "Version",
+          "effective": "Effective",
+          "by": "Published by",
+          "at": "Published",
+          "actions": "Actions"
+        },
+        "sourceHint": "The Dutch text to translate from (read only).",
+        "draftSaved": "Draft saved",
+        "published": "Version {{version}} published",
+        "restored": "Version {{version}} restored",
+        "errors": {
+          "failed": "That did not work. Try again.",
+          "load": "The legal texts could not be loaded."
+        }
+      },
+      "strings": {
+        "title": "Strings",
+        "description": "The texts of the site, the app and the emails. A change shows at once, without a new release."
+      },
+      "filters": {
+        "label": "Filters for the strings",
+        "search": "Search",
+        "searchPlaceholder": "Search keys and texts",
+        "namespace": "Section",
+        "allNamespaces": "All sections",
+        "status": "Show",
+        "allStatuses": "All strings",
+        "language": "Language",
+        "anyLanguage": "Any language",
+        "statuses": {
+          "missing": "Missing",
+          "stale": "Source changed",
+          "invalid": "Placeholder problems"
+        }
+      },
+      "table": {
+        "label": "Interface strings",
+        "key": "Key",
+        "sourceHeader": "{{language}} (source)",
+        "total": "Strings: {{n}}",
+        "empty": "No strings match these filters."
+      },
+      "cell": {
+        "edit": "Edit {{key}} in {{language}}",
+        "empty": "No text yet",
+        "missing": "Missing",
+        "stale": "Source changed",
+        "confirm": "Confirm",
+        "confirmLabel": "Confirm {{key}} in {{language}}",
+        "placeholderIssue": "Placeholders do not match",
+        "notApplicable": "Not used in this language"
+      },
+      "editor": {
+        "label": "Text of {{key}} in {{language}}",
+        "source": "Source:",
+        "placeholders": "Keep these placeholders: {{placeholders}}.",
+        "save": "Save",
+        "cancel": "Cancel",
+        "revert": "Back to the default text",
+        "conflictTitle": "Somebody was first",
+        "conflictBody": "This text was saved by somebody else in the meantime. Their version is below.",
+        "useTheirs": "Use their version",
+        "keepMine": "Save mine anyway"
+      },
+      "errors": {
+        "empty": "Enter a text.",
+        "tooLong": "This text is too long.",
+        "placeholders": "The placeholders must match the source: {{placeholders}}.",
+        "generic": "Saving failed. Try again.",
+        "notFound": "This string no longer exists.",
+        "saveFailed": "The text could not be saved."
+      },
+      "export": {
+        "button": "Export",
+        "all": "All languages",
+        "item": "{{language}} ({{format}})",
+        "allItem": "All languages ({{format}})",
+        "failed": "Exporting failed."
+      },
+      "import": {
+        "button": "Import",
+        "title": "Import strings",
+        "description": "Choose a JSON or CSV file. You see what would change first, and only then are the texts saved.",
+        "file": "File",
+        "fileHint": "JSON or CSV, such as a file from the export.",
+        "language": "Language of the file",
+        "fromFile": "As in the file",
+        "added": "New: {{n}}",
+        "changed": "Changed: {{n}}",
+        "unchanged": "Unchanged: {{n}}",
+        "skipped": "Skipped: {{n}}",
+        "changes": "Changes",
+        "problems": "Skipped lines",
+        "problem": {
+          "unknownKey": "unknown key",
+          "unknownLanguage": "unknown language",
+          "notApplicable": "plural form this language does not use",
+          "placeholders": "placeholders do not match",
+          "tooLong": "too long",
+          "duplicate": "appears more than once"
+        },
+        "apply": "Import",
+        "done": "Strings saved: {{n}}",
+        "errors": {
+          "title": "The file cannot be used",
+          "tooLarge": "The file is too large.",
+          "applyFailed": "Importing failed.",
+          "staleImport": "Some texts changed while the file was being read. Nothing was imported: preview the file again.",
+          "file": {
+            "invalidJson": "This is not a valid JSON file.",
+            "invalidCsv": "This is not a valid CSV file.",
+            "noKeyColumn": "The key column is missing.",
+            "noLanguageColumn": "There is no column for the chosen language.",
+            "unknownLanguage": "The file names a language that does not exist or is not enabled.",
+            "unsupportedShape": "The values in the file must be texts.",
+            "needsLanguage": "Choose the language of this file.",
+            "generic": "The file could not be read."
+          }
+        }
+      },
+      "languages": {
+        "title": "Languages",
+        "description": "Which languages exist, what they are called and in which order they appear in the language menu. A new language shows the Dutch text until it is translated.",
+        "label": "Languages",
+        "add": "Add a language",
+        "addTitle": "Add a language",
+        "editTitle": "Change {{language}}",
+        "dialogDescription": "The code cannot be changed later.",
+        "code": "Code",
+        "codeHint": "A language code such as pt or pt-BR.",
+        "name": "Name",
+        "nameHint": "As the language calls itself, for example Português.",
+        "intlTag": "Intl tag",
+        "intlTagHint": "For dates and lists, for example pt-PT.",
+        "order": "Order",
+        "orderHint": "A number. Leave empty to put the language last.",
+        "enabled": "Enabled",
+        "enabledLabel": "Enable {{language}}",
+        "default": "Default",
+        "edit": "Change",
+        "editLabel": "Change {{language}}",
+        "save": "Save",
+        "saved": "The language was saved.",
+        "errors": {
+          "code": "Use a valid language code.",
+          "intlTag": "This is not a valid Intl tag.",
+          "exists": "This language code exists already.",
+          "order": "Enter a whole number.",
+          "default": "The default language stays enabled.",
+          "failed": "Saving failed. Try again."
+        }
+      },
+      "coverage": {
+        "title": "Translation coverage",
+        "percent": "{{percent}}% translated",
+        "progress": "Translated in {{language}}",
+        "missing": "Missing: {{n}}",
+        "stale": "Source changed: {{n}}",
+        "invalid": "Placeholders: {{n}}",
+        "complete": "Everything translated"
+      }
     }
   },
   "sponsorship": {
@@ -2135,7 +2482,7 @@
     },
     "review": {
       "title": "Review your sponsorship",
-      "description": "This is how your name appears on the selected gestures. The real video is made after payment and checked before it goes online.",
+      "description": "This is how your name appears at the end of the video of the selected gestures. After payment we check your sponsorship before it goes online.",
       "summary": "Sponsorship details",
       "gestures": "Gestures",
       "duration": "Duration",
@@ -2206,7 +2553,6 @@
       "timeline": {
         "title": "What happens next?",
         "paid": "Your payment is confirmed.",
-        "video": "We make your video with your name in it.",
         "review": "An administrator reviews your sponsorship within five working days.",
         "live": "You get an email as soon as it is online."
       },
@@ -2243,7 +2589,7 @@
       "submit": "Send for review",
       "submitted": {
         "title": "Sent!",
-        "description": "We make your new video and check it before it goes online. You do not have to pay again."
+        "description": "We check your changes before they go online. You do not have to pay again."
       },
       "failed": "We could not send your change. Please try again."
     },
@@ -2262,12 +2608,7 @@
     "preview": {
       "label": "Preview for {{name}}",
       "picker": "Choose the gesture to preview",
-      "play": "Play",
-      "pause": "Pause",
-      "showEnding": "Show the ending",
-      "loading": "Loading the preview…",
-      "fallbackNote": "The video cannot be played here, so the preview shows a still of the gesture. The final video uses the full clip, with this ending.",
-      "unavailable": "The preview cannot be shown right now. The final video is made with your name and logo as entered."
+      "caption": "This is how the end of the video looks: a still of the gesture with your name and logo."
     }
   },
   "signOutConfirm": {

@@ -6,11 +6,12 @@ import { siteEnv } from "./auth";
 
 /**
  * The published categories' slugs by `slugify(name)`, for old
- * `?category=<Name>` links (the catalog snapshot in KV, else D1).
+ * `?category=<Name>` links: the Dutch names the old links carry, whatever
+ * the visitor's language (the catalog snapshot in KV, else D1).
  */
 export async function loadCategorySlugs(): Promise<CategorySlugs> {
   const { db, kv } = siteEnv();
-  const categories = await getCatalogCategories(createDb(db), kv);
+  const categories = await getCatalogCategories(createDb(db), kv, "nl");
   return new Map(
     categories.map((category) => [slugify(category.name), category.slug])
   );

@@ -24,6 +24,7 @@ import { type AppClients, AppProviders, sessionHook } from "@/providers";
 
 export const HOND = {
   categories: [{ name: "Dieren", slug: "dieren" }],
+  fallbackUsed: false,
   id: "g-hond",
   name: "Hond",
   playbackId: "playback-hond",
@@ -31,6 +32,7 @@ export const HOND = {
 };
 export const KAT = {
   categories: [{ name: "Dieren", slug: "dieren" }],
+  fallbackUsed: false,
   id: "g-kat",
   name: "Kat",
   playbackId: "playback-kat",
@@ -69,9 +71,12 @@ const CATALOG_ROUTES: Routes = {
     }
     return {
       ...gesture,
+      audioPath: null,
       canonicalSlug: gesture.slug,
       description: `Het gebaar voor ${gesture.name.toLowerCase()}.`,
       keywords: ["huisdier"],
+      // Like every video that existed before the textless ones: the name is in the picture.
+      needsRecut: true,
       publishedAt: 0,
       sponsor: null,
       updatedAt: 0,

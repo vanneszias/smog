@@ -1,10 +1,12 @@
 import {
   category,
+  DEFAULT_LANGUAGE_SQL,
   failWhen,
   GuardFailedError,
   gesture,
   gestureCategory,
   gestureKeyword,
+  gestureNeedsTranslationSql,
   gestureSortName,
   inList,
   jsonList,
@@ -40,6 +42,7 @@ import {
   runCatalogBatch,
   withFreeSlug,
 } from "./catalog-writes";
+import { markUnchanged } from "./guard";
 import { type AdminDeps, adminProcedure } from "./procedure";
 
 // --- Reads -----------------------------------------------------------------
@@ -69,9 +72,13 @@ const categoriesColumn =
       }))
   );
 
-/** Keywords in the editor's order. */
+/**
+ * Keywords in the editor's order: the default language's only (this editor
+ * edits the base text; the other languages' keywords belong to
+ * `catalogTranslation.gestures.save`).
+ */
 const keywordsColumn =
-  sql`(SELECT json_group_array(o.keyword) FROM (SELECT ${ref("k", gestureKeyword.keyword)} AS keyword FROM ${gestureKeyword} AS k WHERE ${ref("k", gestureKeyword.gestureId)} = ${ref(G, gesture.id)} ORDER BY ${ref("k", gestureKeyword.position)}) AS o)`.mapWith(
+  sql`(SELECT json_group_array(o.keyword) FROM (SELECT ${ref("k", gestureKeyword.keyword)} AS keyword FROM ${gestureKeyword} AS k WHERE ${ref("k", gestureKeyword.gestureId)} = ${ref(G, gesture.id)} AND ${ref("k", gestureKeyword.locale)} = ${DEFAULT_LANGUAGE_SQL} ORDER BY ${ref("k", gestureKeyword.position)}) AS o)`.mapWith(
     parseJson<string[]>
   );
 
@@ -82,6 +89,7 @@ const rowColumns = {
   keywords: keywordsColumn,
   muxAssetId: gesture.muxAssetId,
   name: gesture.name,
+  needsRecut: gesture.needsRecut,
   playbackId: gesture.playbackId,
   publishedAt: gesture.publishedAt,
   slug: gesture.slug,
@@ -100,6 +108,7 @@ interface StoredRow {
   keywords: string[];
   muxAssetId: string | null;
   name: string;
+  needsRecut: boolean;
   playbackId: string;
   publishedAt: Date | null;
   slug: string;
@@ -114,6 +123,7 @@ function toRow(row: StoredRow): AdminGestureRow {
     keywords: row.keywords,
     muxAssetId: row.muxAssetId,
     name: row.name,
+    needsRecut: row.needsRecut,
     playbackId: row.playbackId,
     publishedAt: row.publishedAt?.getTime() ?? null,
     slug: row.slug,
@@ -163,7 +173,8 @@ async function keywordMatches(db: Db, needle: string): Promise<string[]> {
       gestureId: gestureKeyword.gestureId,
       keyword: gestureKeyword.keyword,
     })
-    .from(gestureKeyword);
+    .from(gestureKeyword)
+    .where(eq(gestureKeyword.locale, DEFAULT_LANGUAGE_SQL));
   const ids = new Set<string>();
   for (const row of rows) {
     if (normalizeText(row.keyword).includes(needle)) {
@@ -173,7 +184,7 @@ async function keywordMatches(db: Db, needle: string): Promise<string[]> {
   return [...ids];
 }
 
-/** The `q` and `category` filters (the counts ignore `status`). */
+/** The `q`, `category` and `needsTranslation` filters (the counts ignore `status`). */
 function listFilters(
   query: AdminGestureListQuery,
   needle: string,
@@ -183,6 +194,9 @@ function listFilters(
     needle === ""
       ? undefined
       : sql`(instr(${gesture.sortName}, ${needle}) > 0 OR ${gesture.id} IN (SELECT value FROM json_each(${jsonList(keywordIds)})))`,
+    query.needsTranslation === undefined
+      ? undefined
+      : gestureNeedsTranslationSql(query.needsTranslation),
     query.category && query.category.length > 0
       ? sql`${gesture.id} IN (SELECT ${ref("gc", gestureCategory.gestureId)} FROM ${gestureCategory} AS gc WHERE ${ref("gc", gestureCategory.categoryId)} IN (SELECT value FROM json_each(${jsonList(query.category)})))`
       : undefined
@@ -228,9 +242,23 @@ async function listAdminGestures(
     const keywordIds = needle === "" ? [] : await keywordMatches(db, needle);
     const filters = listFilters(query, needle, keywordIds);
     const [rows, [counts]] = await db.batch([
-      adminGesturesQuery(db, filters, query.status, position, query.limit),
+      adminGesturesQuery(
+        db,
+        // The re-cut list narrows the page, not the counts (its tab shows the number).
+        and(
+          filters,
+          query.needsRecut === true ? sql`${gesture.needsRecut} = 1` : undefined
+        ),
+        query.status,
+        position,
+        query.limit
+      ),
       db
         .select({
+          needsRecut:
+            sql<number>`coalesce(sum(${gesture.needsRecut}), 0)`.mapWith(
+              Number
+            ),
           published: sql<number>`count(${gesture.publishedAt})`.mapWith(Number),
           total: sql<number>`count(*)`.mapWith(Number),
         })
@@ -242,7 +270,12 @@ async function listAdminGestures(
     const total = counts?.total ?? 0;
     const published = counts?.published ?? 0;
     return {
-      counts: { published, total, unpublished: total - published },
+      counts: {
+        needsRecut: counts?.needsRecut ?? 0,
+        published,
+        total,
+        unpublished: total - published,
+      },
       items: page.map(toRow),
       nextCursor:
         rows.length > query.limit && last
@@ -327,7 +360,12 @@ async function unknownCategories(
   return ids.filter((id) => !known.has(id));
 }
 
-/** The keyword rows for a gesture, in order (already trimmed and de-duplicated). */
+/**
+ * The default language's keyword rows for a gesture, in order (already
+ * trimmed and de-duplicated). `locale` is the column's SQL default (`nl`,
+ * migration 0017), not a bound value: D1 binds at most 100 values per
+ * statement, and 30 keywords of four columns would be 120.
+ */
 function keywordRows(gestureId: string, keywords: readonly string[]) {
   return keywords.map((keyword, position) => ({
     gestureId,
@@ -364,8 +402,16 @@ function patchStatements(
       .where(eq(gesture.id, id)),
   ];
   if (patch.keywords !== undefined) {
+    // Only the default language's: the other languages' keywords stay.
     statements.push(
-      db.delete(gestureKeyword).where(eq(gestureKeyword.gestureId, id))
+      db
+        .delete(gestureKeyword)
+        .where(
+          and(
+            eq(gestureKeyword.gestureId, id),
+            eq(gestureKeyword.locale, DEFAULT_LANGUAGE_SQL)
+          )
+        )
     );
     if (patch.keywords.length > 0) {
       statements.push(
@@ -743,6 +789,7 @@ export function gesturesRoutes(deps: AdminDeps) {
                 id,
                 muxAssetId: input.muxAssetId ?? null,
                 name: input.name,
+                needsRecut: !input.textless,
                 playbackId: input.playbackId,
                 publishedAt: input.published ? now : null,
                 slug,
@@ -854,6 +901,45 @@ export function gesturesRoutes(deps: AdminDeps) {
             }
             throw error;
           }
+        }
+      ),
+      recutDone: adminProcedure.gestures.recutDone.handler(
+        async ({ context, errors, input }) => {
+          const { db } = context;
+          const row = (await currentGestures(db, [input.id])).get(input.id);
+          if (!row) {
+            throw errors.NOT_FOUND();
+          }
+          const [flag] = await db
+            .select({ needsRecut: gesture.needsRecut })
+            .from(gesture)
+            .where(eq(gesture.id, input.id));
+          if (flag?.needsRecut === false) {
+            markUnchanged(db);
+            return (await findAdminGesture(db, input.id)) as AdminGestureDetail;
+          }
+          // `updated_at` stays: this is no edit of the fields an editor holds.
+          await runCatalogBatch(
+            db,
+            [
+              db
+                .update(gesture)
+                .set({
+                  needsRecut: false,
+                  updatedAt: sql`${gesture.updatedAt}`,
+                })
+                .where(eq(gesture.id, input.id)),
+              auditStatement(db, {
+                action: "gesture.recut_done",
+                actorId: context.user.id,
+                data: { name: row.name, slug: row.slug },
+                targetId: input.id,
+                targetType: "gesture",
+              }),
+            ],
+            "clear the re-cut flag"
+          );
+          return (await findAdminGesture(db, input.id)) as AdminGestureDetail;
         }
       ),
       saveMany: adminProcedure.gestures.saveMany.handler(

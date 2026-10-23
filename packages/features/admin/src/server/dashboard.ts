@@ -102,8 +102,6 @@ export async function getDashboard(
         inReview: of("in_review"),
         live: of("live"),
         refundNeeded: refunds[0]?.n ?? 0,
-        renderFailed: of("render_failed"),
-        rendering: of("rendering"),
       },
       users: users[0] ?? { admins: 0, banned: 0, last30Days: 0, total: 0 },
     };

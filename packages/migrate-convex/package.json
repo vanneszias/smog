@@ -32,7 +32,6 @@
     "@orpc/server": "catalog:",
     "@smog/auth": "workspace:*",
     "@smog/payments": "workspace:*",
-    "@smog/render": "workspace:*",
     "@smog/rpc": "workspace:*",
     "@types/bun": "catalog:",
     "typescript": "catalog:",

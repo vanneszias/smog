@@ -1,8 +1,9 @@
 import { useEmailPreview, useEmailTemplates } from "@smog/admin/client";
-import { DEFAULT_LOCALE, LOCALES, type Locale } from "@smog/config/constants";
+import { DEFAULT_LOCALE, LOCALE_CODE_PATTERN } from "@smog/config/constants";
 import { EMAIL_TEMPLATE_IDS, type EmailTemplateId } from "@smog/email/samples";
 import type { Translate, TranslationKey } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
+import { useLanguages } from "@smog/translation/client";
 import {
   Card,
   cn,
@@ -39,8 +40,6 @@ const TEMPLATE_LABELS = {
     "admin.emails.template.adminNewSponsorship",
   "transactional/admin-refund-needed":
     "admin.emails.template.adminRefundNeeded",
-  "transactional/admin-render-failed":
-    "admin.emails.template.adminRenderFailed",
   "transactional/payment-confirmed": "admin.emails.template.paymentConfirmed",
   "transactional/renewal-reminder": "admin.emails.template.renewalReminder",
   "transactional/sponsorship-live": "admin.emails.template.sponsorshipLive",
@@ -49,12 +48,6 @@ const TEMPLATE_LABELS = {
   "transactional/we-moved": "admin.emails.template.weMoved",
   "transactional/welcome": "admin.emails.template.welcome",
 } as const satisfies Record<EmailTemplateId, TranslationKey>;
-
-const LOCALE_LABELS = {
-  en: "language.en",
-  fr: "language.fr",
-  nl: "language.nl",
-} as const satisfies Record<Locale, TranslationKey>;
 
 /** The preview widths (W-07): a desktop client's column and a phone. */
 const WIDTHS = { desktop: 780, mobile: 390 } as const;
@@ -116,6 +109,9 @@ function useNarrowScreen(): boolean {
   return useSyncExternalStore(subscribeNarrow, isNarrow, notNarrowOnServer);
 }
 
+/** A language code, as the previews and the URL name a language. */
+type Locale = string;
+
 export interface EmailPreviewSearch {
   locale?: Locale;
   template?: EmailTemplateId;
@@ -136,7 +132,11 @@ export function validateEmailPreviewSearch(
   search: Record<string, unknown>
 ): EmailPreviewSearch {
   return {
-    locale: isOneOf(LOCALES, search.locale) ? search.locale : undefined,
+    locale:
+      typeof search.locale === "string" &&
+      LOCALE_CODE_PATTERN.test(search.locale)
+        ? search.locale
+        : undefined,
     template: isOneOf(EMAIL_TEMPLATE_IDS, search.template)
       ? search.template
       : undefined,
@@ -213,7 +213,7 @@ function TemplateList({
               current={id === selected}
               id={id}
               onSelect={onSelect}
-              subject={subject[locale]}
+              subject={subject[locale] ?? ""}
             />
           </li>
         );
@@ -332,13 +332,23 @@ export function EmailPreview({
 }: EmailPreviewProps): ReactNode {
   const { t } = useTranslation();
   const templates = useEmailTemplates();
-  const locale = search.locale ?? DEFAULT_LOCALE;
+  const languages = useLanguages();
+  // The enabled languages (the data, so one added by an admin shows up); a
+  // language in the URL that is not one of them falls back to the default.
+  const enabled = useMemo(
+    () => (languages.data?.items ?? []).filter((item) => item.enabled),
+    [languages.data]
+  );
+  const locale =
+    search.locale && enabled.some((item) => item.code === search.locale)
+      ? search.locale
+      : DEFAULT_LOCALE;
   // Without a choice in the URL: the phone width on a phone.
   const narrow = useNarrowScreen();
   const width = search.width ?? (narrow ? "mobile" : "desktop");
   const localeOptions = useMemo(
-    () => LOCALES.map((value) => ({ label: t(LOCALE_LABELS[value]), value })),
-    [t]
+    () => enabled.map((item) => ({ label: item.name, value: item.code })),
+    [enabled]
   );
   const widthOptions = useMemo(
     () => [
@@ -353,9 +363,7 @@ export function EmailPreview({
   );
   const onLocale = useCallback(
     (value: string) => {
-      if (isOneOf(LOCALES, value)) {
-        onSearchChange({ ...search, locale: value });
-      }
+      onSearchChange({ ...search, locale: value });
     },
     [onSearchChange, search]
   );

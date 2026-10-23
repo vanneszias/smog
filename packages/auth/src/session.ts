@@ -1,6 +1,7 @@
+import { hasRole, type UserRole } from "./fields";
 import type { Auth } from "./server";
 
-export type { Role } from "./fields";
+export type { Role, UserRole } from "./fields";
 
 export type SessionWithUser = NonNullable<
   Awaited<ReturnType<Auth["api"]["getSession"]>>
@@ -40,8 +41,19 @@ export function requireUser(session: SessionWithUser | null): SessionUser {
 
 /** The signed-in admin, or an `UNAUTHORIZED` / `FORBIDDEN` AuthError. */
 export function requireAdminUser(session: SessionWithUser | null): SessionUser {
+  return requireRoleUser(session, "admin");
+}
+
+/**
+ * The signed-in user holding one of `roles` (`admin` passes every check,
+ * roles are a set), or an `UNAUTHORIZED` / `FORBIDDEN` AuthError.
+ */
+export function requireRoleUser(
+  session: SessionWithUser | null,
+  ...roles: readonly UserRole[]
+): SessionUser {
   const current = requireUser(session);
-  if (current.role !== "admin") {
+  if (!hasRole(current.roles, ...roles)) {
     throw new AuthError("FORBIDDEN");
   }
   return current;

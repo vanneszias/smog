@@ -278,6 +278,103 @@ describe("GET /api/logos/$key (an admin read)", () => {
 });
 
 /**
+ * `GET /api/sponsor-logos/<uuid>` (phase 10b task 8): the end card shows the
+ * logo of a running sponsorship to every visitor of the gesture, and of no
+ * other.
+ */
+describe("GET /api/sponsor-logos/$key (the public logo of a running sponsorship)", () => {
+  async function sponsorshipWithLogo(marker: number): Promise<{
+    id: string;
+    logoId: string;
+  }> {
+    const upload = await requestUpload();
+    expect(
+      (await put(upload.uploadUrl, file([...PNG_HEAD, marker]))).status
+    ).toBe(200);
+    const checkout = await checkoutVia(createFakeMollie(), {
+      count: 1,
+      logoKey: upload.key,
+    });
+    const id = checkout.sponsorshipIds[0] ?? "";
+    const [stored] = await logoKeysOf([id]);
+    return { id, logoId: (stored ?? "").slice("logos/".length) };
+  }
+
+  function setStatus(id: string, status: string): Promise<unknown> {
+    const { db } = siteEnv();
+    return db
+      .prepare("UPDATE sponsorship SET status = ? WHERE id = ?")
+      .bind(status, id)
+      .run();
+  }
+
+  function read(id: string): Promise<Response> {
+    return exports.default.fetch(`${ORIGIN}/api/sponsor-logos/${id}`, {
+      headers: { "cf-connecting-ip": crypto.randomUUID() },
+    });
+  }
+
+  it("serves a live or expiring sponsorship's logo to a guest, cached for an hour and sandboxed", async () => {
+    const { id, logoId } = await sponsorshipWithLogo(1);
+    for (const status of ["live", "expiring"]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one status at a time.
+      await setStatus(id, status);
+      const response = await read(logoId);
+      expect(response.status, status).toBe(200);
+      expect(response.headers.get("content-type")).toBe("image/png");
+      expect(response.headers.get("cache-control")).toBe(
+        "public, max-age=3600"
+      );
+      expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(response.headers.get("cross-origin-resource-policy")).toBe(
+        "same-origin"
+      );
+      expect(response.headers.get("content-security-policy")).toBe(
+        "default-src 'none'; sandbox"
+      );
+      expect(new Uint8Array(await response.arrayBuffer()).slice(0, 8)).toEqual(
+        new Uint8Array(PNG_HEAD)
+      );
+    }
+  });
+
+  it("keeps the logo private until the sponsorship runs, and again once it ends: the same 404 as an unknown id", async () => {
+    const { id, logoId } = await sponsorshipWithLogo(2);
+    for (const status of [
+      "awaiting_payment",
+      "in_review",
+      "changes_requested",
+      "rejected",
+      "expired",
+    ]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one status at a time.
+      await setStatus(id, status);
+      const response = await read(logoId);
+      expect(response.status, status).toBe(404);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      await response.body?.cancel();
+    }
+    for (const missing of [crypto.randomUUID(), "not-a-key", "..%2Fsecret"]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one key at a time.
+      const response = await read(missing);
+      expect(response.status, missing).toBe(404);
+      await response.body?.cancel();
+    }
+  });
+
+  it("serves only an image: another stored type is a 404", async () => {
+    const { id, logoId } = await sponsorshipWithLogo(3);
+    await setStatus(id, "live");
+    await media().put(`logos/${logoId}`, file(PNG_HEAD), {
+      httpMetadata: { contentType: "text/html" },
+    });
+    const response = await read(logoId);
+    expect(response.status).toBe(404);
+    await response.body?.cancel();
+  });
+});
+
+/**
  * `POST /api/sponsor/reedit-logo` (phase 7 task 9, task 8 review M-5): the
  * re-edit link holder reads the logo their sponsorship keeps, for the
  * preview. The token is in the body (never a URL), the answer is private

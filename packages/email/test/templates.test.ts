@@ -1,4 +1,4 @@
-import { LOCALES, type Locale } from "@smog/i18n";
+import { LOCALES, type ShippedLocale as Locale } from "@smog/i18n";
 import { describe, expect, it } from "vitest";
 import { EmailRenderError, type EmailTemplateProps, renderEmail } from "../src";
 import { EMAIL_SAMPLES } from "../src/samples";
@@ -114,7 +114,6 @@ describe("escaping", () => {
     "transactional/sponsorship-received",
     "transactional/sponsorship-live",
     "transactional/admin-new-sponsorship",
-    "transactional/admin-render-failed",
   ] as const)("escapes a <script> display name in %s", async (template) => {
     const props = { ...EMAIL_SAMPLES[template], displayName: SCRIPT };
     const email = await renderEmail(template, props as never, "en");
@@ -122,7 +121,7 @@ describe("escaping", () => {
     expect(email.html).toContain("&lt;script&gt;");
   });
 
-  it("escapes the names and the error text the admin emails show", async () => {
+  it("escapes the names the admin emails show", async () => {
     const email = await renderEmail(
       "transactional/admin-new-sponsorship",
       {
@@ -133,12 +132,6 @@ describe("escaping", () => {
       "nl"
     );
     expect(email.html).not.toContain("<script");
-    const failed = await renderEmail(
-      "transactional/admin-render-failed",
-      { ...EMAIL_SAMPLES["transactional/admin-render-failed"], error: SCRIPT },
-      "nl"
-    );
-    expect(failed.html).not.toContain("<script");
   });
 });
 
@@ -318,18 +311,6 @@ describe("the admin emails", () => {
       "en"
     );
     expect(email.subject).toBe("Sponsorship renewed by Acme BV");
-  });
-
-  it("admin_render_failed shows at most 300 characters of the error", async () => {
-    const error = `${"x".repeat(299)}yz${"!".repeat(50)}`;
-    const email = await renderEmail(
-      "transactional/admin-render-failed",
-      { ...EMAIL_SAMPLES["transactional/admin-render-failed"], error },
-      "en"
-    );
-    expect(email.subject).toBe("Video failed for Hond");
-    expect(email.text).toContain(`${"x".repeat(299)}y`);
-    expect(email.text).not.toContain("yz");
   });
 
   it.each([

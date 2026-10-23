@@ -47,6 +47,7 @@ function detail(overrides: Partial<AdminGestureDetail> = {}) {
     keywords: ["hallo"],
     muxAssetId: null,
     name: "Zwaaien",
+    needsRecut: false,
     playbackId: "pb-zwaaien",
     publishedAt: 1,
     slug: "zwaaien",
@@ -60,12 +61,19 @@ function nameInput(): HTMLInputElement {
 }
 
 const DIEREN = /Dieren/;
-const DESCRIPTION = /Description/;
+const DESCRIPTION = /^Description(?! in )/;
 
 const BASE_API = {
   "admin/categories/list": CATEGORIES,
   "admin/gestures/checkName": { duplicates: [] },
   "admin/mux/status": { configured: false },
+  "catalogTranslation/gestures/get": {
+    id: "g1",
+    published: true,
+    slug: "zwaaien",
+    source: { description: "", keywords: [], name: "Zwaaien" },
+    translations: {},
+  },
 };
 
 describe("GestureEditor", () => {
@@ -141,7 +149,39 @@ describe("GestureEditor", () => {
         name: "Kat",
         playbackId: "pb-kat",
         published: true,
+        textless: true,
       })
+    );
+  });
+
+  test("a new gesture says whether its video has text in the picture (re-cut list), an existing one has the re-cut card", async () => {
+    const created = detail({ id: "g-new", name: "Kat", slug: "kat" });
+    const { calls } = await renderSite(
+      () => (
+        <div data-testid="page">
+          <GestureEditor gesture={null} />
+        </div>
+      ),
+      { api: { ...BASE_API, "admin/gestures/create": created } }
+    );
+    const textless = await screen.findByRole("switch", {
+      name: "The video has no text in the picture",
+    });
+    expect(textless.getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(textless);
+    expect(textless.getAttribute("aria-checked")).toBe("false");
+    fireEvent.change(nameInput(), { target: { value: "Kat" } });
+    fireEvent.change(
+      await screen.findByRole("textbox", { name: "Playback ID" }),
+      { target: { value: "pb-kat" } }
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Use this video" }));
+    fireEvent.click(await screen.findByRole("button", { name: DIEREN }));
+    fireEvent.click(screen.getByRole("button", { name: "Create gesture" }));
+    await waitFor(() =>
+      expect(
+        calls.find((call) => call.path === "admin/gestures/create")?.input
+      ).toMatchObject({ textless: false })
     );
   });
 

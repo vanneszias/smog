@@ -26,7 +26,22 @@ describe("toAuthState", () => {
     const withExtra = { ...user, emailVerified: true };
     expect(
       toAuthState({ data: { user: withExtra }, isPending: false })
-    ).toEqual({ status: "signedIn", user });
+    ).toEqual({ status: "signedIn", user: { ...user, roles: [] } });
+  });
+
+  it("carries the roles held: known ones only, in a fixed order", () => {
+    const state = toAuthState({
+      data: {
+        user: {
+          ...user,
+          role: "user",
+          roles: ["teacher", "bogus", "translator"],
+        },
+      },
+      isPending: false,
+    });
+    expect(state.user?.roles).toEqual(["translator", "teacher"]);
+    expect(state.user?.role).toBe("user");
   });
 
   it("names a user without a name by their email (code and link sign-ups)", () => {

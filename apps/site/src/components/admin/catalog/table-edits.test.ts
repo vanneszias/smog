@@ -21,6 +21,7 @@ function row(id: string, overrides: Partial<AdminGestureRow> = {}) {
     keywords: ["hallo"],
     muxAssetId: null,
     name: `Gebaar ${id}`,
+    needsRecut: false,
     playbackId: `pb-${id}`,
     publishedAt: 1,
     slug: `gebaar-${id}`,

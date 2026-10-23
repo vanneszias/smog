@@ -17,20 +17,20 @@ const ALLOWED: readonly [
   SponsorshipEventType,
   SponsorshipStatus,
 ][] = [
-  ["awaiting_payment", "payment_paid", "rendering"],
-  ["awaiting_payment", "marked_paid_manually", "rendering"],
+  ["awaiting_payment", "payment_paid", "in_review"],
+  ["awaiting_payment", "marked_paid_manually", "in_review"],
   ["awaiting_payment", "payment_failed", "cancelled"],
   ["awaiting_payment", "cancelled", "cancelled"],
-  ["cancelled", "revived", "rendering"],
+  ["cancelled", "revived", "in_review"],
+  // The retirement sweep (phase 10b task 9): the only way out of a render state.
   ["rendering", "render_succeeded", "in_review"],
-  ["rendering", "render_failed", "render_failed"],
-  ["render_failed", "render_retried", "rendering"],
+  ["render_failed", "render_succeeded", "in_review"],
   ["in_review", "approved", "live"],
   ["in_review", "rejected", "rejected"],
   ["changes_requested", "rejected", "rejected"],
   ["in_review", "changes_requested", "changes_requested"],
   ["rejected", "changes_requested", "changes_requested"],
-  ["changes_requested", "resubmitted", "rendering"],
+  ["changes_requested", "resubmitted", "in_review"],
   ["live", "reminder_sent", "expiring"],
   ["expiring", "renewed", "live"],
   ["live", "renewed", "live"],
@@ -43,6 +43,8 @@ const ALLOWED: readonly [
 const NON_TRANSITION_EVENTS: readonly SponsorshipEventType[] = [
   "created",
   "render_started",
+  "render_failed",
+  "render_retried",
   "refund_needed",
   "token_issued",
   "legacy",
@@ -90,5 +92,25 @@ describe("transition (spec §5.5)", () => {
     expect(
       transition("awaiting_payment", "toString" as SponsorshipEventType)
     ).toBeNull();
+  });
+});
+
+describe("the retired render pipeline (phase 10b task 9)", () => {
+  test("paid, revived and resubmitted sponsorships go to review, never to rendering", () => {
+    expect(transition("awaiting_payment", "payment_paid")).toBe("in_review");
+    expect(transition("awaiting_payment", "marked_paid_manually")).toBe(
+      "in_review"
+    );
+    expect(transition("cancelled", "revived")).toBe("in_review");
+    expect(transition("changes_requested", "resubmitted")).toBe("in_review");
+  });
+
+  test("nothing enters a render state any more", () => {
+    for (const from of SPONSORSHIP_STATUSES) {
+      for (const event of SPONSORSHIP_EVENT_TYPES) {
+        const to = transition(from, event);
+        expect(to === "rendering" || to === "render_failed").toBe(false);
+      }
+    }
   });
 });

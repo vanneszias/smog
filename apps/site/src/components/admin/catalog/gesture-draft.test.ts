@@ -19,6 +19,7 @@ const BASE: GestureDraft = {
   keywords: ["hallo"],
   name: "Zwaaien",
   published: true,
+  textless: true,
   video: { playbackId: "pb-1" },
 };
 

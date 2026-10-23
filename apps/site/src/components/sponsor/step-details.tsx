@@ -3,7 +3,6 @@ import {
   LOGO_ADDON_PER_GESTURE_CENTS,
 } from "@smog/config/constants";
 import { useTranslation } from "@smog/i18n/react";
-import { RENDER_OVERLAY_LAYOUT } from "@smog/render/contract";
 import {
   type DetailsErrors,
   type DetailsField,
@@ -153,7 +152,7 @@ export function StepDetails({
               }}
               error={errorFor("displayName")}
               hint={t("sponsor.details.displayNameHint", {
-                intro: RENDER_OVERLAY_LAYOUT.text.intro,
+                intro: t("endCard.message"),
                 name,
               })}
               label={t("sponsor.details.displayName")}

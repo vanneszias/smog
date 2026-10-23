@@ -434,11 +434,18 @@ describe("sessions and roles", () => {
     expect(current?.user.locale).toBe("fr");
   });
 
-  it("rejects an unknown locale and never lets a client set legacyId or role", async () => {
+  it("rejects a malformed locale, falls back to the default for one that is not enabled, and never lets a client set legacyId or role", async () => {
     const ctx = setup();
 
-    const bad = await signUp(ctx, uniqueEmail(), { locale: "de" });
+    const bad = await signUp(ctx, uniqueEmail(), { locale: "!!" });
     expect(bad.status).toBe(400);
+
+    // Well formed but no enabled language: the account gets the default
+    // language, never a foreign-key error.
+    const unknownEmail = uniqueEmail();
+    const unknown = await signUp(ctx, unknownEmail, { locale: "de" });
+    expect(unknown.status).toBe(200);
+    expect((await findUser(ctx.db, unknownEmail))?.locale).toBe("nl");
 
     const email = uniqueEmail();
     const sneaky = await signUp(ctx, email, {

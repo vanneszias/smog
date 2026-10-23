@@ -3,9 +3,12 @@ import { expo } from "@better-auth/expo";
 import { passkey } from "@better-auth/passkey";
 import {
   account,
+  defaultLanguageCode,
+  isEnabledLanguage,
   passkey as passkeyTable,
   session,
   user,
+  userRole,
   verification,
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
@@ -24,19 +27,27 @@ import {
   createAuthMiddleware,
   sendVerificationEmailFn,
 } from "better-auth/api";
-import { admin, captcha, emailOTP, magicLink } from "better-auth/plugins";
+import {
+  admin,
+  captcha,
+  customSession,
+  emailOTP,
+  magicLink,
+} from "better-auth/plugins";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { COOKIE_PREFIX } from "./cookie";
 import type { AuthEnv } from "./env";
 import {
   APP_MAGIC_LINK_PATH,
   MAGIC_LINK_TTL_SECONDS,
+  normalizeRoles,
   OTP_LENGTH,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   PROFILE_NAME_MAX,
   profileNameSchema,
   USER_ADDITIONAL_FIELDS,
+  type UserRole,
 } from "./fields";
 
 export type { AuthEnv } from "./env";
@@ -114,6 +125,34 @@ export interface CreateAuthOptions {
 }
 
 const minutes = (seconds: number): number => Math.round(seconds / 60);
+
+/**
+ * Our columns and the admin plugin's on the session user: the custom
+ * session's return type replaces Better Auth's inferred one, so they are
+ * named here to stay on `SessionUser`.
+ */
+interface SessionUserColumns {
+  banExpires?: Date | null | undefined;
+  banned?: boolean | null | undefined;
+  banReason?: string | null | undefined;
+  legacyId?: string | null | undefined;
+  locale?: string | null | undefined;
+  role?: string | null | undefined;
+}
+
+/** The roles the user holds in `user_role`, in `USER_ROLES` order. */
+async function rolesOf(db: Db, userId: string): Promise<UserRole[]> {
+  try {
+    const rows = await db
+      .select({ role: userRole.role })
+      .from(userRole)
+      .where(eq(userRole.userId, userId));
+    return normalizeRoles(rows.map((row) => row.role));
+  } catch (error) {
+    console.error("[auth] Failed to read the roles of the user:", error);
+    throw error;
+  }
+}
 
 function localeOf(value: unknown): string | null {
   return typeof value === "object" &&
@@ -254,6 +293,24 @@ function newUserProfile(
     );
   }
   return { image: null, name };
+}
+
+/**
+ * The `locale` a new account is created with, as a partial row to merge.
+ * Languages are data: a well-formed code that is not an enabled language
+ * (a disabled one, one that never existed, a stale app) becomes the default
+ * language instead of reaching the foreign key as a 500. No locale sent,
+ * nothing to add.
+ */
+async function signUpLocale(
+  db: Db,
+  data: unknown
+): Promise<{ locale?: string | null }> {
+  const locale = localeOf(data);
+  if (locale === null || (await isEnabledLanguage(db, locale))) {
+    return {};
+  }
+  return { locale: await defaultLanguageCode(db) };
 }
 
 /** The only code type a sign-in-only server sends. */
@@ -447,7 +504,6 @@ export function createAuth(options: CreateAuthOptions) {
               await welcome(created, context?.request);
             }
           },
-          // biome-ignore lint/suspicious/useAwait: Better Auth's hook signature is async.
           before: async (data, context) => {
             if (signInOnly) {
               throw new APIError("FORBIDDEN", {
@@ -455,7 +511,12 @@ export function createAuth(options: CreateAuthOptions) {
                 message: "Sign-up is closed during maintenance",
               });
             }
-            return { data: newUserProfile(data, context?.path) };
+            return {
+              data: {
+                ...newUserProfile(data, context?.path),
+                ...(await signUpLocale(db, data)),
+              },
+            };
           },
         },
         update: {
@@ -565,6 +626,17 @@ export function createAuth(options: CreateAuthOptions) {
     },
     plugins: [
       admin({ adminRoles: ["admin"], defaultRole: "user" }),
+      // Roles as a set (phase 10b): every session read, over HTTP and
+      // `auth.api`, carries `user.roles` from `user_role`, read from D1
+      // each time (no cookie cache), so a grant or a demotion applies on
+      // the next request.
+      customSession(async ({ session: current, user: member }) => ({
+        session: current,
+        user: {
+          ...(member as typeof member & SessionUserColumns),
+          roles: await rolesOf(db, member.id),
+        },
+      })),
       emailOTP({
         disableSignUp: signInOnly,
         expiresIn: OTP_TTL,

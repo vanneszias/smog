@@ -46,6 +46,7 @@ export const CASES: Record<string, ReactElement> = {
     <kit.AlertDialog onConfirm={noop} open testID={ID} title="Delete?" />
   ),
   AlertTitle: <kit.AlertTitle testID={ID}>Title</kit.AlertTitle>,
+  AudioButton: <kit.AudioButton src="https://example.test/a.mp3" testID={ID} />,
   Avatar: <kit.Avatar name="Zias" testID={ID} />,
   Badge: <kit.Badge testID={ID}>New</kit.Badge>,
   Button: <kit.Button testID={ID}>Save</kit.Button>,
@@ -155,6 +156,9 @@ export const CASES: Record<string, ReactElement> = {
       </kit.MenuContent>
     </kit.Menu>
   ),
+  NameOverlayToggle: (
+    <kit.NameOverlayToggle checked onCheckedChange={noop} testID={ID} />
+  ),
   NoResultsEmptyState: <kit.NoResultsEmptyState testID={ID} />,
   OfflineBanner: <kit.OfflineBanner online={false} testID={ID} />,
   PopoverContent: (
@@ -196,6 +200,7 @@ export const CASES: Record<string, ReactElement> = {
   SheetFooter: <kit.SheetFooter testID={ID} />,
   Skeleton: <kit.Skeleton testID={ID} />,
   Spinner: <kit.Spinner testID={ID} />,
+  SponsorEndCard: <kit.SponsorEndCard name="Jan" testID={ID} />,
   Stepper: <kit.Stepper current={0} steps={[{ label: "One" }]} testID={ID} />,
   Surface: <kit.Surface testID={ID} />,
   Switch: <kit.Switch label="Switch" testID={ID} />,

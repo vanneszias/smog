@@ -14,7 +14,6 @@
   "dependencies": {
     "@smog/config": "workspace:*",
     "@smog/email": "workspace:*",
-    "@smog/render": "workspace:*",
     "@smog/utils": "workspace:*",
     "zod": "catalog:"
   },

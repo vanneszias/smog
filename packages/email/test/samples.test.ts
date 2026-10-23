@@ -23,7 +23,6 @@ describe("EMAIL_SAMPLES", () => {
       "transactional/admin-dead-letter": true,
       "transactional/admin-new-sponsorship": true,
       "transactional/admin-refund-needed": true,
-      "transactional/admin-render-failed": true,
       "transactional/payment-confirmed": true,
       "transactional/renewal-reminder": true,
       "transactional/sponsorship-live": true,

@@ -1,8 +1,8 @@
 import {
-  LOCALES,
   RECENT_GESTURES_MAX,
   RECENT_SEARCHES_MAX,
 } from "@smog/config/constants";
+import { localeCodeSchema } from "@smog/config/locale";
 import { z } from "zod";
 
 /** 2 added `preferences.importDismissedFor` (`MIGRATIONS[1]`). */
@@ -41,12 +41,17 @@ export const guestDataSchema = z.object({
      */
     appBannerDismissedAt: z.number().int().optional(),
     /**
+     * The viewer hid the gesture name over the video (phase 10b). Optional
+     * and additive, so stored v2 data still parses; absent is shown.
+     */
+    hideGestureName: z.boolean().optional(),
+    /**
      * Signed-in user ids that dismissed the guest import prompt on this
      * device, oldest first (at most `IMPORT_DISMISSED_MAX`).
      */
     importDismissedFor: z.array(z.string()),
     /** `null` follows the device or browser language. */
-    locale: z.enum(LOCALES).nullable(),
+    locale: localeCodeSchema.nullable(),
     /**
      * Gestures this device opened lately, newest first (at most
      * `RECENT_GESTURES_MAX`): Home's "continue where you left off". Like

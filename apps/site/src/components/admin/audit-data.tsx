@@ -35,9 +35,15 @@ const ACTION_LABEL_KEYS = {
   "gesture.create": "admin.audit.actions.gesture.create",
   "gesture.delete": "admin.audit.actions.gesture.delete",
   "gesture.publish": "admin.audit.actions.gesture.publish",
+  "gesture.recut_done": "admin.audit.actions.gesture.recut_done",
   "gesture.unpublish": "admin.audit.actions.gesture.unpublish",
   "gesture.update": "admin.audit.actions.gesture.update",
+  "language.create": "admin.audit.actions.language.create",
+  "language.update": "admin.audit.actions.language.update",
   legacy: "admin.audit.actions.legacy",
+  "legal.draft_save": "admin.audit.actions.legal.draft_save",
+  "legal.publish": "admin.audit.actions.legal.publish",
+  "legal.restore": "admin.audit.actions.legal.restore",
   "maintenance.disable": "admin.audit.actions.maintenance.disable",
   "maintenance.enable": "admin.audit.actions.maintenance.enable",
   "payment.refund": "admin.audit.actions.payment.refund",
@@ -51,10 +57,18 @@ const ACTION_LABEL_KEYS = {
   "sponsorship.request_changes":
     "admin.audit.actions.sponsorship.request_changes",
   "sponsorship.retry_render": "admin.audit.actions.sponsorship.retry_render",
+  "translation.audio_delete": "admin.audit.actions.translation.audio_delete",
+  "translation.audio_upload": "admin.audit.actions.translation.audio_upload",
+  "translation.category_save": "admin.audit.actions.translation.category_save",
+  "translation.gesture_save": "admin.audit.actions.translation.gesture_save",
+  "translation.string_import": "admin.audit.actions.translation.string_import",
+  "translation.string_save": "admin.audit.actions.translation.string_save",
   "user.ban": "admin.audit.actions.user.ban",
   "user.delete": "admin.audit.actions.user.delete",
   "user.impersonate": "admin.audit.actions.user.impersonate",
   "user.role_change": "admin.audit.actions.user.role_change",
+  "user.role_grant": "admin.audit.actions.user.role_grant",
+  "user.role_revoke": "admin.audit.actions.user.role_revoke",
   "user.unban": "admin.audit.actions.user.unban",
 } as const satisfies Record<AuditAction, TranslationKey>;
 
@@ -62,11 +76,14 @@ const TARGET_TYPE_LABEL_KEYS = {
   category: "admin.audit.targetTypes.category",
   dead_letter: "admin.audit.targetTypes.dead_letter",
   gesture: "admin.audit.targetTypes.gesture",
+  language: "admin.audit.targetTypes.language",
+  legal_text: "admin.audit.targetTypes.legal_text",
   list: "admin.audit.targetTypes.list",
   payment: "admin.audit.targetTypes.payment",
   setting: "admin.audit.targetTypes.setting",
   sponsorship: "admin.audit.targetTypes.sponsorship",
   system: "admin.audit.targetTypes.system",
+  ui_string: "admin.audit.targetTypes.ui_string",
   user: "admin.audit.targetTypes.user",
 } as const satisfies Record<AuditTargetType, TranslationKey>;
 
@@ -86,6 +103,10 @@ export type AuditTargetLink =
   | { search: { payment: string; tab: "all" }; to: "/admin/sponsorships" }
   | { search: { user: string }; to: "/admin/users" }
   | { search: { status: "discarded" | "replayed" }; to: "/admin/dead-letters" }
+  | {
+      search: { kind: "privacy" | "terms"; lang: string };
+      to: "/admin/translation/legal";
+    }
   | { to: "/admin/categories" | "/admin/settings" };
 
 /**
@@ -116,6 +137,13 @@ export function auditTargetLink(entry: AuditEntry): AuditTargetLink | null {
         },
         to: "/admin/dead-letters",
       };
+    case "legal_text": {
+      // `<kind>:<locale>:<version>`: the text's editor in that language.
+      const [kind, lang] = id.split(":");
+      return (kind === "privacy" || kind === "terms") && lang
+        ? { search: { kind, lang }, to: "/admin/translation/legal" }
+        : null;
+    }
     case "sponsorship":
       return { params: { id }, to: "/admin/sponsorships/$id" };
     case "payment":

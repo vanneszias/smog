@@ -16,6 +16,8 @@ import {
   requireTurnstile,
   requireUser,
   rpcHandlerOptions,
+  teacherProcedure,
+  translatorProcedure,
   userProcedure,
 } from "../src/index";
 import { makeRpcContext, makeSession } from "../src/testing";
@@ -59,6 +61,52 @@ describe("adminProcedure", () => {
   it("lets an admin through", async () => {
     const context = makeRpcContext({ session: makeSession("admin") });
     expect(await call(stats, undefined, { context })).toBe("stats");
+  });
+});
+
+describe("translatorProcedure and teacherProcedure", () => {
+  const translate = translatorProcedure.handler(
+    ({ context }) => context.user.id
+  );
+  const teach = teacherProcedure.handler(({ context }) => context.user.id);
+  const as = (roles: Parameters<typeof makeSession>[1]) =>
+    makeRpcContext({ session: makeSession("user", roles) });
+
+  it("throws UNAUTHORIZED without a session", async () => {
+    await expect(
+      call(translate, undefined, { context: makeRpcContext() })
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(
+      call(teach, undefined, { context: makeRpcContext() })
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("each role opens only its own door", async () => {
+    expect(
+      await call(translate, undefined, { context: as(["translator"]) })
+    ).toBe("user-1");
+    expect(await call(teach, undefined, { context: as(["teacher"]) })).toBe(
+      "user-1"
+    );
+    await expect(
+      call(translate, undefined, { context: as(["teacher"]) })
+    ).rejects.toMatchObject({ code: "FORBIDDEN", defined: true });
+    await expect(
+      call(teach, undefined, { context: as(["translator"]) })
+    ).rejects.toMatchObject({ code: "FORBIDDEN", defined: true });
+    await expect(
+      call(translate, undefined, { context: as([]) })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("neither role passes the admin guard, an admin passes both", async () => {
+    const stats = adminProcedure.handler(() => "stats");
+    await expect(
+      call(stats, undefined, { context: as(["translator", "teacher"]) })
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const admin = makeRpcContext({ session: makeSession("admin") });
+    expect(await call(translate, undefined, { context: admin })).toBe("user-1");
+    expect(await call(teach, undefined, { context: admin })).toBe("user-1");
   });
 });
 
@@ -144,6 +192,7 @@ describe("rpcHandlerOptions (limitRequests, then loadSession)", () => {
     const auth = { api: { getSession } } as unknown as Auth;
     const handler = new RPCHandler<RpcContext>(
       {
+        locale: publicProcedure.handler(({ context }) => context.locale),
         me: publicProcedure.handler(
           ({ context }) => context.session?.user.id ?? null
         ),
@@ -153,7 +202,11 @@ describe("rpcHandlerOptions (limitRequests, then loadSession)", () => {
       },
       rpcHandlerOptions
     );
-    async function post(path: string, body: unknown): Promise<Response> {
+    async function post(
+      path: string,
+      body: unknown,
+      extra: Partial<RpcContext> = {}
+    ): Promise<Response> {
       const { response } = await handler.handle(
         new Request(`https://smog.test/api/rpc/${path}`, {
           body: JSON.stringify({ json: body }),
@@ -161,7 +214,12 @@ describe("rpcHandlerOptions (limitRequests, then loadSession)", () => {
           method: "POST",
         }),
         {
-          context: makeRpcContext({ auth, env: { RL_API }, ip: "203.0.113.9" }),
+          context: makeRpcContext({
+            auth,
+            env: { RL_API },
+            ip: "203.0.113.9",
+            ...extra,
+          }),
           prefix: "/api/rpc",
         }
       );
@@ -193,6 +251,29 @@ describe("rpcHandlerOptions (limitRequests, then loadSession)", () => {
 
     expect(await response.json()).toEqual({ json: "user-1" });
     expect(getSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("applies the account locale through localeFor once the session is known", async () => {
+    const { getSession, post } = setup(true);
+    getSession.mockResolvedValue({
+      ...makeSession("user"),
+      user: { ...makeSession("user").user, locale: "fr" },
+    });
+    const localeFor = vi.fn((account: string | null) => account ?? "nl");
+
+    const response = await post("locale", undefined, {
+      locale: "nl",
+      localeFor,
+    });
+
+    expect(await response.json()).toEqual({ json: "fr" });
+    expect(localeFor).toHaveBeenCalledWith("fr");
+  });
+
+  it("keeps the context locale without localeFor", async () => {
+    const { post } = setup(true);
+    const response = await post("locale", undefined, { locale: "en" });
+    expect(await response.json()).toEqual({ json: "en" });
   });
 
   it("sends VALIDATION over the wire as a defined error", async () => {

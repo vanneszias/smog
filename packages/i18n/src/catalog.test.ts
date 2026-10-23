@@ -1,11 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { LOCALES, type Locale, resolveLocale, resources } from "./index";
+import {
+  LOCALES,
+  placeholdersOf,
+  requiredPluralForms,
+  resolveLocale,
+  resources,
+  type ShippedLocale,
+  splitPluralKey,
+} from "./index";
 
 interface Tree {
   [key: string]: string | Tree;
 }
 
-const PLURAL_FORMS = new Set(["zero", "one", "two", "few", "many", "other"]);
 const PLACEHOLDER = /\{\{\s*([\w.]+)[^}]*\}\}/g;
 
 function flatten(tree: Tree, prefix = ""): Map<string, string> {
@@ -24,14 +31,12 @@ function flatten(tree: Tree, prefix = ""): Map<string, string> {
 }
 
 /** Groups plural forms (`x_one`, `x_other`) under their base key `x`. */
-function byBaseKey(locale: Locale): Map<string, Map<string, string>> {
+function byBaseKey(locale: ShippedLocale): Map<string, Map<string, string>> {
   const groups = new Map<string, Map<string, string>>();
   const flat = flatten(resources[locale].translation as unknown as Tree);
   for (const [key, value] of flat) {
-    const cut = key.lastIndexOf("_");
-    const plural = cut > 0 && PLURAL_FORMS.has(key.slice(cut + 1));
-    const base = plural ? key.slice(0, cut) : key;
-    const form = plural ? key.slice(cut + 1) : "";
+    const { base, form: pluralForm } = splitPluralKey(key);
+    const form = pluralForm ?? "";
     const group = groups.get(base) ?? new Map<string, string>();
     group.set(form, value);
     groups.set(base, group);
@@ -40,15 +45,7 @@ function byBaseKey(locale: Locale): Map<string, Map<string, string>> {
 }
 
 function placeholders(values: Iterable<string>): string[] {
-  const names = new Set<string>();
-  for (const value of values) {
-    for (const match of value.matchAll(PLACEHOLDER)) {
-      if (match[1] && match[1] !== "count") {
-        names.add(match[1]);
-      }
-    }
-  }
-  return [...names].sort();
+  return placeholdersOf(...values);
 }
 
 const canonical = byBaseKey("nl");
@@ -135,10 +132,7 @@ describe("catalogues", () => {
       });
 
       test("plural keys have every CLDR category of the locale", () => {
-        const categories = new Intl.PluralRules(locale)
-          .resolvedOptions()
-          .pluralCategories.slice()
-          .sort();
+        const categories = requiredPluralForms(locale);
         const missing = [...groups].flatMap(([key, forms]) => {
           if (forms.has("")) {
             return forms.size === 1 ? [] : [`${key}: mixes plain and plural`];

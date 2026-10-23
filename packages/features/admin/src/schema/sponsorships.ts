@@ -245,11 +245,6 @@ export const adminSponsorshipDetailSchema = z.object({
   }),
   tokens: z.array(adminSponsorshipTokenSchema),
   video: z.object({
-    /**
-     * The video is the gesture's own (the fake render of phase 6: "fake
-     * render (no overlay)").
-     */
-    fakeRender: z.boolean(),
     playbackId: z.string().nullable(),
   }),
 });
@@ -315,12 +310,6 @@ export const paymentActionResultSchema = z.object({
   result: z.enum(["marked_paid", "settled", "refund_needed", "canceled"]),
   /** Every sponsorship of the payment. */
   sponsorshipIds: z.array(z.string()),
-});
-
-/** The job a retried render created (A-27): its id and attempt (≥ 2). */
-export const retryRenderResultSchema = z.object({
-  attempt: z.number().int().min(2),
-  renderJobId: z.string(),
 });
 
 export const recordRefundResultSchema = z.object({

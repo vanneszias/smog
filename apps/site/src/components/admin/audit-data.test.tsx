@@ -63,6 +63,20 @@ describe("audit target links", () => {
       search: { payment: "pay-1", tab: "all" },
       to: "/admin/sponsorships",
     });
+    // Phase 10b: a legal text version opens the editor of its text and language.
+    expect(
+      auditTargetLink({
+        ...ENTRY,
+        targetId: "privacy:fr:3",
+        targetType: "legal_text",
+      })
+    ).toEqual({
+      search: { kind: "privacy", lang: "fr" },
+      to: "/admin/translation/legal",
+    });
+    expect(
+      auditTargetLink({ ...ENTRY, targetId: "odd", targetType: "legal_text" })
+    ).toBeNull();
   });
 });
 

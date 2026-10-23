@@ -84,7 +84,7 @@ interface SponsorshipView {
   gestureSlug: string;
   id: string;
   sponsorEmail: string;
-  sponsorLocale: "nl" | "en" | "fr";
+  sponsorLocale: string;
   sponsorName: string;
   status: SponsorshipStatus;
   videoAssetId: string | null;
@@ -145,7 +145,9 @@ interface ActorInput {
 }
 
 /**
- * Approve (A-05): only from `in_review` with the video set. It goes live
+ * Approve (A-05): only from `in_review`. There is no video to wait for: the
+ * gesture's own video plays with the sponsor end card over it (phase 10b
+ * ruling 9; an older row's rendered video, if any, plays as before). It goes live
  * for 365 days from now, and `sponsorship_live` (with the stored dates,
  * bug 1) goes to the sponsor.
  */
@@ -156,12 +158,6 @@ export async function approveStatements(
   const { actorId, now, siteUrl, sponsorshipId } = input;
   const view = await readSponsorship(db, sponsorshipId);
   requireStatus(view, ["in_review"], "approve");
-  if (!view.videoPlaybackId) {
-    throw new SponsorshipActionError(
-      "noVideo",
-      `Sponsorship ${sponsorshipId} has no video yet`
-    );
-  }
   const startsAt = now;
   const endsAt = new Date(now.getTime() + DURATION_MS);
   return {

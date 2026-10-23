@@ -92,7 +92,8 @@
     "signIn": "Se connecter",
     "signOut": "Se déconnecter",
     "gestures": "Signes",
-    "legal": "Mentions légales"
+    "legal": "Mentions légales",
+    "translation": "Traduction"
   },
   "theme": {
     "label": "Thème",
@@ -374,6 +375,54 @@
       "inList": "Dans la liste"
     }
   },
+  "endCard": {
+    "message": "Rendu possible grâce à"
+  },
+  "media": {
+    "nameOverlay": {
+      "toggle": "Afficher le nom sur la vidéo"
+    },
+    "audio": {
+      "play": "Écouter la prononciation",
+      "stop": "Arrêter la prononciation"
+    },
+    "admin": {
+      "audio": {
+        "title": "Prononciation (audio)",
+        "description": "Un extrait par langue, le nom du geste prononcé. MP3 ou M4A, 1 Mo et 10 secondes au maximum.",
+        "none": "Pas encore d'audio",
+        "choose": "Choisir un audio",
+        "replace": "Remplacer l'audio",
+        "remove": "Supprimer l'audio",
+        "saved": "Audio enregistré",
+        "removed": "Audio supprimé",
+        "duration": "{{seconds}} s",
+        "errors": {
+          "format": "Ce fichier n'est pas un MP3 ou un M4A valide.",
+          "duration": "L'extrait dépasse 10 secondes.",
+          "tooLarge": "Le fichier dépasse 1 Mo.",
+          "missing": "L'envoi n'est pas arrivé. Réessayez.",
+          "key": "Cet envoi n'appartient pas à ce geste.",
+          "network": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
+          "generic": "L'enregistrement a échoué. Réessayez.",
+          "removeFailed": "La suppression a échoué. Réessayez."
+        }
+      },
+      "recut": {
+        "title": "Vidéo sans texte",
+        "description": "La vidéo de ce geste porte encore le nom dans l'image. Envoyez la vidéo sans texte et confirmez-le ici, le lecteur affichera alors le nom dans la langue du spectateur.",
+        "needed": "Le nom est encore dans la vidéo",
+        "done": "Vidéo sans texte envoyée",
+        "doneSaved": "Marqué comme vidéo sans texte",
+        "doneFailed": "Le marquage a échoué. Réessayez.",
+        "ok": "La vidéo n'a pas de texte dans l'image",
+        "filter": "À remonter",
+        "badge": "Nom dans la vidéo",
+        "textless": "La vidéo n'a pas de texte dans l'image",
+        "textlessHint": "Sans la coche, le geste reste dans la liste des vidéos à remonter."
+      }
+    }
+  },
   "gesture": {
     "sponsored": "Sponsorisé",
     "disclaimer": {
@@ -623,10 +672,9 @@
         "subject": "Nous avons bien reçu votre parrainage",
         "preheader": "Merci\u00a0! Voici la suite.",
         "heading": "Parrainage reçu",
-        "body": "Merci de parrainer {{gesture}}. La vidéo affichera le nom {{displayName}}.",
+        "body": "Merci de parrainer {{gesture}}. La fin de la vidéo affichera le nom {{displayName}}.",
         "nextTitle": "Et maintenant\u00a0?",
-        "stepRender": "Nous réalisons votre vidéo parrainée.",
-        "stepReview": "Nous vérifions la vidéo avant sa mise en ligne.",
+        "stepReview": "Nous vérifions votre parrainage avant sa mise en ligne.",
         "stepLive": "Vous recevez un e-mail dès que votre parrainage est en ligne.",
         "footer": "Vous recevez cet e-mail parce que vous avez récemment soumis un parrainage via SMOG & Co."
       },
@@ -643,7 +691,7 @@
         "subject": "Votre parrainage est en ligne\u00a0!",
         "preheader": "Votre vidéo parrainée est en ligne.",
         "heading": "Votre parrainage est en ligne\u00a0!",
-        "body": "Votre vidéo parrainée pour {{gesture}} est maintenant en ligne avec le nom {{displayName}}.",
+        "body": "Votre parrainage de {{gesture}} est maintenant en ligne : la fin de la vidéo affiche le nom {{displayName}}.",
         "button": "Voir sur SMOG",
         "thanks": "Merci de soutenir SMOG\u00a0!",
         "footer": "Nous vous enverrons un rappel 30 jours avant la fin, pour que vous puissiez prolonger."
@@ -663,18 +711,11 @@
         "preheader": "Payé\u00a0: {{total}}.",
         "heading": "Nouveau parrainage payé",
         "headingRenewal": "Parrainage prolongé",
-        "body": "Un parrainage a été payé. Il attend maintenant sa vidéo, puis une approbation.",
+        "body": "Un parrainage a été payé. Il attend maintenant une approbation.",
         "bodyRenewal": "Un parrainage a été prolongé d'un an. Aucune nouvelle vidéo ni approbation n'est nécessaire.",
         "detailsTitle": "Parrainage",
         "invoiceTitle": "Facturation",
         "button": "Voir dans l'administration"
-      },
-      "adminRenderFailed": {
-        "subject": "Échec de la vidéo pour {{gesture}}",
-        "preheader": "La vidéo pour {{displayName}} n'a pas pu être réalisée.",
-        "heading": "Échec de la vidéo",
-        "body": "La vidéo parrainée n'a pas pu être réalisée, même après de nouvelles tentatives. Vérifiez le parrainage dans l'administration.",
-        "button": "Voir le parrainage"
       },
       "adminRefundNeeded": {
         "subject": "Remboursement nécessaire pour le paiement {{paymentId}}",
@@ -707,13 +748,12 @@
       },
       "adminDeadLetter": {
         "subject": "Des dead letters demandent votre attention",
-        "preheader": "Des messages n’ont pas pu être distribués, ou une vidéo est en échec depuis plus d’un jour.",
+        "preheader": "Des messages n’ont pas pu être distribués.",
         "heading": "Des dead letters demandent votre attention",
-        "body": "Certains messages n’ont pas pu être distribués après toutes les tentatives, ou une vidéo est en échec depuis plus de 24\u00a0heures. Rejouez-les ou supprimez-les dans l’administration.",
+        "body": "Certains messages n’ont pas pu être distribués après toutes les tentatives. Rejouez-les ou supprimez-les dans l’administration.",
         "emailOpen": "E-mails en attente",
         "eventsOpen": "Événements de parrainage en attente",
         "lost": "Messages perdus pendant l’indisponibilité de la base de données",
-        "renderFailed": "Vidéos en échec depuis plus de 24\u00a0heures",
         "types": "En attente par type",
         "button": "Ouvrir les dead letters"
       }
@@ -936,8 +976,12 @@
       "groups": {
         "content": "Contenu",
         "community": "Communauté",
-        "operations": "Exploitation"
-      }
+        "operations": "Exploitation",
+        "translation": "Traduction"
+      },
+      "strings": "Textes",
+      "languages": "Langues",
+      "legal": "Textes juridiques"
     },
     "comingSoon": {
       "title": "Prévu dans cette phase",
@@ -979,12 +1023,6 @@
         "awaitingPayment_one": "{{count}} en attente de paiement",
         "awaitingPayment_other": "{{count}} en attente de paiement",
         "awaitingPayment_many": "{{count}} en attente de paiement",
-        "rendering_one": "{{count}} vidéo en préparation",
-        "rendering_other": "{{count}} vidéos en préparation",
-        "rendering_many": "{{count}} vidéos en préparation",
-        "renderFailed_one": "{{count}} vidéo en échec",
-        "renderFailed_other": "{{count}} vidéos en échec",
-        "renderFailed_many": "{{count}} vidéos en échec",
         "live_one": "{{count}} en ligne",
         "live_other": "{{count}} en ligne",
         "live_many": "{{count}} en ligne",
@@ -1005,10 +1043,7 @@
         "email_other": "{{count}} e-mails en attente",
         "events_one": "{{count}} événement en attente",
         "events_many": "{{count}} événements en attente",
-        "events_other": "{{count}} événements en attente",
-        "renderFailed_one": "{{count}} vidéo en échec",
-        "renderFailed_many": "{{count}} vidéos en échec",
-        "renderFailed_other": "{{count}} vidéos en échec"
+        "events_other": "{{count}} événements en attente"
       },
       "chart": {
         "title": "En un coup d’œil",
@@ -1017,7 +1052,6 @@
         "catalogue": "Gestes",
         "awaitingPayment": "En attente de paiement",
         "inReview": "En révision",
-        "rendering": "En cours de création",
         "live": "En ligne",
         "published": "Publiés",
         "hidden": "Masqués"
@@ -1061,7 +1095,8 @@
           "publish": "Geste publié",
           "unpublish": "Geste masqué",
           "delete": "Geste supprimé",
-          "bulk_update": "Gestes modifiés en masse"
+          "bulk_update": "Gestes modifiés en masse",
+          "recut_done": "Vidéo sans texte téléversée"
         },
         "category": {
           "create": "Catégorie créée",
@@ -1076,7 +1111,9 @@
           "ban": "Utilisateur bloqué",
           "unban": "Blocage levé",
           "delete": "Utilisateur supprimé",
-          "impersonate": "Connecté en tant qu’utilisateur"
+          "impersonate": "Connecté en tant qu’utilisateur",
+          "role_grant": "Rôle attribué",
+          "role_revoke": "Rôle retiré"
         },
         "sponsorship": {
           "approve": "Parrainage approuvé",
@@ -1102,6 +1139,23 @@
         "dead_letter": {
           "replay": "Dead letter rejoué",
           "discard": "Dead letter supprimé"
+        },
+        "language": {
+          "create": "Langue ajoutée",
+          "update": "Langue modifiée"
+        },
+        "translation": {
+          "string_save": "Texte d’interface traduit",
+          "string_import": "Textes d’interface importés",
+          "gesture_save": "Traduction du geste enregistrée",
+          "category_save": "Traduction de la catégorie enregistrée",
+          "audio_upload": "Audio téléversé",
+          "audio_delete": "Audio supprimé"
+        },
+        "legal": {
+          "draft_save": "Brouillon de texte juridique enregistré",
+          "publish": "Texte juridique publié",
+          "restore": "Texte juridique restauré"
         }
       },
       "targetTypes": {
@@ -1113,7 +1167,10 @@
         "list": "Liste",
         "setting": "Paramètre",
         "system": "Système",
-        "dead_letter": "Dead letter"
+        "dead_letter": "Dead letter",
+        "language": "Langue",
+        "ui_string": "Texte d’interface",
+        "legal_text": "Texte juridique"
       }
     },
     "gestures": {
@@ -1386,6 +1443,47 @@
       "countWithPublished_many": "{{count}} gestes · {{published}} publiés",
       "countWithPublished_other": "{{count}} gestes · {{published}} publiés"
     },
+    "catalogTranslation": {
+      "title": "Traductions",
+      "description": "Traduisez le nom, la description et les mots-clés pour chaque langue. Le texte de la langue par défaut s’affiche à côté.",
+      "sourceLabel": "Source ({{language}})",
+      "tabsLabel": "Langue de la traduction",
+      "noLanguages": "Aucune autre langue n’est activée.",
+      "needs": "À traduire",
+      "translated": "Traduit",
+      "fields": {
+        "name": "Nom en {{language}}",
+        "description": "Description en {{language}}",
+        "keywords": "Mots-clés en {{language}}"
+      },
+      "fallbackHint": "Tant qu’une traduction manque, le visiteur voit le texte de la langue par défaut.",
+      "save": "Enregistrer la traduction",
+      "saved": "Traduction enregistrée.",
+      "saveFailed": "La traduction n’a pas pu être enregistrée.",
+      "stale": "Quelqu’un d’autre vient d’enregistrer cette traduction. Le dernier texte est chargé\u00a0: vérifiez-le et enregistrez à nouveau.",
+      "nameRequired": "Saisissez un nom.",
+      "loadFailed": "Les traductions n’ont pas pu être chargées.",
+      "report": {
+        "title": "Traductions par langue",
+        "gestures": "{{needs}} gestes sur {{total}} ont besoin d’une traduction",
+        "categories": "{{missing}} catégories sur {{total}} n’ont pas encore de nom traduit",
+        "detail": "Sans nom\u00a0: {{name}}, sans description\u00a0: {{description}}, sans mots-clés\u00a0: {{keywords}}",
+        "allDone": "Tout est traduit",
+        "show": "Afficher ce qui reste à traduire"
+      },
+      "filter": {
+        "label": "À traduire en",
+        "none": "Aucun filtre"
+      },
+      "categories": {
+        "title": "Noms par langue",
+        "description": "Traduisez le nom de chaque catégorie. Les visiteurs voient le nom traduit dans les filtres et sur les cartes des gestes.",
+        "nameIn": "Nom en {{language}}",
+        "save": "Enregistrer",
+        "saveFor": "Enregistrer la traduction de {{name}}",
+        "saved": "Nom enregistré."
+      }
+    },
     "mux": {
       "title": "Vidéo",
       "label": "Vidéo",
@@ -1473,7 +1571,9 @@
       },
       "roles": {
         "user": "Utilisateur",
-        "admin": "Administrateur"
+        "admin": "Administrateur",
+        "translator": "Traducteur",
+        "teacher": "Enseignant"
       },
       "columns": {
         "name": "Nom",
@@ -1504,12 +1604,13 @@
         "banUntil": "Bloqué jusqu’au",
         "banForever": "Sans date de fin",
         "actions": "Actions",
-        "self": "C’est votre propre compte. Un autre administrateur doit en changer le rôle, le bloquer ou le supprimer.",
+        "self": "C’est votre propre compte. Un autre administrateur doit en changer les rôles, le bloquer ou le supprimer.",
         "adminTarget": "Retirez d’abord le rôle d’administrateur avant de bloquer ou de supprimer ce compte.",
         "bannedTarget": "Levez le blocage avant de nommer ce compte administrateur.",
         "notFound": "Ce compte n’existe plus.",
         "sponsorships": "Parrainages",
-        "noSponsorships": "Aucun parrainage avec cette adresse e-mail."
+        "noSponsorships": "Aucun parrainage avec cette adresse e-mail.",
+        "roles": "Rôles"
       },
       "methods": {
         "credential": "Mot de passe",
@@ -1517,17 +1618,27 @@
         "apple": "Apple",
         "passkey": "Clé d’accès"
       },
-      "promote": {
-        "action": "Nommer administrateur",
-        "title": "Nommer {{name}} administrateur\u202f?",
-        "description": "Les administrateurs peuvent modifier le catalogue, les comptes et les réglages. Cela s’applique dès leur prochaine page.",
-        "done": "{{name}} est maintenant administrateur."
+      "roleSection": {
+        "title": "Rôles",
+        "description": "Une personne peut avoir plusieurs rôles. Un administrateur peut faire tout ce que font les autres rôles.",
+        "none": "Aucun rôle\u00a0: un apprenant.",
+        "help": {
+          "translator": "Traduit les noms, les mots-clés, les écrans et les textes juridiques.",
+          "teacher": "Enregistre et vérifie les vidéos des signes.",
+          "admin": "Gère le catalogue, les comptes, les parrainages et les réglages."
+        }
       },
-      "demote": {
-        "action": "Retirer le rôle d’administrateur",
-        "title": "Retirer le rôle d’administrateur de {{name}}\u202f?",
-        "description": "L’accès à l’administration disparaît immédiatement.",
-        "done": "{{name}} n’est plus administrateur."
+      "grant": {
+        "action": "Ajouter le rôle\u00a0: {{role}}",
+        "title": "Donner le rôle {{role}} à {{name}}\u202f?",
+        "description": "Cela s’applique dès leur prochaine page.",
+        "done": "{{name}} a maintenant le rôle {{role}}."
+      },
+      "revoke": {
+        "action": "Retirer le rôle\u00a0: {{role}}",
+        "title": "Retirer le rôle {{role}} à {{name}}\u202f?",
+        "description": "Ce que le rôle permet disparaît immédiatement.",
+        "done": "{{name}} n’a plus le rôle {{role}}."
       },
       "ban": {
         "action": "Bloquer",
@@ -1623,7 +1734,6 @@
         "sponsorshipLive": "Parrainage en ligne",
         "renewalReminder": "Rappel de renouvellement",
         "adminNewSponsorship": "Nouveau parrainage (admin)",
-        "adminRenderFailed": "Échec de la vidéo (admin)",
         "adminRefundNeeded": "Remboursement nécessaire (admin)",
         "weMoved": "Nous avons déménagé",
         "adminDeadLetter": "Dead letters (administration)"
@@ -1652,7 +1762,6 @@
         "awaiting": "En attente de paiement",
         "refund": "À rembourser",
         "closed": "Clôturés",
-        "rendering": "En cours/en échec",
         "live": "En ligne/bientôt fini"
       },
       "filters": {
@@ -1724,7 +1833,6 @@
         "originalOf": "Vidéo originale de {{name}}",
         "sponsored": "Vidéo parrainée",
         "sponsoredOf": "Vidéo parrainée de {{name}}",
-        "fakeRender": "Rendu factice (sans incrustation)",
         "noVideo": "Pas encore de vidéo.",
         "facts": "Détails",
         "gesture": "Geste",
@@ -1743,8 +1851,8 @@
         "title": "Actions",
         "notes": {
           "awaitingPayment": "En attente de paiement. Marquez-le payé ou annulez-le sur le paiement ci-dessous.",
-          "rendering": "La vidéo est en préparation. Ensuite, le parrainage passe à l’examen.",
-          "renderFailed": "La vidéo a échoué. L’erreur figure sous Tâches de rendu\u00a0; relancez le rendu une fois la cause corrigée ou si elle était passagère.",
+          "rendering": "Ce parrainage attendait une vidéo qui n’est plus réalisée. Il passe à l’examen dans l’heure.",
+          "renderFailed": "Ce parrainage attendait une vidéo qui n’est plus réalisée. Il passe à l’examen dans l’heure.",
           "closed": "Ce parrainage est clôturé."
         }
       },
@@ -1790,14 +1898,14 @@
         "action": "Marquer comme payé",
         "note": "Référence bancaire",
         "noteHint": "Figure dans l’historique, p. ex. la communication du virement.",
-        "done": "Marqué comme payé. Les vidéos sont en préparation.",
+        "done": "Marqué comme payé. Les parrainages attendent maintenant l’examen.",
         "settled": "Mollie avait déjà ce paiement\u00a0: il est traité comme payé.",
         "refundNeeded": "Mollie avait déjà ce paiement, mais il doit être remboursé. Consultez le paiement ci-dessous.",
-        "lateFailure": "Le paiement est marqué comme payé, mais les vidéos n’ont peut-être pas démarré. La vérification horaire lance celles qui manquent\u00a0; revenez dans une heure.",
+        "lateFailure": "Le paiement est marqué comme payé, mais les e-mails de confirmation n’ont peut-être pas été envoyés. Vérifiez le paiement et prévenez le parrain vous-même si nécessaire.",
         "title": "Marquer {{amount}} de {{name}} comme payé\u00a0?",
-        "description_one": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: sa vidéo est préparée.",
-        "description_other": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: la vidéo de chacun est préparée.",
-        "description_many": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: la vidéo de chacun est préparée."
+        "description_one": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: il passe à l’examen.",
+        "description_other": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: chacun passe à l’examen.",
+        "description_many": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: chacun passe à l’examen."
       },
       "cancel": {
         "action": "Annuler le paiement",
@@ -1902,19 +2010,7 @@
           "running": "En cours",
           "succeeded": "Réussi",
           "failed": "Échoué"
-        },
-        "hint": {
-          "sourceTooLong": "La vidéo du geste dure plus de 2 minutes, le maximum pour une vidéo sponsorisée. Raccourcissez ou remplacez la vidéo du geste, puis relancez.",
-          "workflowNeverStarted": "Le rendu n'a pas démarré dans les 6 heures. Vérifiez le dernier déploiement et le tableau de bord Workflows, puis relancez.",
-          "rendererBusy": "Aucun moteur de rendu n'a été libre pendant une heure. Relancez quand moins de vidéos sont en cours."
         }
-      },
-      "retryRender": {
-        "action": "Relancer le rendu",
-        "title": "Refaire la vidéo de {{name}} sur {{gesture}}\u00a0?",
-        "description": "Un nouveau rendu démarre avec le nom et le logo actuels. Le parrainage repasse à Vidéo en préparation, puis à l’examen quand la vidéo est prête. Aucun e-mail n’est envoyé.",
-        "done": "La vidéo est refaite (essai {{attempt}}).",
-        "announce": "Rendu relancé\u00a0: essai {{attempt}} démarré pour {{name}}."
       },
       "tokens": {
         "title": "Liens",
@@ -2012,6 +2108,254 @@
       "rowActions": "Actions pour {{name}}",
       "open": "Ouvrir",
       "actions": "Actions"
+    },
+    "translation": {
+      "loadError": "Les données de traduction n'ont pas pu être chargées.",
+      "legal": {
+        "title": "Textes juridiques",
+        "description": "La politique de confidentialité et les conditions d’utilisation, par langue. Publier modifie aussitôt la page publique.",
+        "responsibility": "Toute personne qui traduit peut publier un texte juridique, et il remplace aussitôt la page publique. Chaque version est conservée, chaque publication figure dans le journal d’audit et un administrateur peut rétablir une version antérieure.",
+        "text": "Texte",
+        "language": "Langue",
+        "kind": {
+          "privacy": "Politique de confidentialité",
+          "terms": "Conditions d’utilisation"
+        },
+        "dutchPrevails": "Le texte néerlandais fait foi\u00a0: les autres langues indiquent qu’il s’agit de traductions.",
+        "draftBadge": "Brouillon",
+        "publishedBadge": "Publié\u00a0: version {{version}}, en vigueur le {{date}}",
+        "notPublished": "Non publié",
+        "unsaved": "Modifications non enregistrées",
+        "noText": "Cette langue n’a pas encore de texte juridique, les visiteurs lisent donc le néerlandais. Le texte néerlandais sert de point de départ\u00a0: traduisez-le, enregistrez un brouillon et publiez-le.",
+        "conflictTitle": "Quelqu’un d’autre a enregistré avant vous",
+        "conflict": "Le brouillon a changé depuis que vous l’avez ouvert. Reprenez le brouillon enregistré, puis refaites vos modifications.",
+        "takeStored": "Reprendre le brouillon enregistré",
+        "saveDraft": "Enregistrer le brouillon",
+        "publish": "Publier",
+        "discardChanges": "Abandonner les modifications",
+        "publishNeeds": "Enregistrez le brouillon, sans erreur, pour le publier.",
+        "views": "Affichages du texte",
+        "tabs": {
+          "edit": "Modifier",
+          "preview": "Aperçu",
+          "source": "Source néerlandaise",
+          "history": "Historique"
+        },
+        "documentTitle": "Titre du texte",
+        "markupHint": "Le texte peut contenir du **gras** et des liens [texte du lien](https://example.test). Les liens mènent vers une adresse https, une adresse mailto ou une page du site (/privacy).",
+        "sectionLabel": "Section {{number}}",
+        "sectionTitle": "Titre de la section",
+        "anchor": "Ancre",
+        "anchorHint": "Des mots en minuscules reliés par des traits d’union, comme dans /privacy#rights. Gardez-la identique dans toutes les langues.",
+        "blockLabel": "{{kind}}, section {{section}}, bloc {{block}}",
+        "blocks": {
+          "paragraph": "Paragraphe",
+          "list": "Liste",
+          "lines": "Lignes d’adresse",
+          "consent": "Interrupteur d’analyse"
+        },
+        "onePerLine": "Un élément par ligne.",
+        "consentHint": "L’interrupteur d’analyse de la page se trouve ici. La politique de confidentialité en exige un seul.",
+        "moveUp": "Monter\u00a0: {{label}}",
+        "moveDown": "Descendre\u00a0: {{label}}",
+        "removeBlock": "Supprimer\u00a0: {{label}}",
+        "removeSection": "Supprimer\u00a0: {{label}}",
+        "addBlock": "Ajouter un bloc",
+        "addSection": "Ajouter une section",
+        "issues": {
+          "badId": "L’ancre doit être composée de mots en minuscules reliés par des traits d’union.",
+          "consentControl": "La politique de confidentialité exige un seul interrupteur d’analyse, les conditions aucun.",
+          "duplicateId": "Deux sections ont la même ancre.",
+          "empty": "Ce champ ne peut pas être vide.",
+          "html": "Le HTML n’est pas autorisé. Utilisez du texte simple avec du **gras** et des liens.",
+          "shape": "Cette partie du texte n’a pas la forme attendue.",
+          "tooLong": "C’est trop long.",
+          "tooMany": "Il y en a trop.",
+          "unsafeLink": "Les liens doivent mener vers une adresse https, une adresse mailto ou une page du site."
+        },
+        "consentPlaceholder": "L’interrupteur d’analyse s’affiche ici.",
+        "effectiveDate": "Date d’entrée en vigueur",
+        "effectiveHint": "La date à laquelle le texte entre en vigueur. La page l’affiche comme dernière mise à jour.",
+        "publishTitle": "Publier ce texte",
+        "publishDescription": "Le texte remplace aussitôt la page publique pour tous les visiteurs.",
+        "publishConfirm": "Publier",
+        "restoreTitle": "Rétablir la version {{version}}",
+        "restoreDescription": "La version {{version}} est copiée dans une nouvelle version publiée. L’historique est conservé.",
+        "restoreConfirm": "Rétablir",
+        "restore": "Rétablir",
+        "restoreLabel": "Rétablir la version {{version}}",
+        "restoreAdminOnly": "Seul un administrateur peut rétablir une version antérieure.",
+        "preview": "Aperçu",
+        "previewLabel": "Aperçu de la version {{version}}",
+        "previewVersion": "Version {{version}}",
+        "previewVersionDescription": "Le texte tel qu’il était lors de sa publication.",
+        "versionNumber": "Version {{version}}",
+        "current": "Actuelle",
+        "shipped": "Texte fourni",
+        "noHistory": "Aucune version n’a encore été publiée.",
+        "historyLabel": "Versions de ce texte",
+        "columns": {
+          "version": "Version",
+          "effective": "En vigueur",
+          "by": "Publié par",
+          "at": "Publié",
+          "actions": "Actions"
+        },
+        "sourceHint": "Le texte néerlandais à traduire (lecture seule).",
+        "draftSaved": "Brouillon enregistré",
+        "published": "Version {{version}} publiée",
+        "restored": "Version {{version}} rétablie",
+        "errors": {
+          "failed": "Cela n’a pas fonctionné. Réessayez.",
+          "load": "Les textes juridiques n’ont pas pu être chargés."
+        }
+      },
+      "strings": {
+        "title": "Textes",
+        "description": "Les textes du site, de l'appli et des e-mails. Une modification est visible immédiatement, sans nouvelle version."
+      },
+      "filters": {
+        "label": "Filtres des textes",
+        "search": "Rechercher",
+        "searchPlaceholder": "Rechercher dans les clés et les textes",
+        "namespace": "Section",
+        "allNamespaces": "Toutes les sections",
+        "status": "Afficher",
+        "allStatuses": "Tous les textes",
+        "language": "Langue",
+        "anyLanguage": "Toutes les langues",
+        "statuses": {
+          "missing": "Manquants",
+          "stale": "Source modifiée",
+          "invalid": "Problèmes de variables"
+        }
+      },
+      "table": {
+        "label": "Textes de l'interface",
+        "key": "Clé",
+        "sourceHeader": "{{language}} (source)",
+        "total": "Nombre de textes\u00a0: {{n}}",
+        "empty": "Aucun texte pour ces filtres."
+      },
+      "cell": {
+        "edit": "Modifier {{key}} en {{language}}",
+        "empty": "Pas encore de texte",
+        "missing": "Manquant",
+        "stale": "Source modifiée",
+        "confirm": "Confirmer",
+        "confirmLabel": "Confirmer {{key}} en {{language}}",
+        "placeholderIssue": "Les variables ne correspondent pas",
+        "notApplicable": "Non utilisé dans cette langue"
+      },
+      "editor": {
+        "label": "Texte de {{key}} en {{language}}",
+        "source": "Source\u00a0:",
+        "placeholders": "Conservez ces variables\u00a0: {{placeholders}}.",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "revert": "Revenir au texte par défaut",
+        "conflictTitle": "Quelqu'un a été plus rapide",
+        "conflictBody": "Ce texte a été enregistré entre-temps par quelqu'un d'autre. Sa version figure ci-dessous.",
+        "useTheirs": "Reprendre sa version",
+        "keepMine": "Enregistrer quand même la mienne"
+      },
+      "errors": {
+        "empty": "Saisissez un texte.",
+        "tooLong": "Ce texte est trop long.",
+        "placeholders": "Les variables doivent correspondre à la source\u00a0: {{placeholders}}.",
+        "generic": "L'enregistrement a échoué. Réessayez.",
+        "notFound": "Ce texte n'existe plus.",
+        "saveFailed": "Le texte n'a pas pu être enregistré."
+      },
+      "export": {
+        "button": "Exporter",
+        "all": "Toutes les langues",
+        "item": "{{language}} ({{format}})",
+        "allItem": "Toutes les langues ({{format}})",
+        "failed": "L'exportation a échoué."
+      },
+      "import": {
+        "button": "Importer",
+        "title": "Importer des textes",
+        "description": "Choisissez un fichier JSON ou CSV. Vous voyez d'abord ce qui changerait, les textes ne sont enregistrés qu'ensuite.",
+        "file": "Fichier",
+        "fileHint": "JSON ou CSV, par exemple un fichier issu de l'exportation.",
+        "language": "Langue du fichier",
+        "fromFile": "Comme dans le fichier",
+        "added": "Nouveaux\u00a0: {{n}}",
+        "changed": "Modifiés\u00a0: {{n}}",
+        "unchanged": "Inchangés\u00a0: {{n}}",
+        "skipped": "Ignorés\u00a0: {{n}}",
+        "changes": "Modifications",
+        "problems": "Lignes ignorées",
+        "problem": {
+          "unknownKey": "clé inconnue",
+          "unknownLanguage": "langue inconnue",
+          "notApplicable": "forme de pluriel que cette langue n'utilise pas",
+          "placeholders": "les variables ne correspondent pas",
+          "tooLong": "trop long",
+          "duplicate": "apparaît plusieurs fois"
+        },
+        "apply": "Importer",
+        "done": "Textes enregistrés\u00a0: {{n}}",
+        "errors": {
+          "title": "Le fichier est inutilisable",
+          "tooLarge": "Le fichier est trop volumineux.",
+          "applyFailed": "L'importation a échoué.",
+          "staleImport": "Certains textes ont changé pendant la lecture du fichier. Rien n'a été importé : prévisualisez à nouveau le fichier.",
+          "file": {
+            "invalidJson": "Ce n'est pas un fichier JSON valide.",
+            "invalidCsv": "Ce n'est pas un fichier CSV valide.",
+            "noKeyColumn": "La colonne key est absente.",
+            "noLanguageColumn": "Il n'y a pas de colonne pour la langue choisie.",
+            "unknownLanguage": "Le fichier nomme une langue qui n'existe pas ou n'est pas activée.",
+            "unsupportedShape": "Les valeurs du fichier doivent être des textes.",
+            "needsLanguage": "Choisissez la langue de ce fichier.",
+            "generic": "Le fichier n'a pas pu être lu."
+          }
+        }
+      },
+      "languages": {
+        "title": "Langues",
+        "description": "Les langues qui existent, leur nom et leur ordre dans le menu des langues. Une nouvelle langue affiche le texte néerlandais tant qu'elle n'est pas traduite.",
+        "label": "Langues",
+        "add": "Ajouter une langue",
+        "addTitle": "Ajouter une langue",
+        "editTitle": "Modifier {{language}}",
+        "dialogDescription": "Le code ne peut plus être modifié ensuite.",
+        "code": "Code",
+        "codeHint": "Un code de langue comme pt ou pt-BR.",
+        "name": "Nom",
+        "nameHint": "Tel que la langue se nomme elle-même, par exemple Português.",
+        "intlTag": "Balise Intl",
+        "intlTagHint": "Pour les dates et les listes, par exemple pt-PT.",
+        "order": "Ordre",
+        "orderHint": "Un nombre. Laissez vide pour placer la langue en dernier.",
+        "enabled": "Activée",
+        "enabledLabel": "Activer {{language}}",
+        "default": "Par défaut",
+        "edit": "Modifier",
+        "editLabel": "Modifier {{language}}",
+        "save": "Enregistrer",
+        "saved": "La langue a été enregistrée.",
+        "errors": {
+          "code": "Utilisez un code de langue valide.",
+          "intlTag": "Ce n'est pas une balise Intl valide.",
+          "exists": "Ce code de langue existe déjà.",
+          "order": "Saisissez un nombre entier.",
+          "default": "La langue par défaut reste activée.",
+          "failed": "L'enregistrement a échoué. Réessayez."
+        }
+      },
+      "coverage": {
+        "title": "Couverture de la traduction",
+        "percent": "{{percent}}\u202f% traduit",
+        "progress": "Traduit en {{language}}",
+        "missing": "Manquants\u00a0: {{n}}",
+        "stale": "Source modifiée\u00a0: {{n}}",
+        "invalid": "Variables\u00a0: {{n}}",
+        "complete": "Tout est traduit"
+      }
     }
   },
   "sponsorship": {
@@ -2178,7 +2522,7 @@
     },
     "review": {
       "title": "Vérifiez votre parrainage",
-      "description": "Voici comment votre nom apparaît sur les gestes choisis. La vraie vidéo est réalisée après le paiement et vérifiée avant sa mise en ligne.",
+      "description": "Voici comment votre nom apparaît à la fin de la vidéo des gestes choisis. Après le paiement, nous vérifions votre parrainage avant sa mise en ligne.",
       "summary": "Détails du parrainage",
       "gestures": "Gestes",
       "duration": "Durée",
@@ -2249,7 +2593,6 @@
       "timeline": {
         "title": "Et maintenant\u00a0?",
         "paid": "Votre paiement est confirmé.",
-        "video": "Nous réalisons votre vidéo avec votre nom.",
         "review": "Un administrateur examine votre parrainage dans les cinq jours ouvrables.",
         "live": "Vous recevez un e-mail dès sa mise en ligne."
       },
@@ -2287,7 +2630,7 @@
       "submit": "Envoyer pour vérification",
       "submitted": {
         "title": "Envoyé\u00a0!",
-        "description": "Nous réalisons votre nouvelle vidéo et la vérifions avant sa mise en ligne. Vous n'avez pas à payer à nouveau."
+        "description": "Nous vérifions vos modifications avant leur mise en ligne. Vous n’avez pas à payer à nouveau."
       },
       "failed": "Nous n'avons pas pu envoyer votre modification. Veuillez réessayer."
     },
@@ -2306,12 +2649,7 @@
     "preview": {
       "label": "Aperçu pour {{name}}",
       "picker": "Choisissez le geste à prévisualiser",
-      "play": "Lire",
-      "pause": "Pause",
-      "showEnding": "Voir la fin",
-      "loading": "Chargement de l’aperçu…",
-      "fallbackNote": "La vidéo ne peut pas être lue ici, l’aperçu montre donc une image fixe du geste. La vidéo finale utilise le clip complet, avec cette fin.",
-      "unavailable": "L’aperçu ne peut pas être affiché pour le moment. La vidéo finale est réalisée avec votre nom et votre logo tels que saisis."
+      "caption": "Voici à quoi ressemble la fin de la vidéo : une image fixe du geste avec votre nom et votre logo."
     }
   },
   "signOutConfirm": {

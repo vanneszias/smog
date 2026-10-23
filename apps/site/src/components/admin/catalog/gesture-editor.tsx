@@ -64,6 +64,8 @@ import {
   sameField,
   withMine,
 } from "./gesture-draft";
+import { GestureAudio, RecutCard } from "./gesture-media";
+import { GestureTranslations } from "./gesture-translations";
 import { KeywordInput } from "./keyword-input";
 
 /** The duplicate-name check waits this long after the last keystroke. */
@@ -386,6 +388,10 @@ export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
     (published: boolean) => set("published", published),
     [set]
   );
+  const onTextless = useCallback(
+    (textless: boolean) => set("textless", textless),
+    [set]
+  );
 
   const saveFailed = useCallback(
     (error: unknown) => {
@@ -566,6 +572,15 @@ export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
                 {shown("video")}
               </p>
             ) : null}
+            {/* A new gesture says whether its video is textless; an existing one has the re-cut card. */}
+            {saved ? null : (
+              <Switch
+                checked={draft.textless}
+                description={t("media.admin.recut.textlessHint")}
+                label={t("media.admin.recut.textless")}
+                onCheckedChange={onTextless}
+              />
+            )}
           </div>
           <div className="flex max-w-reading flex-col gap-2">
             <Field
@@ -638,9 +653,12 @@ export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
               onPublished={onPublished}
             />
           </div>
+          {saved ? <RecutCard gesture={saved} /> : null}
           {saved ? <DangerZone gesture={saved} onLeave={allowLeave} /> : null}
         </div>
       </form>
+      {saved ? <GestureTranslations gestureId={saved.id} /> : null}
+      {saved ? <GestureAudio gestureId={saved.id} /> : null}
       <ConflictDialog
         categories={categories.data ?? []}
         conflict={conflict}

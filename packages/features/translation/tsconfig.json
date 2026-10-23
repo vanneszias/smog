@@ -1,0 +1,13 @@
+{
+  // The Worker side (./server), with the Workers types. The D1 tests are
+  // checked by tsconfig.test.json (they reach the gestures server by
+  // relative path, which a composite project cannot hold), and the
+  // client-safe entries by tsconfig.client.json too (no Workers types).
+  "extends": "@smog/config/tsconfig/worker.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["@cloudflare/vitest-plugin/types"]
+  },
+  "include": ["src", "vitest.config.ts"]
+}

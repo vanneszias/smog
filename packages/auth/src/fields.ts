@@ -4,10 +4,39 @@
  * `./session` or anything that references Workers types
  * (`test/client-entries.test.ts` and `tsconfig.client.json` guard that).
  */
-import { LOCALES } from "@smog/config/constants";
+import { localeCodeSchema } from "@smog/config/locale";
 import { z } from "zod";
 
 export type Role = "user" | "admin";
+
+/**
+ * The roles a user can hold besides being a learner (phase 10b, the
+ * `user_role` table; `@smog/db` `USER_ROLES` is the same list, a test keeps
+ * them equal). `admin` implies every other role (`hasRole`).
+ */
+export const USER_ROLES = ["translator", "teacher", "admin"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
+
+/** `roles` of a session user, from raw values: known roles only, sorted, once each. */
+export function normalizeRoles(values: readonly unknown[]): UserRole[] {
+  return USER_ROLES.filter((role) => values.includes(role));
+}
+
+/**
+ * Whether a user holding `roles` may act as one of `allowed`: the `admin`
+ * role passes every check, anything else must hold one of them.
+ */
+export function hasRole(
+  roles: readonly string[] | null | undefined,
+  ...allowed: readonly UserRole[]
+): boolean {
+  if (!roles) {
+    return false;
+  }
+  return (
+    roles.includes("admin") || allowed.some((role) => roles.includes(role))
+  );
+}
 
 /** Password bounds: set on the server and checked by the forms first. */
 export const PASSWORD_MIN_LENGTH = 8;
@@ -27,7 +56,9 @@ export const OTP_LENGTH = 6;
 
 /**
  * Our columns on Better Auth's `user` (spec §5.1): `locale` is set by the
- * client (validated `nl|en|fr`), `legacyId` only by the migration.
+ * client (a well-formed language code here; the sign-up hook replaces one
+ * that is not an enabled language with the default, `signUpLocale`),
+ * `legacyId` only by the migration.
  */
 export const USER_ADDITIONAL_FIELDS = {
   legacyId: { input: false, required: false, type: "string" },
@@ -35,7 +66,7 @@ export const USER_ADDITIONAL_FIELDS = {
     input: true,
     required: false,
     type: "string",
-    validator: { input: z.enum(LOCALES).nullish() },
+    validator: { input: localeCodeSchema.nullish() },
   },
 } as const;
 

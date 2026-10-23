@@ -8,12 +8,19 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderSite, rpcError } from "@/test/render";
-// The preview's Player and Mux reads, faked (before the page loads it).
-import { player, resetPreviewFakes } from "@/test/sponsor-preview-fakes";
 import { ReeditView } from "./reedit-view";
 import { RenewalView } from "./renewal-view";
 
 const LOGO = /^Logo/;
+
+/** The logo the preview's end card shows (an object URL), or none. */
+function cardLogo(): string | null {
+  return (
+    document
+      .querySelector('[data-slot="sponsor-end-card-logo"]')
+      ?.getAttribute("src") ?? null
+  );
+}
 const BLOB_URL = /^blob:/;
 
 const NAME_IN_VIDEO = /^Name in the video/;
@@ -124,7 +131,6 @@ function reeditWithLogo(hasLogo: boolean) {
 }
 
 beforeEach(() => {
-  resetPreviewFakes();
   // No test reaches the network: the kept logo is refused unless stubbed.
   stubKeptLogo(404);
 });
@@ -242,10 +248,8 @@ describe("the re-edit page (S-19)", () => {
   test("the preview shows the kept logo until a new file is chosen (review M-5)", async () => {
     const kept = stubKeptLogo(200);
     await renderSite(() => <Edit />, { api: reeditWithLogo(true) });
-    await waitFor(() =>
-      expect(player.props?.inputProps.logoUrl).toMatch(BLOB_URL)
-    );
-    const keptUrl = player.props?.inputProps.logoUrl;
+    await waitFor(() => expect(cardLogo()).toMatch(BLOB_URL));
+    const keptUrl = cardLogo();
     // The token travels in the body of a same-origin POST, never a URL.
     expect(kept.requests).toEqual([
       {
@@ -266,19 +270,22 @@ describe("the re-edit page (S-19)", () => {
       },
     });
     await waitFor(() => {
-      expect(player.props?.inputProps.logoUrl).toMatch(BLOB_URL);
-      expect(player.props?.inputProps.logoUrl).not.toBe(keptUrl);
+      expect(cardLogo()).toMatch(BLOB_URL);
+      expect(cardLogo()).not.toBe(keptUrl);
     });
   });
 
   test("reads no logo without one, and shows none when the read is refused", async () => {
     const none = stubKeptLogo(200);
     await renderSite(() => <Edit />, { api: reeditWithLogo(false) });
-    await waitFor(() => expect(player.props).not.toBeNull());
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="sponsor-end-card"]')
+      ).not.toBeNull()
+    );
     expect(none.requests).toEqual([]);
-    expect(player.props?.inputProps.logoUrl).toBeNull();
+    expect(cardLogo()).toBeNull();
     cleanup();
-    resetPreviewFakes();
 
     const refused = stubKeptLogo(404);
     await renderSite(() => <Edit />, { api: reeditWithLogo(true) });
@@ -293,8 +300,12 @@ describe("the re-edit page (S-19)", () => {
     await act(async () => {
       await Promise.resolve();
     });
-    await waitFor(() => expect(player.props).not.toBeNull());
-    expect(player.props?.inputProps.logoUrl).toBeNull();
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-slot="sponsor-end-card"]')
+      ).not.toBeNull()
+    );
+    expect(cardLogo()).toBeNull();
   });
 });
 

@@ -9,8 +9,39 @@ import { LOCALES as APP_LOCALES } from "@smog/config/constants";
 export const LOCALES = APP_LOCALES;
 export type Locale = (typeof LOCALES)[number];
 
+/**
+ * The legacy single role on `user.role` (Better Auth's admin plugin). Since
+ * phase 10b it is the mirror of `user_role`: `admin` while the user holds the
+ * `admin` role, else `user` (`USER_ROLES` below is the set).
+ */
 export const ROLES = ["user", "admin"] as const;
 export type Role = (typeof ROLES)[number];
+
+/**
+ * The roles a user can hold besides being a learner (phase 10b, `user_role`).
+ * A user with no row is a plain learner; `admin` implies every other role.
+ */
+export const USER_ROLES = ["translator", "teacher", "admin"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
+
+/** The two legal texts (`legal_text.kind`), as in `@smog/i18n`'s `LegalKind`. */
+export const LEGAL_KINDS = ["privacy", "terms"] as const;
+export type LegalTextKind = (typeof LEGAL_KINDS)[number];
+
+/** A legal text version is a draft until published; history is kept. */
+export const LEGAL_STATUSES = ["draft", "published"] as const;
+export type LegalStatus = (typeof LEGAL_STATUSES)[number];
+
+/**
+ * The audio formats of a gesture's spoken name (`gesture_audio.content_type`):
+ * MP3 and M4A, verified by magic bytes after the upload.
+ */
+export const AUDIO_CONTENT_TYPES = ["audio/mpeg", "audio/mp4"] as const;
+export type AudioContentType = (typeof AUDIO_CONTENT_TYPES)[number];
+
+/** The upload caps of a gesture's audio clip (1 MiB, 10 s). */
+export const AUDIO_MAX_BYTES = 1_048_576;
+export const AUDIO_MAX_DURATION_MS = 10_000;
 
 export const LIST_SHARE_ROLES = ["view", "edit"] as const;
 export type ListShareRole = (typeof LIST_SHARE_ROLES)[number];
@@ -139,6 +170,27 @@ export const AUDIT_ACTIONS = [
   "export.sponsorships_csv",
   "dead_letter.replay",
   "dead_letter.discard",
+  /** Phase 10b: roles as a set (`user_role`), one row per grant or revoke. */
+  "user.role_grant",
+  "user.role_revoke",
+  /** Phase 10b: languages are data (`language`). */
+  "language.create",
+  "language.update",
+  /** Phase 10b: interface strings (`ui_string`), a single save or an import. */
+  "translation.string_save",
+  "translation.string_import",
+  /** Phase 10b: gesture and category translations. */
+  "translation.gesture_save",
+  "translation.category_save",
+  /** Phase 10b: a gesture's spoken name (`gesture_audio`). */
+  "translation.audio_upload",
+  "translation.audio_delete",
+  /** Phase 10b: an admin cleared `gesture.needs_recut` (a textless video was uploaded). */
+  "gesture.recut_done",
+  /** Phase 10b: legal text versions (`legal_text`). */
+  "legal.draft_save",
+  "legal.publish",
+  "legal.restore",
   "legacy",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -156,6 +208,12 @@ export const AUDIT_TARGET_TYPES = [
   "system",
   /** A message a DLQ consumer stored (`target_id` = its queue message id), phase 9. */
   "dead_letter",
+  /** A language (`target_id` = its code), phase 10b. */
+  "language",
+  /** An interface string (`target_id` = `<locale>:<key>`) or an import (`system`), phase 10b. */
+  "ui_string",
+  /** A legal text version (`target_id` = its id), phase 10b. */
+  "legal_text",
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

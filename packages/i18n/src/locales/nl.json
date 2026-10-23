@@ -92,7 +92,8 @@
     "signIn": "Aanmelden",
     "signOut": "Afmelden",
     "gestures": "Gebaren",
-    "legal": "Juridisch"
+    "legal": "Juridisch",
+    "translation": "Vertalen"
   },
   "theme": {
     "label": "Thema",
@@ -370,6 +371,54 @@
       "inList": "In de lijst"
     }
   },
+  "endCard": {
+    "message": "Mogelijk gemaakt door"
+  },
+  "media": {
+    "nameOverlay": {
+      "toggle": "Naam in de video tonen"
+    },
+    "audio": {
+      "play": "Uitspraak beluisteren",
+      "stop": "Uitspraak stoppen"
+    },
+    "admin": {
+      "audio": {
+        "title": "Uitspraak (audio)",
+        "description": "Eén fragment per taal: de gesproken naam van het gebaar. MP3 of M4A, hoogstens 1 MB en 10 seconden.",
+        "none": "Nog geen audio",
+        "choose": "Audio kiezen",
+        "replace": "Audio vervangen",
+        "remove": "Audio verwijderen",
+        "saved": "Audio opgeslagen",
+        "removed": "Audio verwijderd",
+        "duration": "{{seconds}} s",
+        "errors": {
+          "format": "Dit is geen geldig MP3- of M4A-bestand.",
+          "duration": "Het fragment is langer dan 10 seconden.",
+          "tooLarge": "Het bestand is groter dan 1 MB.",
+          "missing": "De upload is niet aangekomen. Probeer het opnieuw.",
+          "key": "Deze upload hoort niet bij dit gebaar.",
+          "network": "De upload is mislukt. Controleer je verbinding en probeer het opnieuw.",
+          "generic": "Het opslaan is mislukt. Probeer het opnieuw.",
+          "removeFailed": "Het verwijderen is mislukt. Probeer het opnieuw."
+        }
+      },
+      "recut": {
+        "title": "Video zonder tekst",
+        "description": "Bij dit gebaar staat de naam nog in de video zelf. Upload de video zonder tekst en bevestig het hier: daarna toont de speler de naam in de taal van de kijker.",
+        "needed": "De naam zit nog in de video",
+        "done": "Video zonder tekst geüpload",
+        "doneSaved": "Gemarkeerd als video zonder tekst",
+        "doneFailed": "Markeren is mislukt. Probeer het opnieuw.",
+        "ok": "De video heeft geen tekst in beeld",
+        "filter": "Opnieuw knippen nodig",
+        "badge": "Naam in video",
+        "textless": "De video heeft geen tekst in beeld",
+        "textlessHint": "Zonder vinkje blijft het gebaar op de lijst van opnieuw te knippen video's staan."
+      }
+    }
+  },
   "gesture": {
     "sponsored": "Gesponsord",
     "disclaimer": {
@@ -616,10 +665,9 @@
         "subject": "We hebben je sponsoring ontvangen",
         "preheader": "Bedankt! Zo gaat het nu verder.",
         "heading": "Sponsoring ontvangen",
-        "body": "Bedankt om {{gesture}} te sponsoren. In de video komt de naam {{displayName}}.",
+        "body": "Bedankt om {{gesture}} te sponsoren. Aan het einde van de video komt de naam {{displayName}}.",
         "nextTitle": "Wat gebeurt er nu?",
-        "stepRender": "We maken je gesponsorde video.",
-        "stepReview": "We bekijken de video voor hij online komt.",
+        "stepReview": "We bekijken je sponsoring voor ze online komt.",
         "stepLive": "Je krijgt een e-mail zodra je sponsoring online staat.",
         "footer": "Je krijgt deze e-mail omdat je onlangs een sponsoring hebt ingediend via SMOG & Co."
       },
@@ -636,7 +684,7 @@
         "subject": "Je sponsoring is nu live!",
         "preheader": "Je gesponsorde video staat online.",
         "heading": "Je sponsoring is live!",
-        "body": "Je gesponsorde video bij {{gesture}} staat nu online met de naam {{displayName}}.",
+        "body": "Je sponsoring van {{gesture}} staat nu online: aan het einde van de video staat de naam {{displayName}}.",
         "button": "Bekijk op SMOG",
         "thanks": "Bedankt om SMOG te steunen!",
         "footer": "30 dagen voor het einde sturen we je een herinnering, zodat je kunt verlengen."
@@ -656,18 +704,11 @@
         "preheader": "Betaald: {{total}}.",
         "heading": "Nieuwe sponsoring betaald",
         "headingRenewal": "Sponsoring verlengd",
-        "body": "Er is een sponsoring betaald. Ze wacht nu op de video en daarna op goedkeuring.",
+        "body": "Er is een sponsoring betaald. Ze wacht nu op goedkeuring.",
         "bodyRenewal": "Een sponsoring is verlengd voor een jaar. Er is geen nieuwe video of goedkeuring nodig.",
         "detailsTitle": "Sponsoring",
         "invoiceTitle": "Facturatie",
         "button": "Bekijk in het beheer"
-      },
-      "adminRenderFailed": {
-        "subject": "Video maken mislukt voor {{gesture}}",
-        "preheader": "De video voor {{displayName}} kon niet gemaakt worden.",
-        "heading": "Video maken mislukt",
-        "body": "De gesponsorde video kon niet gemaakt worden, ook niet na nieuwe pogingen. Bekijk de sponsoring in het beheer.",
-        "button": "Bekijk de sponsoring"
       },
       "adminRefundNeeded": {
         "subject": "Terugbetaling nodig voor betaling {{paymentId}}",
@@ -700,13 +741,12 @@
       },
       "adminDeadLetter": {
         "subject": "Dead letters vragen aandacht",
-        "preheader": "Berichten konden niet worden afgeleverd, of een video is al meer dan een dag mislukt.",
+        "preheader": "Berichten konden niet worden afgeleverd.",
         "heading": "Dead letters vragen aandacht",
-        "body": "Sommige berichten konden na alle pogingen niet worden afgeleverd, of een video is al meer dan 24 uur mislukt. Speel ze opnieuw af of verwijder ze in het beheer.",
+        "body": "Sommige berichten konden na alle pogingen niet worden afgeleverd. Speel ze opnieuw af of verwijder ze in het beheer.",
         "emailOpen": "E-mails in de wachtrij",
         "eventsOpen": "Sponsorgebeurtenissen in de wachtrij",
         "lost": "Berichten verloren terwijl de database niet beschikbaar was",
-        "renderFailed": "Video’s die al meer dan 24 uur mislukt zijn",
         "types": "Wachtend per type",
         "button": "Dead letters openen"
       }
@@ -928,8 +968,12 @@
       "groups": {
         "content": "Inhoud",
         "community": "Gemeenschap",
-        "operations": "Opvolging"
-      }
+        "operations": "Opvolging",
+        "translation": "Vertalen"
+      },
+      "strings": "Teksten",
+      "languages": "Talen",
+      "legal": "Juridische teksten"
     },
     "comingSoon": {
       "title": "Komt in deze fase",
@@ -964,10 +1008,6 @@
         "inReview_other": "te beoordelen",
         "awaitingPayment_one": "{{count}} wacht op betaling",
         "awaitingPayment_other": "{{count}} wachten op betaling",
-        "rendering_one": "{{count}} video in de maak",
-        "rendering_other": "{{count}} video’s in de maak",
-        "renderFailed_one": "{{count}} video mislukt",
-        "renderFailed_other": "{{count}} video’s mislukt",
         "live_one": "{{count}} live",
         "live_other": "{{count}} live",
         "expiring_one": "{{count}} loopt binnenkort af",
@@ -983,9 +1023,7 @@
         "events_one": "{{count}} gebeurtenis wacht",
         "events_other": "{{count}} gebeurtenissen wachten",
         "oldest": "Oudste van {{date}}",
-        "none": "Niets in de wachtrij",
-        "renderFailed_one": "{{count}} video mislukt",
-        "renderFailed_other": "{{count}} video’s mislukt"
+        "none": "Niets in de wachtrij"
       },
       "chart": {
         "title": "In één oogopslag",
@@ -994,7 +1032,6 @@
         "catalogue": "Gebaren",
         "awaitingPayment": "Wacht op betaling",
         "inReview": "In beoordeling",
-        "rendering": "Wordt gemaakt",
         "live": "Live",
         "published": "Gepubliceerd",
         "hidden": "Verborgen"
@@ -1038,7 +1075,8 @@
           "publish": "Gebaar gepubliceerd",
           "unpublish": "Gebaar verborgen",
           "delete": "Gebaar verwijderd",
-          "bulk_update": "Gebaren in bulk bewerkt"
+          "bulk_update": "Gebaren in bulk bewerkt",
+          "recut_done": "Video zonder tekst geüpload"
         },
         "category": {
           "create": "Categorie aangemaakt",
@@ -1053,7 +1091,9 @@
           "ban": "Gebruiker geblokkeerd",
           "unban": "Blokkering opgeheven",
           "delete": "Gebruiker verwijderd",
-          "impersonate": "Aangemeld als gebruiker"
+          "impersonate": "Aangemeld als gebruiker",
+          "role_grant": "Rol toegekend",
+          "role_revoke": "Rol ingetrokken"
         },
         "sponsorship": {
           "approve": "Sponsoring goedgekeurd",
@@ -1079,6 +1119,23 @@
         "dead_letter": {
           "replay": "Dead letter opnieuw afgespeeld",
           "discard": "Dead letter verwijderd"
+        },
+        "language": {
+          "create": "Taal toegevoegd",
+          "update": "Taal gewijzigd"
+        },
+        "translation": {
+          "string_save": "Interfacetekst vertaald",
+          "string_import": "Interfaceteksten geïmporteerd",
+          "gesture_save": "Gebaarvertaling opgeslagen",
+          "category_save": "Categorievertaling opgeslagen",
+          "audio_upload": "Audio geüpload",
+          "audio_delete": "Audio verwijderd"
+        },
+        "legal": {
+          "draft_save": "Juridische tekst bewaard als concept",
+          "publish": "Juridische tekst gepubliceerd",
+          "restore": "Juridische tekst hersteld"
         }
       },
       "targetTypes": {
@@ -1090,7 +1147,10 @@
         "list": "Lijst",
         "setting": "Instelling",
         "system": "Systeem",
-        "dead_letter": "Dead letter"
+        "dead_letter": "Dead letter",
+        "language": "Taal",
+        "ui_string": "Interfacetekst",
+        "legal_text": "Juridische tekst"
       }
     },
     "gestures": {
@@ -1353,6 +1413,47 @@
       "countWithPublished_one": "{{count}} gebaar · {{published}} gepubliceerd",
       "countWithPublished_other": "{{count}} gebaren · {{published}} gepubliceerd"
     },
+    "catalogTranslation": {
+      "title": "Vertalingen",
+      "description": "Vertaal de naam, beschrijving en trefwoorden per taal. De tekst in de standaardtaal staat ernaast.",
+      "sourceLabel": "Bron ({{language}})",
+      "tabsLabel": "Taal van de vertaling",
+      "noLanguages": "Er zijn geen andere talen ingeschakeld.",
+      "needs": "Vertaling nodig",
+      "translated": "Vertaald",
+      "fields": {
+        "name": "Naam in {{language}}",
+        "description": "Beschrijving in {{language}}",
+        "keywords": "Trefwoorden in {{language}}"
+      },
+      "fallbackHint": "Zolang een vertaling ontbreekt, ziet de bezoeker de tekst in de standaardtaal.",
+      "save": "Vertaling opslaan",
+      "saved": "Vertaling opgeslagen.",
+      "saveFailed": "De vertaling kon niet worden opgeslagen.",
+      "stale": "Iemand anders heeft deze vertaling net opgeslagen. De nieuwste tekst is geladen: controleer hem en sla opnieuw op.",
+      "nameRequired": "Vul een naam in.",
+      "loadFailed": "De vertalingen konden niet worden geladen.",
+      "report": {
+        "title": "Vertalingen per taal",
+        "gestures": "{{needs}} van {{total}} gebaren hebben een vertaling nodig",
+        "categories": "{{missing}} van {{total}} categorieën hebben nog geen vertaalde naam",
+        "detail": "Zonder naam: {{name}}, zonder beschrijving: {{description}}, zonder trefwoorden: {{keywords}}",
+        "allDone": "Alles is vertaald",
+        "show": "Toon wat nog vertaald moet worden"
+      },
+      "filter": {
+        "label": "Vertaling nodig in",
+        "none": "Geen filter"
+      },
+      "categories": {
+        "title": "Namen per taal",
+        "description": "Vertaal de naam van elke categorie. Bezoekers zien de vertaalde naam in de filters en op de gebarenkaarten.",
+        "nameIn": "Naam in {{language}}",
+        "save": "Opslaan",
+        "saveFor": "Vertaling van {{name}} opslaan",
+        "saved": "Naam opgeslagen."
+      }
+    },
     "mux": {
       "title": "Video",
       "label": "Video",
@@ -1439,7 +1540,9 @@
       },
       "roles": {
         "user": "Gebruiker",
-        "admin": "Beheerder"
+        "admin": "Beheerder",
+        "translator": "Vertaler",
+        "teacher": "Leerkracht"
       },
       "columns": {
         "name": "Naam",
@@ -1470,12 +1573,13 @@
         "banUntil": "Geblokkeerd tot",
         "banForever": "Geen einddatum",
         "actions": "Acties",
-        "self": "Dit is je eigen account. Een andere beheerder moet de rol wijzigen, het account blokkeren of verwijderen.",
+        "self": "Dit is je eigen account. Een andere beheerder moet de rollen wijzigen, het account blokkeren of verwijderen.",
         "adminTarget": "Neem eerst de beheerdersrol af voor je dit account blokkeert of verwijdert.",
         "bannedTarget": "Hef de blokkering op voor je dit account beheerder maakt.",
         "notFound": "Dit account bestaat niet meer.",
         "sponsorships": "Sponsorings",
-        "noSponsorships": "Geen sponsorings met dit e-mailadres."
+        "noSponsorships": "Geen sponsorings met dit e-mailadres.",
+        "roles": "Rollen"
       },
       "methods": {
         "credential": "Wachtwoord",
@@ -1483,17 +1587,27 @@
         "apple": "Apple",
         "passkey": "Passkey"
       },
-      "promote": {
-        "action": "Beheerder maken",
-        "title": "{{name}} beheerder maken?",
-        "description": "Beheerders kunnen de catalogus, de accounts en de instellingen wijzigen. Het geldt vanaf hun volgende pagina.",
-        "done": "{{name}} is nu beheerder."
+      "roleSection": {
+        "title": "Rollen",
+        "description": "Iemand kan meerdere rollen hebben. Een beheerder kan alles wat de andere rollen kunnen.",
+        "none": "Geen rol: een leerling.",
+        "help": {
+          "translator": "Vertaalt namen, trefwoorden, schermen en juridische teksten.",
+          "teacher": "Neemt de gebarenvideo’s op en controleert ze.",
+          "admin": "Beheert de catalogus, de accounts, de sponsoringen en de instellingen."
+        }
       },
-      "demote": {
-        "action": "Beheerdersrol afnemen",
-        "title": "De beheerdersrol van {{name}} afnemen?",
-        "description": "De toegang tot het beheer verdwijnt meteen.",
-        "done": "{{name}} is geen beheerder meer."
+      "grant": {
+        "action": "Rol toevoegen: {{role}}",
+        "title": "{{name}} de rol {{role}} geven?",
+        "description": "Het geldt vanaf hun volgende pagina.",
+        "done": "{{name}} heeft nu de rol {{role}}."
+      },
+      "revoke": {
+        "action": "Rol afnemen: {{role}}",
+        "title": "De rol {{role}} van {{name}} afnemen?",
+        "description": "Wat de rol toelaat, verdwijnt meteen.",
+        "done": "{{name}} heeft de rol {{role}} niet meer."
       },
       "ban": {
         "action": "Blokkeren",
@@ -1588,7 +1702,6 @@
         "sponsorshipLive": "Sponsoring online",
         "renewalReminder": "Herinnering verlenging",
         "adminNewSponsorship": "Nieuwe sponsoring (beheer)",
-        "adminRenderFailed": "Video mislukt (beheer)",
         "adminRefundNeeded": "Terugbetaling nodig (beheer)",
         "weMoved": "We zijn verhuisd",
         "adminDeadLetter": "Dead letters (beheer)"
@@ -1617,7 +1730,6 @@
         "awaiting": "Wacht op betaling",
         "refund": "Terug te betalen",
         "closed": "Afgesloten",
-        "rendering": "In de maak/mislukt",
         "live": "Live/loopt af"
       },
       "filters": {
@@ -1689,7 +1801,6 @@
         "originalOf": "Originele video van {{name}}",
         "sponsored": "Gesponsorde video",
         "sponsoredOf": "Gesponsorde video van {{name}}",
-        "fakeRender": "Testvideo (zonder overlay)",
         "noVideo": "Nog geen video.",
         "facts": "Gegevens",
         "gesture": "Gebaar",
@@ -1708,8 +1819,8 @@
         "title": "Acties",
         "notes": {
           "awaitingPayment": "Wacht op betaling. Markeer als betaald of annuleer bij de betaling hieronder.",
-          "rendering": "De video wordt gemaakt. Daarna komt de sponsoring bij Te beoordelen.",
-          "renderFailed": "De video is mislukt. De fout staat bij Videotaken; probeer opnieuw als de oorzaak opgelost of tijdelijk was.",
+          "rendering": "Deze sponsoring wachtte op een video die niet meer gemaakt wordt. Ze komt binnen het uur bij Te beoordelen.",
+          "renderFailed": "Deze sponsoring wachtte op een video die niet meer gemaakt wordt. Ze komt binnen het uur bij Te beoordelen.",
           "closed": "Deze sponsoring is afgesloten."
         }
       },
@@ -1755,13 +1866,13 @@
         "action": "Als betaald markeren",
         "note": "Bankreferentie",
         "noteHint": "Komt in de geschiedenis, bv. de mededeling van de overschrijving.",
-        "done": "Als betaald gemarkeerd. De video’s worden gemaakt.",
+        "done": "Als betaald gemarkeerd. De sponsorings wachten nu op beoordeling.",
         "settled": "Mollie had deze betaling al: ze is als betaald verwerkt.",
         "refundNeeded": "Mollie had deze betaling al, maar ze moet terugbetaald worden. Bekijk de betaling hieronder.",
-        "lateFailure": "De betaling is als betaald gemarkeerd, maar de video’s zijn misschien niet gestart. De controle van elk uur start wat ontbreekt; kijk over een uur opnieuw.",
+        "lateFailure": "De betaling is als betaald gemarkeerd, maar de bevestigingsmails zijn misschien niet verstuurd. Controleer de betaling en verwittig de sponsor zelf indien nodig.",
         "title": "{{amount}} van {{name}} als betaald markeren?",
-        "description_one": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: de video wordt gemaakt.",
-        "description_other": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: van elk wordt de video gemaakt."
+        "description_one": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: ze gaat naar beoordeling.",
+        "description_other": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: elk gaat naar beoordeling."
       },
       "cancel": {
         "action": "Betaling annuleren",
@@ -1865,19 +1976,7 @@
           "running": "Bezig",
           "succeeded": "Gelukt",
           "failed": "Mislukt"
-        },
-        "hint": {
-          "sourceTooLong": "De video van het gebaar duurt langer dan 2 minuten, het maximum voor een gesponsorde video. Kort de video van het gebaar in of vervang hem, en probeer dan opnieuw.",
-          "workflowNeverStarted": "Het maken van de video is binnen 6 uur niet gestart. Controleer de laatste deploy en het Workflows-dashboard, en probeer dan opnieuw.",
-          "rendererBusy": "Er was een uur lang geen renderer vrij. Probeer opnieuw wanneer er minder video's tegelijk gemaakt worden."
         }
-      },
-      "retryRender": {
-        "action": "Video opnieuw maken",
-        "title": "De video voor {{name}} op {{gesture}} opnieuw maken?",
-        "description": "Er start een nieuwe video met de huidige naam en het huidige logo. De sponsoring gaat terug naar Video wordt gemaakt en komt bij Ter beoordeling zodra de video klaar is. Er gaat geen e-mail uit.",
-        "done": "De video wordt opnieuw gemaakt (poging {{attempt}}).",
-        "announce": "Video opnieuw gestart: poging {{attempt}} voor {{name}}."
       },
       "tokens": {
         "title": "Links",
@@ -1974,6 +2073,254 @@
       "rowActions": "Acties voor {{name}}",
       "open": "Openen",
       "actions": "Acties"
+    },
+    "translation": {
+      "loadError": "De vertaalgegevens konden niet worden geladen.",
+      "legal": {
+        "title": "Juridische teksten",
+        "description": "Het privacybeleid en de gebruiksvoorwaarden, per taal. Publiceren wijzigt de openbare pagina meteen.",
+        "responsibility": "Iedereen die vertaalt kan een juridische tekst publiceren, en die vervangt meteen de openbare pagina. Elke versie blijft bewaard, elke publicatie staat in het auditlogboek en een beheerder kan een eerdere versie herstellen.",
+        "text": "Tekst",
+        "language": "Taal",
+        "kind": {
+          "privacy": "Privacybeleid",
+          "terms": "Gebruiksvoorwaarden"
+        },
+        "dutchPrevails": "De Nederlandse tekst heeft voorrang: de andere talen vermelden dat het vertalingen zijn.",
+        "draftBadge": "Concept",
+        "publishedBadge": "Gepubliceerd: versie {{version}}, geldig vanaf {{date}}",
+        "notPublished": "Niet gepubliceerd",
+        "unsaved": "Niet-opgeslagen wijzigingen",
+        "noText": "Deze taal heeft nog geen juridische tekst, dus bezoekers lezen de Nederlandse. De Nederlandse tekst is het uitgangspunt: vertaal ze, bewaar een concept en publiceer het.",
+        "conflictTitle": "Iemand anders was eerst",
+        "conflict": "Het concept is gewijzigd sinds je het opende. Neem het opgeslagen concept over en doe je wijzigingen opnieuw.",
+        "takeStored": "Opgeslagen concept overnemen",
+        "saveDraft": "Concept bewaren",
+        "publish": "Publiceren",
+        "discardChanges": "Wijzigingen verwerpen",
+        "publishNeeds": "Bewaar het concept zonder fouten om het te publiceren.",
+        "views": "Weergaven van de tekst",
+        "tabs": {
+          "edit": "Bewerken",
+          "preview": "Voorbeeld",
+          "source": "Nederlandse bron",
+          "history": "Geschiedenis"
+        },
+        "documentTitle": "Titel van de tekst",
+        "markupHint": "Tekst mag **vet** en [linktekst](https://example.test) bevatten. Links gaan naar https:, mailto: of een pagina van de site (/privacy).",
+        "sectionLabel": "Sectie {{number}}",
+        "sectionTitle": "Titel van de sectie",
+        "anchor": "Anker",
+        "anchorHint": "Kleine letters, woorden verbonden met koppeltekens, zoals in /privacy#rights. Houd het in elke taal gelijk.",
+        "blockLabel": "{{kind}}, sectie {{section}}, blok {{block}}",
+        "blocks": {
+          "paragraph": "Alinea",
+          "list": "Lijst",
+          "lines": "Adresregels",
+          "consent": "Analyticsschakelaar"
+        },
+        "onePerLine": "Eén item per regel.",
+        "consentHint": "Hier staat de analyticsschakelaar van de pagina. Het privacybeleid heeft er precies één nodig.",
+        "moveUp": "Omhoog verplaatsen: {{label}}",
+        "moveDown": "Omlaag verplaatsen: {{label}}",
+        "removeBlock": "Verwijderen: {{label}}",
+        "removeSection": "Verwijderen: {{label}}",
+        "addBlock": "Blok toevoegen",
+        "addSection": "Sectie toevoegen",
+        "issues": {
+          "badId": "Het anker moet uit kleine letters bestaan, woorden verbonden met koppeltekens.",
+          "consentControl": "Het privacybeleid heeft precies één analyticsschakelaar nodig, de voorwaarden geen enkele.",
+          "duplicateId": "Twee secties hebben hetzelfde anker.",
+          "empty": "Dit mag niet leeg zijn.",
+          "html": "HTML is niet toegestaan. Gebruik gewone tekst met **vet** en links.",
+          "shape": "Dit deel van de tekst heeft niet de verwachte vorm.",
+          "tooLong": "Dit is te lang.",
+          "tooMany": "Dit zijn er te veel.",
+          "unsafeLink": "Links moeten naar https:, mailto: of een pagina van de site gaan."
+        },
+        "consentPlaceholder": "Hier verschijnt de analyticsschakelaar.",
+        "effectiveDate": "Ingangsdatum",
+        "effectiveHint": "De datum waarop de tekst ingaat. De pagina toont ze als laatst bijgewerkt.",
+        "publishTitle": "Deze tekst publiceren",
+        "publishDescription": "De tekst vervangt meteen de openbare pagina voor elke bezoeker.",
+        "publishConfirm": "Publiceren",
+        "restoreTitle": "Versie {{version}} herstellen",
+        "restoreDescription": "Versie {{version}} wordt gekopieerd naar een nieuwe gepubliceerde versie. De geschiedenis blijft bewaard.",
+        "restoreConfirm": "Herstellen",
+        "restore": "Herstellen",
+        "restoreLabel": "Versie {{version}} herstellen",
+        "restoreAdminOnly": "Alleen een beheerder kan een eerdere versie herstellen.",
+        "preview": "Voorbeeld",
+        "previewLabel": "Voorbeeld van versie {{version}}",
+        "previewVersion": "Versie {{version}}",
+        "previewVersionDescription": "Zo las de tekst toen ze gepubliceerd werd.",
+        "versionNumber": "Versie {{version}}",
+        "current": "Actueel",
+        "shipped": "Meegeleverde tekst",
+        "noHistory": "Er is nog geen versie gepubliceerd.",
+        "historyLabel": "Versies van deze tekst",
+        "columns": {
+          "version": "Versie",
+          "effective": "Ingangsdatum",
+          "by": "Gepubliceerd door",
+          "at": "Gepubliceerd",
+          "actions": "Acties"
+        },
+        "sourceHint": "De Nederlandse tekst om uit te vertalen (alleen lezen).",
+        "draftSaved": "Concept bewaard",
+        "published": "Versie {{version}} gepubliceerd",
+        "restored": "Versie {{version}} hersteld",
+        "errors": {
+          "failed": "Dat lukte niet. Probeer het opnieuw.",
+          "load": "De juridische teksten konden niet worden geladen."
+        }
+      },
+      "strings": {
+        "title": "Teksten",
+        "description": "De teksten van de site, de app en de e-mails. Een wijziging is meteen zichtbaar, zonder nieuwe release."
+      },
+      "filters": {
+        "label": "Filters voor de teksten",
+        "search": "Zoeken",
+        "searchPlaceholder": "Zoek in sleutels en teksten",
+        "namespace": "Onderdeel",
+        "allNamespaces": "Alle onderdelen",
+        "status": "Toon",
+        "allStatuses": "Alle teksten",
+        "language": "Taal",
+        "anyLanguage": "Elke taal",
+        "statuses": {
+          "missing": "Ontbrekend",
+          "stale": "Bron gewijzigd",
+          "invalid": "Problemen met invulplaatsen"
+        }
+      },
+      "table": {
+        "label": "Interfaceteksten",
+        "key": "Sleutel",
+        "sourceHeader": "{{language}} (bron)",
+        "total": "Aantal teksten: {{n}}",
+        "empty": "Geen teksten voor deze filters."
+      },
+      "cell": {
+        "edit": "Bewerk {{key}} in het {{language}}",
+        "empty": "Nog geen tekst",
+        "missing": "Ontbreekt",
+        "stale": "Bron gewijzigd",
+        "confirm": "Bevestigen",
+        "confirmLabel": "Bevestig {{key}} in het {{language}}",
+        "placeholderIssue": "Invulplaatsen kloppen niet",
+        "notApplicable": "Niet gebruikt in deze taal"
+      },
+      "editor": {
+        "label": "Tekst van {{key}} in het {{language}}",
+        "source": "Bron:",
+        "placeholders": "Behoud deze invulplaatsen: {{placeholders}}.",
+        "save": "Opslaan",
+        "cancel": "Annuleren",
+        "revert": "Terug naar de standaardtekst",
+        "conflictTitle": "Iemand was je voor",
+        "conflictBody": "Deze tekst is intussen door iemand anders opgeslagen. Hun versie staat hieronder.",
+        "useTheirs": "Hun versie overnemen",
+        "keepMine": "Toch mijn versie opslaan"
+      },
+      "errors": {
+        "empty": "Vul een tekst in.",
+        "tooLong": "Deze tekst is te lang.",
+        "placeholders": "De invulplaatsen moeten gelijk zijn aan de bron: {{placeholders}}.",
+        "generic": "Opslaan is niet gelukt. Probeer het opnieuw.",
+        "notFound": "Deze tekst bestaat niet meer.",
+        "saveFailed": "De tekst kon niet worden opgeslagen."
+      },
+      "export": {
+        "button": "Exporteren",
+        "all": "Alle talen",
+        "item": "{{language}} ({{format}})",
+        "allItem": "Alle talen ({{format}})",
+        "failed": "Het exporteren is niet gelukt."
+      },
+      "import": {
+        "button": "Importeren",
+        "title": "Teksten importeren",
+        "description": "Kies een JSON- of CSV-bestand. Je ziet eerst wat er zou veranderen, pas daarna worden de teksten opgeslagen.",
+        "file": "Bestand",
+        "fileHint": "JSON of CSV, ook een bestand uit de export.",
+        "language": "Taal van het bestand",
+        "fromFile": "Zoals in het bestand",
+        "added": "Nieuw: {{n}}",
+        "changed": "Gewijzigd: {{n}}",
+        "unchanged": "Ongewijzigd: {{n}}",
+        "skipped": "Overgeslagen: {{n}}",
+        "changes": "Wijzigingen",
+        "problems": "Overgeslagen regels",
+        "problem": {
+          "unknownKey": "onbekende sleutel",
+          "unknownLanguage": "onbekende taal",
+          "notApplicable": "meervoudsvorm die deze taal niet gebruikt",
+          "placeholders": "invulplaatsen kloppen niet",
+          "tooLong": "te lang",
+          "duplicate": "komt meer dan eens voor"
+        },
+        "apply": "Importeren",
+        "done": "Teksten opgeslagen: {{n}}",
+        "errors": {
+          "title": "Het bestand kan niet worden gebruikt",
+          "tooLarge": "Het bestand is te groot.",
+          "applyFailed": "Het importeren is niet gelukt.",
+          "staleImport": "Enkele teksten zijn gewijzigd terwijl het bestand werd gelezen. Er is niets geïmporteerd: bekijk het bestand opnieuw.",
+          "file": {
+            "invalidJson": "Dit is geen geldig JSON-bestand.",
+            "invalidCsv": "Dit is geen geldig CSV-bestand.",
+            "noKeyColumn": "De kolom key ontbreekt.",
+            "noLanguageColumn": "Er is geen kolom voor de gekozen taal.",
+            "unknownLanguage": "Het bestand noemt een taal die niet bestaat of niet is ingeschakeld.",
+            "unsupportedShape": "De waarden in het bestand moeten teksten zijn.",
+            "needsLanguage": "Kies de taal van dit bestand.",
+            "generic": "Het bestand kon niet worden gelezen."
+          }
+        }
+      },
+      "languages": {
+        "title": "Talen",
+        "description": "Welke talen er zijn, hoe ze heten en in welke volgorde ze in het taalmenu staan. Een nieuwe taal toont de Nederlandse tekst tot ze vertaald is.",
+        "label": "Talen",
+        "add": "Taal toevoegen",
+        "addTitle": "Taal toevoegen",
+        "editTitle": "{{language}} wijzigen",
+        "dialogDescription": "De code kan later niet meer wijzigen.",
+        "code": "Code",
+        "codeHint": "Een taalcode zoals pt of pt-BR.",
+        "name": "Naam",
+        "nameHint": "Zoals de taal zichzelf noemt, bijvoorbeeld Português.",
+        "intlTag": "Intl-tag",
+        "intlTagHint": "Voor datums en lijsten, bijvoorbeeld pt-PT.",
+        "order": "Volgorde",
+        "orderHint": "Een getal. Leeg laten zet de taal achteraan.",
+        "enabled": "Ingeschakeld",
+        "enabledLabel": "{{language}} inschakelen",
+        "default": "Standaard",
+        "edit": "Wijzigen",
+        "editLabel": "{{language}} wijzigen",
+        "save": "Opslaan",
+        "saved": "De taal is opgeslagen.",
+        "errors": {
+          "code": "Gebruik een geldige taalcode.",
+          "intlTag": "Dit is geen geldige Intl-tag.",
+          "exists": "Deze taalcode bestaat al.",
+          "order": "Vul een geheel getal in.",
+          "default": "De standaardtaal blijft ingeschakeld.",
+          "failed": "Opslaan is niet gelukt. Probeer het opnieuw."
+        }
+      },
+      "coverage": {
+        "title": "Vertaaldekking",
+        "percent": "{{percent}}% vertaald",
+        "progress": "Vertaald in het {{language}}",
+        "missing": "Ontbrekend: {{n}}",
+        "stale": "Bron gewijzigd: {{n}}",
+        "invalid": "Invulplaatsen: {{n}}",
+        "complete": "Alles vertaald"
+      }
     }
   },
   "sponsorship": {
@@ -2135,7 +2482,7 @@
     },
     "review": {
       "title": "Bekijk je sponsoring",
-      "description": "Zo verschijnt je naam op de geselecteerde gebaren. De echte video wordt na de betaling gemaakt en gecontroleerd voor hij online gaat.",
+      "description": "Zo verschijnt je naam aan het einde van de video van de geselecteerde gebaren. Na de betaling controleren we je sponsoring voor ze online gaat.",
       "summary": "Sponsoringdetails",
       "gestures": "Gebaren",
       "duration": "Duur",
@@ -2206,7 +2553,6 @@
       "timeline": {
         "title": "Wat gebeurt er nu?",
         "paid": "Je betaling is bevestigd.",
-        "video": "We maken je video met je naam erin.",
         "review": "Een beheerder beoordeelt je sponsoring binnen vijf werkdagen.",
         "live": "Je krijgt een e-mail zodra hij online staat."
       },
@@ -2243,7 +2589,7 @@
       "submit": "Ter controle verzenden",
       "submitted": {
         "title": "Verzonden!",
-        "description": "We maken je nieuwe video en controleren hem voor hij online gaat. Je hoeft niet opnieuw te betalen."
+        "description": "We controleren je aanpassing voor ze online gaat. Je hoeft niet opnieuw te betalen."
       },
       "failed": "We konden je aanpassing niet verzenden. Probeer het opnieuw."
     },
@@ -2262,12 +2608,7 @@
     "preview": {
       "label": "Voorbeeld voor {{name}}",
       "picker": "Kies het gebaar voor het voorbeeld",
-      "play": "Afspelen",
-      "pause": "Pauzeren",
-      "showEnding": "Toon het einde",
-      "loading": "Voorbeeld laden…",
-      "fallbackNote": "De video kan hier niet worden afgespeeld, dus het voorbeeld toont een stilstaand beeld van het gebaar. De definitieve video gebruikt de volledige clip, met dit einde.",
-      "unavailable": "Het voorbeeld kan nu niet getoond worden. De definitieve video wordt gemaakt met je naam en logo zoals ingevuld."
+      "caption": "Zo ziet het einde van de video eruit: een stilstaand beeld van het gebaar met je naam en logo."
     }
   },
   "signOutConfirm": {

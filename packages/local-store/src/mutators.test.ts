@@ -156,6 +156,19 @@ describe("consent and preferences", () => {
     );
   });
 
+  test("hideGestureName is an optional, additive preference (stored v2 data without it still parses)", () => {
+    const base = defaultGuestData();
+    expect(guestDataSchema.safeParse(base).success).toBe(true);
+    const hidden = setPreferences({ hideGestureName: true })(base);
+    expect(guestDataSchema.parse(hidden).preferences.hideGestureName).toBe(
+      true
+    );
+    expect(
+      setPreferences({ hideGestureName: false })(hidden).preferences
+        .hideGestureName
+    ).toBe(false);
+  });
+
   test("setPreferences merges", () => {
     const data = setPreferences({ theme: "dark" })(defaultGuestData());
     expect(data.preferences).toEqual({

@@ -1,8 +1,6 @@
 import {
   sponsorshipRefusalOf,
   useAdminSponsorshipActions,
-  useRetryRender,
-  useRetryRenderPending,
 } from "@smog/admin/client";
 import type { AdminPayment, AdminSponsorshipDetail } from "@smog/admin/schema";
 import type { SponsorshipStatus } from "@smog/db/enums";
@@ -29,7 +27,6 @@ import {
   Link2,
   MessageSquareWarning,
   ReceiptText,
-  RotateCcw,
   TimerOff,
   X,
 } from "lucide-react";
@@ -37,9 +34,7 @@ import {
   type ChangeEvent,
   type ReactNode,
   useCallback,
-  useEffect,
   useId,
-  useRef,
   useState,
 } from "react";
 import { sponsorshipActionError, useMoney, usePageLocale } from "./labels";
@@ -301,7 +296,6 @@ export function SponsorshipActions({
           {t(idle)}
         </Text>
       ) : null}
-      <RetryRender detail={detail} />
       {status === "in_review" && noVideo ? (
         <Text id={noteId} size="body-sm" tone="muted">
           {t("admin.sponsorships.approve.noVideo")}
@@ -463,118 +457,6 @@ export function SponsorshipActions({
   );
 }
 
-/**
- * Retry a failed render (A-27, A-15): on a `render_failed` sponsorship, a
- * button behind a confirm dialog, then a toast and a polite live-region
- * announcement. Shown in the status card and in the render jobs section.
- * Focus returns to the button when the dialog closes; once the refetched
- * detail has moved on (the button is gone), it moves to the announcement,
- * then shown in the button's place, instead of falling back to the page.
- */
-export function RetryRender({
-  detail,
-}: {
-  detail: AdminSponsorshipDetail;
-}): ReactNode {
-  const { t } = useTranslation();
-  const retry = useRetryRender();
-  const anyPending = useRetryRenderPending();
-  const run = useRun();
-  const [open, setOpen] = useState(false);
-  const [announcement, setAnnouncement] = useState("");
-  const region = useRef<HTMLParagraphElement>(null);
-  const retried = useRef(false);
-
-  const { gesture, sponsorship } = detail;
-  const { id, status } = sponsorship;
-  const name = sponsorship.displayName;
-  const failed = status === "render_failed";
-
-  useEffect(() => {
-    if (failed || !retried.current) {
-      return;
-    }
-    retried.current = false;
-    const active = document.activeElement;
-    if (active === null || active === document.body) {
-      region.current?.focus();
-    }
-  }, [failed]);
-
-  const openDialog = useCallback(() => setOpen(true), []);
-  const onOpenChange = useCallback((next: boolean) => setOpen(next), []);
-  const confirm = useCallback(() => {
-    run(
-      `retry the render of sponsorship ${id}`,
-      () => retry.mutateAsync({ id }),
-      (result) => {
-        retried.current = true;
-        setAnnouncement(
-          t("admin.sponsorships.retryRender.announce", {
-            attempt: result.attempt,
-            name,
-          })
-        );
-        return {
-          title: t("admin.sponsorships.retryRender.done", {
-            attempt: result.attempt,
-          }),
-          variant: "success",
-        };
-      }
-    ).catch(() => undefined);
-  }, [id, name, retry, run, t]);
-
-  return (
-    <>
-      {failed ? (
-        <div>
-          <Button
-            disabled={anyPending && !retry.isPending}
-            icon={<RotateCcw />}
-            loading={retry.isPending}
-            onClick={openDialog}
-            variant="secondary"
-          >
-            {t("admin.sponsorships.retryRender.action")}
-          </Button>
-        </div>
-      ) : null}
-      {/* Only where it can speak: on a failed render (ready before the
-          announcement, so it is read), and after a retry. Once the button
-          is gone the announcement shows, so the focus it gets is visible
-          (WCAG 2.4.7, review M-7). */}
-      {failed || announcement ? (
-        <p
-          aria-live="polite"
-          className={
-            failed
-              ? "sr-only"
-              : "rounded-sm text-body-sm text-muted-foreground focus:outline-2 focus:outline-ring focus:outline-offset-2"
-          }
-          ref={region}
-          role="status"
-          tabIndex={-1}
-        >
-          {announcement}
-        </p>
-      ) : null}
-      <AlertDialog
-        className="wrap-anywhere"
-        confirmLabel={t("admin.sponsorships.retryRender.action")}
-        description={t("admin.sponsorships.retryRender.description")}
-        onConfirm={confirm}
-        onOpenChange={onOpenChange}
-        open={open && failed}
-        title={t("admin.sponsorships.retryRender.title", {
-          gesture: gesture.name,
-          name,
-        })}
-      />
-    </>
-  );
-}
-
 type PaymentDialog = "cancel" | "markPaid" | "recordRefund";
 
 export interface PaymentActionsProps {
@@ -641,8 +523,8 @@ export function PaymentActions({
   );
 
   /**
-   * Mark paid commits first and fails loudly when the render cannot be
-   * started (the hourly check is the backstop). After a failure that is not
+   * Mark paid commits first and fails loudly when its `payment.settled`
+   * (the confirmation emails) cannot be queued. After a failure that is not
    * a refusal the payment is read again: `paid` is that case,
    * `refund_needed` is Mollie's settlement flagging it, and anything else
    * (still open, or cancelled by another write) is a plain error. The

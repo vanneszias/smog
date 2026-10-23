@@ -6,11 +6,16 @@ import {
   type SessionHookResult,
   useAuthState,
 } from "@smog/auth/react";
+import { isLocalizedQuery } from "@smog/gestures/client";
+import { languageCodes, registerLanguages } from "@smog/i18n";
 import { setupNative } from "@smog/i18n/native";
 import { I18nextProvider } from "@smog/i18n/react";
 import { createLocalStore, type LocalStore } from "@smog/local-store";
 import { nativeAdapter } from "@smog/local-store/native";
-import { LocalStoreProvider } from "@smog/local-store/react";
+import {
+  LocalStoreProvider,
+  useLocalStoreInstance,
+} from "@smog/local-store/react";
 import { PurgeOtherUsers, purgeOtherUsers, RpcProvider } from "@smog/rpc/react";
 import {
   QueryClient,
@@ -26,6 +31,7 @@ import {
   type ReactNode,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -36,6 +42,7 @@ import {
 import { createMobileApiClient } from "@/lib/api";
 import { appScheme } from "@/lib/app-scheme";
 import { AuthClientProvider } from "@/lib/auth-client";
+import { useRuntimeCatalogue } from "@/lib/catalogue";
 import { mobileEnv } from "@/lib/env";
 import { connectQueryToDevice } from "@/lib/network";
 import { usePreferences } from "@/lib/preferences";
@@ -44,7 +51,9 @@ import {
   createPersistOptions,
   keepPersistedQueries,
   type PersistStorage,
+  reconcileCacheLanguage,
 } from "@/lib/query-persist";
+import { setRequestedLocale } from "@/lib/request-locale";
 
 export interface AppClients {
   /** Consent-gated; tests leave it out (a no-op). */
@@ -121,7 +130,69 @@ function PreferencesRoot({ children }: { children: ReactNode }): ReactElement {
   useEffect(() => {
     setColorScheme(theme);
   }, [setColorScheme, theme]);
-  const i18n = useMemo(() => setupNative({ preference: locale }), [locale]);
+  // The catalogue answers in the language the requests ask for (the stored
+  // choice, else the device's). Set while rendering, so the first requests
+  // already carry it; a later change drops the cached answers, which are in
+  // the old language, and the active queries refetch.
+  const queryClient = useQueryClient();
+  const { languages, overlay, wanted } = useRuntimeCatalogue();
+  const applied = useRef<string | null | undefined>(undefined);
+  setRequestedLocale(wanted);
+  // The restored cache may be in another language than the one wanted now
+  // (the device language changed while the app was closed): once the cache
+  // is restored and the stored choice is known, reset it like a switch.
+  const restoring = useIsRestoring();
+  const store = useLocalStoreInstance();
+  const [prefsRead, setPrefsRead] = useState(false);
+  useEffect(() => {
+    let live = true;
+    store.ready
+      .catch((error: unknown) => {
+        console.error("[preferences] Failed to read the device store:", error);
+      })
+      .finally(() => {
+        if (live) {
+          setPrefsRead(true);
+        }
+      });
+    return () => {
+      live = false;
+    };
+  }, [store]);
+  const reconciled = useRef(false);
+  useEffect(() => {
+    if (restoring || !prefsRead) {
+      return;
+    }
+    const outdated = reconcileCacheLanguage(queryClient, wanted);
+    if (outdated && !reconciled.current) {
+      queryClient.resetQueries({ predicate: isLocalizedQuery }).catch(() => {
+        // A failed refetch shows its own error state.
+      });
+    }
+    reconciled.current = true;
+  }, [prefsRead, queryClient, restoring, wanted]);
+  useEffect(() => {
+    if (applied.current !== undefined && applied.current !== wanted) {
+      queryClient.resetQueries({ predicate: isLocalizedQuery }).catch(() => {
+        // A failed refetch shows its own error state.
+      });
+    }
+    applied.current = wanted;
+  }, [queryClient, wanted]);
+  // The bundled catalogue first (offline works from it), then the enabled
+  // languages and the ui_string overlay of the last `system.i18n` answer: a
+  // language change or a fresh answer hot-swaps the instance.
+  registerLanguages(languages);
+  const i18n = useMemo(
+    () =>
+      setupNative({
+        enabled: languageCodes(languages),
+        overlay,
+        preference: locale,
+      }),
+    [languages, locale, overlay]
+  );
   return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
 }
 

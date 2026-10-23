@@ -44,6 +44,7 @@ const FIXED_HEIGHT_ALLOWED: Record<string, string> = {
   "components/skeleton.tsx": "a placeholder: no text",
   "components/stepper.tsx": "the connector line between steps: no text",
   "domain/gesture-row.tsx": "the thumbnail: an image",
+  "domain/sponsor-end-card.tsx": "the logo: an image, the text beside it wraps",
   "domain/video-player.tsx": "the video fills its aspect-ratio box",
 };
 
@@ -106,6 +107,7 @@ describe("reduced motion", () => {
       "components/skeleton.tsx",
       "components/toast.tsx",
       "domain/favorite-button.tsx",
+      "domain/sponsor-end-card.tsx",
       "domain/video-player.tsx",
     ]);
   });

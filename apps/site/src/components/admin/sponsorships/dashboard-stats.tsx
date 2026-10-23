@@ -22,19 +22,6 @@ export function SponsorshipStats({ stats }: { stats: Stats }): ReactNode {
       tab: "awaiting",
     },
     {
-      label: t("admin.dashboard.sponsorships.rendering", {
-        count: stats.rendering,
-      }),
-      tab: "rendering",
-    },
-    {
-      label: t("admin.dashboard.sponsorships.renderFailed", {
-        count: stats.renderFailed,
-      }),
-      tab: "rendering",
-      urgent: stats.renderFailed > 0,
-    },
-    {
       label: t("admin.dashboard.sponsorships.live", { count: stats.live }),
       tab: "live",
     },

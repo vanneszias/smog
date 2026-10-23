@@ -24,10 +24,6 @@ import { CRON, type CronName } from "@smog/jobs";
 import { DAY_MS, newId } from "@smog/utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/worker";
-import {
-  type WorkflowStatusBinding,
-  workflowStatusPort,
-} from "../src/worker/scheduled";
 import { waitForMail } from "./helpers";
 
 function required<T>(binding: T | undefined, name: string): T {
@@ -310,14 +306,15 @@ describe("the scheduled dispatch (ruling 9)", () => {
     ).toBe("1");
   });
 
-  it(`stale (${CRON.stale}) re-sends render.requested for a job queued over 10 minutes, once (fake mode: no Workflow binding)`, async () => {
-    const { id } = await seed({ status: "rendering" });
+  it(`stale (${CRON.stale}) moves rendering and render_failed sponsorships to in_review, once, with a trail event (phase 10b task 9)`, async () => {
+    const rendering = await seed({ status: "rendering" });
+    const failed = await seed({ status: "render_failed" });
     const jobId = newId();
     await db.insert(renderJob).values({
       createdAt: new Date(NOW.getTime() - 11 * 60_000),
       id: jobId,
       input: { v: 1 },
-      sponsorshipId: id,
+      sponsorshipId: rendering.id,
       status: "queued",
       updatedAt: new Date(NOW.getTime() - 11 * 60_000),
       workflowInstanceId: jobId,
@@ -327,14 +324,19 @@ describe("the scheduled dispatch (ruling 9)", () => {
     const first = await runCron("stale");
     const second = await runCron("stale");
 
-    expect(counts(first)).toMatchObject({
-      renderFailed: 0,
-      renderRequeued: 1,
-      renderTimedOut: 0,
-    });
-    expect(counts(second)).toMatchObject({ renderRequeued: 0 });
+    expect(counts(first)).toMatchObject({ retireFailed: 0 });
+    expect(counts(first).retired).toBeGreaterThanOrEqual(2);
+    expect(counts(second)).toMatchObject({ retired: 0 });
+    expect(await statusOf(rendering.id)).toBe("in_review");
+    expect(await statusOf(failed.id)).toBe("in_review");
+    expect(await eventTypes(rendering.id)).toEqual(["render_succeeded"]);
+    const job = await d1
+      .prepare("SELECT status, error FROM render_job WHERE id = ?")
+      .bind(jobId)
+      .first<{ error: string; status: string }>();
+    expect(job).toEqual({ error: "render pipeline retired", status: "failed" });
     expect(warn).toHaveBeenCalledWith(
-      `[sponsorships] Re-sent render.requested for the queued render job ${jobId}`
+      expect.stringContaining("from a retired render state to in_review")
     );
   });
 
@@ -345,79 +347,5 @@ describe("the scheduled dispatch (ruling 9)", () => {
     await worker.scheduled(controller, env, createExecutionContext());
 
     expect(warn).toHaveBeenCalledWith("[cron] Unknown schedule 0 3 1 * *");
-  });
-});
-
-describe("workflowStatusPort (the render watchdog's port, ruling 12)", () => {
-  it("is null without a RENDER_WORKFLOW binding", () => {
-    expect(workflowStatusPort(undefined)).toBeNull();
-  });
-
-  it("answers an instance's status, not-found for an unknown id, and terminates", async () => {
-    const terminated: string[] = [];
-    const binding: WorkflowStatusBinding = {
-      get: (id) => {
-        if (id === "gone") {
-          return Promise.reject(new Error("instance.not_found"));
-        }
-        if (id === "broken") {
-          return Promise.reject(new Error("engine unavailable"));
-        }
-        return Promise.resolve({
-          status: () =>
-            Promise.resolve(
-              id === "failed"
-                ? {
-                    error: { message: "boom", name: "Error" },
-                    status: "errored" as const,
-                  }
-                : { status: "running" as const }
-            ),
-          terminate: () => {
-            terminated.push(id);
-            return Promise.resolve();
-          },
-        });
-      },
-    };
-    const port = workflowStatusPort(binding);
-    expect(await port?.status("job-1")).toEqual({
-      error: null,
-      status: "running",
-    });
-    expect(await port?.status("failed")).toEqual({
-      error: { message: "boom", name: "Error" },
-      status: "errored",
-    });
-    expect(await port?.status("gone")).toBe("not-found");
-    await expect(port?.status("broken")).rejects.toThrow("engine unavailable");
-    await port?.terminate("job-1");
-    expect(terminated).toEqual(["job-1"]);
-  });
-
-  it("only the instance.not_found code is not-found; any other 'not found' is thrown (review I-1)", async () => {
-    const failing = (message: string): WorkflowStatusBinding => ({
-      get: () => Promise.reject(new Error(message)),
-    });
-    for (const message of [
-      "instance.not_found",
-      "(instance.not_found) Instance does not exist",
-    ]) {
-      // biome-ignore lint/performance/noAwaitInLoops: one case at a time.
-      expect(await workflowStatusPort(failing(message))?.status("x")).toBe(
-        "not-found"
-      );
-    }
-    for (const message of [
-      "Workflow not found",
-      "script not found",
-      "Not Found",
-      "instance.not_foundation",
-    ]) {
-      // biome-ignore lint/performance/noAwaitInLoops: one case at a time.
-      await expect(
-        workflowStatusPort(failing(message))?.status("x")
-      ).rejects.toThrow(message);
-    }
   });
 });

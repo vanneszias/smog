@@ -6,7 +6,6 @@
  * re-exported here; this file adds the admin's input and the email
  * preview schemas. Client-safe.
  */
-import { LOCALES } from "@smog/config/constants";
 import { MAINTENANCE_MESSAGE_MAX } from "@smog/config/maintenance";
 import { z } from "zod";
 
@@ -74,10 +73,10 @@ export type MaintenanceSetInput = z.input<typeof maintenanceSetInputSchema>;
  * this client-safe file.
  */
 
-/** One template in the preview list, with its sample subject per locale. */
+/** One template in the preview list, with its sample subject in each enabled language. */
 export const emailTemplateSummarySchema = z.object({
   id: z.string(),
-  subject: z.record(z.enum(LOCALES), z.string()),
+  subject: z.record(z.string(), z.string()),
 });
 
 export type EmailTemplateSummary = z.infer<typeof emailTemplateSummarySchema>;

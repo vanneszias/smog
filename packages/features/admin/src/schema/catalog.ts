@@ -3,6 +3,7 @@
  * inputs, limits; ruling 8). Everything exported here is part of
  * `@smog/admin/schema` (`index.ts` re-exports this file). Client-safe.
  */
+import { localeCodeSchema } from "@smog/config/locale";
 import { normalizeText } from "@smog/utils";
 import { z } from "zod";
 
@@ -130,6 +131,12 @@ export const adminGestureRowSchema = z.object({
   keywords: z.array(z.string()),
   muxAssetId: z.string().nullable(),
   name: z.string(),
+  /**
+   * The video still has the name burned into the picture (phase 10b): the
+   * player's name overlay stays hidden until an admin says the textless
+   * video is uploaded (`gestures.recutDone`).
+   */
+  needsRecut: z.boolean(),
   playbackId: z.string(),
   /** Epoch milliseconds; `null` while unpublished. */
   publishedAt: z.number().int().nullable(),
@@ -164,6 +171,15 @@ export const adminGestureListInputSchema = z.object({
     .min(1)
     .max(ADMIN_GESTURE_PAGE_MAX)
     .default(ADMIN_GESTURE_PAGE_DEFAULT),
+  /**
+   * Only gestures that still need a translation in this language (the
+   * "needs translation" definition of `@smog/db`: no translated name, a
+   * blank description or no keyword where the default language has some).
+   * The default language itself never needs one.
+   */
+  /** `true`: only the gestures whose video still has the name burned in (the "needs re-cut" list). */
+  needsRecut: z.boolean().optional(),
+  needsTranslation: localeCodeSchema.optional(),
   /** A `normalizeText` substring of the name or of a keyword. */
   q: z.string().max(GESTURE_NAME_MAX).optional(),
   status: z.enum(ADMIN_GESTURE_STATUSES).default("all"),
@@ -181,7 +197,13 @@ export const adminGesturePageSchema = z.object({
    * For the `q` and `category` filters, whatever the status: the numbers
    * the status tabs show.
    */
-  counts: z.object({ published: count, total: count, unpublished: count }),
+  counts: z.object({
+    /** Gestures whose video still has the name burned in (for the same filters). */
+    needsRecut: count,
+    published: count,
+    total: count,
+    unpublished: count,
+  }),
   items: z.array(adminGestureRowSchema),
   /** Pass as `cursor` for the next page; `null` on the last. */
   nextCursor: z.string().nullable(),
@@ -211,6 +233,12 @@ export const createGestureInputSchema = z.object({
   name: gestureNameSchema,
   playbackId: playbackIdSchema,
   published: z.boolean().default(true),
+  /**
+   * The video has no text in the picture (phase 10b): the player overlays
+   * the name. Off (the default) keeps the gesture on the "needs re-cut"
+   * list until `gestures.recutDone`.
+   */
+  textless: z.boolean().default(false),
 });
 
 export type CreateGestureInput = z.input<typeof createGestureInputSchema>;

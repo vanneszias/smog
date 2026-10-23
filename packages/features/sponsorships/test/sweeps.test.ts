@@ -5,6 +5,7 @@
  */
 import {
   payment,
+  renderJob,
   sponsorship,
   sponsorshipEvent,
   sponsorshipToken,
@@ -16,16 +17,13 @@ import type { MollieClient } from "@smog/payments";
 import { createFakeMollie, type FakeMollie } from "@smog/payments/testing";
 import { DAY_MS, newId } from "@smog/utils";
 import { createFakeMux, type FakeMux } from "@smog/video/testing";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { hashSponsorshipToken } from "../src/schema";
-import { createRenderJob } from "../src/server/render";
+import { RENDER_RETIRED_ERROR } from "../src/server/retire-render";
 import { settleFromMollie } from "../src/server/settle";
 import { handlePaymentSettled } from "../src/server/settled";
 import {
-  RECONCILE_GRACE_MS,
-  RECONCILE_MAX_PAYMENTS,
-  RECONCILE_WINDOW_MS,
   REMINDER_WINDOW_MS,
   runExpirySweep,
   runReminderSweep,
@@ -469,11 +467,8 @@ describe("runStaleSweep (J-03)", () => {
     return await runStaleSweep({
       db,
       mollie,
-      mux: null,
       now: NOW,
       queues,
-      siteUrl: SITE_URL,
-      workflow: null,
     });
   }
 
@@ -492,7 +487,7 @@ describe("runStaleSweep (J-03)", () => {
     expect((await paymentRow(db, seeded.paymentId)).status).toBe("paid");
     for (const id of seeded.sponsorshipIds) {
       // biome-ignore lint/performance/noAwaitInLoops: two rows, in order.
-      expect((await sponsorshipRow(db, id)).status).toBe("rendering");
+      expect((await sponsorshipRow(db, id)).status).toBe("in_review");
     }
     // The settle's fan-out; the reconciliation may re-send it (no consumer
     // creates the render jobs here).
@@ -508,7 +503,7 @@ describe("runStaleSweep (J-03)", () => {
     expect(fake.requests.some((r) => r.method === "DELETE")).toBe(false);
   });
 
-  it("a payment paid at Mollie 8 days ago and settled now still gets its jobs and every email (fix wave, jobs I-1)", async () => {
+  it("a payment paid at Mollie 8 days ago and settled now still gets every email (fix wave, jobs I-1)", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     await makeAdmin(db);
     const seeded = await staleCheckout();
@@ -521,7 +516,7 @@ describe("runStaleSweep (J-03)", () => {
     stored.paidAt = new Date(NOW.getTime() - 8 * DAY_MS);
     const { events, queues } = recordingQueues();
 
-    expect(await sweep(queues)).toMatchObject({ settled: 1, stuck: 0 });
+    expect(await sweep(queues)).toMatchObject({ settled: 1 });
     expect(events[0]).toEqual({
       paymentId: seeded.paymentId,
       type: "payment.settled",
@@ -532,9 +527,7 @@ describe("runStaleSweep (J-03)", () => {
       paymentId: seeded.paymentId,
       siteUrl: SITE_URL,
     });
-    expect(
-      out.events.filter((event) => event.type === "render.requested")
-    ).toHaveLength(2);
+    expect(out.events).toEqual([]);
     const templates = out.notify.map((email) => email.template);
     expect(
       templates.filter((t) => t === "transactional/sponsorship-received")
@@ -726,171 +719,116 @@ describe("runStaleSweep (J-03)", () => {
   });
 });
 
-describe("runStaleSweep's reconciliation (task 4 review)", () => {
-  const paidLongAgo = new Date(NOW.getTime() - RECONCILE_GRACE_MS - 1);
-
-  async function paidRendering(
-    options: Parameters<typeof seedCheckout>[1] = {},
-    paidAt: Date = paidLongAgo
-  ) {
-    const seeded = await seedCheckout(db, {
-      count: 1,
-      paymentStatus: "paid",
-      status: "rendering",
-      ...options,
-    });
-    await db
-      .update(payment)
-      .set({ paidAt })
-      .where(eq(payment.id, seeded.paymentId));
-    return seeded;
-  }
-
-  async function sweepOnce(queues: JobQueues, now = NOW) {
+describe("runStaleSweep retires the render states (phase 10b task 9)", () => {
+  async function sweepOnce(now = NOW) {
     return await runStaleSweep({
       db,
       mollie: null,
-      mux: null,
       now,
-      queues,
-      siteUrl: SITE_URL,
-      workflow: null,
+      queues: { email: undefined, events: undefined },
     });
   }
 
-  it("re-sends payment.settled for a paid item rendering without a job, until the job exists", async () => {
+  async function seedJob(sponsorshipId: string, status: "queued" | "running") {
+    const id = newId();
+    await db.insert(renderJob).values({
+      attempt: 1,
+      createdAt: NOW,
+      id,
+      input: {},
+      sponsorshipId,
+      status,
+      updatedAt: NOW,
+      workflowInstanceId: id,
+    });
+    return id;
+  }
+
+  it("moves rendering and render_failed rows to in_review with a trail event, and closes their open jobs", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const seeded = await paidRendering();
-    const { events, queues } = recordingQueues();
-
-    const first = await sweepOnce(queues);
-    // Nothing consumed it (a lost message): the next hour sends it again.
-    const second = await sweepOnce(queues);
-    // The consumer creates the job (one per item, decided in D1)...
-    await createRenderJob(db, {
-      now: NOW,
-      sponsorshipId: seeded.sponsorshipIds[0] as string,
+    const rendering = await one({ paymentStatus: "paid", status: "rendering" });
+    const failed = await one({
+      paymentStatus: "paid",
+      status: "render_failed",
     });
-    // ...and from then on nothing is re-sent.
-    const third = await sweepOnce(queues);
-    const fourth = await sweepOnce(queues);
+    const live = await one({ paymentStatus: "paid", status: "live" });
+    const queuedJob = await seedJob(rendering.id, "queued");
+    const runningJob = await seedJob(rendering.id, "running");
 
-    expect([first, second, third, fourth].map((r) => r.resent)).toEqual([
-      1, 1, 0, 0,
-    ]);
-    expect(events).toEqual([
-      { paymentId: seeded.paymentId, type: "payment.settled" },
-      { paymentId: seeded.paymentId, type: "payment.settled" },
-    ]);
-    expect(warn).toHaveBeenCalledWith(
-      "[sponsorships] Re-sent payment.settled for 1 paid payment(s) with an item rendering and no render job"
+    const result = await sweepOnce();
+    expect(result).toMatchObject({ retired: 2, retireFailed: 0 });
+    expect((await sponsorshipRow(db, rendering.id)).status).toBe("in_review");
+    expect((await sponsorshipRow(db, failed.id)).status).toBe("in_review");
+    expect((await sponsorshipRow(db, live.id)).status).toBe("live");
+    const trails = await Promise.all(
+      [rendering.id, failed.id].map((id) => eventsOf(db, id))
     );
-  });
-
-  it("leaves a payment just paid, an item with a job, an unpaid payment and other statuses alone", async () => {
-    await paidRendering(
-      {},
-      new Date(NOW.getTime() - RECONCILE_GRACE_MS + 1000)
-    );
-    const withJob = await paidRendering();
-    await createRenderJob(db, {
-      now: NOW,
-      sponsorshipId: withJob.sponsorshipIds[0] as string,
-    });
-    await seedCheckout(db, { count: 1, status: "awaiting_payment" });
-    await paidRendering({ status: "in_review" });
-    await paidRendering({ status: "live" });
-    const { events, queues } = recordingQueues();
-
-    const result = await sweepOnce(queues);
-
-    expect(result.resent).toBe(0);
-    expect(events).toEqual([]);
-  });
-
-  it("sends the oldest first, one message per payment, at most RECONCILE_MAX_PAYMENTS per run (M-2)", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const oldest = await paidRendering(
-      { count: 2 },
-      new Date(NOW.getTime() - 2 * DAY_MS)
-    );
-    for (let i = 0; i < RECONCILE_MAX_PAYMENTS; i += 1) {
-      // biome-ignore lint/performance/noAwaitInLoops: fixtures, one checkout each.
-      await paidRendering();
+    for (const trail of trails) {
+      const retired = trail.filter(
+        (event) => event.type === "render_succeeded"
+      );
+      expect(retired).toHaveLength(1);
+      expect(retired[0]).toMatchObject({
+        actorId: null,
+        data: { retired: true },
+      });
     }
-    const { events, queues } = recordingQueues();
-
-    const result = await sweepOnce(queues);
-
-    expect(RECONCILE_MAX_PAYMENTS).toBe(100);
-    expect(result.resent).toBe(RECONCILE_MAX_PAYMENTS);
-    const ids = events.map((m) =>
-      m.type === "payment.settled" ? m.paymentId : ""
-    );
-    expect(ids[0]).toBe(oldest.paymentId);
-    expect(new Set(ids).size).toBe(RECONCILE_MAX_PAYMENTS);
+    const jobs = await db
+      .select()
+      .from(renderJob)
+      .where(inArray(renderJob.id, [queuedJob, runningJob]));
+    expect(jobs.map((job) => job.status)).toEqual(["failed", "failed"]);
+    expect(jobs.every((job) => job.error === RENDER_RETIRED_ERROR)).toBe(true);
+    expect(warn).toHaveBeenCalled();
   });
 
-  it("stops re-sending after 7 days: stuck, counted every run and logged once a day (M-2)", async () => {
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
-    const midnight = new Date("2026-10-03T00:00:00.000Z");
-    const morning = new Date("2026-10-03T10:00:00.000Z");
-    await paidRendering(
-      {},
-      new Date(midnight.getTime() - RECONCILE_WINDOW_MS - 1)
-    );
-    const { events, queues } = recordingQueues();
-
-    const atMidnight = await sweepOnce(queues, midnight);
-    const later = await sweepOnce(queues, morning);
-
-    expect(RECONCILE_WINDOW_MS).toBe(7 * DAY_MS);
-    expect(atMidnight).toMatchObject({ resent: 0, stuck: 1 });
-    expect(later).toMatchObject({ resent: 0, stuck: 1 });
-    expect(events).toEqual([]);
-    const stuckLogs = error.mock.calls.filter(([line]) =>
-      String(line).includes("no longer re-sent")
-    );
-    expect(stuckLogs).toHaveLength(1);
-  });
-
-  it("measures the window from our first settling event, not Mollie's paidAt (fix wave, jobs I-1)", async () => {
+  it("is idempotent: a second run changes nothing", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const seeded = await paidRendering(
-      {},
-      new Date(NOW.getTime() - 8 * DAY_MS)
-    );
-    await db.insert(sponsorshipEvent).values({
-      createdAt: new Date(NOW.getTime() - 60 * 60_000),
-      data: { paymentId: seeded.paymentId },
-      id: newId(),
-      sponsorshipId: seeded.sponsorshipIds[0] as string,
-      type: "payment_paid",
-    });
-    const { events, queues } = recordingQueues();
-
-    const result = await sweepOnce(queues);
-
-    expect(result).toMatchObject({ resent: 1, stuck: 0 });
-    expect(events).toEqual([
-      { paymentId: seeded.paymentId, type: "payment.settled" },
-    ]);
+    const { id } = await one({ paymentStatus: "paid", status: "rendering" });
+    await sweepOnce();
+    const second = await sweepOnce();
+    expect(second).toMatchObject({ retired: 0, retireFailed: 0 });
+    expect(
+      (await eventsOf(db, id)).filter(
+        (event) => event.type === "render_succeeded"
+      )
+    ).toHaveLength(1);
   });
 
-  it("logs and sends nothing without the EVENTS_QUEUE binding", async () => {
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
-    await paidRendering();
+  it("keeps a rendered video the row already has", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { id } = await one({
+      paymentStatus: "paid",
+      status: "render_failed",
+    });
+    await db
+      .update(sponsorship)
+      .set({ videoPlaybackId: "rendered-playback" })
+      .where(eq(sponsorship.id, id));
+    await sweepOnce();
+    expect(await sponsorshipRow(db, id)).toMatchObject({
+      status: "in_review",
+      videoPlaybackId: "rendered-playback",
+    });
+  });
 
-    const result = await sweepOnce({});
-
-    expect(result.resent).toBe(0);
-    expect(error).toHaveBeenCalledWith(
-      "[jobs] The EVENTS_QUEUE binding is missing"
-    );
+  it("moves more than one page of rows", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const seeded = await seedCheckout(db, {
+      count: 105,
+      paymentStatus: "paid",
+      status: "rendering",
+    });
+    const result = await sweepOnce();
+    expect(result.retired).toBe(105);
+    expect(
+      (
+        await db
+          .select()
+          .from(sponsorship)
+          .where(eq(sponsorship.status, "in_review"))
+      ).length
+    ).toBe(seeded.sponsorshipIds.length);
   });
 });
 

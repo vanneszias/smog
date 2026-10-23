@@ -1,8 +1,10 @@
 import { useAdminUsers } from "@smog/admin/client";
 import {
   type AdminRole,
+  type AdminRoleFilter,
   type AdminUser,
   type AdminUserListInput,
+  ROLE_FILTERS,
   USER_QUERY_MAX,
 } from "@smog/admin/schema";
 import {
@@ -41,7 +43,6 @@ import {
 } from "../data-table-parts";
 
 const PINNED_COLUMNS = ["name", "actions"] as const;
-const ROLES = ["user", "admin"] as const satisfies readonly AdminRole[];
 const BANNED = ["yes", "no"] as const;
 type BannedFilter = (typeof BANNED)[number];
 
@@ -51,7 +52,7 @@ export interface UserSearch {
   /** The page's start (a cursor from the previous page). */
   cursor?: string | undefined;
   q?: string | undefined;
-  role?: AdminRole | undefined;
+  role?: AdminRoleFilter | undefined;
   /** The account whose panel is open (also the audit log's link). */
   user?: string | undefined;
 }
@@ -85,7 +86,7 @@ export function validateUserSearch(
     banned: pick(search.banned, BANNED),
     cursor: text(search.cursor, 1024),
     q: text(search.q, USER_QUERY_MAX),
-    role: pick(search.role, ROLES),
+    role: pick(search.role, ROLE_FILTERS),
     user: text(search.user, 200),
   };
 }
@@ -106,10 +107,13 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 const ROLE_LABELS = {
   admin: "admin.users.roles.admin",
+  teacher: "admin.users.roles.teacher",
+  translator: "admin.users.roles.translator",
   user: "admin.users.roles.user",
-} as const satisfies Record<AdminRole, TranslationKey>;
+} as const satisfies Record<AdminRoleFilter, TranslationKey>;
 
-export function roleLabel(t: Translate, role: AdminRole): string {
+/** A role's name; `user` is the plain learner (no role held). */
+export function roleLabel(t: Translate, role: AdminRoleFilter): string {
   return t(ROLE_LABELS[role]);
 }
 
@@ -123,13 +127,27 @@ export function useUserDate(): (ms: number) => string {
   );
 }
 
-/** The role as a badge (admins stand out). */
-export function RoleBadge({ role }: { role: AdminRole }): ReactNode {
+/**
+ * The roles held, one badge each (admins stand out); a learner with no role
+ * shows `User`.
+ */
+export function RoleBadges({
+  roles,
+}: {
+  roles: readonly AdminRole[];
+}): ReactNode {
   const { t } = useTranslation();
+  if (roles.length === 0) {
+    return <Badge variant="neutral">{roleLabel(t, "user")}</Badge>;
+  }
   return (
-    <Badge variant={role === "admin" ? "primary" : "neutral"}>
-      {roleLabel(t, role)}
-    </Badge>
+    <span className="flex flex-wrap gap-1">
+      {roles.map((role) => (
+        <Badge key={role} variant={role === "admin" ? "primary" : "accent"}>
+          {roleLabel(t, role)}
+        </Badge>
+      ))}
+    </span>
   );
 }
 
@@ -195,7 +213,7 @@ function UserFilters({
 
   const all = { label: t("admin.users.filters.all"), value: ALL };
   const onRole = useCallback(
-    (value: string) => set({ role: pick(value, ROLES) }),
+    (value: string) => set({ role: pick(value, ROLE_FILTERS) }),
     [set]
   );
   const onBanned = useCallback(
@@ -226,7 +244,7 @@ function UserFilters({
           onValueChange={onRole}
           options={[
             all,
-            ...ROLES.map((role) => ({
+            ...ROLE_FILTERS.map((role) => ({
               label: roleLabel(t, role),
               value: role,
             })),
@@ -325,7 +343,7 @@ export function UserTable({
         id: "name",
       },
       {
-        cell: (row) => <RoleBadge role={row.role} />,
+        cell: (row) => <RoleBadges roles={row.roles} />,
         header: t("admin.users.columns.role"),
         id: "role",
       },

@@ -1,5 +1,6 @@
 import { processEmailMessage } from "@smog/jobs";
 import { emailDeliveryEnv, getEmailSender, siteEnv } from "@/server/auth";
+import { emailOverlay } from "@/server/catalogue";
 
 /**
  * The `EMAIL_QUEUE` consumer (spec §8.1, phase 6 ruling 8). Each message
@@ -18,6 +19,8 @@ export async function handleEmailBatch(
   const deps = {
     env: emailDeliveryEnv(),
     kv: siteEnv().kv,
+    // The emails render through the merged catalogue (shipped + ui_string).
+    loadOverlay: emailOverlay,
     sender: getEmailSender(),
   };
   for (const message of batch.messages) {

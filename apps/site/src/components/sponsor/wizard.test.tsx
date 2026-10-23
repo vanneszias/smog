@@ -10,8 +10,6 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderSite, rpcError } from "@/test/render";
-// The preview's Player and Mux reads, faked (before the wizard loads it).
-import "@/test/sponsor-preview-fakes";
 import { SponsorWizard } from "./wizard";
 
 const NAME_IN_THE_VIDEO = /^Name in the video/;
@@ -179,7 +177,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     );
     // The value cards come from the constants (bug 24).
     expect(screen.getByText("€50.00")).toBeDefined();
-    expect(screen.getByText("5 sec")).toBeDefined();
+    expect(screen.getByText("4 sec")).toBeDefined();
     expect(screen.getByText("+€10.00")).toBeDefined();
     expect(
       screen.getByText("2 available gestures shown · 0 selected")
@@ -281,7 +279,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     await chooseBroerAndZus();
     await fillDetails();
     expect(screen.getByTestId("review-total").textContent).toBe("€100.00");
-    // One Player at a time (phase 7 ruling 8): the first gesture, and a
+    // One preview at a time (phase 7 ruling 8): the first gesture, and a
     // poster toggle per gesture to switch.
     expect(screen.getAllByRole("img", { name: PREVIEW_FOR })).toHaveLength(1);
     expect(

@@ -22,9 +22,24 @@ export const RECENT_SEARCHES_MAX = 10;
 /** Gestures kept for "continue where you left off" (on the device only). */
 export const RECENT_GESTURES_MAX = 6;
 
+/**
+ * The languages that ship a catalogue in the bundle: the seed of the
+ * `language` table and the offline base of the apps (phase 10b ruling 1).
+ */
 export const LOCALES = ["nl", "en", "fr"] as const;
-export type Locale = (typeof LOCALES)[number];
-export const DEFAULT_LOCALE: Locale = "nl";
+export type ShippedLocale = (typeof LOCALES)[number];
+/**
+ * A language code. Languages are data (phase 10b ruling 2): the shipped ones
+ * and every language an admin adds, validated against the `language` table
+ * at the edges (`resolveLocale`, the cookie, profile and checkout writes).
+ */
+export type Locale = string;
+/** The shipped default; the database's `language.is_default` row names the same one. */
+export const DEFAULT_LOCALE = "nl";
+
+/** The shape of a language code (BCP-47: `nl`, `fr`, `pt-BR`), before it is looked up. */
+export const LOCALE_CODE_PATTERN = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,3}$/;
+export const LOCALE_CODE_MAX_LENGTH = 35;
 
 /**
  * The privacy policy version a consent decision refers to

@@ -1,7 +1,7 @@
 // biome-ignore-all lint/performance/noBarrelFile: the `@smog/sponsorships/server` entry point (Worker only).
 /**
  * `@smog/sponsorships/server`: the state machine, the money path, the
- * admin's lifecycle builders, the render seam and the public router
+ * admin's lifecycle builders, the retirement of the render states and the public router
  * (phase 6 ruling 1). The queue consumers and cron handlers that call these
  * are wired in `apps/site/src/worker/*`; the admin gets the builders
  * through `AdminDeps.sponsorships` from `@smog/api`.
@@ -29,7 +29,7 @@ export {
 } from "./lifecycle";
 export {
   isLogoContentType,
-  LOGO_KEY_PREFIX,
+  isRunningLogo,
   r2Origin,
   signLogoUpload,
   sniffLogoType,
@@ -50,54 +50,11 @@ export {
 export { type ReeditLogo, readReeditLogo } from "./reedit";
 export { isRejectedTooLongAgo } from "./rejected-video";
 export {
-  completeRender,
-  createRenderJob,
-  createRenderJobStatements,
-  failRender,
-  fakeRenderStarter,
-  isCurrentRenderUpload,
-  type MarkRunningState,
-  markRenderRunning,
-  type RenderJobPlan,
-  type RenderJobRecord,
-  readRenderJob,
-  retryRenderStatements,
-  setRenderUpload,
-} from "./render";
-export {
-  instanceErrorSummary,
-  RENDER_NEVER_STARTED_MS,
-  RENDER_QUEUED_GRACE_MS,
-  RENDER_WATCHDOG_BUDGET,
-  type RenderWatchdogResult,
-  reconcileRenderJobs,
-  type WorkflowInstanceState,
-  type WorkflowInstanceStatus,
-  type WorkflowStatusPort,
-} from "./render-watchdog";
-export {
-  ENGINE_ABORT_PREFIX,
-  isEngineAbort,
-  nonRetryableMessage,
-  RENDER_JOB_FAILURE_CODES,
-  RENDER_STEP_CONFIG,
-  RENDER_WAITS,
-  RENDER_WATCHDOG_CEILING,
-  RENDER_WORKFLOW_MAX_MS,
-  type ReadLogo,
-  type RenderJobDeps,
-  RenderJobFailure,
-  type RenderJobFailureCode,
-  type RenderJobOutcome,
-  type RenderStep,
-  type RenderStepConfig,
-  releaseRenderUpload,
-  renderEventType,
-  runRenderJob,
-  stepWorstCaseMs,
-  summariseRenderError,
-  toRenderJobFailure,
-} from "./render-workflow";
+  RENDER_RETIRED_ERROR,
+  RETIRED_RENDER_STATUSES,
+  type RetireRenderResult,
+  retireRenderStates,
+} from "./retire-render";
 export { createSponsorshipsRouter } from "./router";
 export {
   isRenewable,
@@ -108,7 +65,7 @@ export {
   settleFromMollie,
   settlePayment,
 } from "./settle";
-export { handlePaymentSettled, queuedRenderJob } from "./settled";
+export { handlePaymentSettled } from "./settled";
 export {
   type IssuedToken,
   isGestureTaken,

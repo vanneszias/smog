@@ -17,6 +17,12 @@ export const categoryRefSchema = z.object({
 export const gestureSummarySchema = z.object({
   /** Published categories only, in category order (`sort_order`, name). */
   categories: z.array(categoryRefSchema),
+  /**
+   * `true` when the viewer's language has no translation of this gesture and
+   * the name (and the rest) is the default language's text. Always `false`
+   * in the default language. The web shows it to translators and admins only.
+   */
+  fallbackUsed: z.boolean(),
   id: z.string(),
   name: z.string(),
   /** The sponsored video's playback id while a sponsorship is live or expiring. */
@@ -26,7 +32,18 @@ export const gestureSummarySchema = z.object({
 
 /** The sponsor credited on a gesture while its sponsorship runs. */
 export const sponsorCreditSchema = z.object({
-  /** The display name shown in the video. */
+  /**
+   * Show the end card over the video's last seconds (phase 10b ruling 9):
+   * `false` for an older sponsorship whose rendered video already carries
+   * the name, so it is never shown twice.
+   */
+  endCard: z.boolean(),
+  /**
+   * Where the logo is served from (`/api/sponsor-logos/<uuid>`), or `null`
+   * when the sponsor paid for none.
+   */
+  logoPath: z.string().nullable(),
+  /** The display name, as the sponsor typed it. */
   name: z.string(),
   /** When the sponsorship ends (epoch milliseconds). */
   until: z.number().int(),
@@ -37,12 +54,35 @@ export const sponsorCreditSchema = z.object({
  * detail can be cached and prefetched on its own.
  */
 export const gestureDetailSchema = gestureSummarySchema.extend({
+  /**
+   * Where the spoken name in the viewer's language is served from
+   * (`/api/audio/<gestureId>/<locale>/<uuid>`), or `null` when there is no
+   * clip: never another language's (a wrong-language clip is worse than none).
+   */
+  audioPath: z.string().nullable(),
   description: z.string(),
   /** "Related concepts": synonyms, in the editor's order. */
   keywords: z.array(z.string()),
+  /**
+   * The video still has the name burned into the picture (the textless one
+   * is not uploaded yet): the player keeps its name overlay hidden.
+   */
+  needsRecut: z.boolean(),
   related: z.never().optional(),
   sponsor: sponsorCreditSchema.nullable(),
 });
+
+/**
+ * Whether the page draws the gesture's name over the video: only on the
+ * textless video, so not while it still has the name in the picture
+ * (`needsRecut`) and not over a sponsor-rendered video, which has the
+ * name burned in as well (`sponsor.endCard === false`).
+ */
+export function nameOverlayApplies(
+  gesture: Pick<GestureDetail, "needsRecut" | "sponsor">
+): boolean {
+  return !gesture.needsRecut && gesture.sponsor?.endCard !== false;
+}
 
 /** `bySlug`: the detail plus the slug to redirect to (a legacy id or old slug). */
 export const gestureBySlugSchema = gestureDetailSchema.extend({
@@ -54,6 +94,8 @@ export const gestureBySlugSchema = gestureDetailSchema.extend({
 });
 
 export const categorySchema = z.object({
+  /** `true` when the viewer's language has no translated name (the default text). */
+  fallbackUsed: z.boolean(),
   /** Published gestures in the category. */
   gestureCount: z.number().int().nonnegative(),
   name: z.string(),

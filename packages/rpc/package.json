@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./audit": "./src/audit-guard.ts",
     "./contract": "./src/contract.ts",
     "./react": "./src/react.tsx",
     "./testing": "./src/testing.ts"
@@ -21,6 +22,7 @@
     "@smog/auth": "workspace:*",
     "@smog/config": "workspace:*",
     "@smog/db": "workspace:*",
+    "@smog/utils": "workspace:*",
     "@tanstack/query-core": "catalog:",
     "zod": "catalog:"
   },

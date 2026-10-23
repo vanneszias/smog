@@ -1,6 +1,7 @@
-export type MoneyLocale = "nl" | "en" | "fr";
+/** A language code; Belgian conventions (`nl-BE`) for the shipped ones, else the code itself. */
+export type MoneyLocale = string;
 
-const INTL_LOCALES: Record<MoneyLocale, string> = {
+const INTL_LOCALES: Record<string, string> = {
   en: "en-BE",
   fr: "fr-BE",
   nl: "nl-BE",
@@ -11,7 +12,7 @@ const formatters = new Map<MoneyLocale, Intl.NumberFormat>();
 function formatter(locale: MoneyLocale): Intl.NumberFormat {
   let format = formatters.get(locale);
   if (!format) {
-    format = new Intl.NumberFormat(INTL_LOCALES[locale], {
+    format = new Intl.NumberFormat(INTL_LOCALES[locale] ?? locale, {
       currency: "EUR",
       style: "currency",
     });

@@ -58,6 +58,7 @@ type Entry = Limit | Unlimited;
 
 const RPC_HANDLER = "packages/rpc/src/handler.ts";
 const LOGO = "apps/site/src/server/logo-upload.ts";
+const AUDIO = "apps/site/src/server/audio.ts";
 
 /**
  * Every non-page route file (`routes/**.ts`, relative to `routes/`). Page
@@ -68,6 +69,8 @@ export const ROUTE_LIMITS: Readonly<Record<string, Entry>> = {
     limiter: "RL_ANALYTICS",
     source: "apps/site/src/routes/api/analytics.ts",
   },
+  "api/audio/$.ts": { limiter: "RL_API", source: AUDIO },
+  "api/audio/upload/$.ts": { limiter: "RL_API", source: AUDIO },
   "api/auth/$.ts": {
     limiter: "RL_AUTH",
     source: "apps/site/src/server/auth-handler.ts",
@@ -92,6 +95,7 @@ export const ROUTE_LIMITS: Readonly<Record<string, Entry>> = {
     source: RPC_HANDLER,
   },
   "api/rpc/$.ts": { limiter: "RL_API", source: RPC_HANDLER },
+  "api/sponsor-logos/$key.ts": { limiter: "RL_API", source: LOGO },
   "api/sponsor/reedit-logo.ts": { limiter: "RL_API", source: LOGO },
   "api/webhooks/mollie.ts": {
     limiter: "RL_API",
@@ -155,7 +159,7 @@ export const OTHER_ENDPOINTS: Readonly<Record<string, Entry>> = {
   },
   "POST /_serverFn/* (theme, locale, shell reads)": {
     because:
-      "Start server functions that read or set a cookie and read the shell (no D1 except the admin gate, which needs a session)",
+      "Start server functions that read or set a cookie and read the shell, the language list and the published legal text (a few cached D1 reads, keyed by the enabled languages only: an unknown locale never reaches D1); the admin gate needs a session",
     none: true,
   },
   "POST /api/maintenance/bypass": {
@@ -382,12 +386,7 @@ function sensitiveNames(args: string): string[] {
 }
 
 /** `file:identifier`, a reason each (what the identifier holds). */
-const ALLOWED: Readonly<Record<string, string>> = {
-  "packages/video/src/webhook-handler.ts:code":
-    "the webhook outcome (OK, GONE or SUPERSEDED), not a credential",
-  "scripts/release-check-render.ts:code":
-    "an error code or a process exit code of the render lane, not a credential",
-};
+const ALLOWED: Readonly<Record<string, string>> = {};
 
 interface Finding {
   file: string;

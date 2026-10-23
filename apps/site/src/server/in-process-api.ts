@@ -50,7 +50,14 @@ async function renderContext(): Promise<RpcContext> {
     });
   }
   const context = createRpcContext(request, env, { waitUntil });
-  return { ...context, session: await requestSession(request) };
+  const session = await requestSession(request);
+  return {
+    ...context,
+    locale:
+      (await context.localeFor?.(session?.user.locale ?? null)) ??
+      context.locale,
+    session,
+  };
 }
 
 /**

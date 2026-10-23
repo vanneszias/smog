@@ -109,6 +109,7 @@ describe("gestures.list", () => {
           { name: "Actie", slug: "actie" },
           { name: "Zomer", slug: "zomer" },
         ],
+        fallbackUsed: false,
         id: row.id,
         name: "Zwemmen",
         playbackId: row.playbackId,
@@ -219,12 +220,15 @@ describe("gestures.bySlug", () => {
         { context: context() }
       )
     ).toEqual({
+      audioPath: null,
       canonicalSlug: "hond",
       categories: [{ name: "Dieren", slug: "dieren" }],
       description: "Een hond.",
+      fallbackUsed: false,
       id: row.id,
       keywords: ["hondje", "huisdier", "blaffen"],
       name: "Hond",
+      needsRecut: true,
       playbackId: row.playbackId,
       // The VideoObject `uploadDate` and `dateModified` (epoch ms).
       publishedAt: row.publishedAt?.getTime(),
@@ -285,7 +289,10 @@ describe("gestures.bySlug", () => {
       { context: context() }
     );
     expect(detail.playbackId).toBe("sponsored-playback");
+    // A rendered video has the name burned in: no end card over it.
     expect(detail.sponsor).toEqual({
+      endCard: false,
+      logoPath: null,
       name: "Bakkerij Jan",
       until: until.getTime(),
     });
@@ -297,6 +304,40 @@ describe("gestures.bySlug", () => {
       { context: context() }
     );
     expect(items[0]?.playbackId).toBe("sponsored-playback");
+  });
+
+  it("credits a live sponsorship without a rendered video with an end card: the gesture's own video, the logo path", async () => {
+    const hond = await addGesture(db, { name: "Hond" });
+    const until = new Date("2027-09-29T00:00:00.000Z");
+    await addSponsorship(db, hond.id, "live", {
+      displayName: "Bakkerij Jan",
+      endsAt: until,
+      logoKey: "logos/0a1b2c3d-0000-4000-8000-000000000001",
+    });
+
+    const detail = await call(
+      gesturesRouter.bySlug,
+      { slug: "hond" },
+      { context: context() }
+    );
+    expect(detail.playbackId).toBe(hond.playbackId);
+    expect(detail.sponsor).toEqual({
+      endCard: true,
+      logoPath: "/api/sponsor-logos/0a1b2c3d-0000-4000-8000-000000000001",
+      name: "Bakkerij Jan",
+      until: until.getTime(),
+    });
+  });
+
+  it("shows no end card for an in_review sponsorship", async () => {
+    const hond = await addGesture(db, { name: "Hond" });
+    await addSponsorship(db, hond.id, "in_review", {});
+    const detail = await call(
+      gesturesRouter.bySlug,
+      { slug: "hond" },
+      { context: context() }
+    );
+    expect(detail.sponsor).toBeNull();
   });
 
   it("plays the sponsored video while the sponsorship is expiring", async () => {
@@ -314,6 +355,8 @@ describe("gestures.bySlug", () => {
     );
     expect(detail.playbackId).toBe("expiring-playback");
     expect(detail.sponsor).toEqual({
+      endCard: false,
+      logoPath: null,
       name: "Bakkerij Jan",
       until: until.getTime(),
     });
@@ -467,9 +510,19 @@ describe("gestures.categories", () => {
     expect(
       await call(gesturesRouter.categories, undefined, { context: context() })
     ).toEqual([
-      { gestureCount: 0, name: "Begroeten", slug: begroeten.slug },
-      { gestureCount: 1, name: "Familie", slug: "familie" },
-      { gestureCount: 2, name: "Dieren", slug: "dieren" },
+      {
+        fallbackUsed: false,
+        gestureCount: 0,
+        name: "Begroeten",
+        slug: begroeten.slug,
+      },
+      {
+        fallbackUsed: false,
+        gestureCount: 1,
+        name: "Familie",
+        slug: "familie",
+      },
+      { fallbackUsed: false, gestureCount: 2, name: "Dieren", slug: "dieren" },
     ]);
   });
 });

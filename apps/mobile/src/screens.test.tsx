@@ -43,6 +43,16 @@ const { mockVideoPlayers } = jest.requireMock("expo-video") as {
   }[];
 };
 
+const { mockAudioPlayers } = jest.requireMock("expo-audio") as {
+  mockAudioPlayers: {
+    play: jest.Mock;
+    replace: jest.Mock;
+  }[];
+};
+
+const AUDIO_URL = /^https?:\/\/.+\/api\/audio\/g-hond\/nl\/clip$/;
+const LOGO_URL =
+  /^https?:\/\/.+\/api\/sponsor-logos\/0a1b2c3d-0000-4000-8000-000000000001$/;
 const LES_1 = /Les 1/;
 const DIEREN_OP_SCHOOL = /Dieren op school/;
 
@@ -287,6 +297,163 @@ describe("gesture", () => {
     expect(
       screen.getAllByRole("button", { name: "Kat" }).length
     ).toBeGreaterThan(0);
+  });
+
+  it("keeps the name over the video off while the picture still has it, and offers no audio without a clip", async () => {
+    await renderApp({ initialUrl: "/gestures/hond" });
+    await screen.findByRole("header", { name: "Hond" });
+    expect(
+      screen.queryByTestId("video-name-overlay", {
+        includeHiddenElements: true,
+      })
+    ).toBeNull();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Listen to the pronunciation" })
+    ).toBeNull();
+  });
+
+  it("overlays the name on a textless video, lets the viewer hide it, and plays the language's clip", async () => {
+    await renderApp({
+      initialUrl: "/gestures/hond",
+      routes: {
+        "gestures/bySlug": {
+          audioPath: "/api/audio/g-hond/nl/clip",
+          canonicalSlug: "hond",
+          categories: [],
+          description: "",
+          fallbackUsed: false,
+          id: "g-hond",
+          keywords: [],
+          name: "Hond",
+          needsRecut: false,
+          playbackId: "hond-video",
+          publishedAt: 0,
+          slug: "hond",
+          sponsor: null,
+          updatedAt: 0,
+        },
+      },
+    });
+    await screen.findByRole("header", { name: "Hond" });
+    expect(
+      screen.getByTestId("video-name-overlay", { includeHiddenElements: true })
+    ).toBeTruthy();
+    await fireEvent.press(
+      screen.getByRole("switch", { name: "Show the name on the video" })
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("video-name-overlay", {
+          includeHiddenElements: true,
+        })
+      ).toBeNull()
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Listen to the pronunciation" })
+    );
+    const player = mockAudioPlayers.at(-1);
+    expect(player?.replace).toHaveBeenCalledWith({
+      uri: expect.stringMatching(AUDIO_URL),
+    });
+    expect(player?.play).toHaveBeenCalled();
+  });
+
+  it("shows the sponsor end card over the last seconds of a sponsored video, in the viewer's language, with the logo from the API origin", async () => {
+    await renderApp({
+      initialUrl: "/gestures/hond",
+      routes: {
+        "gestures/bySlug": {
+          audioPath: null,
+          canonicalSlug: "hond",
+          categories: [],
+          description: "",
+          fallbackUsed: false,
+          id: "g-hond",
+          keywords: [],
+          name: "Hond",
+          needsRecut: true,
+          playbackId: "hond-video",
+          publishedAt: 0,
+          slug: "hond",
+          sponsor: {
+            endCard: true,
+            logoPath: "/api/sponsor-logos/0a1b2c3d-0000-4000-8000-000000000001",
+            name: "Bakkerij JAN nv",
+            until: 1_900_000_000_000,
+          },
+          updatedAt: 0,
+        },
+      },
+    });
+    await screen.findByRole("header", { name: "Hond" });
+    const player = mockVideoPlayers.at(-1);
+    if (!player) {
+      throw new Error("No video player");
+    }
+    const card = () =>
+      screen.queryByTestId("sponsor-end-card", { includeHiddenElements: true });
+    player.duration = 20;
+    await act(() => {
+      player.emit("timeUpdate", { currentTime: 10 });
+    });
+    expect(card()).toBeNull();
+    await act(() => {
+      player.emit("timeUpdate", { currentTime: 17 });
+    });
+    expect(card()).not.toBeNull();
+    expect(
+      screen.getByText("Made possible by", { includeHiddenElements: true })
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Bakkerij JAN nv", { includeHiddenElements: true })
+    ).toBeTruthy();
+    expect(
+      screen.getByTestId("sponsor-end-card-logo", {
+        includeHiddenElements: true,
+      }).props.source.uri
+    ).toMatch(LOGO_URL);
+  });
+
+  it("draws no end card over a video that already carries the sponsor's name (a rendered one)", async () => {
+    await renderApp({
+      initialUrl: "/gestures/hond",
+      routes: {
+        "gestures/bySlug": {
+          audioPath: null,
+          canonicalSlug: "hond",
+          categories: [],
+          description: "",
+          fallbackUsed: false,
+          id: "g-hond",
+          keywords: [],
+          name: "Hond",
+          needsRecut: false,
+          playbackId: "hond-video",
+          publishedAt: 0,
+          slug: "hond",
+          sponsor: {
+            endCard: false,
+            logoPath: null,
+            name: "Bakkerij Jan",
+            until: 1_900_000_000_000,
+          },
+          updatedAt: 0,
+        },
+      },
+    });
+    await screen.findByRole("header", { name: "Hond" });
+    const player = mockVideoPlayers.at(-1);
+    if (!player) {
+      throw new Error("No video player");
+    }
+    player.duration = 20;
+    await act(() => {
+      player.emit("timeUpdate", { currentTime: 19 });
+    });
+    expect(
+      screen.queryByTestId("sponsor-end-card", { includeHiddenElements: true })
+    ).toBeNull();
   });
 
   it("offers to share the link after a screenshot", async () => {

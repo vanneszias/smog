@@ -112,6 +112,31 @@ describe("processEmailMessage", () => {
     expect(message?.to).toBe("alex@smog.example");
   });
 
+  it("renders through the overlay of the recipient's language, and without it when loading fails", async () => {
+    const sender = new MemoryEmailSender();
+    const loaded: string[] = [];
+    await processEmailMessage(delivery(welcome()), {
+      ...deps(sender),
+      loadOverlay: (locale) => {
+        loaded.push(locale);
+        return Promise.resolve({
+          en: { "email.transactional.welcome.subject": "Hi from the overlay" },
+        });
+      },
+    });
+    expect(loaded).toEqual(["en"]);
+    expect(sender.sent[0]?.subject).toBe("Hi from the overlay");
+
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const fallback = new MemoryEmailSender();
+    const outcome = await processEmailMessage(delivery(welcome()), {
+      ...deps(fallback),
+      loadOverlay: () => Promise.reject(new Error("D1 is down")),
+    });
+    expect(outcome).toEqual({ action: "ack", outcome: "sent" });
+    expect(fallback.sent[0]?.subject).toBe("Welcome to SMOG & Co");
+  });
+
   it("marks a sent key in KV for 7 days", async () => {
     const body = welcome();
     const before = Math.floor(Date.now() / 1000);
@@ -332,7 +357,7 @@ describe("processEmailMessage", () => {
     ["not an object", "hello"],
     ["an unknown template", { ...welcome(), template: "transactional/nope" }],
     ["a bad address", { ...welcome(), to: "not-an-address" }],
-    ["a bad locale", { ...welcome(), locale: "de" }],
+    ["a malformed locale", { ...welcome(), locale: "not a locale!" }],
   ])(
     "acks an invalid message (%s) without sending or retrying",
     async (_name, body) => {

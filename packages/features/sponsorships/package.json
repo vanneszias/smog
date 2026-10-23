@@ -24,7 +24,6 @@
     "@smog/i18n": "workspace:*",
     "@smog/jobs": "workspace:*",
     "@smog/payments": "workspace:*",
-    "@smog/render": "workspace:*",
     "@smog/rpc": "workspace:*",
     "@smog/utils": "workspace:*",
     "@smog/video": "workspace:*",

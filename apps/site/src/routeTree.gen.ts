@@ -53,13 +53,20 @@ import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id
 import { Route as AdminGesturesNewRouteImport } from './routes/admin/gestures/new'
 import { Route as AdminSponsorshipsIndexRouteImport } from './routes/admin/sponsorships/index'
 import { Route as AdminSponsorshipsIdRouteImport } from './routes/admin/sponsorships/$id'
+import { Route as AdminTranslationIndexRouteImport } from './routes/admin/translation/index'
+import { Route as AdminTranslationLanguagesRouteImport } from './routes/admin/translation/languages'
+import { Route as AdminTranslationLegalRouteImport } from './routes/admin/translation/legal'
+import { Route as AdminTranslationStringsRouteImport } from './routes/admin/translation/strings'
+import { Route as ApiAudioSplatRouteImport } from './routes/api/audio/$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiLogosKeyRouteImport } from './routes/api/logos/$key'
 import { Route as ApiOpenapiSplatRouteImport } from './routes/api/openapi/$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api/rpc/$'
+import { Route as ApiSponsorLogosKeyRouteImport } from './routes/api/sponsor-logos/$key'
 import { Route as ApiSponsorReeditLogoRouteImport } from './routes/api/sponsor/reedit-logo'
 import { Route as ApiWebhooksMollieRouteImport } from './routes/api/webhooks/mollie'
 import { Route as ApiWebhooksMuxRouteImport } from './routes/api/webhooks/mux'
+import { Route as ApiAudioUploadSplatRouteImport } from './routes/api/audio/upload/$'
 import { Route as ApiLogosUploadKeyRouteImport } from './routes/api/logos/upload.$key'
 
 const IndexRoute = IndexRouteImport.update({
@@ -282,6 +289,32 @@ const AdminSponsorshipsIdRoute = AdminSponsorshipsIdRouteImport.update({
   path: '/sponsorships/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminTranslationIndexRoute = AdminTranslationIndexRouteImport.update({
+  id: '/translation/',
+  path: '/translation/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTranslationLanguagesRoute =
+  AdminTranslationLanguagesRouteImport.update({
+    id: '/translation/languages',
+    path: '/translation/languages',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminTranslationLegalRoute = AdminTranslationLegalRouteImport.update({
+  id: '/translation/legal',
+  path: '/translation/legal',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTranslationStringsRoute = AdminTranslationStringsRouteImport.update({
+  id: '/translation/strings',
+  path: '/translation/strings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const ApiAudioSplatRoute = ApiAudioSplatRouteImport.update({
+  id: '/api/audio/$',
+  path: '/api/audio/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -302,6 +335,11 @@ const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   path: '/api/rpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSponsorLogosKeyRoute = ApiSponsorLogosKeyRouteImport.update({
+  id: '/api/sponsor-logos/$key',
+  path: '/api/sponsor-logos/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSponsorReeditLogoRoute = ApiSponsorReeditLogoRouteImport.update({
   id: '/api/sponsor/reedit-logo',
   path: '/api/sponsor/reedit-logo',
@@ -315,6 +353,11 @@ const ApiWebhooksMollieRoute = ApiWebhooksMollieRouteImport.update({
 const ApiWebhooksMuxRoute = ApiWebhooksMuxRouteImport.update({
   id: '/api/webhooks/mux',
   path: '/api/webhooks/mux',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAudioUploadSplatRoute = ApiAudioUploadSplatRouteImport.update({
+  id: '/api/audio/upload/$',
+  path: '/api/audio/upload/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLogosUploadKeyRoute = ApiLogosUploadKeyRouteImport.update({
@@ -366,15 +409,22 @@ export interface FileRoutesByFullPath {
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
+  '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
+  '/admin/translation/legal': typeof AdminTranslationLegalRoute
+  '/admin/translation/strings': typeof AdminTranslationStringsRoute
+  '/api/audio/$': typeof ApiAudioSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor-logos/$key': typeof ApiSponsorLogosKeyRoute
   '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
   '/admin/sponsorships/': typeof AdminSponsorshipsIndexRoute
+  '/admin/translation/': typeof AdminTranslationIndexRoute
+  '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRoutesByTo {
@@ -419,15 +469,22 @@ export interface FileRoutesByTo {
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
+  '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
+  '/admin/translation/legal': typeof AdminTranslationLegalRoute
+  '/admin/translation/strings': typeof AdminTranslationStringsRoute
+  '/api/audio/$': typeof ApiAudioSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor-logos/$key': typeof ApiSponsorLogosKeyRoute
   '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures': typeof AdminGesturesIndexRoute
   '/admin/sponsorships': typeof AdminSponsorshipsIndexRoute
+  '/admin/translation': typeof AdminTranslationIndexRoute
+  '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRoutesById {
@@ -474,15 +531,22 @@ export interface FileRoutesById {
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
+  '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
+  '/admin/translation/legal': typeof AdminTranslationLegalRoute
+  '/admin/translation/strings': typeof AdminTranslationStringsRoute
+  '/api/audio/$': typeof ApiAudioSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/logos/$key': typeof ApiLogosKeyRoute
   '/api/openapi/$': typeof ApiOpenapiSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/api/sponsor-logos/$key': typeof ApiSponsorLogosKeyRoute
   '/api/sponsor/reedit-logo': typeof ApiSponsorReeditLogoRoute
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
   '/admin/sponsorships/': typeof AdminSponsorshipsIndexRoute
+  '/admin/translation/': typeof AdminTranslationIndexRoute
+  '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
 }
 export interface FileRouteTypes {
@@ -530,15 +594,22 @@ export interface FileRouteTypes {
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
+    | '/admin/translation/languages'
+    | '/admin/translation/legal'
+    | '/admin/translation/strings'
+    | '/api/audio/$'
     | '/api/auth/$'
     | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor-logos/$key'
     | '/api/sponsor/reedit-logo'
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
     | '/admin/sponsorships/'
+    | '/admin/translation/'
+    | '/api/audio/upload/$'
     | '/api/logos/upload/$key'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -583,15 +654,22 @@ export interface FileRouteTypes {
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
+    | '/admin/translation/languages'
+    | '/admin/translation/legal'
+    | '/admin/translation/strings'
+    | '/api/audio/$'
     | '/api/auth/$'
     | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor-logos/$key'
     | '/api/sponsor/reedit-logo'
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures'
     | '/admin/sponsorships'
+    | '/admin/translation'
+    | '/api/audio/upload/$'
     | '/api/logos/upload/$key'
   id:
     | '__root__'
@@ -637,15 +715,22 @@ export interface FileRouteTypes {
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
+    | '/admin/translation/languages'
+    | '/admin/translation/legal'
+    | '/admin/translation/strings'
+    | '/api/audio/$'
     | '/api/auth/$'
     | '/api/logos/$key'
     | '/api/openapi/$'
     | '/api/rpc/$'
+    | '/api/sponsor-logos/$key'
     | '/api/sponsor/reedit-logo'
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
     | '/admin/sponsorships/'
+    | '/admin/translation/'
+    | '/api/audio/upload/$'
     | '/api/logos/upload/$key'
   fileRoutesById: FileRoutesById
 }
@@ -682,13 +767,16 @@ export interface RootRouteChildren {
   WebhooksMollieRoute: typeof WebhooksMollieRoute
   GesturesIndexRoute: typeof GesturesIndexRoute
   SponsorIndexRoute: typeof SponsorIndexRoute
+  ApiAudioSplatRoute: typeof ApiAudioSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiLogosKeyRoute: typeof ApiLogosKeyRoute
   ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
+  ApiSponsorLogosKeyRoute: typeof ApiSponsorLogosKeyRoute
   ApiSponsorReeditLogoRoute: typeof ApiSponsorReeditLogoRoute
   ApiWebhooksMollieRoute: typeof ApiWebhooksMollieRoute
   ApiWebhooksMuxRoute: typeof ApiWebhooksMuxRoute
+  ApiAudioUploadSplatRoute: typeof ApiAudioUploadSplatRoute
   ApiLogosUploadKeyRoute: typeof ApiLogosUploadKeyRoute
 }
 
@@ -1002,6 +1090,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSponsorshipsIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/translation/': {
+      id: '/admin/translation/'
+      path: '/translation'
+      fullPath: '/admin/translation/'
+      preLoaderRoute: typeof AdminTranslationIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/translation/languages': {
+      id: '/admin/translation/languages'
+      path: '/translation/languages'
+      fullPath: '/admin/translation/languages'
+      preLoaderRoute: typeof AdminTranslationLanguagesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/translation/legal': {
+      id: '/admin/translation/legal'
+      path: '/translation/legal'
+      fullPath: '/admin/translation/legal'
+      preLoaderRoute: typeof AdminTranslationLegalRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/translation/strings': {
+      id: '/admin/translation/strings'
+      path: '/translation/strings'
+      fullPath: '/admin/translation/strings'
+      preLoaderRoute: typeof AdminTranslationStringsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/api/audio/$': {
+      id: '/api/audio/$'
+      path: '/api/audio/$'
+      fullPath: '/api/audio/$'
+      preLoaderRoute: typeof ApiAudioSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -1030,6 +1153,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sponsor-logos/$key': {
+      id: '/api/sponsor-logos/$key'
+      path: '/api/sponsor-logos/$key'
+      fullPath: '/api/sponsor-logos/$key'
+      preLoaderRoute: typeof ApiSponsorLogosKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/sponsor/reedit-logo': {
       id: '/api/sponsor/reedit-logo'
       path: '/api/sponsor/reedit-logo'
@@ -1049,6 +1179,13 @@ declare module '@tanstack/react-router' {
       path: '/api/webhooks/mux'
       fullPath: '/api/webhooks/mux'
       preLoaderRoute: typeof ApiWebhooksMuxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/audio/upload/$': {
+      id: '/api/audio/upload/$'
+      path: '/api/audio/upload/$'
+      fullPath: '/api/audio/upload/$'
+      preLoaderRoute: typeof ApiAudioUploadSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/logos/upload/$key': {
@@ -1072,8 +1209,12 @@ interface AdminRouteChildren {
   AdminGesturesIdRoute: typeof AdminGesturesIdRoute
   AdminGesturesNewRoute: typeof AdminGesturesNewRoute
   AdminSponsorshipsIdRoute: typeof AdminSponsorshipsIdRoute
+  AdminTranslationLanguagesRoute: typeof AdminTranslationLanguagesRoute
+  AdminTranslationLegalRoute: typeof AdminTranslationLegalRoute
+  AdminTranslationStringsRoute: typeof AdminTranslationStringsRoute
   AdminGesturesIndexRoute: typeof AdminGesturesIndexRoute
   AdminSponsorshipsIndexRoute: typeof AdminSponsorshipsIndexRoute
+  AdminTranslationIndexRoute: typeof AdminTranslationIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -1087,8 +1228,12 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminGesturesIdRoute: AdminGesturesIdRoute,
   AdminGesturesNewRoute: AdminGesturesNewRoute,
   AdminSponsorshipsIdRoute: AdminSponsorshipsIdRoute,
+  AdminTranslationLanguagesRoute: AdminTranslationLanguagesRoute,
+  AdminTranslationLegalRoute: AdminTranslationLegalRoute,
+  AdminTranslationStringsRoute: AdminTranslationStringsRoute,
   AdminGesturesIndexRoute: AdminGesturesIndexRoute,
   AdminSponsorshipsIndexRoute: AdminSponsorshipsIndexRoute,
+  AdminTranslationIndexRoute: AdminTranslationIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -1126,13 +1271,16 @@ const rootRouteChildren: RootRouteChildren = {
   WebhooksMollieRoute: WebhooksMollieRoute,
   GesturesIndexRoute: GesturesIndexRoute,
   SponsorIndexRoute: SponsorIndexRoute,
+  ApiAudioSplatRoute: ApiAudioSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiLogosKeyRoute: ApiLogosKeyRoute,
   ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
+  ApiSponsorLogosKeyRoute: ApiSponsorLogosKeyRoute,
   ApiSponsorReeditLogoRoute: ApiSponsorReeditLogoRoute,
   ApiWebhooksMollieRoute: ApiWebhooksMollieRoute,
   ApiWebhooksMuxRoute: ApiWebhooksMuxRoute,
+  ApiAudioUploadSplatRoute: ApiAudioUploadSplatRoute,
   ApiLogosUploadKeyRoute: ApiLogosUploadKeyRoute,
 }
 export const routeTree = rootRouteImport

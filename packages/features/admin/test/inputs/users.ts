@@ -1,3 +1,4 @@
+import { userRole } from "@smog/db";
 import { makeUser } from "@smog/db/testing";
 import { testDb } from "../helpers";
 import type { ProcedureInputs } from "./index";
@@ -18,11 +19,18 @@ export const USERS_INPUTS: ProcedureInputs = {
     return { confirmEmail: target.email, userId: target.id };
   },
   "users.get": (fixtures) => ({ id: fixtures.user.id }),
-  "users.list": () => ({}),
-  "users.setRole": async () => ({
-    role: "admin",
+  "users.grantRole": async () => ({
+    role: "translator",
     userId: (await makeUser(testDb())).id,
   }),
+  "users.list": () => ({}),
+  "users.revokeRole": async () => {
+    const target = await makeUser(testDb());
+    await testDb()
+      .insert(userRole)
+      .values({ role: "teacher", userId: target.id });
+    return { role: "teacher", userId: target.id };
+  },
   "users.unban": async () => ({
     userId: (await makeUser(testDb(), { banned: true, banReason: "Spam" })).id,
   }),

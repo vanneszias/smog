@@ -11,6 +11,14 @@ import type { SponsorshipEventType, SponsorshipStatus } from "@smog/db/enums";
 
 type From = Partial<Record<SponsorshipStatus, SponsorshipStatus>>;
 
+/**
+ * Paid, revived and resubmitted sponsorships go straight to `in_review`:
+ * the sponsor message is an app-side end card over the gesture's own video
+ * and nothing is rendered (phase 10b tasks 8 and 9). The render pipeline is
+ * retired; `rendering` and `render_failed` remain readable statuses of old
+ * rows, and `render_succeeded` is the one event that leaves them (the
+ * retirement sweep, `retireRenderStates`, writes it with `retired: true`).
+ */
 const TABLE = {
   approved: { in_review: "live" },
   cancelled: { awaiting_payment: "cancelled" },
@@ -20,21 +28,21 @@ const TABLE = {
   },
   expired: { expiring: "expired", live: "expired" },
   force_expired: { expiring: "expired", live: "expired" },
-  marked_paid_manually: { awaiting_payment: "rendering" },
+  marked_paid_manually: { awaiting_payment: "in_review" },
   payment_failed: { awaiting_payment: "cancelled" },
-  payment_paid: { awaiting_payment: "rendering" },
+  payment_paid: { awaiting_payment: "in_review" },
   rejected: { changes_requested: "rejected", in_review: "rejected" },
   reminder_sent: { live: "expiring" },
-  render_failed: { rendering: "render_failed" },
-  render_retried: { render_failed: "rendering" },
-  render_succeeded: { rendering: "in_review" },
+  render_succeeded: { render_failed: "in_review", rendering: "in_review" },
   renewed: { expiring: "live", live: "live" },
-  resubmitted: { changes_requested: "rendering" },
-  revived: { cancelled: "rendering" },
+  resubmitted: { changes_requested: "in_review" },
+  revived: { cancelled: "in_review" },
 } as const satisfies Partial<Record<SponsorshipEventType, From>>;
 
+type Table = typeof TABLE;
+
 /** The events that change a status (every other event is trail only). */
-export type TransitionEvent = keyof typeof TABLE;
+export type TransitionEvent = keyof Table;
 
 export const TRANSITION_EVENTS = Object.keys(TABLE) as TransitionEvent[];
 

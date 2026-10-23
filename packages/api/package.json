@@ -19,11 +19,14 @@
     "@smog/account": "workspace:*",
     "@smog/admin": "workspace:*",
     "@smog/config": "workspace:*",
+    "@smog/db": "workspace:*",
     "@smog/favorites": "workspace:*",
     "@smog/gestures": "workspace:*",
+    "@smog/i18n": "workspace:*",
     "@smog/lists": "workspace:*",
     "@smog/rpc": "workspace:*",
     "@smog/sponsorships": "workspace:*",
+    "@smog/translation": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

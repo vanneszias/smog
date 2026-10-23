@@ -3,15 +3,14 @@
  * exported here is part of `@smog/admin/client` (`index.ts` re-exports this
  * file). Reads only: a preview is never sent.
  */
-import type { Locale } from "@smog/config/constants";
 import type { EmailTemplateId } from "@smog/email/samples";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useAdminKey, useAdminRpc } from "./slice";
 
-/** The templates only change with a deploy. */
-const TEMPLATES_STALE_TIME = Number.POSITIVE_INFINITY;
+/** The templates change with a deploy, the texts with a translator's edit: refetch after 30 s. */
+const TEMPLATES_STALE_TIME = 30_000;
 
-/** Every registered template with its sample subject per locale. */
+/** Every registered template with its sample subject per enabled language. */
 export function useEmailTemplates() {
   const rpc = useAdminRpc();
   const scoped = useAdminKey();
@@ -27,7 +26,7 @@ export function useEmailTemplates() {
  */
 export function useEmailPreview(
   template: EmailTemplateId | null,
-  locale: Locale
+  locale: string
 ) {
   const rpc = useAdminRpc();
   const scoped = useAdminKey();

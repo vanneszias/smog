@@ -1,6 +1,10 @@
 import { createAccountRouter } from "@smog/account/server";
-import { createAdminRouter } from "@smog/admin/server";
+import {
+  createAdminRouter,
+  createCatalogTranslationRouter,
+} from "@smog/admin/server";
 import { publicAuthConfig } from "@smog/config/env/worker";
+import { uiCatalogueSource } from "@smog/db";
 import {
   createFavoritesRouter,
   insertFavoritesStmt,
@@ -10,6 +14,8 @@ import {
   findGesturesByIds,
   gesturesRouter,
 } from "@smog/gestures/server";
+import { resolveLocale } from "@smog/i18n";
+import { loadCatalogue } from "@smog/i18n/server";
 import {
   appendItemsStmt,
   createListsRouter,
@@ -21,10 +27,17 @@ import {
 import { implementRpc } from "@smog/rpc";
 import { roleSchema } from "@smog/rpc/contract";
 import { createSponsorshipsRouter } from "@smog/sponsorships/server";
+import { createTranslationRouter } from "@smog/translation/server";
 import { adminSponsorshipServices } from "./admin-deps";
 import { appContract } from "./contract";
 
 const os = implementRpc(appContract);
+
+/** What the admin procedures inject from other features' servers. */
+const adminDeps = {
+  bumpCatalogVersion,
+  sponsorships: adminSponsorshipServices,
+};
 
 const system = os.system.router({
   authConfig: os.system.authConfig.handler(({ context }) =>
@@ -34,6 +47,19 @@ const system = os.system.router({
     environment: context.env.ENVIRONMENT,
     ok: true as const,
   })),
+  i18n: os.system.i18n.handler(async ({ context, input }) => {
+    const catalogue = await loadCatalogue(
+      { kv: context.kv, source: uiCatalogueSource(context.db) },
+      (enabled, fallback) =>
+        resolveLocale({ preference: input.locale }, enabled, fallback)
+    );
+    return {
+      languages: [...catalogue.languages],
+      locale: catalogue.locale,
+      overlay: catalogue.overlay,
+      version: catalogue.version,
+    };
+  }),
   whoami: os.system.whoami.handler(({ context }) => {
     const user = context.session?.user;
     return {
@@ -44,6 +70,7 @@ const system = os.system.router({
             image: user.image ?? null,
             name: user.name,
             role: roleSchema.parse(user.role),
+            roles: user.roles,
           }
         : null,
     };
@@ -66,10 +93,10 @@ export const appRouter = os.router({
   // cache); the sponsorship actions run the sponsorship batches and enqueue
   // on the rpc env's queues after the commit. Every admin procedure is
   // `requireAdmin`.
-  admin: createAdminRouter({
-    bumpCatalogVersion,
-    sponsorships: adminSponsorshipServices,
-  }),
+  admin: createAdminRouter(adminDeps),
+  // The gesture and category translations: open to a translator (an admin
+  // passes too), with the admin audit guard on every write.
+  catalogTranslation: createCatalogTranslationRouter(adminDeps),
   // Favorites and lists resolve summaries with the gestures query (a
   // feature never imports another feature's server; the api wires them).
   favorites: createFavoritesRouter({ findSummaries: findGesturesByIds }),
@@ -80,6 +107,9 @@ export const appRouter = os.router({
   // and renewal slices.
   sponsorships: createSponsorshipsRouter(),
   system,
+  // Translators and admins: the strings, languages and coverage. Each
+  // procedure carries its role guard and the audit guard.
+  translation: createTranslationRouter(),
 });
 
 export type AppRouter = typeof appRouter;

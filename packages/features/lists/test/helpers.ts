@@ -30,7 +30,7 @@ const fakeSummaries: FindGestureSummaries = async (db, ids) => {
   const byId = new Map(rows.map((row) => [row.id, row]));
   return ids.flatMap((id): GestureSummary[] => {
     const row = byId.get(id);
-    return row ? [{ ...row, categories: [] }] : [];
+    return row ? [{ ...row, categories: [], fallbackUsed: false }] : [];
   });
 };
 

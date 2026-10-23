@@ -6,8 +6,10 @@
   "exports": {
     ".": "./src/index.ts",
     "./legal": "./src/legal/index.ts",
+    "./legal/markup": "./src/legal/markup.ts",
     "./native": "./src/setup-native.ts",
-    "./react": "./src/react.ts"
+    "./react": "./src/react.ts",
+    "./server": "./src/server.ts"
   },
   "scripts": {
     "check-types": "tsc -b",

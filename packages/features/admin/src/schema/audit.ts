@@ -8,9 +8,11 @@ import {
   AUDIT_TARGET_TYPES,
   type AuditAction,
   DEAD_LETTER_ORIGINS,
+  LEGAL_KINDS,
   ROLES,
   SPONSORSHIP_STATUSES,
   SPONSORSHIP_TOKEN_PURPOSES,
+  USER_ROLES,
 } from "@smog/db/enums";
 import {
   MARK_PAID_NOTE_MAX,
@@ -79,6 +81,44 @@ const CATALOG_AUDIT_SCHEMAS = {
   }),
 } satisfies AuditSchemaBlock;
 
+/**
+ * Phase 10b task 5: a gesture's or category's translation (`translation.*`),
+ * one entry per save, `target_type` `gesture` or `category`. `name` and
+ * `slug` are the default language's (what the admin list shows); `locale`
+ * the language written. The translated text itself is not in the entry.
+ */
+const CATALOG_TRANSLATION_AUDIT_SCHEMAS = {
+  "translation.category_save": catalogTarget.extend({
+    /** The first translation of the category in this language. */
+    created: z.boolean(),
+    locale: z.string(),
+  }),
+  "translation.gesture_save": catalogTarget.extend({
+    created: z.boolean(),
+    /** The parts the save changed. */
+    fields: z.array(z.enum(["name", "description", "keywords"])).min(1),
+    locale: z.string(),
+  }),
+} satisfies AuditSchemaBlock;
+
+/**
+ * Phase 10b task 6: a gesture's media. `translation.audio_*` are one entry
+ * per clip (`target_type` `gesture`, `target_id` the gesture); no key, no
+ * file name. `gesture.recut_done` says the textless video is uploaded
+ * (`needs_recut` cleared).
+ */
+const MEDIA_AUDIT_SCHEMAS = {
+  "gesture.recut_done": catalogTarget,
+  "translation.audio_delete": catalogTarget.extend({ locale: z.string() }),
+  "translation.audio_upload": catalogTarget.extend({
+    durationMs: z.number().int().positive(),
+    locale: z.string(),
+    /** A clip of this language was there and is replaced. */
+    replaced: z.boolean(),
+    size: z.number().int().positive(),
+  }),
+} satisfies AuditSchemaBlock;
+
 const auditRole = z.enum(ROLES);
 
 /**
@@ -102,6 +142,9 @@ const USER_AUDIT_SCHEMAS = {
   ]),
   "user.delete": z.object({ hadSessions: z.boolean() }),
   "user.role_change": z.object({ from: auditRole, to: auditRole }),
+  /** Phase 10b: one entry per role granted or revoked (the set, not the legacy value). */
+  "user.role_grant": z.object({ role: z.enum(USER_ROLES) }),
+  "user.role_revoke": z.object({ role: z.enum(USER_ROLES) }),
   "user.unban": z.object({}),
 } satisfies AuditSchemaBlock;
 
@@ -140,7 +183,7 @@ const sponsorshipStatusFilter = z.array(z.enum(SPONSORSHIP_STATUSES));
  * its expiry. No sponsor contact data either (data minimisation; the
  * target id links to the sponsorship while it exists).
  * Phase 7 task 7: `sponsorship.retry_render` (A-27), the new job's id and
- * attempt.
+ * attempt (Retry render is removed since phase 10b task 9; old entries stay).
  */
 const SPONSORSHIP_AUDIT_SCHEMAS = {
   "export.sponsorships_csv": z.object({
@@ -212,16 +255,81 @@ const DEAD_LETTER_AUDIT_SCHEMAS = {
 } satisfies AuditSchemaBlock;
 
 /**
+ * Phase 10b task 4: the translation screens. `language.*` target the
+ * language (`target_id` its code); `translation.string_save` targets one
+ * string (`target_type` `ui_string`, `target_id` `<locale>:<key>`) and
+ * `translation.string_import` the language an import wrote to (`target_id`
+ * the code, NULL for a file with several). Texts are public interface copy,
+ * but an entry carries the key and the counts only, never a value.
+ */
+const TRANSLATION_AUDIT_SCHEMAS = {
+  "language.create": z.object({
+    code: z.string(),
+    enabled: z.boolean(),
+    intlTag: z.string(),
+    name: z.string(),
+  }),
+  "language.update": z.object({
+    /** The fields the update changed. */
+    fields: z.array(z.enum(["enabled", "intlTag", "name", "sortOrder"])).min(1),
+  }),
+  "translation.string_import": z.object({
+    /** Strings written (added or changed). */
+    applied: z.number().int().nonnegative(),
+    format: z.enum(["csv", "json"]),
+    /** Rows of the file that were left out (unknown key, invalid, unchanged excluded). */
+    skipped: z.number().int().nonnegative(),
+  }),
+  "translation.string_save": z.object({
+    key: z.string(),
+    locale: z.string(),
+    /** Set when the stored text was saved again unchanged, to publish it (a retry after a failed `i18n:version` bump). */
+    republished: z.literal(true).optional(),
+    /** Set when the override was removed (back to the shipped text). */
+    reverted: z.literal(true).optional(),
+  }),
+} satisfies AuditSchemaBlock;
+
+/**
+ * Phase 10b task 7: legal texts. One entry per version row
+ * (`target_type` `legal_text`, `target_id` `<kind>:<locale>:<version>`).
+ * The text itself is never in the entry (it is stored in `legal_text`, every
+ * version kept); the entry says who did what to which version.
+ */
+const legalTarget = z.object({
+  kind: z.enum(LEGAL_KINDS),
+  locale: z.string(),
+  /** The version the entry is about (a draft's provisional number until published). */
+  version: z.number().int().positive(),
+});
+
+const LEGAL_AUDIT_SCHEMAS = {
+  "legal.draft_save": legalTarget,
+  "legal.publish": legalTarget.extend({
+    /** ISO date the published version takes effect. */
+    effectiveDate: z.string(),
+  }),
+  "legal.restore": legalTarget.extend({
+    /** The earlier version whose text was copied into the new one. */
+    restoredFrom: z.number().int().positive(),
+  }),
+} satisfies AuditSchemaBlock;
+
+/**
  * `audit_log.data` per action. The writer validates `data` with it before
  * any write, and `admin.audit.list` parses stored rows with it.
  */
 export const AUDIT_DATA_SCHEMAS = {
   ...LEGACY_AUDIT_SCHEMAS,
   ...CATALOG_AUDIT_SCHEMAS,
+  ...CATALOG_TRANSLATION_AUDIT_SCHEMAS,
+  ...MEDIA_AUDIT_SCHEMAS,
   ...USER_AUDIT_SCHEMAS,
   ...MAINTENANCE_AUDIT_SCHEMAS,
   ...SPONSORSHIP_AUDIT_SCHEMAS,
   ...DEAD_LETTER_AUDIT_SCHEMAS,
+  ...TRANSLATION_AUDIT_SCHEMAS,
+  ...LEGAL_AUDIT_SCHEMAS,
 } satisfies AuditSchemaBlock;
 
 /** Actions that are parsed on read but never written. */

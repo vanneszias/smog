@@ -5,7 +5,14 @@ import {
   useAuthState,
 } from "@smog/auth/react";
 import { createWebAuthClient, type WebAuthClient } from "@smog/auth/web";
-import { createI18n, type Locale } from "@smog/i18n";
+import { isLocalizedQuery } from "@smog/gestures/client";
+import {
+  createI18n,
+  ensureCatalogues,
+  type LanguageInfo,
+  type Locale,
+  registerLanguages,
+} from "@smog/i18n";
 import { I18nextProvider, useTranslation } from "@smog/i18n/react";
 import {
   createLocalStore,
@@ -76,13 +83,24 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { charSet: "utf-8" },
       { content: "width=device-width, initial-scale=1", name: "viewport" },
       {
-        title: createI18n(loaderData?.locale ?? "nl").t("common.appName"),
+        title: createI18n(loaderData?.locale ?? "nl", loaderData?.overlay).t(
+          "common.appName"
+        ),
       },
     ],
   }),
   // The shell (locale, theme, session) changes only through the setters
   // below, which invalidate the router.
-  loader: (): Promise<Shell> => getShell(),
+  // The browser holds the shipped catalogue of one language at a time
+  // (phase 10b task 7b): a reload of the shell that brings another language
+  // (the language menu, a sign-in with a saved language) loads it before the
+  // new shell swaps in, so no render sees an empty catalogue. A no-op on the
+  // server, which has all three, and for a language already loaded.
+  loader: async (): Promise<Shell> => {
+    const shell = await getShell();
+    await ensureCatalogues(shell.locale);
+    return shell;
+  },
   notFoundComponent: NotFound,
   shellComponent: RootDocument,
   staleTime: Number.POSITIVE_INFINITY,
@@ -163,7 +181,14 @@ function RootDocument({ children }: { children: ReactNode }): ReactNode {
   const [theme, setThemeState] = useState<Theme>(shell.theme);
   const systemDark = useSystemDark();
   const dark = theme === "dark" || (theme === "system" && systemDark);
-  const i18n = useMemo(() => createI18n(shell.locale), [shell.locale]);
+  // `Intl` tags of the enabled languages (dates, lists), from data.
+  registerLanguages(shell.languages);
+  // The shipped catalogue with the ui_string overlay on top; a language
+  // change reloads the shell, so the new language and its overlay swap in.
+  const i18n = useMemo(
+    () => createI18n(shell.locale, shell.overlay),
+    [shell.locale, shell.overlay]
+  );
 
   const themeValue = useMemo(
     () => ({
@@ -205,7 +230,10 @@ function RootDocument({ children }: { children: ReactNode }): ReactNode {
                   <LocalStoreProvider store={clients.store}>
                     <SiteAnalytics>
                       <ThemeProvider value={themeValue}>
-                        <SiteLocaleProvider locale={shell.locale}>
+                        <SiteLocaleProvider
+                          languages={shell.languages}
+                          locale={shell.locale}
+                        >
                           <TooltipProvider>
                             <ToastProvider>
                               <Layout>{children}</Layout>
@@ -264,21 +292,29 @@ function ThemeColor({ theme }: { theme: Theme }): ReactNode {
  */
 function SiteLocaleProvider({
   children,
+  languages,
   locale,
 }: {
   children: ReactNode;
+  languages: readonly LanguageInfo[];
   locale: Locale;
 }): ReactNode {
   const router = useRouter();
-  const { api } = Route.useRouteContext();
+  const { api, queryClient } = Route.useRouteContext();
   const signedIn = useAuthState().status === "signedIn";
   const value = useMemo(
     () => ({
+      languages,
       locale,
       setLocale: (next: Locale): void => {
         const save = async (): Promise<void> => {
           await Promise.all([
-            saveLocale({ data: next }).then(() => router.invalidate()),
+            saveLocale({ data: next }).then(async () => {
+              // Cached gestures are in the old language: drop them (active
+              // ones refetch), then run the loaders again with the new cookie.
+              await queryClient.resetQueries({ predicate: isLocalizedQuery });
+              await router.invalidate();
+            }),
             signedIn ? api.account.updateProfile({ locale: next }) : null,
           ]);
         };
@@ -287,7 +323,7 @@ function SiteLocaleProvider({
         });
       },
     }),
-    [api, locale, router, signedIn]
+    [api, languages, locale, queryClient, router, signedIn]
   );
   return <LocaleProvider value={value}>{children}</LocaleProvider>;
 }

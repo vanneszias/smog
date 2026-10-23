@@ -7,6 +7,13 @@ export {
   rebuildGesturesFtsSql,
 } from "./fts";
 export {
+  defaultLanguageCode,
+  type EnabledLanguage,
+  isEnabledLanguage,
+  legalPublishedSource,
+  uiCatalogueSource,
+} from "./i18n-queries";
+export {
   AUDIT_RETENTION_MS,
   DEAD_LETTER_RETENTION_MS,
   RETENTION_CHUNK_SIZE,
@@ -32,4 +39,11 @@ export {
   toGuardFailure,
   userBanInForce,
 } from "./sql";
+export {
+  DEFAULT_LANGUAGE_SQL,
+  gestureNeedsTranslationSql,
+  gestureUntranslatedSql,
+  type TranslationReport,
+  translationReport,
+} from "./translation-report";
 export type * from "./types";

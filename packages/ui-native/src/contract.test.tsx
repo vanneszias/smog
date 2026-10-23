@@ -59,6 +59,7 @@ describe("the kit contract", () => {
  */
 const WEB_KIT = [
   "AlertDialog",
+  "AudioButton",
   "Avatar",
   "Badge",
   "Button",
@@ -101,6 +102,7 @@ const WEB_KIT = [
   "MenuLabel",
   "MenuSeparator",
   "MenuTrigger",
+  "NameOverlayToggle",
   "NoResultsEmptyState",
   "OfflineBanner",
   "ProgressBar",
@@ -118,6 +120,7 @@ const WEB_KIT = [
   "SheetTrigger",
   "Skeleton",
   "Spinner",
+  "SponsorEndCard",
   "Stepper",
   "Switch",
   "Tabs",

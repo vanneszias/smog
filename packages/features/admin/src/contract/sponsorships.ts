@@ -10,7 +10,6 @@ import {
   recordRefundResultSchema,
   regenerateTokenInputSchema,
   rejectSponsorshipInputSchema,
-  retryRenderResultSchema,
   sponsorshipActionResultSchema,
   sponsorshipIdInputSchema,
   sponsorshipInvalidStateDataSchema,
@@ -85,7 +84,7 @@ export const sponsorshipsSlice = {
      * Mark paid by hand (A-10, a bank transfer) for the whole payment, only
      * while `open`. Mollie is asked first: already paid settles normally;
      * otherwise it is cancelled there when it can be. Every gesture goes to
-     * `rendering` and `payment.settled` follows (bug 32).
+     * `in_review` and `payment.settled` follows (bug 32).
      */
     markPaid: sponsorshipsContract
       .input(markPaidInputSchema)
@@ -118,17 +117,6 @@ export const sponsorshipsSlice = {
     requestChanges: sponsorshipsContract
       .input(sponsorshipIdInputSchema)
       .output(sponsorshipLinkResultSchema),
-    /**
-     * Retry a failed render (A-27), only from `render_failed`: back to
-     * `rendering` (`render_retried`) with the next render job (`attempt +
-     * 1`), its `render_started` and the audit entry in one batch; then
-     * `render.requested` is enqueued (a lost message is re-sent by the
-     * hourly render watchdog). `INVALID_STATE stale` for any other status
-     * or a lost race.
-     */
-    retryRender: sponsorshipsContract
-      .input(sponsorshipIdInputSchema)
-      .output(retryRenderResultSchema),
   },
 };
 
@@ -144,5 +132,4 @@ export const ADMIN_PROCEDURES = {
   "sponsorships.regenerateToken": { audit: "sponsorship.regenerate_token" },
   "sponsorships.reject": { audit: "sponsorship.reject" },
   "sponsorships.requestChanges": { audit: "sponsorship.request_changes" },
-  "sponsorships.retryRender": { audit: "sponsorship.retry_render" },
 } as const satisfies AdminProcedures<typeof sponsorshipsSlice>;

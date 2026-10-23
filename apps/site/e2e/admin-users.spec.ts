@@ -73,12 +73,16 @@ test.describe("admin users", () => {
     // The seeded admin promotes the account from its panel.
     await openPanel(page, member.email);
     const panel = page.getByRole("dialog", { name: member.email });
-    await panel.getByRole("button", { name: "Beheerder maken" }).click();
-    await confirmIn(page, "Beheerder maken");
+    await panel
+      .getByRole("button", { name: "Rol toevoegen: Beheerder" })
+      .click();
+    await confirmIn(page, "Rol toevoegen: Beheerder");
     await expect(
-      toastText(page, `${member.email} is nu beheerder.`)
+      toastText(page, `${member.email} heeft nu de rol Beheerder.`)
     ).toBeVisible();
-    await expect(panel.getByText("Beheerder", { exact: true })).toBeVisible();
+    await expect(
+      panel.getByRole("button", { name: "Rol afnemen: Beheerder" })
+    ).toBeVisible();
     expect(await blockingViolations(page)).toEqual([]);
 
     // The member's next page is the admin.
@@ -90,10 +94,10 @@ test.describe("admin users", () => {
     expect(await dashboardStatus(member.page)).toBe(200);
 
     // Demoted: the next navigation is a 404, the next call FORBIDDEN.
-    await panel.getByRole("button", { name: "Beheerdersrol afnemen" }).click();
-    await confirmIn(page, "Beheerdersrol afnemen");
+    await panel.getByRole("button", { name: "Rol afnemen: Beheerder" }).click();
+    await confirmIn(page, "Rol afnemen: Beheerder");
     await expect(
-      toastText(page, `${member.email} is geen beheerder meer.`)
+      toastText(page, `${member.email} heeft de rol Beheerder niet meer.`)
     ).toBeVisible();
     const after = await member.page.goto("/admin");
     expect(after?.status()).toBe(404);
@@ -108,6 +112,55 @@ test.describe("admin users", () => {
       headers: { origin: ORIGIN },
     });
     expect(direct.status()).toBe(404);
+    expect(errors).toEqual([]);
+  });
+
+  test("translator and teacher: add and remove, the translator opens only the translation screens, the session shows both", async ({
+    browser,
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    await signInAsAdmin(page);
+    const member = await memberPage(browser);
+    await openPanel(page, member.email);
+    const panel = page.getByRole("dialog", { name: member.email });
+    for (const role of ["Vertaler", "Leerkracht"]) {
+      // biome-ignore lint/performance/noAwaitInLoops: the grants run one after the other, each waits for its dialog.
+      await panel
+        .getByRole("button", { name: `Rol toevoegen: ${role}` })
+        .click();
+      await confirmIn(page, `Rol toevoegen: ${role}`);
+      await expect(
+        toastText(page, `${member.email} heeft nu de rol ${role}.`)
+      ).toBeVisible();
+      await expect(
+        panel.getByRole("button", { name: `Rol afnemen: ${role}` })
+      ).toBeVisible();
+    }
+    expect(await blockingViolations(page)).toEqual([]);
+
+    // The member's next session read carries both, and the admin stays shut.
+    const session = await member.page.request.get("/api/auth/get-session");
+    expect(
+      ((await session.json()) as { user: { roles: string[] } }).user.roles
+    ).toEqual(["translator", "teacher"]);
+    // A translator is led from /admin to the strings (phase 10b task 4);
+    // every other admin screen stays the 404 page.
+    expect((await member.page.goto("/admin"))?.status()).toBe(200);
+    expect(member.page.url()).toContain("/admin/translation/strings");
+    expect((await member.page.goto("/admin/users"))?.status()).toBe(404);
+    expect(await dashboardStatus(member.page)).toBe(403);
+
+    // Removed at once: the next session read has one role left.
+    await panel.getByRole("button", { name: "Rol afnemen: Vertaler" }).click();
+    await confirmIn(page, "Rol afnemen: Vertaler");
+    await expect(
+      toastText(page, `${member.email} heeft de rol Vertaler niet meer.`)
+    ).toBeVisible();
+    const after = await member.page.request.get("/api/auth/get-session");
+    expect(
+      ((await after.json()) as { user: { roles: string[] } }).user.roles
+    ).toEqual(["teacher"]);
     expect(errors).toEqual([]);
   });
 
@@ -178,7 +231,8 @@ test.describe("admin users", () => {
     const panel = page.getByRole("dialog");
     await expect(panel.getByText("Dit is je eigen account.")).toBeVisible();
     for (const name of [
-      "Beheerdersrol afnemen",
+      "Rol afnemen: Beheerder",
+      "Rol toevoegen: Vertaler",
       "Blokkeren",
       "Account verwijderen",
     ]) {

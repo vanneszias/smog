@@ -19,12 +19,16 @@ import { FAVORITE_IDS_MAX, type FavoritesPage } from "../schema";
  */
 export type FindGestureSummaries = (
   db: Db,
-  ids: readonly string[]
+  ids: readonly string[],
+  /** The viewer's language (names in it, the default text where untranslated). */
+  locale?: string
 ) => Promise<GestureSummary[]>;
 
 export interface FavoritesDeps {
   db: Db;
   findSummaries: FindGestureSummaries;
+  /** The request's language, for the summaries. */
+  locale?: string;
 }
 
 /** The gesture is unknown or unpublished. */
@@ -116,7 +120,7 @@ export async function listFavoriteIds(
  * cursor). Two D1 queries: the page of ids, then their summaries.
  */
 export async function listFavorites(
-  { db, findSummaries }: FavoritesDeps,
+  { db, findSummaries, locale }: FavoritesDeps,
   userId: string,
   input: { cursor?: string | undefined; limit: number }
 ): Promise<FavoritesPage> {
@@ -128,7 +132,8 @@ export async function listFavorites(
     const last = page.at(-1);
     const items = await findSummaries(
       db,
-      page.map((row) => row.gestureId)
+      page.map((row) => row.gestureId),
+      locale
     );
     return {
       items,

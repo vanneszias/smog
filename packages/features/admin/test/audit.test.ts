@@ -1,17 +1,17 @@
 import { env } from "cloudflare:workers";
 import { auditLog, gesture } from "@smog/db";
 import { makeUser } from "@smog/db/testing";
+import {
+  type AuditSchemas,
+  buildAuditStatement,
+  writeAuditWith,
+} from "@smog/rpc/audit";
 import { encodeCursor } from "@smog/utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { AuditEntry, AuditPage } from "../src/schema";
 import { AuditDataError, auditStatement, writeAudit } from "../src/server";
 import { auditEntriesQuery } from "../src/server/audit";
-import {
-  type AuditSchemas,
-  buildAuditStatement,
-  writeAuditWith,
-} from "../src/server/audit-writer";
 import { type Authed, callAs, signedUp, testDb } from "./helpers";
 
 async function auditCount(): Promise<number> {

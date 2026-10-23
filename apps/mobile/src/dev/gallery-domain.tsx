@@ -1,6 +1,7 @@
 import { COURSE_URL } from "@smog/config/constants";
 import { useTranslation } from "@smog/i18n/react";
 import {
+  AudioButton,
   Button,
   CategoryChips,
   ConsentBanner,
@@ -17,6 +18,7 @@ import {
   ListPicker,
   type ListPickerList,
   ListsEmptyState,
+  NameOverlayToggle,
   SearchResults,
   ShareLink,
   VideoPlayer,
@@ -239,6 +241,7 @@ function VideoSection(): ReactElement {
   const { t } = useTranslation();
   const [banner, setBanner] = useState(true);
   const [nearEnd, setNearEnd] = useState(false);
+  const [overlay, setOverlay] = useState(true);
   const dismiss = useCallback((): void => {
     setBanner(false);
   }, []);
@@ -249,11 +252,16 @@ function VideoSection(): ReactElement {
   return (
     <Section name="VideoPlayer / CourseBanner">
       <VideoPlayer
+        endCard={{ name: "Bakkerij Jan" }}
         loop
+        nameOverlay={overlay ? t("devTools.gallery.gestureHello") : undefined}
         onNearEnd={showBanner}
         playbackId={SAMPLE_PLAYBACK_ID}
         title={t("devTools.gallery.gestureHello")}
       />
+      <NameOverlayToggle checked={overlay} onCheckedChange={setOverlay} />
+      {/* Nothing loads until it is pressed; this address has no clip. */}
+      <AudioButton src="https://example.invalid/api/audio/gallery/nl/none" />
       {banner ? (
         <CourseBanner
           courseUrl={COURSE_URL}

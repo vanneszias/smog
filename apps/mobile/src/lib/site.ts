@@ -6,6 +6,18 @@ function siteUrl(path: string): string {
   return `https://${mobileEnv().EXPO_PUBLIC_SITE_HOST}${path}`;
 }
 
+const TRAILING_SLASHES = /\/+$/;
+
+/**
+ * A same-origin path the site serves (a gesture's spoken name,
+ * `GestureBySlug.audioPath`, or a sponsor's logo, `sponsor.logoPath`) on
+ * the API origin (`EXPO_PUBLIC_API_URL`): the players and images need it
+ * absolute.
+ */
+export function apiUrl(path: string): string {
+  return `${mobileEnv().EXPO_PUBLIC_API_URL.replace(TRAILING_SLASHES, "")}${path}`;
+}
+
 /** The site's privacy policy (the consent prompt and settings link to it). */
 export function privacyUrl(): string {
   return siteUrl("/privacy");

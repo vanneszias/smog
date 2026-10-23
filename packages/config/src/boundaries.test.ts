@@ -28,7 +28,6 @@ describe("BOUNDARIES", () => {
       "@smog/jobs",
       "@smog/payments",
       "@smog/video",
-      "@smog/render",
       "@smog/email",
       "@smog/auth",
       "@smog/rpc",
@@ -71,11 +70,9 @@ describe("BOUNDARIES", () => {
       "@smog/auth",
       "@smog/rpc",
       "@smog/payments/testing",
-      "@smog/render/testing",
     ]) {
       expect(isAllowedImport(name, target)).toBe(true);
     }
-    expect(isAllowedImport(name, "@smog/render/composition")).toBe(false);
     for (const target of [
       "@smog/site",
       "@smog/mobile",
@@ -127,7 +124,7 @@ describe("isAllowedDependency", () => {
   });
 
   test("allows a package listed only by subpath", () => {
-    expect(isAllowedDependency("@smog/jobs", "@smog/render")).toBe(true);
+    expect(isAllowedDependency("@smog/mobile", "@smog/analytics")).toBe(true);
   });
 
   test("allows features through the feature pattern", () => {
@@ -142,14 +139,16 @@ describe("isAllowedDependency", () => {
 
 describe("isAllowedImport", () => {
   test("a full package entry allows every subpath", () => {
-    expect(isAllowedImport("@smog/site", "@smog/render")).toBe(true);
+    expect(isAllowedImport("@smog/site", "@smog/video")).toBe(true);
     expect(isAllowedImport("@smog/site", "@smog/gestures/server")).toBe(true);
   });
 
   test("a subpath entry allows only that subpath", () => {
-    expect(isAllowedImport("@smog/jobs", "@smog/render/contract")).toBe(true);
-    expect(isAllowedImport("@smog/jobs", "@smog/render")).toBe(false);
-    expect(isAllowedImport("@smog/jobs", "@smog/render/compositions")).toBe(
+    expect(isAllowedImport("@smog/mobile", "@smog/analytics/native")).toBe(
+      true
+    );
+    expect(isAllowedImport("@smog/mobile", "@smog/analytics")).toBe(false);
+    expect(isAllowedImport("@smog/mobile", "@smog/analytics/server")).toBe(
       false
     );
   });
@@ -174,22 +173,10 @@ describe("isAllowedImport", () => {
     expect(isAllowedImport("@smog/lists", "@smog/gestures")).toBe(false);
   });
 
-  test("a feature reaches the render contract and the fake renderer only (phase 7 ruling 1)", () => {
-    expect(isAllowedImport("@smog/sponsorships", "@smog/render/contract")).toBe(
-      true
-    );
-    expect(isAllowedImport("@smog/sponsorships", "@smog/render/testing")).toBe(
-      true
-    );
-    for (const subpath of ["composition", "metadata", "remotion", ""]) {
-      expect(
-        isAllowedImport(
-          "@smog/sponsorships",
-          subpath ? `@smog/render/${subpath}` : "@smog/render"
-        )
-      ).toBe(false);
+  test("the retired render package is in no list (phase 10b task 9)", () => {
+    for (const name of ["@smog/site", "@smog/jobs", "@smog/sponsorships"]) {
+      expect(isAllowedDependency(name, "@smog/render")).toBe(false);
     }
-    expect(isAllowedImport("@smog/jobs", "@smog/render/testing")).toBe(false);
   });
 
   test("a package may import itself", () => {

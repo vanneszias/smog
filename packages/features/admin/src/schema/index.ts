@@ -32,6 +32,7 @@ export {
 } from "./audit";
 // The area files (Tasks 2, 5 and 6 fill them).
 export * from "./catalog";
+export * from "./catalog-translation";
 export {
   DASHBOARD_NEW_USER_DAYS,
   DASHBOARD_RECENT_AUDIT,

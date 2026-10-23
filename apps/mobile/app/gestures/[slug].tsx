@@ -9,9 +9,10 @@ import {
   useRememberGesture,
   useVideoEnd,
 } from "@smog/gestures/client";
-import type { GestureBySlug } from "@smog/gestures/schema";
+import { type GestureBySlug, nameOverlayApplies } from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
 import {
+  AudioButton,
   Badge,
   Button,
   Chip,
@@ -23,6 +24,7 @@ import {
   FavoriteButton,
   Heading,
   IconButton,
+  NameOverlayToggle,
   Skeleton,
   Text,
   useToast,
@@ -46,7 +48,8 @@ import {
 } from "@/components/gesture-cards";
 import { HeaderActions } from "@/components/header-actions";
 import { SaveToList } from "@/components/save-to-list";
-import { gestureUrl, shareUrl } from "@/lib/site";
+import { usePreferences } from "@/lib/preferences";
+import { apiUrl, gestureUrl, shareUrl } from "@/lib/site";
 import { SponsorCta } from "@/sponsor-cta";
 
 /** Related gestures under the detail (the contract's default is 5). */
@@ -159,13 +162,33 @@ function GestureDetail({
       router.navigate({ params: { category }, pathname: "/search" }),
     [router]
   );
+  // The name over the video: only on a textless video (an older one has
+  // the name in the picture) and unless this viewer hid it.
+  const [preferences, setPreferences] = usePreferences();
+  const overlayApplies = nameOverlayApplies(gesture);
+  const overlayShown = preferences.hideGestureName !== true;
+  const setOverlayShown = useCallback(
+    (shown: boolean) => setPreferences({ hideGestureName: !shown }),
+    [setPreferences]
+  );
   return (
     <ScrollView contentContainerClassName="gap-6 px-4 pb-10 pt-2">
       <ConnectionBanner className="mx-0" />
       <VideoPlayer
         autoPlay
+        endCard={
+          gesture.sponsor?.endCard
+            ? {
+                logoSrc: gesture.sponsor.logoPath
+                  ? apiUrl(gesture.sponsor.logoPath)
+                  : null,
+                name: gesture.sponsor.name,
+              }
+            : undefined
+        }
         isFocused={isFocused}
         loop
+        nameOverlay={overlayApplies && overlayShown ? gesture.name : undefined}
         onNearEnd={onNearEnd}
         playbackId={gesture.playbackId}
         title={gesture.name}
@@ -181,6 +204,18 @@ function GestureDetail({
         <Heading level={1} size="title-2">
           {gesture.name}
         </Heading>
+        {/* A clip of this language only; never a fallback. */}
+        {gesture.audioPath ? (
+          <View className="flex-row">
+            <AudioButton src={apiUrl(gesture.audioPath)} />
+          </View>
+        ) : null}
+        {overlayApplies ? (
+          <NameOverlayToggle
+            checked={overlayShown}
+            onCheckedChange={setOverlayShown}
+          />
+        ) : null}
         {gesture.categories.length > 0 ? (
           <View
             accessibilityLabel={t("search.categories")}

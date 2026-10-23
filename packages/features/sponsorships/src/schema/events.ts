@@ -80,7 +80,11 @@ export const SPONSORSHIP_EVENT_DATA_SCHEMAS = {
     attempt: z.number().int().min(1),
     renderJobId: z.string(),
   }),
-  render_succeeded: z.strictObject({ renderJobId: z.string() }),
+  /** Phase 10b task 9: written only by the retirement sweep (`retired`). */
+  render_succeeded: z.strictObject({
+    renderJobId: z.string().optional(),
+    retired: z.literal(true),
+  }),
   renewed: z.strictObject({
     ...paymentRef,
     endsAt: iso,

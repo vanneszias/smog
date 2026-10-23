@@ -15,7 +15,6 @@ import {
   checkoutVia,
   jobsOf,
   kv,
-  leaveQueued,
   makeAdmin,
   paymentStatusOf,
   type RecordingQueue,
@@ -89,7 +88,6 @@ async function drainEvents(
       email: options.email ?? recordingQueue(),
       events: recordingQueue(),
     },
-    renderStarter: leaveQueued(),
     siteUrl: ORIGIN,
   };
   const messages = queues.events.messages.splice(0);
@@ -116,9 +114,10 @@ describe("the Mollie webhook (ruling 2)", () => {
       code: "OK",
       status: 200,
     });
+    // The end card (phase 10b ruling 9): paid goes straight to review.
     expect(await statusesOf(checkout.sponsorshipIds)).toEqual([
-      "rendering",
-      "rendering",
+      "in_review",
+      "in_review",
     ]);
     expect(queues.events.messages).toEqual([settled(checkout.paymentId)]);
     expect(limit).not.toHaveBeenCalled();
@@ -133,7 +132,7 @@ describe("the Mollie webhook (ruling 2)", () => {
       method: "POST",
     });
     expect((await deliver(request)).status).toBe(200);
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["rendering"]);
+    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["in_review"]);
   });
 
   it("never trusts the body: only Mollie's re-fetched status counts", async () => {
@@ -229,7 +228,7 @@ describe("the Mollie webhook (ruling 2)", () => {
       code: "ENQUEUE_FAILED",
       status: 503,
     });
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["rendering"]);
+    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["in_review"]);
     // Mollie's retry: already paid, and payment.settled goes out again.
     expect((await deliver(form(checkout.mollieId))).status).toBe(200);
     expect(queues.events.messages).toEqual([settled(checkout.paymentId)]);
@@ -312,10 +311,10 @@ describe("the Mollie webhook (ruling 2)", () => {
     await drainEvents({ email: again, now: later });
     expect(again.messages).toEqual([]);
     expect(JSON.stringify(again.messages)).not.toContain(admin.email);
-    expect(await jobsOf(checkout.sponsorshipIds)).toHaveLength(1);
+    expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
   });
 
-  it("a replay and a concurrent storm leave one state and, through the consumer, one render job per item", async () => {
+  it("a replay and a concurrent storm leave one state and, through the consumer, no render job", async () => {
     const checkout = await checkoutVia(fake);
     fake.setStatus(checkout.mollieId, "paid");
     const answers = await Promise.all(
@@ -328,15 +327,20 @@ describe("the Mollie webhook (ruling 2)", () => {
       expect(await trailTypes(id)).toEqual(["created", "payment_paid"]);
     }
     // Each delivery may enqueue payment.settled (ruling 6; the fan-out
-    // marker skips some `already` ones); the consumer is idempotent: one
-    // job per item, however many messages run.
+    // marker skips some `already` ones); the consumer is idempotent.
     expect(queues.events.messages.length).toBeGreaterThanOrEqual(1);
     expect(queues.events.messages.length).toBeLessThanOrEqual(7);
+    // Nothing is rendered (phase 10b tasks 8 and 9): no job, however many
+    // messages run.
     await drainEvents();
-    const jobs = await jobsOf(checkout.sponsorshipIds);
-    expect(jobs).toHaveLength(2);
-    expect(new Set(jobs.map((job) => job.sponsorshipId)).size).toBe(2);
-    expect(jobs.every((job) => job.status === "queued")).toBe(true);
+    expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
+    queues.events.messages.push(settled(checkout.paymentId));
+    await drainEvents();
+    expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
+    expect(await statusesOf(checkout.sponsorshipIds)).toEqual([
+      "in_review",
+      "in_review",
+    ]);
   });
 
   it("out of order: canceled after paid leaves the payment paid", async () => {
@@ -346,7 +350,7 @@ describe("the Mollie webhook (ruling 2)", () => {
     fake.setStatus(checkout.mollieId, "canceled");
     expect((await deliver(form(checkout.mollieId))).status).toBe(200);
     expect(await paymentStatusOf(checkout.paymentId)).toBe("paid");
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["rendering"]);
+    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["in_review"]);
   });
 
   it("a late payment with its gestures still free is revived", async () => {
@@ -356,7 +360,7 @@ describe("the Mollie webhook (ruling 2)", () => {
     expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["cancelled"]);
     fake.setStatus(checkout.mollieId, "paid");
     expect((await deliver(form(checkout.mollieId))).status).toBe(200);
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["rendering"]);
+    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["in_review"]);
     expect(queues.events.messages).toEqual([settled(checkout.paymentId)]);
   });
 

@@ -5,7 +5,6 @@ export type { EmailTemplateId } from "./render";
 /** Reserved for examples (RFC 2606): a sample never points at a real host. */
 const SAMPLE_ORIGIN = "https://smog.example";
 const SAMPLE_PAYMENT_ID = "0b6c6d4e-6c43-4e1c-9a59-8a1b4c0d9e01";
-const SAMPLE_SPONSORSHIP_ID = "5a1e0c3d-2b4f-4e6a-8c7d-9e0f1a2b3c4d";
 
 /**
  * One sample prop set per template, for the admin email previews (A-25,
@@ -35,7 +34,6 @@ export const EMAIL_SAMPLES: {
     emailOpen: 3,
     eventsOpen: 1,
     lost: 0,
-    renderFailed: 2,
     types: [
       { count: 2, type: "transactional/welcome" },
       { count: 1, type: "transactional/payment-confirmed" },
@@ -67,12 +65,6 @@ export const EMAIL_SAMPLES: {
     paymentId: SAMPLE_PAYMENT_ID,
     reason: "late",
     url: `${SAMPLE_ORIGIN}/mollie/dashboard/payments/tr_sample`,
-  },
-  "transactional/admin-render-failed": {
-    displayName: "Acme BV",
-    error: "The render container timed out after 20 minutes.",
-    gestureName: "Hond",
-    url: `${SAMPLE_ORIGIN}/admin/sponsorships/${SAMPLE_SPONSORSHIP_ID}`,
   },
   "transactional/payment-confirmed": {
     amountCents: 6000,

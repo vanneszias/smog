@@ -263,6 +263,12 @@ export {
   type ListPickerProps,
 } from "./domain/list-picker";
 export {
+  AudioButton,
+  type AudioButtonProps,
+  NameOverlayToggle,
+  type NameOverlayToggleProps,
+} from "./domain/media-controls";
+export {
   SearchResults,
   type SearchResultsProps,
   type SearchResultsState,
@@ -272,6 +278,10 @@ export {
   ShareLink,
   type ShareLinkProps,
 } from "./domain/share-link";
+export {
+  SponsorEndCard,
+  type SponsorEndCardProps,
+} from "./domain/sponsor-end-card";
 export type {
   CategoryRef,
   GestureCardData,

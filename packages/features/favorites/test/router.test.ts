@@ -63,6 +63,7 @@ describe("favoritesRouter", () => {
       items: [
         {
           categories: [],
+          fallbackUsed: false,
           id: hond.id,
           name: "Hond",
           playbackId: hond.playbackId,

@@ -7,7 +7,8 @@ import {
   PROFILE_NAME_MAX as AUTH_PROFILE_NAME_MAX,
   profileNameSchema as authProfileNameSchema,
 } from "@smog/auth/fields";
-import { CONSENT_POLICY_VERSION, LOCALES } from "@smog/config/constants";
+import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
+import { localeCodeSchema } from "@smog/config/locale";
 import {
   gestureIdSchema,
   LIST_DESCRIPTION_MAX,
@@ -16,7 +17,7 @@ import {
   listNameSchema,
   SHARE_ROLES,
 } from "@smog/lists/schema";
-import { roleSchema } from "@smog/rpc/contract";
+import { roleSchema, userRolesSchema } from "@smog/rpc/contract";
 import { z } from "zod";
 
 /** Favorites per import call (the rest stays on the device for the next one). */
@@ -123,8 +124,8 @@ export const PROFILE_NAME_MAX = AUTH_PROFILE_NAME_MAX;
 
 export const profileNameSchema = authProfileNameSchema;
 
-/** An app language (`LOCALES`), or `null` to follow the device or browser. */
-export const profileLocaleSchema = z.enum(LOCALES).nullable();
+/** An app language (a code in the `language` table), or `null` to follow the device or browser. */
+export const profileLocaleSchema = localeCodeSchema.nullable();
 
 /** Only the fields sent change; an empty object changes nothing. */
 export const updateProfileInputSchema = z.object({
@@ -153,6 +154,8 @@ export const meSchema = z.object({
   methods: signInMethodsSchema,
   name: z.string(),
   role: roleSchema,
+  /** translator, teacher and admin, as held now (`user_role`). */
+  roles: userRolesSchema,
 });
 
 /** What a client sends. */
@@ -301,7 +304,7 @@ export const accountExportSchema = z.object({
       contact: z.object({
         company: z.string().nullable(),
         email: z.string(),
-        locale: z.enum(LOCALES),
+        locale: localeCodeSchema,
         name: z.string(),
       }),
       createdAt: isoDate,

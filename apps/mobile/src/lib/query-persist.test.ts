@@ -7,11 +7,13 @@ import {
   persistQueryClientSave,
 } from "@tanstack/react-query-persist-client";
 import {
+  CACHE_LANGUAGE_KEY,
   cacheBuster,
   createPersistOptions,
   keepPersistedQueries,
   QUERY_CACHE_KEY,
   QUERY_CACHE_MAX_AGE,
+  reconcileCacheLanguage,
 } from "./query-persist";
 
 const rpc = createApiQueryUtils(createApiClient({ baseUrl: "https://t.test" }));
@@ -35,6 +37,7 @@ afterEach(() => {
 
 const HOND = {
   categories: [{ name: "Dieren", slug: "dieren" }],
+  fallbackUsed: false,
   id: "g1",
   name: "Hond",
   playbackId: "pb1",
@@ -90,6 +93,7 @@ const keys = {
     "u1"
   ),
   guestIds: userScopedKey(rpc.favorites.ids.key({ type: "query" }), undefined),
+  i18n: rpc.system.i18n.queryKey({ input: { locale: "fr" } }),
   list: rpc.gestures.list.infiniteKey({
     initialPageParam: undefined,
     input: (cursor: string | undefined) => ({ cursor }),
@@ -104,16 +108,26 @@ function fillCache(queryClient: QueryClient): void {
     pages: [{ items: [HOND], nextCursor: null }],
   });
   queryClient.setQueryData(keys.categories, [
-    { gestureCount: 1, name: "Dieren", slug: "dieren" },
+    { fallbackUsed: false, gestureCount: 1, name: "Dieren", slug: "dieren" },
   ]);
   queryClient.setQueryData(keys.bySlug, {
     ...HOND,
+    audioPath: null,
     canonicalSlug: "hond",
     description: "",
     keywords: [],
+    needsRecut: false,
     publishedAt: 0,
     sponsor: null,
     updatedAt: 0,
+  });
+  queryClient.setQueryData(keys.i18n, {
+    languages: [
+      { code: "nl", intlTag: "nl-BE", isDefault: true, name: "Nederlands" },
+    ],
+    locale: "fr",
+    overlay: { fr: { "common.cancel": "Laisser tomber" } },
+    version: "v1",
   });
   queryClient.setQueryData(keys.favoritesIds, ["g1"]);
   queryClient.setQueryData(keys.guestIds, ["g9"]);
@@ -161,6 +175,11 @@ describe("the offline query cache", () => {
     expect(restored.getQueryData(keys.categories)).toHaveLength(1);
     expect(restored.getQueryData(keys.bySlug)).toMatchObject({ slug: "hond" });
     expect(restored.getQueryData(keys.favoritesIds)).toEqual(["g1"]);
+    // The runtime catalogue (languages and ui_string overlay) is the device's
+    // cache of the last answer; the bundled catalogue is the base offline.
+    expect(restored.getQueryData(keys.i18n)).toMatchObject({
+      overlay: { fr: { "common.cancel": "Laisser tomber" } },
+    });
     // The signed-in favorites tab renders offline too (the null cursor is
     // put back, so the refetch sends a valid first page).
     expect(restored.getQueryData(keys.favoritesList)).toEqual({
@@ -316,9 +335,11 @@ describe("the offline query cache", () => {
       big,
       {
         ...HOND,
+        audioPath: null,
         canonicalSlug: "groot",
         description: "x".repeat(5000),
         keywords: [],
+        needsRecut: false,
         publishedAt: 0,
         slug: "groot",
         sponsor: null,
@@ -353,9 +374,11 @@ describe("the offline query cache", () => {
         rpc.gestures.bySlug.queryKey({ input: { slug } }),
         {
           ...HOND,
+          audioPath: null,
           canonicalSlug: slug,
           description: "x".repeat(1000),
           keywords: [],
+          needsRecut: false,
           publishedAt: 0,
           slug,
           sponsor: null,
@@ -400,5 +423,31 @@ describe("the offline query cache", () => {
       expect(client.getQueryDefaults(key).gcTime).toBe(QUERY_CACHE_MAX_AGE);
     }
     expect(client.getQueryDefaults(keys.search).gcTime).toBeUndefined();
+  });
+});
+
+describe("the language of the persisted answers", () => {
+  it("is written with the cache, and a cache in another language is reported", async () => {
+    const storage = memoryStorage();
+    const first = newClient();
+    keepPersistedQueries(first);
+    // First start: nothing written yet, nothing outdated.
+    expect(reconcileCacheLanguage(first, "nl")).toBe(false);
+    const options = createPersistOptions({
+      buster: "1.0.0:embedded",
+      storage,
+      throttleTime: 1,
+    });
+    await persistQueryClientSave({ ...options, queryClient: first });
+    expect(storage.map.get(QUERY_CACHE_KEY)).toContain("cacheLanguage");
+
+    // A later start, the device now asks for French.
+    const second = newClient();
+    keepPersistedQueries(second);
+    await persistQueryClientRestore({ ...options, queryClient: second });
+    expect(second.getQueryData(CACHE_LANGUAGE_KEY)).toBe("nl");
+    expect(reconcileCacheLanguage(second, "fr")).toBe(true);
+    // Recorded now: the same language again is not outdated.
+    expect(reconcileCacheLanguage(second, "fr")).toBe(false);
   });
 });

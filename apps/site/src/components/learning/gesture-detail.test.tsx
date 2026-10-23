@@ -27,11 +27,14 @@ const { useHearts } = await import("./use-hearts");
 const { renderSite } = await import("@/test/render");
 
 const HOND: GestureDetail = {
+  audioPath: null,
   categories: [{ name: "Dieren", slug: "dieren" }],
   description: "Het gebaar voor hond.",
+  fallbackUsed: false,
   id: "g-hond",
   keywords: ["huisdier"],
   name: "Hond",
+  needsRecut: false,
   playbackId: "pb-hond",
   slug: "hond",
   sponsor: null,
@@ -39,6 +42,7 @@ const HOND: GestureDetail = {
 const KAT_NAME = /Kat/;
 const KAT = {
   categories: [],
+  fallbackUsed: false,
   id: "g-kat",
   name: "Kat",
   playbackId: "pb-kat",
@@ -65,6 +69,27 @@ function Detail(): ReactNode {
   );
 }
 
+/** The same gesture in a language that has no translation of it yet. */
+function UntranslatedDetail(): ReactNode {
+  const hearts = useHearts("gesture_detail");
+  return (
+    <div data-testid="page">
+      <GestureDetailView
+        gesture={{ ...HOND, fallbackUsed: true }}
+        hearts={hearts}
+        layout="page"
+        related={{
+          data: [],
+          isError: false,
+          isRefetching: false,
+          refetch: () => undefined,
+        }}
+        viewSource="favorites"
+      />
+    </div>
+  );
+}
+
 /** One playthrough of the (looping) video: the start, then 3 s before the end. */
 async function playThrough(): Promise<void> {
   await screen.findByTestId("mux");
@@ -77,6 +102,12 @@ async function playThrough(): Promise<void> {
 }
 
 describe("the gesture detail", () => {
+  test("does not tell a learner that a translation is missing (translators and admins only)", async () => {
+    await renderSite(UntranslatedDetail);
+    expect(await screen.findByRole("heading", { name: "Hond" })).toBeDefined();
+    expect(screen.queryByText("Needs translation")).toBeNull();
+  });
+
   test("tracks gesture_viewed with its source, and video_playback_completed once per visit", async () => {
     const { events } = await renderSite(Detail);
     await waitFor(() =>

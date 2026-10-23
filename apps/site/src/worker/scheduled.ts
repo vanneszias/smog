@@ -15,69 +15,9 @@ import {
   runReminderSweep,
   runRetentionPurge,
   runStaleSweep,
-  type WorkflowInstanceState,
-  type WorkflowStatusPort,
 } from "@smog/sponsorships/server";
 import { createMux } from "@smog/video";
 import { siteEnv } from "@/server/auth";
-
-/**
- * The part of a Workflow binding the render watchdog uses (`RENDER_WORKFLOW`,
- * added by the build only in `local`/`container` mode, phase 7 ruling 2).
- */
-export interface WorkflowStatusBinding {
-  get: (id: string) => Promise<{
-    status: () => Promise<WorkflowInstanceState>;
-    terminate: () => Promise<void>;
-  }>;
-}
-
-/**
- * What `get(id)` throws for an id the engine does not know: the code
- * `instance.not_found` (Miniflare: `new Error("instance.not_found")`, and
- * `(instance.not_found) Instance does not exist` from the engine). Only
- * that code: any other error ("Workflow not found", "script not found"
- * during a deploy) is thrown, so the watchdog leaves the job for the next
- * run instead of failing a healthy render (task 7 review I-1).
- */
-const NOT_FOUND = /\binstance\.not_found\b/;
-
-export function isInstanceNotFound(error: unknown): boolean {
-  return error instanceof Error && NOT_FOUND.test(error.message);
-}
-
-/**
- * The render watchdog's `WorkflowStatusPort` over `RENDER_WORKFLOW`
- * (phase 7 ruling 12): an instance's status, `"not-found"` when `get`
- * reports an unknown id (any other error is thrown: the job is left for
- * the next run), and `terminate`. `null` without the binding (`fake`
- * mode): the watchdog then only re-sends lost `render.requested`.
- */
-export function workflowStatusPort(
-  binding: WorkflowStatusBinding | undefined
-): WorkflowStatusPort | null {
-  if (!binding) {
-    return null;
-  }
-  return {
-    status: async (id) => {
-      let instance: Awaited<ReturnType<WorkflowStatusBinding["get"]>>;
-      try {
-        instance = await binding.get(id);
-      } catch (failure) {
-        if (isInstanceNotFound(failure)) {
-          return "not-found";
-        }
-        throw failure;
-      }
-      const { error, status } = await instance.status();
-      return { error: error ?? null, status };
-    },
-    terminate: async (id) => {
-      await (await binding.get(id)).terminate();
-    },
-  };
-}
 
 /**
  * One cron's work (phase 6 ruling 9): the sweep from
@@ -111,8 +51,7 @@ function cronQueues(): JobQueues {
 /**
  * The daily retention cron: the purge, then the dead-letter digest (phase 9
  * task 4: one `admin_dead_letter` email per admin when dead letters wait,
- * messages were lost or a render has been failed for over a day, at most
- * once a day). Each part runs even when the other fails; the first failure
+ * messages were lost, at most once a day). Each part runs even when the other fails; the first failure
  * is rethrown after both, so the run shows as failed and the next day
  * continues.
  */
@@ -177,13 +116,8 @@ const HANDLERS: Record<CronName, CronHandler> = {
     ...(await runStaleSweep({
       db: createDb(siteEnv().db),
       mollie: createMollie(siteEnv().worker),
-      mux: createMux(siteEnv().worker),
       now,
       queues: cronQueues(),
-      siteUrl: siteEnv().vars.SITE_URL,
-      workflow: workflowStatusPort(
-        siteEnv().bindings.RENDER_WORKFLOW as WorkflowStatusBinding | undefined
-      ),
     })),
   }),
 };

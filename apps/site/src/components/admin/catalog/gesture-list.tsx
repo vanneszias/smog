@@ -8,6 +8,7 @@ import {
   GESTURE_NAME_MAX,
 } from "@smog/admin/schema";
 import { useDebouncedValue } from "@smog/gestures/client";
+import { LOCALE_CODE_PATTERN } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
   Button,
@@ -18,6 +19,7 @@ import {
   SegmentedControl,
   Select,
   Skeleton,
+  Switch,
 } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, ChevronsLeft, Hand, X } from "lucide-react";
@@ -30,17 +32,23 @@ import {
   useState,
 } from "react";
 import { LeaveGuard } from "@/components/admin/leave-guard";
+import { useLocale } from "@/lib/locale";
 import { BulkBar } from "./bulk-bar";
 import { GestureTable } from "./gesture-table";
 import { GestureTableEditor } from "./gesture-table-editor";
 import type { TableEdits } from "./table-edits";
+import { TranslationReportCard } from "./translation-report";
 
 /** The list's filters as they live in the URL (`/admin/gestures?…`). */
 export interface GestureListSearch {
   category?: string | undefined;
   /** The page's start (a cursor from the previous page). */
   cursor?: string | undefined;
+  /** Only gestures that still need a translation in this language (a language code). */
+  needs?: string | undefined;
   q?: string | undefined;
+  /** Only gestures whose video still has the name burned in (`needsRecut`). */
+  recut?: true | undefined;
   status?: "published" | "unpublished" | undefined;
 }
 
@@ -67,7 +75,12 @@ export function validateGestureListSearch(
         ? search.category
         : undefined,
     cursor: text(search.cursor, 1024),
+    needs:
+      typeof search.needs === "string" && LOCALE_CODE_PATTERN.test(search.needs)
+        ? search.needs
+        : undefined,
     q: text(search.q, GESTURE_NAME_MAX),
+    recut: search.recut === true || search.recut === "true" ? true : undefined,
     status:
       search.status === "published" || search.status === "unpublished"
         ? search.status
@@ -84,6 +97,8 @@ function gestureListInput(search: GestureListSearch): AdminGestureListInput {
     category: search.category ? [search.category] : undefined,
     cursor: search.cursor,
     limit: ADMIN_GESTURE_PAGE_MAX,
+    needsRecut: search.recut,
+    needsTranslation: search.needs,
     q: search.q,
     status: search.status ?? "all",
   };
@@ -95,11 +110,12 @@ function Stats({ counts }: { counts: AdminGesturePage["counts"] }): ReactNode {
     { label: t("admin.gestures.stats.total"), value: counts.total },
     { label: t("admin.gestures.stats.published"), value: counts.published },
     { label: t("admin.gestures.stats.hidden"), value: counts.unpublished },
+    { label: t("media.admin.recut.filter"), value: counts.needsRecut },
   ];
   return (
     <dl
       aria-label={t("admin.gestures.stats.label")}
-      className="grid grid-cols-3 gap-2 sm:max-w-reading"
+      className="grid grid-cols-2 gap-2 sm:max-w-reading sm:grid-cols-4"
     >
       {items.map((item) => (
         <div
@@ -128,6 +144,7 @@ function Filters({
 }): ReactNode {
   const { t } = useTranslation();
   const categories = useAdminCategories();
+  const { languages } = useLocale();
   const [query, setQuery] = useState(search.q ?? "");
   const settled = useDebouncedValue(query.trim(), SEARCH_DELAY_MS);
   // The URL follows the typed text once it settles (only the settled text
@@ -162,21 +179,31 @@ function Filters({
     (value: string) => set({ category: value === ALL ? undefined : value }),
     [set]
   );
+  const onNeeds = useCallback(
+    (value: string) => set({ needs: value === ALL ? undefined : value }),
+    [set]
+  );
   const clear = useCallback(() => {
     setQuery("");
     onSearchChange({});
   }, [onSearchChange]);
-  const filtered = Boolean(search.q || search.status || search.category);
+  const onRecut = useCallback(
+    (checked: boolean) => set({ recut: checked ? true : undefined }),
+    [set]
+  );
+  const filtered = Boolean(
+    search.q || search.status || search.category || search.needs || search.recut
+  );
   return (
     <fieldset
       aria-describedby={locked ? "gesture-filters-locked" : undefined}
-      className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_auto_minmax(0,1fr)_auto]"
+      className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_auto_minmax(0,1fr)_minmax(0,1fr)_auto]"
       disabled={locked}
     >
       <legend className="sr-only">{t("admin.gestures.filters.label")}</legend>
       {locked ? (
         <p
-          className="text-body-sm text-muted-foreground sm:col-span-2 xl:col-span-4"
+          className="text-body-sm text-muted-foreground sm:col-span-2 xl:col-span-5"
           id="gesture-filters-locked"
         >
           {t("admin.gestures.table.locked")}
@@ -229,6 +256,30 @@ function Filters({
           value={search.category ?? ALL}
         />
       </Field>
+      <Field label={t("admin.catalogTranslation.filter.label")}>
+        <Select
+          disabled={locked}
+          onValueChange={onNeeds}
+          options={[
+            { label: t("admin.catalogTranslation.filter.none"), value: ALL },
+            ...languages
+              .filter((language) => !language.isDefault)
+              .map((language) => ({
+                label: language.name,
+                value: language.code,
+              })),
+          ]}
+          value={search.needs ?? ALL}
+        />
+      </Field>
+      <div className="sm:col-span-2 xl:col-span-5">
+        <Switch
+          checked={search.recut === true}
+          disabled={locked}
+          label={t("media.admin.recut.filter")}
+          onCheckedChange={onRecut}
+        />
+      </div>
       <Button
         className="justify-self-start"
         disabled={locked || !(filtered || query)}
@@ -398,6 +449,10 @@ export function GestureList({
     selected.has(row.id) ? [row.id] : []
   );
   const clearSelection = useCallback(() => setSelected(new Set()), []);
+  const showNeeding = useCallback(
+    (needs: string) => onSearchChange({ needs }),
+    [onSearchChange]
+  );
   // After a bulk action the bar unmounts: focus the list, not <body>.
   const bulkDone = useCallback(() => {
     setSelected(new Set());
@@ -454,6 +509,7 @@ export function GestureList({
       ) : (
         <Skeleton className="h-16 w-full sm:max-w-reading" />
       )}
+      <TranslationReportCard onShow={showNeeding} />
       <Filters
         locked={locked}
         onSearchChange={onSearchChange}

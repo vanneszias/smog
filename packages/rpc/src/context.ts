@@ -45,6 +45,13 @@ export interface RpcContext {
   /** The `KV` binding: cache version keys and small settings. */
   kv: KVNamespace;
   locale: Locale;
+  /**
+   * The request's locale once the signed-in account's language is known: the
+   * cookie still wins, then `accountLocale`, then Accept-Language (the same
+   * order as the site shell). `loadSession` applies it, after the rate limit
+   * (it may read the enabled languages); absent, `locale` stays.
+   */
+  localeFor?: (accountLocale: string | null) => Locale | Promise<Locale>;
   request: Request;
   session: SessionWithUser | null;
   waitUntil: (promise: Promise<unknown>) => void;

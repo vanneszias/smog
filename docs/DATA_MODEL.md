@@ -304,6 +304,11 @@ erDiagram
 | `gesture_category.category_id` | `category` | CASCADE |
 | `list_item.list_id`, `list_share.list_id` | `list` | CASCADE |
 | `invoice_request.sponsor_id` | `sponsor` | CASCADE |
+| `user.locale`, `sponsor.locale`, `ui_string.locale`, `gesture_translation.locale`, `category_translation.locale`, `gesture_keyword.locale`, `gesture_audio.locale`, `legal_text.locale` | `language` | NO ACTION (a language in use cannot be deleted; the default never) |
+| `gesture_translation.gesture_id`, `gesture_audio.gesture_id` | `gesture` | CASCADE |
+| `category_translation.category_id` | `category` | CASCADE |
+| `user_role.user_id` | `user` | CASCADE |
+| `user_role.granted_by`, `ui_string.updated_by`, `gesture_translation.updated_by`, `category_translation.updated_by`, `gesture_audio.updated_by`, `legal_text.updated_by`, `legal_text.published_by` | `user` | SET NULL |
 | `sponsorship.sponsor_id` | `sponsor` | RESTRICT |
 | `sponsorship.gesture_id` | `gesture` | RESTRICT (a sponsored gesture cannot be deleted; unpublish it) |
 | `payment_item.payment_id` | `payment` | CASCADE |
@@ -324,13 +329,13 @@ erDiagram
 
 ## Row rules the services follow
 
-- **Render jobs:** a job's Workflow instance id is its own `id` (`workflow_instance_id = id`, unique). Workflow instance ids cannot be reused, so a retry (automatic or the admin "retry render") inserts a **new** `render_job` row with `attempt` + 1; the old row stays as `failed`. The newest row per sponsorship (`render_job_sponsorship_created_idx`) is the current one.
+- **Render jobs (retired, phase 10b task 9):** the table is history only: nothing writes a job any more, and the stale cron closes any `queued` / `running` one as `failed` (`error = "render pipeline retired"`) when it moves its sponsorship on. While the pipeline ran, a job's Workflow instance id is its own `id` (`workflow_instance_id = id`, unique). Workflow instance ids cannot be reused, so a retry (automatic or the admin "retry render") inserts a **new** `render_job` row with `attempt` + 1; the old row stays as `failed`. The newest row per sponsorship (`render_job_sponsorship_created_idx`) is the current one.
 - **Sponsorship tokens:** regenerating a re-edit or renewal link inserts a new token and sets `expires_at = now` on the sponsorship's older unused tokens of the same purpose (no `revoked_at` column). A token is valid when `used_at IS NULL AND expires_at > now`. The monthly cron deletes expired rows.
 - **Audit targets:** `target_type`/`target_id` name what an action touched: a row (`gesture`, `category`, `user`, `sponsorship`, `payment`, `list` + its id), a KV setting (`setting` + its key, for `maintenance.enable`/`maintenance.disable`), or nothing specific (`system` + NULL, for `export.sponsorships_csv`). `category.reorder` targets the category that moved; a bulk reorder writes one row per category.
 
 ## Sponsorship state machine
 
-Statuses (`SPONSORSHIP_STATUSES`): `awaiting_payment → rendering → in_review → live → expiring → expired`, plus `render_failed`, `changes_requested`, `rejected` and `cancelled`. The blocking statuses are listed above; `rejected`, `cancelled` and `expired` are terminal. Approval sets `starts_at = now` and `ends_at = now + 365 days`; the reminder cron moves `live → expiring` and sets `reminder_sent_at`; a paid renewal adds 365 days to `ends_at` and moves `expiring → live`. Every transition writes a `sponsorship_event` row (type from `SPONSORSHIP_EVENT_TYPES`) in the same D1 batch. The transition table is enforced by `@smog/sponsorships` (phase 6), not by the database; the database only guarantees valid status values and one blocking sponsorship per gesture. Full diagram and rules: spec [§5.5](superpowers/specs/2026-09-29-cloudflare-rewrite-design.md#55-sponsorship-state-machine-enforced-in-smogsponsorships).
+Statuses (`SPONSORSHIP_STATUSES`): `awaiting_payment → rendering → in_review → live → expiring → expired`, plus `render_failed`, `changes_requested`, `rejected` and `cancelled`. **`rendering` and `render_failed` are retired (phase 10b task 9):** no transition enters them any more (paid, revived and resubmitted sponsorships go straight to `in_review`), they stay in the enum and the CHECKs because migrations are append-only, and the hourly stale cron moves any old row in either one to `in_review` (`render_succeeded` event with `retired: true`; the `render_started`, `render_failed` and `render_retried` event types stay for old trails). The blocking statuses are listed above; `rejected`, `cancelled` and `expired` are terminal. Approval sets `starts_at = now` and `ends_at = now + 365 days`; the reminder cron moves `live → expiring` and sets `reminder_sent_at`; a paid renewal adds 365 days to `ends_at` and moves `expiring → live`. Every transition writes a `sponsorship_event` row (type from `SPONSORSHIP_EVENT_TYPES`) in the same D1 batch. The transition table is enforced by `@smog/sponsorships` (phase 6), not by the database; the database only guarantees valid status values and one blocking sponsorship per gesture. Full diagram and rules: spec [§5.5](superpowers/specs/2026-09-29-cloudflare-rewrite-design.md#55-sponsorship-state-machine-enforced-in-smogsponsorships).
 
 ## Decisions
 
@@ -356,17 +361,17 @@ Statuses (`SPONSORSHIP_STATUSES`): `awaiting_payment → rendering → in_review
 | `image` | `image` | text | yes |  |
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
-| `role` | `role` | text |  | enum: `user`, `admin`; default "user" |
+| `role` | `role` | text |  | enum: `user`, `admin`; default "user"; the legacy single role, mirrored from `user_role` (`admin` while the user holds the admin row), see "Translation, roles and languages" |
 | `banned` | `banned` | integer (0/1) → boolean | yes | default false |
 | `ban_reason` | `banReason` | text | yes |  |
 | `ban_expires` | `banExpires` | integer (ms) → Date | yes |  |
-| `locale` | `locale` | text | yes | enum: `nl`, `en`, `fr` |
+| `locale` | `locale` | text | yes | → language.code (phase 10b; was CHECK `nl`, `en`, `fr`) |
 | `legacy_id` | `legacyId` | text | yes | unique |
 | `welcomed_at` | `welcomedAt` | integer (ms) → Date | yes | server-only (migration 0012): when the welcome email was claimed |
 
 Indexes: `user_created_at_idx` (created_at).
 
-CHECK: `user_role_check`, `user_locale_check`.
+CHECK: `user_role_check`. (`user_locale_check` was replaced by the foreign key in migration 0015.)
 
 `welcomed_at` (migration 0012, phase 8 ruling 16): the welcome email is claimed once in D1. `welcome()` runs `UPDATE user SET welcomed_at = ? WHERE id = ? AND welcomed_at IS NULL RETURNING id` and enqueues only when a row comes back, so two concurrent verifications send one welcome; the claim keeps `updated_at`. It is not a Better Auth additional field (no client reads or sets it). The migration is `ADD COLUMN` plus the backfill `UPDATE user SET welcomed_at = updated_at WHERE email_verified = 1`: no table rebuild, so `user_keep_one_admin` survives, and it never writes `role`. Unverified accounts stay NULL. On rows from before 0012 the value is an approximation (`updated_at`, between sign-up and the latest change), not a send time: only `IS NULL` is meaningful there. The Convex import sets it to the plan's `--now`, so a migrated user is never welcomed.
 
@@ -461,12 +466,13 @@ Indexes: `category_published_sort_idx` (published_at, sort_order).
 | `description` | `description` | text |  | default "" |
 | `playback_id` | `playbackId` | text |  |  |
 | `mux_asset_id` | `muxAssetId` | text | yes |  |
+| `needs_recut` | `needsRecut` | integer (0/1) → boolean |  | migration 0021, default 1: the video still has the name burned in, so the player's name overlay stays hidden; 1 for every gesture that existed then, cleared by an admin when the textless video is uploaded |
 | `published_at` | `publishedAt` | integer (ms) → Date | yes |  |
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
 | `legacy_id` | `legacyId` | text | yes | unique |
 
-Indexes: `gesture_published_sort_name_idx` (sort_name, id) WHERE published_at IS NOT NULL (the public catalogue order and its keyset cursor, migration 0002); `gesture_mux_asset_id_idx` (mux_asset_id).
+Indexes: `gesture_needs_recut_idx` (sort_name, id) WHERE needs_recut = 1 (the admin "needs re-cut" list, migration 0021); `gesture_published_sort_name_idx` (sort_name, id) WHERE published_at IS NOT NULL (the public catalogue order and its keyset cursor, migration 0002); `gesture_mux_asset_id_idx` (mux_asset_id).
 #### `gesture_category`
 
 | Column | TS | Type | Null | Notes |
@@ -480,6 +486,7 @@ Indexes: `gesture_category_category_id_idx` (category_id).
 | Column | TS | Type | Null | Notes |
 |---|---|---|---|---|
 | `gesture_id` | `gestureId` | text |  | PK; → gesture.id ON DELETE CASCADE |
+| `locale` | `locale` | text |  | PK; → language.code; default `nl` (migration 0017: every earlier keyword is a Dutch one) |
 | `keyword` | `keyword` | text |  | PK |
 | `position` | `position` | integer |  |  |
 #### `favorite`
@@ -540,12 +547,63 @@ CHECK: `list_share_role_check`.
 | `keywords` | yes | the gesture's keywords, joined by spaces |
 | `categories` | yes | the names of its categories, joined by spaces |
 | `description` | yes | `gesture.description` |
+| `locale` | no (`UNINDEXED`) | the language of the row (migration 0022; the **last** column, so the bm25 weights keep their positions) |
+
+Since migration 0022 there is **one row per (gesture, language)**: the default language's row (`gesture.name`, the keywords of that language, the published category names, `gesture.description`) and one row per `gesture_translation` (the translated name and description, the keywords of that language, the category names in that language, the default name where a category has no translation). A gesture without a translation in a language has no row there. The search reads one language's rows (`locale = ?`); until phase 10b task 5 it reads the default language's rows only.
 
 `tokenize = 'unicode61 remove_diacritics 2'`, `prefix = '2 3'`. No triggers: the gestures service rewrites the row (`reindexGesture` / `reindexGestureStatements` in `@smog/gestures/server`) in the same D1 batch as every write to the gesture, its keywords or its categories. The row is defined once, in `src/fts.ts` (`rebuildGestureFtsSql`): `DELETE` + `INSERT … SELECT` from the tables, so it indexes the batch's own writes; only **published** category names are indexed, so (un)publishing or renaming a category reindexes its gestures. The dev seed renders the same statements. Search keeps the best 200 candidates by `bm25(gesture_fts, 0, 10, 5, 3, 1)`, then ranks them in TS (spec §7.1).
 
-`gesture_id` is `UNINDEXED`, so `reindexGesture`'s `DELETE FROM gesture_fts WHERE gesture_id = ?` scans the FTS table. That is fine at the catalogue's size (a few thousand gestures). If it gets slow, phase 3 can key the rows by rowid instead (a stable integer per gesture, `DELETE … WHERE rowid = ?`).
+`gesture_id` is `UNINDEXED`, so `reindexGesture`'s `DELETE FROM gesture_fts WHERE gesture_id = ?` (every language of the gesture) scans the FTS table. That is fine at the catalogue's size (a few thousand gestures). If it gets slow, phase 3 can key the rows by rowid instead (a stable integer per gesture, `DELETE … WHERE rowid = ?`).
 
-`wrangler d1 export` does not support databases with virtual tables, so `gesture_fts` blocks exporting a remote D1 as-is. To export, drop `gesture_fts` in a copy (or use D1 Time Travel to restore instead of an export), export, then recreate it with migration `0001` and a full reindex.
+`wrangler d1 export` does not support databases with virtual tables, so `gesture_fts` blocks exporting a remote D1 as-is. To export, drop `gesture_fts` in a copy (or use D1 Time Travel to restore instead of an export), export, then recreate it with migration `0022` (the current definition) and a full reindex.
+
+### Translation, roles and languages (phase 10b)
+
+Migrations 0015 to 0023. The base columns (`gesture.name`, `gesture.description`, `category.name`) stay the default language's value, so nothing that reads them breaks; every other language lives in the tables below. The default language, `language.is_default`, is data (nl today).
+
+#### `language` (migration 0015)
+
+| Column | TS | Type | Null | Notes |
+|---|---|---|---|---|
+| `code` | `code` | text |  | PK, a BCP-47 tag (`nl`, `fr`, `pt-BR`), 2..35 characters |
+| `name` | `name` | text |  | the language's own name ("Nederlands") |
+| `intl_tag` | `intlTag` | text |  | what `Intl` formats with (`nl-BE`) |
+| `enabled` | `enabled` | integer (0/1) → boolean |  | default 1; a disabled language is hidden from the menu, its data is kept |
+| `is_default` | `isDefault` | integer (0/1) → boolean |  | default 0; exactly one row is 1 |
+| `sort_order` | `sortOrder` | integer |  | default 0 |
+
+Seeded: `nl` (default), `en`, `fr` with `nl-BE`, `en-BE`, `fr-BE`. Indexes: `language_default_uq` unique (is_default) WHERE is_default = 1; `language_menu_idx` (enabled, sort_order, code). CHECK: lengths, and the default must be enabled. The trigger `language_keep_default` refuses to delete the default (`default_language`). The `locale` columns reference `code` with NO ACTION, so a language in use cannot be deleted either.
+
+#### `ui_string` (migration 0016)
+
+The editable layer over the shipped catalogues: `locale` (→ language.code), `key`, `value` (1..4000 characters), `source_hash` (hash of the default-language source it was translated from; NULL for the default language), `updated_by` (→ user, SET NULL), `updated_at`. PK `(locale, key)`, so the overlay load of one language is a primary key range. The shipped JSON stays the base; a missing row falls back to the shipped value, then to the default language.
+
+#### `gesture_translation`, `category_translation` (migration 0017)
+
+`gesture_translation`: `gesture_id` (CASCADE), `locale`, `name` (1..200), `description` (default ""), `updated_by`, `updated_at`; PK `(gesture_id, locale)`; indexes `(locale, gesture_id)` (coverage per language) and `updated_by`. `category_translation`: `category_id` (CASCADE), `locale`, `name`, `updated_by`, `updated_at`; PK `(category_id, locale)`. A gesture without a row is shown with the default text and listed as "needs translation". Keywords per language are `gesture_keyword.locale`.
+
+#### `gesture_audio` (migration 0018)
+
+The spoken name of a gesture in one language: `gesture_id` (CASCADE), `locale`, `r2_key` (unique, `audio/<gestureId>/<locale>/<uuid>`, a new key on every replace), `content_type` (`audio/mpeg` or `audio/mp4`), `size` (1..1 MiB), `duration_ms` (1..10 000), `updated_by`, `updated_at`; PK `(gesture_id, locale)`. The caps are CHECKs as well as upload rules.
+
+#### `legal_text` (migration 0019)
+
+One row per (kind, language, version), history kept: `id`, `kind` (`privacy`, `terms`), `locale`, `version` (>= 1), `content` (the `LegalDocument` JSON of `@smog/i18n`), `effective_date` (ISO date), `status` (`draft`, `published`), `updated_by`/`updated_at`, `published_by`/`published_at` (set exactly when published: a CHECK). Unique `(kind, locale, version)`; at most one draft per (kind, locale) (`legal_text_draft_uq`); `legal_text_published_idx` (kind, locale, version) WHERE status = 'published' serves the current text. The migration seeds version 1 of both kinds in nl, en and fr from the texts shipped in `@smog/i18n` (effective 2026-09-30), which stay the fallback. A draft keeps a provisional `version` (after every existing row) until it is published, when it is renumbered after the highest published version (task 7).
+
+#### `user_role` (migration 0020)
+
+`user_id` (CASCADE), `role` (`translator`, `teacher`, `admin`), `granted_by` (SET NULL), `granted_at`; PK `(user_id, role)`; index `(role, user_id)`. A user with no row is a plain learner; `admin` implies the other roles (the guards say so, not the table). The migration copies every `user.role = 'admin'` into an admin row.
+
+- **`user.role` is the legacy mirror.** Triggers keep it in step in both directions (`user_role_mirror_user_insert`, `_user_promote`, `_user_demote`, `_grant`, `_revoke`): a user is `admin` in `user.role` exactly while they hold the admin row, whichever column the code writes. They stop after one hop (each is conditional).
+- **Last admin.** `user_role_keep_one_admin_delete` and `_update` refuse (`last_admin`) to remove the admin row of the last admin whose ban is not in force, the same rule as `user_keep_one_admin` on `user.role` (migration 0007, recreated by 0015). The delete trigger only fires while the user row exists, so deleting an account (a cascade) is not refused: `account.delete` guards that, as before.
+
+#### New audit kinds (migration 0023)
+
+`AUDIT_ACTIONS` gained `user.role_grant`, `user.role_revoke`, `language.create`, `language.update`, `translation.string_save`, `translation.string_import`, `translation.gesture_save`, `translation.category_save`, `translation.audio_upload`, `translation.audio_delete`, `gesture.recut_done`, `legal.draft_save`, `legal.publish`, `legal.restore`, and `AUDIT_TARGET_TYPES` gained `language` (the code), `ui_string` (`<locale>:<key>`) and `legal_text` (`<kind>:<locale>:<version>`, task 7).
+
+#### Rebuilding a table that other tables reference
+
+D1 applies a migration in a transaction where `PRAGMA foreign_keys = OFF` is a no-op, so the 12-step rebuild (create `__new_x`, copy, `DROP TABLE x`, rename) **runs the foreign key actions of the drop**: dropping `user` cascade-deletes every session, account, passkey, favorite and list and nulls `audit_log.actor_id`; dropping `sponsor` fails on `sponsorship` (RESTRICT) and would delete every `invoice_request`. A rebuild of such a table must copy every dependent row (and the SET NULL columns) into `_bk_*` tables first, delete what the drop would restrict, rebuild, put the rows back in foreign key order and drop the backups; migration 0015 does this for `user` and `sponsor` and `packages/db/test/migrations-phase-10b.test.ts` proves it on seeded data (every table compared before and after). A table nothing references (`audit_log`, `gesture_keyword`) can be rebuilt plainly. A rebuild of `user` also drops its triggers: recreate them in the same file.
 
 ### Account, consent, audit
 #### `consent_event`
@@ -610,12 +668,12 @@ CHECK: `dead_letter_origin_check`, `dead_letter_replayable_check`. Retention: 14
 | `name` | `name` | text |  |  |
 | `email` | `email` | text |  |  |
 | `company` | `company` | text | yes |  |
-| `locale` | `locale` | text |  | enum: `nl`, `en`, `fr` |
+| `locale` | `locale` | text |  | → language.code (phase 10b; was CHECK `nl`, `en`, `fr`) |
 | `created_at` | `createdAt` | integer (ms) → Date |  |  |
 
 Indexes: `sponsor_email_idx` (email); `sponsor_email_lower_idx` (lower(email)), migration 0010: the admin user panel finds an account's sponsors by it.
 
-CHECK: `sponsor_name_length_check`, `sponsor_email_length_check`, `sponsor_company_length_check`, `sponsor_locale_check`.
+CHECK: `sponsor_name_length_check`, `sponsor_email_length_check`, `sponsor_company_length_check`. (`sponsor_locale_check` was replaced by the foreign key in migration 0015.)
 #### `invoice_request`
 
 | Column | TS | Type | Null | Notes |
@@ -686,6 +744,8 @@ Indexes: `payment_item_sponsorship_id_idx` (sponsorship_id).
 CHECK: `payment_item_amount_check`.
 #### `render_job`
 
+Retired in phase 10b task 9 (history only; see the render job notes above).
+
 | Column | TS | Type | Null | Notes |
 |---|---|---|---|---|
 | `id` | `id` | text |  | PK |
@@ -702,7 +762,7 @@ CHECK: `payment_item_amount_check`.
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
 | `finished_at` | `finishedAt` | integer (ms) → Date | yes |  |
 
-Indexes: `render_job_sponsorship_created_idx` (sponsorship_id, created_at); `render_job_mux_upload_id_idx` (mux_upload_id); `render_job_mux_asset_id_idx` (mux_asset_id); `render_job_status_updated_idx` (status, updated_at), migration 0011: the render watchdog (phase 7 ruling 12) reads the `queued` and the `running` jobs oldest first, each status a seek with no sort.
+Indexes: `render_job_sponsorship_created_idx` (sponsorship_id, created_at); `render_job_mux_upload_id_idx` (mux_upload_id); `render_job_mux_asset_id_idx` (mux_asset_id); `render_job_status_updated_idx` (status, updated_at), migration 0011: the render watchdog (phase 7 ruling 12, removed in phase 10b task 9) read the `queued` and the `running` jobs oldest first, each status a seek with no sort.
 
 CHECK: `render_job_status_check`, `render_job_attempt_check`.
 #### `sponsorship_event`
@@ -754,7 +814,7 @@ CHECK: `sponsorship_token_purpose_check`.
 
 ## Migrations, seed and tests
 
-**Migrations are append-only.** `0000`–`0014` are merged (the next free number is `0015`); never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
+**Migrations are append-only.** `0000`–`0023` are merged (the next free number is `0024`); never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
 
 - **Retention** (phase 6 ruling 9, `packages/db/src/retention.ts`): the daily `15 3 * * *` cron deletes `audit_log` rows older than 3 × 365 days, `dead_letter` rows older than 14 days (phase 9), expired `session` and `verification` rows, and `sponsorship_token` rows used or expired more than 29 days ago (so a daily run removes them within 30 days), in chunks of 500 (`rowid IN (SELECT rowid … LIMIT 500)`, at most 20 per purge per run). Each chunk read seeks an index except the used-token one (`used_at` has no index; the table is small). The same run (`runRetentionPurge`, `@smog/sponsorships/server`) clears `sponsorship.logo_key` on sponsorships that ended (`rejected`, `cancelled`, `expired`) more than 30 days ago and can no longer use the logo (`payment_item.includes_logo` keeps the fact), and deletes R2 `logos/*` objects that no sponsorship references and that were uploaded more than 24 h ago (a KV cursor resumes the listing across runs). `bun run retention --env <env> --dry-run` counts what it would delete.
 - `bun -F @smog/db db:generate` runs `drizzle-kit generate` (generate only; wrangler applies migrations). Hand-written SQL (such as the FTS table) goes in a file made with `drizzle-kit generate --custom --name <name>`, so the drizzle journal stays in step.

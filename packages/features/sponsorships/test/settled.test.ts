@@ -6,9 +6,9 @@ import {
   sponsorshipEvent,
 } from "@smog/db";
 import { DAY_MS, newId } from "@smog/utils";
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { handlePaymentSettled, queuedRenderJob } from "../src/server/settled";
+import { handlePaymentSettled } from "../src/server/settled";
 import { eventStatement } from "../src/server/transition";
 import {
   makeAdmin,
@@ -21,23 +21,16 @@ import {
 
 const db = testDb();
 
-async function jobsOf(sponsorshipIds: string[]) {
-  return await db
-    .select()
-    .from(renderJob)
-    .where(inArray(renderJob.sponsorshipId, sponsorshipIds));
-}
-
 function settled(paymentId: string) {
   return handlePaymentSettled(db, { now: NOW, paymentId, siteUrl: SITE_URL });
 }
 
 describe("handlePaymentSettled (the payment.settled fan-out)", () => {
-  it("creates one render job per rendering item and keys every email; a second run creates nothing new", async () => {
+  it("keys every email, enqueues no event and creates no render job; a second run answers the same", async () => {
     const admin = await makeAdmin(db);
     const seeded = await seedCheckout(db, {
       paymentStatus: "paid",
-      status: "rendering",
+      status: "in_review",
     });
     await db.insert(invoiceRequest).values({
       email: "billing@example.com",
@@ -46,15 +39,8 @@ describe("handlePaymentSettled (the payment.settled fan-out)", () => {
       vatNumber: "0123456749",
     });
     const first = await settled(seeded.paymentId);
-    const jobs = await jobsOf(seeded.sponsorshipIds);
-    expect(jobs).toHaveLength(2);
-    expect(jobs.every((job) => job.status === "queued")).toBe(true);
-    expect(first.events).toEqual(
-      expect.arrayContaining(
-        jobs.map((job) => ({ renderJobId: job.id, type: "render.requested" }))
-      )
-    );
-    expect(first.events).toHaveLength(2);
+    expect(first.events).toEqual([]);
+    expect(await db.select().from(renderJob)).toEqual([]);
     const keys = first.notify.map((email) => email.idempotencyKey).sort();
     expect(keys).toEqual(
       [
@@ -91,20 +77,17 @@ describe("handlePaymentSettled (the payment.settled fan-out)", () => {
     });
 
     const second = await settled(seeded.paymentId);
-    expect(await jobsOf(seeded.sponsorshipIds)).toHaveLength(2);
-    // The queued jobs are requested again (the start is idempotent) and
-    // the emails carry the same keys (the consumer skips a sent key).
-    expect(second.events).toHaveLength(first.events.length);
-    expect(second.events).toEqual(expect.arrayContaining([...first.events]));
+    // The emails carry the same keys (the consumer skips a sent key).
+    expect(second.events).toEqual([]);
     expect(second.notify.map((email) => email.idempotencyKey).sort()).toEqual(
       keys
     );
   });
 
-  it("acts only on items past payment: a cancelled or flagged item gets no job and no email", async () => {
+  it("acts only on items past payment: a cancelled or flagged item gets no email", async () => {
     const seeded = await seedCheckout(db, {
       paymentStatus: "refund_needed",
-      status: "rendering",
+      status: "in_review",
     });
     const [revived, flagged] = seeded.sponsorshipIds as [string, string];
     // `flagged` lost its gesture: still `cancelled`, with the refund flag.
@@ -123,9 +106,6 @@ describe("handlePaymentSettled (the payment.settled fan-out)", () => {
     ]);
     const out = await settled(seeded.paymentId);
     expect(
-      (await jobsOf(seeded.sponsorshipIds)).map((j) => j.sponsorshipId)
-    ).toEqual([revived]);
-    expect(
       out.notify
         .map((email) => email.idempotencyKey)
         .filter((key) => key?.includes(flagged))
@@ -135,7 +115,7 @@ describe("handlePaymentSettled (the payment.settled fan-out)", () => {
     );
   });
 
-  it("confirms a renewal with the new end and creates no job", async () => {
+  it("confirms a renewal with the new end", async () => {
     const endsAt = new Date("2027-11-03T10:00:00.000Z");
     const seeded = await seedCheckout(db, { count: 1, endsAt, status: "live" });
     const sponsorshipId = seeded.sponsorshipIds[0] as string;
@@ -162,12 +142,12 @@ describe("handlePaymentSettled (the payment.settled fan-out)", () => {
     ]);
   });
 
-  it("sends the emails only within 6 days of paid_at (inside the 7-day KV marker); jobs always", async () => {
+  it("sends the emails only within 6 days of paid_at (inside the 7-day KV marker)", async () => {
     await makeAdmin(db);
     const seeded = await seedCheckout(db, {
       count: 1,
       paymentStatus: "paid",
-      status: "rendering",
+      status: "in_review",
     });
     await db
       .update(payment)
@@ -182,9 +162,6 @@ describe("handlePaymentSettled (the payment.settled fan-out)", () => {
     // A refund or chargeback webhook 30 days later re-sends nothing.
     const late = await at(30);
     expect(late.notify).toEqual([]);
-    // The render job is still created and requested.
-    expect(late.events).toHaveLength(1);
-    expect(await jobsOf(seeded.sponsorshipIds)).toHaveLength(1);
     expect((await at(6)).notify).toEqual([]);
     expect((await at(5.9)).notify.length).toBeGreaterThan(0);
   });
@@ -192,34 +169,6 @@ describe("handlePaymentSettled (the payment.settled fan-out)", () => {
   it("does nothing for a payment that is not paid", async () => {
     const seeded = await seedCheckout(db, { status: "awaiting_payment" });
     expect(await settled(seeded.paymentId)).toEqual({ events: [], notify: [] });
-    expect(await jobsOf(seeded.sponsorshipIds)).toEqual([]);
-  });
-
-  it("queuedRenderJob answers a queued job's input and null otherwise", async () => {
-    const seeded = await seedCheckout(db, {
-      count: 1,
-      paymentStatus: "paid",
-      status: "rendering",
-    });
-    const out = await settled(seeded.paymentId);
-    const [event] = out.events;
-    const renderJobId =
-      event?.type === "render.requested" ? event.renderJobId : "";
-    expect(await queuedRenderJob(db, renderJobId)).toEqual({
-      input: {
-        displayName: "Acme BV",
-        logoKey: null,
-        sourcePlaybackId: seeded.gestures[0]?.playbackId,
-        v: 1,
-      },
-      renderJobId,
-    });
-    await db
-      .update(renderJob)
-      .set({ status: "succeeded" })
-      .where(eq(renderJob.id, renderJobId));
-    expect(await queuedRenderJob(db, renderJobId)).toBeNull();
-    expect(await queuedRenderJob(db, "missing")).toBeNull();
   });
 
   it("measures the 6-day window from our first settling event, not Mollie's paidAt (fix wave, jobs I-1)", async () => {
@@ -227,7 +176,7 @@ describe("handlePaymentSettled (the payment.settled fan-out)", () => {
     const seeded = await seedCheckout(db, {
       count: 1,
       paymentStatus: "paid",
-      status: "rendering",
+      status: "in_review",
     });
     // Mollie took the money 8 days ago; we learned of it an hour ago.
     await db

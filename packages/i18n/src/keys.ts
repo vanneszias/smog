@@ -1,19 +1,13 @@
-import type { Locale } from "@smog/config/constants";
 import type { ParseKeys } from "i18next";
-import en from "./locales/en.json";
-import fr from "./locales/fr.json";
-import nl from "./locales/nl.json";
+import type nl from "./locales/nl.json";
 
 export const DEFAULT_NAMESPACE = "translation";
 
-/** The canonical (nl) catalogue shape; en and fr must match it. */
+/**
+ * The canonical (nl) catalogue shape; en and fr must match it. A type-only
+ * import: no catalogue is in this module (phase 10b task 7b).
+ */
 export type Messages = typeof nl;
-
-export const resources = {
-  en: { translation: en },
-  fr: { translation: fr },
-  nl: { translation: nl },
-} as const satisfies Record<Locale, { translation: Messages }>;
 
 declare module "i18next" {
   interface CustomTypeOptions {
