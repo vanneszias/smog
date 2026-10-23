@@ -12,7 +12,10 @@ import { setupNative } from "@smog/i18n/native";
 import { I18nextProvider } from "@smog/i18n/react";
 import { createLocalStore, type LocalStore } from "@smog/local-store";
 import { nativeAdapter } from "@smog/local-store/native";
-import { LocalStoreProvider } from "@smog/local-store/react";
+import {
+  LocalStoreProvider,
+  useLocalStoreInstance,
+} from "@smog/local-store/react";
 import { PurgeOtherUsers, purgeOtherUsers, RpcProvider } from "@smog/rpc/react";
 import {
   QueryClient,
@@ -48,6 +51,7 @@ import {
   createPersistOptions,
   keepPersistedQueries,
   type PersistStorage,
+  reconcileCacheLanguage,
 } from "@/lib/query-persist";
 import { setRequestedLocale } from "@/lib/request-locale";
 
@@ -134,6 +138,40 @@ function PreferencesRoot({ children }: { children: ReactNode }): ReactElement {
   const { languages, overlay, wanted } = useRuntimeCatalogue();
   const applied = useRef<string | null | undefined>(undefined);
   setRequestedLocale(wanted);
+  // The restored cache may be in another language than the one wanted now
+  // (the device language changed while the app was closed): once the cache
+  // is restored and the stored choice is known, reset it like a switch.
+  const restoring = useIsRestoring();
+  const store = useLocalStoreInstance();
+  const [prefsRead, setPrefsRead] = useState(false);
+  useEffect(() => {
+    let live = true;
+    store.ready
+      .catch((error: unknown) => {
+        console.error("[preferences] Failed to read the device store:", error);
+      })
+      .finally(() => {
+        if (live) {
+          setPrefsRead(true);
+        }
+      });
+    return () => {
+      live = false;
+    };
+  }, [store]);
+  const reconciled = useRef(false);
+  useEffect(() => {
+    if (restoring || !prefsRead) {
+      return;
+    }
+    const outdated = reconcileCacheLanguage(queryClient, wanted);
+    if (outdated && !reconciled.current) {
+      queryClient.resetQueries({ predicate: isLocalizedQuery }).catch(() => {
+        // A failed refetch shows its own error state.
+      });
+    }
+    reconciled.current = true;
+  }, [prefsRead, queryClient, restoring, wanted]);
   useEffect(() => {
     if (applied.current !== undefined && applied.current !== wanted) {
       queryClient.resetQueries({ predicate: isLocalizedQuery }).catch(() => {
