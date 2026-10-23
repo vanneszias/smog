@@ -299,11 +299,16 @@ export function GestureTable({
       },
       {
         cell: (row) => (
-          <TextLink asChild className="font-medium" tone="default">
-            <Link params={{ id: row.id }} to="/admin/gestures/$id">
-              {row.name}
-            </Link>
-          </TextLink>
+          <span className="flex flex-wrap items-center gap-2">
+            <TextLink asChild className="font-medium" tone="default">
+              <Link params={{ id: row.id }} to="/admin/gestures/$id">
+                {row.name}
+              </Link>
+            </TextLink>
+            {row.needsRecut ? (
+              <Badge variant="warning">{t("media.admin.recut.badge")}</Badge>
+            ) : null}
+          </span>
         ),
         header: t("admin.gestures.columns.name"),
         id: "name",
