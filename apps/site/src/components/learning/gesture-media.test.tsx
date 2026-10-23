@@ -72,6 +72,23 @@ describe("the name over the video and the spoken name (phase 10b)", () => {
     expect(screen.queryByRole("switch")).toBeNull();
   });
 
+  test("a sponsor-rendered video carries the name already: no overlay and no toggle", async () => {
+    await renderSite(
+      detailOf({
+        ...BASE,
+        sponsor: {
+          endCard: false,
+          logoPath: null,
+          name: "Bakkerij JAN nv",
+          until: 1_900_000_000_000,
+        },
+      })
+    );
+    await screen.findByRole("heading", { name: "Hond" });
+    expect(overlay()).toBeNull();
+    expect(screen.queryByRole("switch")).toBeNull();
+  });
+
   test("a textless video shows the name once the device store is read, decoration only", async () => {
     await renderSite(detailOf(BASE));
     await waitFor(() => expect(overlay()).not.toBeNull());

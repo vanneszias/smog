@@ -6,7 +6,11 @@ import {
   useRememberGesture,
   useVideoEnd,
 } from "@smog/gestures/client";
-import type { GestureDetail, GestureSummary } from "@smog/gestures/schema";
+import {
+  type GestureDetail,
+  type GestureSummary,
+  nameOverlayApplies,
+} from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
 import { webAdapter } from "@smog/local-store/web";
 import {
@@ -136,7 +140,7 @@ export function GestureDetailView({
   // The name over the video: only on a textless video (the picture of an
   // older one already carries it) and unless this viewer hid it.
   const nameOverlay = useNameOverlayPreference();
-  const overlayApplies = !gesture.needsRecut;
+  const overlayApplies = nameOverlayApplies(gesture);
   const page = layout === "page";
   // The page's name is its h1; in the browse panel the page title is.
   const titleLevel = page ? 1 : 2;
