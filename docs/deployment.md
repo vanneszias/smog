@@ -13,7 +13,6 @@ First-time setup of the three environments, in the order the owner does it. The 
 | Worker | none | `smog-site-staging` | `smog-site-production` |
 | D1, KV | local state | `smog-staging`, ids in `wrangler.jsonc` | `smog-production`, **ids are placeholders until step 4** |
 | Queues, bucket | local | `smog-staging-*` (`-email`, `-email-dlq`, `-sponsorship-events`, `-sponsorship-events-dlq`, bucket `smog-staging-media`) | the same names with `production` |
-| Render (`RENDER_MODE`) | `fake` (`local` with `SMOG_DEV_RENDER_MODE=local`) | `fake` until the owner's flip | `container` (needs `SMOG_RENDER_PIPELINE=1`) |
 | Mux | the fake (`@smog/video/testing/server`) | its **own** Mux environment | the **existing (old) production** Mux environment |
 | Mollie key | the fake | `test_` | `live_` |
 | Email | the KV mailbox at `/dev/mail` | Email Service, sender `info@smog.zias.be` | Email Service, sender `noreply@smog.vlaanderen` |
@@ -25,18 +24,17 @@ First-time setup of the three environments, in the order the owner does it. The 
 
 One account holds both envs (the `zias` workers.dev subdomain). **Confirm that production deploys to that same account**: `zias` is the account's workers.dev subdomain, so another account would give another host and `SITE_URL` would change.
 
-Needed on the account: the **Workers Paid** plan (Queues, Containers), **R2 enabled** (dashboard → R2 Object Storage, once; otherwise `[code: 10042]`), and, for the render pipeline, **Containers** enabled.
+Needed on the account: the **Workers Paid** plan (Queues), and **R2 enabled** (dashboard → R2 Object Storage, once; otherwise `[code: 10042]`). Workflows and Containers are no longer used (the render pipeline is retired, phase 10b task 9).
 
 **The deploy token** (a GitHub environment secret `CLOUDFLARE_API_TOKEN` per env, plus `CLOUDFLARE_ACCOUNT_ID`). Staging already deploys with its token, so start from the permissions it has; production's must cover the same list:
 
 | Permission | Why |
 |---|---|
-| Account › Workers Scripts: Edit | `wrangler deploy`, `wrangler secret put` and **`wrangler secret list`** (Read, which Edit includes; the deploy config check needs it), Workflows (registered with the script) |
+| Account › Workers Scripts: Edit | `wrangler deploy`, `wrangler secret put` and **`wrangler secret list`** (Read, which Edit includes; the deploy config check needs it) |
 | Account › Workers R2 Storage: Edit | the bucket, its CORS, and a deploy with an `r2_buckets` binding |
 | Account › **Queues: Edit** | creating the queues and DLQs (Workers Scripts: Edit is accepted too), **and** the Queues HTTP API `we-moved` calls (a local token, below) |
 | Account › D1: Edit | `wrangler d1 migrations apply` and the importer's `d1 execute` |
 | Account › Workers KV Storage: Edit | the KV namespace binding, `wrangler kv key put` (maintenance, `catalog:version`) |
-| Account › Containers: Edit (and pushing to the Cloudflare Registry) | the `SmogRenderer` image, only with the render gate on. **Unconfirmed names** until the owner's first flip (the resources step prints a `[provision] Workflows: …` / `[provision] Containers: …` line naming what is missing) |
 
 `scripts/ensure-cloudflare-resources.ts` stops with a `[provision]` line naming whichever of these is missing; nothing is created half way that a re-run would not finish.
 
@@ -49,11 +47,10 @@ The **`we-moved` command** (`docs/cutover-runbook.md`) runs on the owner's machi
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | secrets of each **environment** (`staging`, `production`) | without them a staging deploy skips with a warning (green, nothing deployed); a production deploy fails at its first step. The `production` environment and both secrets are created before the first `master` push (`docs/PROGRESS.md`, step 5.5) |
 | `SMOG_REQUIRE_SECRETS` | variable of the **`staging` environment** (not the repository) | `1` makes staging enforce the deploy config check; without it staging only warns (`--warn-only`). A repository-level `1` would also make staging enforce, and production ignores it (production always enforces) |
 | `SMOG_PROVISION_PRODUCTION` | repository variable | `1` lets the production deploy **create** the queues and the bucket; otherwise it only checks (`--check`) and fails with the exact commands. It refuses while `SITE_URL` is a placeholder (the four-label workers.dev rule) |
-| `SMOG_RENDER_PIPELINE` | variable of each **environment** | `1` turns the render gate on for that env: the build adds the Workflow and the `SmogRenderer` container, the resources step probes Workflows, Docker and Containers, and the deploy builds the render image first. **A `container` build without it fails on purpose**, and production's `RENDER_MODE` is already `container`, so **every production build fails until `production` has the flag** |
 
-Turning the render pipeline off again is two steps in this order: the env's `RENDER_MODE` back to `fake` (let that deploy), then remove the variable. Details: `docs/PROGRESS.md`, "The render pipeline".
+`SMOG_RENDER_PIPELINE` is gone: the build no longer reads it. **Owner: delete the variable** from the `staging` and `production` GitHub environments if you set it (it does nothing now, and `RENDER_MODE` is no longer a var either). Details: `docs/DECISIONS.md`, "Retire the render pipeline (phase 10b task 9)".
 
-**Branch protection (owner, GitHub → Settings → Branches, for `develop` and `master`).** Require the status checks `Release check (core)`, `Release check (tests)`, `Release check (mobile)`, `Release check (render)` and the seven `Playwright e2e (<shard>)` checks (`public`, `a11y`, `a11y-signed-in`, `a11y-reflow`, `admin`, `admin-a11y`, `serial`). Deploy's reusable call of `ci.yml` already waits for them, but a branch rule is what stops a red e2e shard from being merged on a pull request. The names are the job names in `.github/workflows/ci.yml` (`scripts/docs-check.test.ts` keeps the shard list in step).
+**Branch protection (owner, GitHub → Settings → Branches, for `develop` and `master`).** Require the status checks `Release check (core)`, `Release check (tests)`, `Release check (mobile)` and the seven `Playwright e2e (<shard>)` checks (`public`, `a11y`, `a11y-signed-in`, `a11y-reflow`, `admin`, `admin-a11y`, `serial`). Deploy's reusable call of `ci.yml` already waits for them, but a branch rule is what stops a red e2e shard from being merged on a pull request. The names are the job names in `.github/workflows/ci.yml` (`scripts/docs-check.test.ts` keeps the shard list in step).
 
 ## 4. D1 and KV (production)
 
@@ -86,7 +83,7 @@ The `production` `R2_ACCOUNT_ID` var (empty placeholder in `wrangler.jsonc`) is 
 
 ## 6. Secrets per env
 
-`scripts/check-deploy-config.ts` holds each env to `requiredWorkerConfig(env, renderMode)` (`@smog/config/env/worker`). Online it runs `wrangler secret list --env <env>` (JSON), so the token needs Workers Scripts: Read. **The first `wrangler secret put` creates the Worker**; `secret list` fails until then. Setting a value:
+`scripts/check-deploy-config.ts` holds each env to `REQUIRED_WORKER_CONFIG[env]` (`@smog/config/env/worker`). Online it runs `wrangler secret list --env <env>` (JSON), so the token needs Workers Scripts: Read. **The first `wrangler secret put` creates the Worker**; `secret list` fails until then. Setting a value:
 
 ```bash
 cd apps/site
@@ -95,21 +92,20 @@ bunx wrangler secret put <NAME> --env <staging|production>      # prompts for th
 
 | Env | Required secrets | Required vars (`wrangler.jsonc`) |
 |---|---|---|
-| staging, `RENDER_MODE=fake` (today) | `BETTER_AUTH_SECRET`, `TURNSTILE_SECRET_KEY` | none |
-| staging, `container` (after the flip) | the above plus `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET` | none |
-| production (`container`) | `BETTER_AUTH_SECRET`, `TURNSTILE_SECRET_KEY`, `MOLLIE_API_KEY` (`live_`), `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | `TURNSTILE_SITE_KEY`, `R2_ACCOUNT_ID` |
+| staging | `BETTER_AUTH_SECRET`, `TURNSTILE_SECRET_KEY` | none |
+| production | `BETTER_AUTH_SECRET`, `TURNSTILE_SECRET_KEY`, `MOLLIE_API_KEY` (`live_`), `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | `TURNSTILE_SITE_KEY`, `R2_ACCOUNT_ID` |
 
 - `BETTER_AUTH_SECRET`: at least 32 characters, `openssl rand -base64 32`. **Changing it signs everyone out** and invalidates the signed logo-upload URLs.
 - Value rules the check cannot see (secret values are unreadable) stay in `workerEnvSchema` at runtime: a `live_` Mollie key in production and `test_` elsewhere, the real Mux and Mollie API URLs outside dev, the R2 trio together.
-- **Optional**: `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_ID` + `APPLE_CLIENT_SECRET` + `APPLE_APP_BUNDLE_IDENTIFIER`, `OPENPANEL_CLIENT_ID` + `OPENPANEL_CLIENT_SECRET`, `REMOTION_LICENSE_KEY`. The check lists an absent provider or OpenPanel pair as "not configured" (recommended), never an error.
+- **Optional**: `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_ID` + `APPLE_CLIENT_SECRET` + `APPLE_APP_BUNDLE_IDENTIFIER`, `OPENPANEL_CLIENT_ID` + `OPENPANEL_CLIENT_SECRET`. (`REMOTION_LICENSE_KEY` is no longer read: delete it with `wrangler secret delete` if you set one.) The check lists an absent provider or OpenPanel pair as "not configured" (recommended), never an error.
 - **Providers are pairs.** An env that has any of a provider's secrets needs all of them (Google two, Apple three); the check refuses a partial one.
 - **The "make Google and Apple mandatory in production" decision (owner).** Today they are optional: production launches without them if they are not set, and the sign-in page then offers an email code, a magic link, a password and passkeys. The old app offered whatever WorkOS offered, which only the WorkOS dashboard shows: look there first, because migrated users who signed in with Google or Apple have no password and would use a code or link instead (the `we_moved` email says so). If production must offer them, set the secrets and let the check enforce them by listing them as required (a one-line change to `BASE_REQUIRED_CONFIG.production` in `packages/config/src/env/worker.ts`, a normal task). App Store guideline 4.8 applies: an iOS app that offers Google sign-in must offer Sign in with Apple too.
 - **Check the staging set** before opting in: `bun scripts/check-deploy-config.ts --env staging` (online, with the deploy token in the environment) prints what is missing as `[deploy-config]` lines with the `wrangler secret put` command for each. `--offline` skips the secrets; `--warn-only` is staging only and turns every problem into a `::warning::`; **production refuses `--warn-only`**.
 - **Fill production's vars before the first production deploy**, or `Check deploy config` fails it: `TURNSTILE_SITE_KEY` and `R2_ACCOUNT_ID` in `env.production.vars`, the real KV and D1 ids, and a `SITE_URL` that is a bare `https:` origin that is not a placeholder (a workers.dev host must be `<script>.<subdomain>.workers.dev`). `bun scripts/check-deploy-config.ts --env production --offline` prints what is still open, with no credentials.
 
-## 7. `SMOG_REQUIRE_SECRETS`, `SMOG_PROVISION_PRODUCTION`, `SMOG_RENDER_PIPELINE`
+## 7. `SMOG_REQUIRE_SECRETS` and `SMOG_PROVISION_PRODUCTION`
 
-See the table in section 3. The order for production is: the secrets and ids first (the check), then `SMOG_PROVISION_PRODUCTION=1` (the resources), then `SMOG_RENDER_PIPELINE=1` (the render image and Workflow), then the first deploy. `deploy.yml` runs the check **before** `Ensure Cloudflare resources`, so with `SMOG_PROVISION_PRODUCTION=1` nothing is created before a missing secret is found.
+See the table in section 3. The order for production is: the secrets and ids first (the check), then `SMOG_PROVISION_PRODUCTION=1` (the resources), then the first deploy. `deploy.yml` runs the check **before** `Ensure Cloudflare resources`, so with `SMOG_PROVISION_PRODUCTION=1` nothing is created before a missing secret is found.
 
 ## 8. Cloudflare Access on staging, and its bypass list
 
@@ -132,17 +128,17 @@ The site alerts nobody by itself (no external error reporter, by design: the pri
 
 - **Worker errors:** an alert on the error rate or exceptions of `smog-site-production` (and `-staging`). The Worker logs one redacted `[error]` line per unhandled fetch, queue or scheduled error (`apps/site/src/worker/top-level.ts`), which `wrangler tail` shows.
 - **Queue backlog:** an alert on `smog-<env>-email` and `smog-<env>-sponsorship-events` growing (a stuck consumer). A message that exhausted its retries is stored in D1 by the DLQ consumers instead (`/admin/dead-letters`), so the dead-letter queues themselves stay near empty.
-- **Cron failures:** the four crons (`stale` hourly, `expiry` 00:00, `retention` 03:15, `reminders` 08:00 UTC). A failed cron logs `[error]`; a missing `[cron] …` line in `wrangler tail` is the other sign. The **daily `admin_dead_letter` digest** (sent by the retention cron to every admin, once per UTC day, only when something needs attention) is the in-app alert for dead letters and for `render_failed` older than 24 hours; if the owner stops receiving digests on a day with open dead letters, the retention cron did not run.
+- **Cron failures:** the four crons (`stale` hourly, `expiry` 00:00, `retention` 03:15, `reminders` 08:00 UTC). A failed cron logs `[error]`; a missing `[cron] …` line in `wrangler tail` is the other sign. The **daily `admin_dead_letter` digest** (sent by the retention cron to every admin, once per UTC day, only when something needs attention) is the in-app alert for dead letters and lost messages; if the owner stops receiving digests on a day with open dead letters, the retention cron did not run.
 - **D1 and R2:** whatever usage or error notification the dashboard offers for the account's D1 databases and the media bucket.
 
 Staging's Access bypass (above) must include `/api/csp-report` for the CSP reports to arrive at all.
 
 ## 9. Mux: environments and webhooks
 
-- **Production uses the existing (old) production Mux environment**: every gesture asset is there, so master access and the admin asset picker need its token. **Staging gets a new Mux environment**; dev keeps the fake. Separate environments keep staging uploads out of the production picker and staging assets off the production bill (`test: true` is dev only).
+- **Production uses the existing (old) production Mux environment**: every gesture asset is there, so the admin asset picker needs its token. **Staging gets a new Mux environment**; dev keeps the fake. Separate environments keep staging uploads out of the production picker and staging assets off the production bill (`test: true` is dev only).
 - Each Mux environment has its own **access token** (`MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`; permissions: Mux Video read and write) and its own **webhook** with a **signing secret** (`MUX_WEBHOOK_SECRET`). The webhook URL is **`<SITE_URL>/api/webhooks/mux`**.
-- Render uploads carry the passthrough `render-job:<env>:<jobId>`: another env's event, or the untagged phase 7 form, is answered `IGNORED` and touches no asset, and an event tagged for this env whose job it does not know is deleted. So a Mux environment shared by accident does not delete the other env's assets.
-- **Production's webhook secret exists before the secrets and the first deploy (PROGRESS step 4, before step 5).** `MUX_WEBHOOK_SECRET` is required at the first production deploy, but the old webhook of the old environment points at the old system until T-0. The new URL is known now (the production `SITE_URL`), so add a **second** webhook endpoint (Mux dashboard → Settings → Webhooks, in the production environment) for `<production SITE_URL>/api/webhooks/mux` first, and put its signing secret in `MUX_WEBHOOK_SECRET`; the old endpoint is removed at step 10 of T-0. The new endpoint ignores the old app's events (they are not `gesture-upload:` or `render-job:` passthroughs). If the dashboard allows only one endpoint per environment, set any random value as `MUX_WEBHOOK_SECRET` before the first deploy (every delivery is then `400`) and put the real secret in at step 10 with `wrangler secret put MUX_WEBHOOK_SECRET --env production`.
+- A late event of a retired render job (the passthrough `render-job:…`, phase 7) is answered `IGNORED` and touches no asset. A Mux environment shared by accident does not delete the other env's assets: the webhook deletes nothing.
+- **Production's webhook secret exists before the secrets and the first deploy (PROGRESS step 4, before step 5).** `MUX_WEBHOOK_SECRET` is required at the first production deploy, but the old webhook of the old environment points at the old system until T-0. The new URL is known now (the production `SITE_URL`), so add a **second** webhook endpoint (Mux dashboard → Settings → Webhooks, in the production environment) for `<production SITE_URL>/api/webhooks/mux` first, and put its signing secret in `MUX_WEBHOOK_SECRET`; the old endpoint is removed at step 10 of T-0. The new endpoint ignores the old app's events (they are not `gesture-upload:` passthroughs). If the dashboard allows only one endpoint per environment, set any random value as `MUX_WEBHOOK_SECRET` before the first deploy (every delivery is then `400`) and put the real secret in at step 10 with `wrangler secret put MUX_WEBHOOK_SECRET --env production`.
 - **Staging smoke (owner, pending):** answer one delivery with a 503 (for example unset `MUX_WEBHOOK_SECRET` briefly) and confirm Mux's retry more than 5 minutes later still verifies (that Mux signs each attempt with a fresh `t`); if it does not, widen the 300 s window or verify `t` against the event's `created_at`.
 - **The importer's two Mux commands use a separate, low-priority token** of the production environment, created for the migration and revoked afterwards (`docs/cutover-runbook.md`).
 
@@ -174,11 +170,9 @@ Users who chose "Hide my email" in Sign in with Apple have an address `…@priva
 - **Mollie.** The production **profile** (Mollie dashboard → Developers / Website profiles) has its **website** set to the production `SITE_URL` (Mollie checks the profile's website), and the **live** API key comes from that profile (`MOLLIE_API_KEY`, `live_…`; the schema refuses `test_` in production and `live_` elsewhere). There is **no webhook to configure**: every payment carries `webhookUrl: <SITE_URL>/api/webhooks/mollie` and `redirectUrl: <SITE_URL>/sponsor/success?payment=<id>`, and the site checks a webhook by fetching the payment back with the key. **Confirm early that Mollie accepts a workers.dev website for the profile**: if it does not, path D (the domain) is forced. Staging uses the test key and its own profile. The old payments created before the cutover keep the old webhook URL (`<old origin>/webhooks/mollie`); the site serves `POST /webhooks/mollie` as an alias (`docs/cutover-runbook.md`).
 - **Email Service onboarding (production, before the first admin signs in).** Production sends from `noreply@smog.vlaanderen` through the `EMAIL` `send_email` binding (`allowed_sender_addresses` in `wrangler.jsonc`). Until the domain is onboarded the binding only sends to verified destination addresses, and the first production admin could not receive a sign-in code. Cloudflare dashboard → **Email Service** **(dashboard)** → onboard `smog.vlaanderen`: it shows the SPF and DKIM (and any other) DNS records to add. The dashboard says whether the zone must be on Cloudflare DNS (expected: yes, it adds the records itself), which is also what path D needs. Staging is onboarded for `smog.zias.be`. Test with the first admin's code (`admin:grant --create`).
 
-## 14. The Remotion licence and the container cost
+## 14. The render pipeline (retired)
 
-- **The licence.** Remotion is free for non-profits and companies of up to 3 people. Confirm that **SMOG & Co vzw** qualifies; otherwise buy a company licence and set `REMOTION_LICENSE_KEY` (`wrangler secret put --env <env>`; the renderer passes it to `renderMedia`). Record the answer in `docs/DECISIONS.md` (phase 7 ruling 14).
-- **The cost.** The `SmogRenderer` container is `standard-2` (1 vCPU, 6 GiB), at most 2 instances in staging and 4 in production, one instance per render job, stopped as soon as its render answers (`sleepAfter` 10 minutes stays as a backstop). A job that finds every instance busy waits (up to 12 × 5 minutes) instead of failing. A 1080 × 1920 frame costs about 0.34 s on one CPU (a 30 s clip in about 5 minutes); a source over 120 s is refused at once. **Every deploy with the gate on may restart the renderer** when the render inputs change (`packages/render/**`, `packages/{config,styles,utils}/**`, the Dockerfile, `bun.lock`): running renders get SIGTERM and drain for up to 14 minutes, and a render cut off is retried (or ends `render_failed` with a working retry). A docs-only push keeps the image digest (`no changes smog-<env>-renderer` in the deploy log).
-- **The render flip order for an env** (staging first, then production): (1) the token has Workflows and Containers access; (2) `SMOG_RENDER_PIPELINE=1` as a GitHub **environment** variable; (3) the env's `RENDER_MODE=container` in `wrangler.jsonc`, committed (the other order fails the deploy on purpose at its first Cloudflare step); (4) the env's own Mux environment, its three secrets, its webhook, and (staging) the Access bypass; (5) the licence answer; (6) the cost accepted. Then the smoke: a Mollie test payment (or an admin mark paid) reaches `in_review` with the overlay in the last 5 s; `wrangler tail --env <env>` shows the `[render]` lines with no URL; a forced failure gives `render_failed`, the `admin_render_failed` email and a working Retry; the Mux dashboard shows no orphan asset after the retry.
+The Remotion render pipeline (the `SmogRenderer` container, the `RenderSponsorshipVideo` Workflow, the render flip, the Remotion licence question and the container cost) was removed in phase 10b task 9, on the owner's decision of 2026-10-23: a sponsor's name and logo are an end card over the gesture's own video, so nothing is rendered and there is no licence to confirm. The section number stays so that references to later sections hold; the history is `docs/DECISIONS.md`, "Retire the render pipeline (phase 10b task 9)".
 
 ## 15. EAS and the stores (mobile)
 
@@ -226,7 +220,7 @@ Before the first `master` push (every item is in `docs/PROGRESS.md`, "Owner acti
 1. `bun scripts/check-deploy-config.ts --env production` (online, with the production token) prints nothing but `ok` and the recommended list.
 2. The legal sign-off (`docs/LEGAL-SIGNOFF.md`) is done: the texts under `/privacy` and `/terms` are the owner's.
 3. Maintenance is **on** in production's KV before the first deploy (`bun run maintenance --env production on --message … --yes`), so the public never sees an empty site. `/sign-in` and the admin sign-in routes stay open; a signed-in admin gets past the rest with `POST /api/maintenance/bypass`.
-4. The `production` GitHub environment exists with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (a missing one fails the production deploy at its first step; staging would skip silently). The `production` environment's `SMOG_RENDER_PIPELINE=1` is set too: **production cannot deploy until the render flip is done**, because its `RENDER_MODE` is `container`.
+4. The `production` GitHub environment exists with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (a missing one fails the production deploy at its first step; staging would skip silently).
 5. The first deploy goes `develop` → `master`; production is on workers.dev. After it, open the Deploy job and confirm that `Check deploy config`, `Apply D1 migrations` and `Deploy` actually ran. Then `bun run admin:grant --env production --create --yes <email>`, and sign in with an email code (the admin sign-in check).
 
 ## 17. Known gaps

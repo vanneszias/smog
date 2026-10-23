@@ -1023,8 +1023,6 @@
         "awaitingPayment_one": "{{count}} en attente de paiement",
         "awaitingPayment_other": "{{count}} en attente de paiement",
         "awaitingPayment_many": "{{count}} en attente de paiement",
-        "rendering_many": "{{count}} vidéos en préparation",
-        "renderFailed_many": "{{count}} vidéos en échec",
         "live_one": "{{count}} en ligne",
         "live_other": "{{count}} en ligne",
         "live_many": "{{count}} en ligne",
@@ -1045,8 +1043,7 @@
         "email_other": "{{count}} e-mails en attente",
         "events_one": "{{count}} événement en attente",
         "events_many": "{{count}} événements en attente",
-        "events_other": "{{count}} événements en attente",
-        "renderFailed_many": "{{count}} vidéos en échec"
+        "events_other": "{{count}} événements en attente"
       },
       "chart": {
         "title": "En un coup d’œil",

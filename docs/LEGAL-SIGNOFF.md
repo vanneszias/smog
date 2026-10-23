@@ -61,7 +61,7 @@ An operator can preview the counts in a deployed environment without deleting an
 **Section 5: Ontvangers**
 - **P11.** Removed: WorkOS, Convex and "E-mail- en queue-infrastructuur".
 - **P12.** Added:
-  - **Cloudflare:** Workers, D1, R2 (sponsor logos), KV, Queues, rendering sponsor videos with the name and logo (Workflows, Containers), Email and Turnstile. Links to Cloudflare's privacy policy.
+  - **Cloudflare:** Workers, D1, R2 (sponsor logos), KV, Queues, Email and Turnstile. Links to Cloudflare's privacy policy.
   - **Better Auth:** self-hosted open-source software; no data goes to a separate provider for it.
   - **Google and Apple:** when you choose to sign in with them; a Google photo is fetched from Google on every view (P29).
 - **P13.** Mux, Mollie, Expo and OpenPanel (self-hosted at analytics.zias.be) are unchanged.
