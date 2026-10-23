@@ -56,7 +56,6 @@ async function deliver(
     method: "POST",
   });
   const response = await handleMuxWebhook(request, {
-    environment: "production",
     kv,
     limit: () => Promise.resolve(allow),
     secret: secret ?? undefined,
@@ -109,7 +108,6 @@ describe("handleMuxWebhook", () => {
     const response = await handleMuxWebhook(
       new Request(URL_, { body: "{}", method: "POST" }),
       {
-        environment: "production",
         kv,
         limit: () => Promise.resolve(true),
         secret: SECRET,
@@ -188,7 +186,6 @@ describe("handleMuxWebhook", () => {
         method: "POST",
       }),
       {
-        environment: "production",
         kv: createMemoryKv(),
         limit: () => Promise.resolve(true),
         secret: SECRET,
@@ -218,7 +215,6 @@ describe("handleMuxWebhook", () => {
         method: "POST",
       }),
       {
-        environment: "production",
         kv: createMemoryKv(),
         limit: () => Promise.resolve(true),
         secret: SECRET,
@@ -228,7 +224,7 @@ describe("handleMuxWebhook", () => {
     expect(cancelled).toBe(true);
   });
 
-  it("ignores other events and other passthroughs with 200", async () => {
+  it("ignores other events and a retired render job's with 200", async () => {
     const kv = createMemoryKv();
     const other = event("video.asset.created", {
       id: "as-5",
@@ -236,7 +232,7 @@ describe("handleMuxWebhook", () => {
     });
     const render = event("video.asset.ready", {
       id: "as-6",
-      passthrough: "render:job-1",
+      passthrough: "render-job:production:job-1",
       status: "ready",
       upload_id: "up-6",
     });

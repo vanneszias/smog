@@ -18,7 +18,6 @@ import {
   regenerateTokenStatements,
   rejectStatements,
   requestChangesStatements,
-  retryRenderStatements,
   SponsorshipActionError,
   settlePayment,
 } from "@smog/sponsorships/server";
@@ -58,14 +57,5 @@ export const adminSponsorshipServices: AdminSponsorshipServices = {
   regenerateToken: regenerateTokenStatements,
   reject: rejectStatements,
   requestChanges: requestChangesStatements,
-  retryRender: async (db, input) => {
-    const plan = await retryRenderStatements(db, input);
-    return {
-      after: plan.after.map((event) => ({ event, kind: "event" as const })),
-      attempt: plan.attempt,
-      renderJobId: plan.renderJobId,
-      statements: plan.statements,
-    };
-  },
   settle: settlePayment,
 };

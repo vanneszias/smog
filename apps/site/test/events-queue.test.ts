@@ -4,7 +4,6 @@ import {
   FAKE_MOLLIE_API_KEY,
   type FakeMollie,
 } from "@smog/payments/testing";
-import { fakeRenderStarter } from "@smog/sponsorships/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { siteEnv } from "../src/server/auth";
 import { handleMollieWebhook } from "../src/server/mollie-webhook";
@@ -16,10 +15,8 @@ import {
 import { mailTo, waitForMail } from "./helpers";
 import {
   checkoutVia,
-  forceRendering,
   jobsOf,
   kv,
-  leaveQueued,
   makeAdmin,
   recordingQueue,
   statusesOf,
@@ -85,7 +82,6 @@ function deps(overrides: Partial<EventsDeps> = {}): EventsDeps {
   return {
     db,
     queues: { email: recordingQueue(), events: recordingQueue() },
-    renderStarter: fakeRenderStarter(db),
     siteUrl: ORIGIN,
     ...overrides,
   };
@@ -153,62 +149,28 @@ describe("the events consumer, end to end on the real queues", () => {
 });
 
 describe("processEventMessage", () => {
-  it("render.requested hands a queued job to the starter; once completed, a second request is a no-op", async () => {
+  it("acks a legacy render.requested without acting (the render pipeline is retired)", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const checkout = await checkoutVia(fake, { count: 1 });
-    fake.setStatus(checkout.mollieId, "paid");
     const requested = recordingQueue();
-    const consumer = deps({
-      queues: { email: recordingQueue(), events: requested },
-      renderStarter: leaveQueued(),
-    });
-    const settledQueues = { email: recordingQueue(), events: recordingQueue() };
-    await handleMollieWebhook(
-      new Request(`${ORIGIN}/api/webhooks/mollie`, {
-        body: `id=${checkout.mollieId}`,
-        method: "POST",
-      }),
-      {
-        db,
-        kv: kv(),
-        limit: () => Promise.resolve(true),
-        mollie: fake.mollie,
-        queues: settledQueues,
-      }
-    );
-    const [settled] = settledQueues.events.messages;
-    // An older row on the render path (the new flow has none).
-    await forceRendering(checkout.sponsorshipIds);
-    await processEventMessage(
-      { attempts: 1, body: settled, id: "s" },
-      consumer
-    );
-    const [request] = requested.messages;
-    expect(request).toMatchObject({ type: "render.requested" });
     expect(
       await processEventMessage(
-        { attempts: 1, body: request, id: "r" },
-        consumer
+        {
+          attempts: 1,
+          body: {
+            renderJobId: "queued-before-retirement",
+            type: "render.requested",
+          },
+          id: "r",
+        },
+        deps({ queues: { email: recordingQueue(), events: requested } })
       )
     ).toEqual({ action: "ack" });
-    expect(
-      (await jobsOf(checkout.sponsorshipIds)).map((j) => j.status)
-    ).toEqual(["queued"]);
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["rendering"]);
-
-    // The fake starter completes it; a second request is a no-op.
-    const fakeRender = deps();
-    await processEventMessage(
-      { attempts: 1, body: request, id: "r2" },
-      fakeRender
+    expect(requested.messages).toEqual([]);
+    expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining("queued before the render pipeline was retired")
     );
-    await processEventMessage(
-      { attempts: 1, body: request, id: "r3" },
-      fakeRender
-    );
-    expect(await statusesOf(checkout.sponsorshipIds)).toEqual(["in_review"]);
-    expect(
-      (await jobsOf(checkout.sponsorshipIds)).map((j) => j.status)
-    ).toEqual(["succeeded"]);
   });
 
   it("retries a failing message with backoff (the DLQ follows max_retries)", async () => {
@@ -229,7 +191,6 @@ describe("processEventMessage", () => {
       }
     );
     const body = { paymentId: checkout.paymentId, type: "payment.settled" };
-    await forceRendering(checkout.sponsorshipIds);
     const noQueues = deps({ queues: {} });
     expect(
       await processEventMessage({ attempts: 1, body, id: "a" }, noQueues)
@@ -238,25 +199,13 @@ describe("processEventMessage", () => {
       await processEventMessage({ attempts: 3, body, id: "b" }, noQueues)
     ).toEqual({ action: "retry", delaySeconds: 120 });
     expect(eventRetryDelaySeconds(10)).toBe(3600);
-    // The retries created the job once.
-    expect(await jobsOf(checkout.sponsorshipIds)).toHaveLength(1);
   });
 
-  it("acks an invalid message and a render.requested for an unknown job", async () => {
+  it("acks an invalid message", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     expect(
       await processEventMessage(
         { attempts: 1, body: { x: 1 }, id: "x" },
-        deps()
-      )
-    ).toEqual({ action: "ack" });
-    expect(
-      await processEventMessage(
-        {
-          attempts: 1,
-          body: { renderJobId: "missing", type: "render.requested" },
-          id: "y",
-        },
         deps()
       )
     ).toEqual({ action: "ack" });
@@ -319,7 +268,6 @@ describe("enqueue fails → 503 → Mollie retries → exactly one effect (I-3)"
   async function consume(messages: readonly unknown[]) {
     const consumer = deps({
       queues: { email: realQueues().email, events: recordingQueue() },
-      renderStarter: leaveQueued(),
     });
     for (const [index, body] of messages.entries()) {
       // biome-ignore lint/performance/noAwaitInLoops: one message at a time.

@@ -14,7 +14,6 @@ export const SPONSORSHIP_TABS = [
   "review",
   "all",
   "awaiting",
-  "rendering",
   "live",
   "refund",
   "closed",
@@ -26,7 +25,6 @@ const TAB_STATUSES = {
   awaiting: ["awaiting_payment"],
   closed: ["rejected", "cancelled", "expired"],
   live: ["live", "expiring"],
-  rendering: ["rendering", "render_failed"],
   review: ["in_review"],
 } as const satisfies Record<
   Exclude<SponsorshipTab, "all" | "refund">,
@@ -39,7 +37,6 @@ export const TAB_LABEL_KEYS = {
   closed: "admin.sponsorships.tabs.closed",
   live: "admin.sponsorships.tabs.live",
   refund: "admin.sponsorships.tabs.refund",
-  rendering: "admin.sponsorships.tabs.rendering",
   review: "admin.sponsorships.tabs.review",
 } as const satisfies Record<SponsorshipTab, TranslationKey>;
 

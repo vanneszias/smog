@@ -1,7 +1,7 @@
 // biome-ignore-all lint/performance/noBarrelFile: the `@smog/jobs` entry point.
 /**
  * `@smog/jobs`: the typed queue messages, their producers, the cron table,
- * the queue email outbox and the render seam (spec §8.1, phase 6 rulings
+ * the queue email outbox (spec §8.1, phase 6 rulings
  * 7–9). It holds no feature logic: the consumers and cron handlers that
  * call feature services are wired in `apps/site/src/worker/*`.
  */
@@ -55,4 +55,3 @@ export {
   InvalidMessageError,
   type QueueProducer,
 } from "./producers";
-export type { RenderStarter } from "./render-starter";

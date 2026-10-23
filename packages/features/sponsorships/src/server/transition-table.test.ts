@@ -5,12 +5,7 @@ import {
   type SponsorshipEventType,
   type SponsorshipStatus,
 } from "@smog/db/enums";
-import {
-  RENDER_NEW_SPONSORSHIPS,
-  TRANSITION_EVENTS,
-  transition,
-  transitionTable,
-} from "./transition-table";
+import { TRANSITION_EVENTS, transition } from "./transition-table";
 
 /**
  * The state machine of spec §5.5 and ruling 6, written out independently
@@ -27,9 +22,9 @@ const ALLOWED: readonly [
   ["awaiting_payment", "payment_failed", "cancelled"],
   ["awaiting_payment", "cancelled", "cancelled"],
   ["cancelled", "revived", "in_review"],
+  // The retirement sweep (phase 10b task 9): the only way out of a render state.
   ["rendering", "render_succeeded", "in_review"],
-  ["rendering", "render_failed", "render_failed"],
-  ["render_failed", "render_retried", "rendering"],
+  ["render_failed", "render_succeeded", "in_review"],
   ["in_review", "approved", "live"],
   ["in_review", "rejected", "rejected"],
   ["changes_requested", "rejected", "rejected"],
@@ -48,6 +43,8 @@ const ALLOWED: readonly [
 const NON_TRANSITION_EVENTS: readonly SponsorshipEventType[] = [
   "created",
   "render_started",
+  "render_failed",
+  "render_retried",
   "refund_needed",
   "token_issued",
   "legacy",
@@ -98,33 +95,22 @@ describe("transition (spec §5.5)", () => {
   });
 });
 
-describe("the end card gate (phase 10b ruling 9)", () => {
-  test("new sponsorships are not rendered", () => {
-    expect(RENDER_NEW_SPONSORSHIPS).toBe(false);
-  });
-
-  test("with the gate on, payment, revival and resubmit render again", () => {
-    const on = transitionTable(true);
-    expect(on.payment_paid.awaiting_payment).toBe("rendering");
-    expect(on.marked_paid_manually.awaiting_payment).toBe("rendering");
-    expect(on.revived.cancelled).toBe("rendering");
-    expect(on.resubmitted.changes_requested).toBe("rendering");
-  });
-
-  test("the gate changes only those four events; render states stay for older rows", () => {
-    const on = transitionTable(true);
-    const off = transitionTable(false);
-    const changed = (Object.keys(on) as (keyof typeof on)[]).filter(
-      (event) => JSON.stringify(on[event]) !== JSON.stringify(off[event])
+describe("the retired render pipeline (phase 10b task 9)", () => {
+  test("paid, revived and resubmitted sponsorships go to review, never to rendering", () => {
+    expect(transition("awaiting_payment", "payment_paid")).toBe("in_review");
+    expect(transition("awaiting_payment", "marked_paid_manually")).toBe(
+      "in_review"
     );
-    expect(changed.sort()).toEqual([
-      "marked_paid_manually",
-      "payment_paid",
-      "resubmitted",
-      "revived",
-    ]);
-    expect(off.render_succeeded.rendering).toBe("in_review");
-    expect(off.render_failed.rendering).toBe("render_failed");
-    expect(off.render_retried.render_failed).toBe("rendering");
+    expect(transition("cancelled", "revived")).toBe("in_review");
+    expect(transition("changes_requested", "resubmitted")).toBe("in_review");
+  });
+
+  test("nothing enters a render state any more", () => {
+    for (const from of SPONSORSHIP_STATUSES) {
+      for (const event of SPONSORSHIP_EVENT_TYPES) {
+        const to = transition(from, event);
+        expect(to === "rendering" || to === "render_failed").toBe(false);
+      }
+    }
   });
 });

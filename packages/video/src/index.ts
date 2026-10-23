@@ -4,10 +4,10 @@
  * (no SDK; DECISIONS, phase 5 task 3), direct uploads, upload and asset
  * lookups, the asset list, webhook verification and the webhook handler.
  * Never imported by client code: it is the only place the Mux token is
- * used. Phase 7 adds what the render Workflow needs: the playback-id
- * lookup, master access, the render upload and its cancel, the rendition
- * fallback and the render-job webhook events. Phase 8 tags render
- * passthroughs with the env and adds the static renditions.
+ * used. The render helpers of phases 7 and 8 (master access, the render
+ * upload, the render-job webhook events) are gone with the render pipeline
+ * (phase 10b task 9); the playback-id lookup and the static renditions stay
+ * for the importer.
  */
 
 export {
@@ -26,21 +26,7 @@ export {
   type MuxEnv,
   type MuxFetch,
 } from "./client";
-export {
-  assetIdForPlayback,
-  enableMasterAccess,
-  type MasterState,
-  masterState,
-} from "./master";
-export {
-  RENDER_MUX_EVENT_TYPES,
-  type RenderMuxEvent,
-  type RenderMuxEventType,
-  toRenderMuxEvent,
-} from "./render-events";
-export { createRenderUpload, type RenderUploadOptions } from "./render-upload";
-export { renditionUrls } from "./renditions";
-export { firstReachable } from "./source";
+export { assetIdForPlayback } from "./master";
 export {
   enableStaticRendition,
   STATIC_RENDITION_STATES,
@@ -54,18 +40,12 @@ export {
   readUploadState,
 } from "./upload-state";
 export {
-  type CancelUploadResult,
-  cancelUpload,
   createDirectUpload,
   GESTURE_UPLOAD_PREFIX,
   gestureUploadPassthrough,
   getUpload,
   isGestureUpload,
-  isRenderJobPassthrough,
   type MuxUpload,
-  RENDER_JOB_PREFIX,
-  renderJobIdOf,
-  renderJobPassthrough,
 } from "./uploads";
 export { isAllowedUploadUrl } from "./urls";
 export {

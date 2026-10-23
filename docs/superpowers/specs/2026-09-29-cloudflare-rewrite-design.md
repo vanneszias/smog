@@ -319,6 +319,8 @@ All handlers are idempotent, process records one at a time, and can safely be re
 
 ### 8.2 Render pipeline (`@smog/render`, `@smog/video`)
 
+> **Amended in phase 10b task 9 (owner decision, 2026-10-23): the render pipeline is retired.** Items 1 to 3 (the Remotion composition, the wizard Player and the final render through the `RenderSponsorshipVideo` Workflow and the `SmogRenderer` Container), the render webhook routing of item 4, the render server and the local render loop were built in phase 7, never deployed to a real env, and removed in task 9 (`packages/render`, the Workflow and Container classes, the render gate and `RENDER_MODE`, the render CI lane, Retry render and the render alerts). A sponsor's name and logo are an end card over the gesture's own video (task 8, §5.5), so nothing is rendered; the admin and the sponsor never wait for a video. `@smog/video` keeps the Mux client, direct uploads, asset reads, static renditions (the importer's `mux renditions` and the `highest` rendition requested at upload, which nothing reads now), the webhook for gesture uploads and expiry deletion (item 5); a late `render-job:` event is answered `200 IGNORED`. Old rows in `rendering` / `render_failed` are moved to `in_review` by the hourly stale cron. The text below is kept as the history of what was built; `docs/DECISIONS.md`, "Retire the render pipeline (phase 10b task 9)".
+
 1. **Composition** `SponsoredVideo` in `packages/render/src/compositions` is a port of the old visuals:
    - 30 fps; the size comes from the source video's dimensions and the duration is derived from the source.
    - In the last 5 s the overlay fades in (1 s spring) and slides up 30 px.

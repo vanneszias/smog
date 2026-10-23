@@ -7,16 +7,13 @@ import {
   FAKE_MOLLIE_API_KEY,
   type FakeMollie,
 } from "@smog/payments/testing";
-import { renderInputSchema } from "@smog/render/contract";
 import { makeRpcContext } from "@smog/rpc/testing";
 import { hashSponsorshipToken } from "@smog/sponsorships/schema";
 import {
   approveStatements,
   createSponsorshipsRouter,
-  fakeRenderStarter,
   handlePaymentSettled,
   requestChangesStatements,
-  retryRenderStatements,
   runExpirySweep,
   runReminderSweep,
   runRetentionPurge,
@@ -41,7 +38,8 @@ import {
  * The sponsorship services on migrated rows (phase 8 task 10; rulings 10
  * and 13, the I4 amendment, task 8 review M7): the Mollie webhook's
  * settle and fan-out, the stale, expiry and reminder sweeps, approve,
- * Retry render and a resubmit without a stored logo (I12), the re-edit
+ * the retirement of a migrated render state and a resubmit without a
+ * stored logo (I12), the re-edit
  * link by its old raw token, and the rejected-video purge.
  */
 
@@ -236,11 +234,8 @@ describe("the stale sweep on migrated open payments (I4)", () => {
     return await runStaleSweep({
       db,
       mollie: fake.mollie,
-      mux: null,
       now,
       queues: recordingQueues().queues,
-      siteUrl: SITE_URL,
-      workflow: null,
     });
   }
 
@@ -341,32 +336,28 @@ describe("the admin's actions and the sweeps on migrated rows", () => {
     expect((await row("08")).status).toBe("expired");
   });
 
-  it("Retry render on a migrated render_failed row with a paid logo and none stored renders without one (I12)", async () => {
+  it("the stale sweep retires a migrated render_failed row to review, keeping its paid logo flag (phase 10b task 9)", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const failed = await row("06");
     expect(failed.status).toBe("render_failed");
     expect(failed.logoKey).toBeNull();
+    const result = await runStaleSweep({
+      db,
+      mollie: fake.mollie,
+      now: NOW,
+      queues: recordingQueues().queues,
+    });
+    expect(result.retired).toBeGreaterThanOrEqual(1);
+    const retired = await row("06");
+    expect(retired.status).toBe("in_review");
+    expect(retired.logoKey).toBeNull();
     const item = await env.DB.prepare(
       "SELECT includes_logo FROM payment_item WHERE sponsorship_id = ?"
     )
       .bind(failed.id)
       .first<{ includes_logo: number }>();
     expect(item?.includes_logo).toBe(1);
-    const plan = await retryRenderStatements(db, {
-      actorId: PRE_EXISTING.id,
-      now: NOW,
-      sponsorshipId: failed.id,
-    });
-    await db.batch(plan.statements as never);
-    const [job] = await renderJobsOf("06");
-    const input = renderInputSchema.parse(JSON.parse(job?.input ?? "{}"));
-    expect(input.logoKey).toBeNull();
-    await fakeRenderStarter(db, () => NOW).start({
-      input,
-      renderJobId: job?.id ?? "",
-    });
-    const rendered = await row("06");
-    expect(rendered.status).toBe("in_review");
-    expect(rendered.videoPlaybackId).toBe(input.sourcePlaybackId);
+    expect(await renderJobsOf("06")).toHaveLength(0);
   });
 
   it("a changes_requested row with a paid logo and none stored resubmits straight to review", async () => {

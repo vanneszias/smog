@@ -40,8 +40,6 @@ const TEMPLATE_LABELS = {
     "admin.emails.template.adminNewSponsorship",
   "transactional/admin-refund-needed":
     "admin.emails.template.adminRefundNeeded",
-  "transactional/admin-render-failed":
-    "admin.emails.template.adminRenderFailed",
   "transactional/payment-confirmed": "admin.emails.template.paymentConfirmed",
   "transactional/renewal-reminder": "admin.emails.template.renewalReminder",
   "transactional/sponsorship-live": "admin.emails.template.sponsorshipLive",

@@ -8,16 +8,12 @@ import { useAuditTime } from "../audit-data";
 
 /**
  * The dashboard's dead-letter card (phase 9 task 4): the messages nobody
- * replayed or discarded, per queue, the oldest one's date, and the
- * sponsorships whose render failed (the same count the sponsorship card
- * shows, here beside the alert that matters for it). Anything waiting
- * stands out.
+ * replayed or discarded, per queue, and the oldest one's date. Anything
+ * waiting stands out.
  */
 export function DeadLetterStats({
-  renderFailed,
   stats,
 }: {
-  renderFailed: number;
   stats: Dashboard["deadLetters"];
 }): ReactNode {
   const { t } = useTranslation();
@@ -55,22 +51,6 @@ export function DeadLetterStats({
               <Link search={{ queue: "events" }} to="/admin/dead-letters">
                 {t("admin.dashboard.deadLetters.events", {
                   count: stats.events,
-                })}
-              </Link>
-            </TextLink>
-          </li>
-          <li>
-            <TextLink
-              asChild
-              className={cn(
-                "text-body-sm",
-                renderFailed > 0 ? "text-danger-strong" : undefined
-              )}
-              tone={renderFailed > 0 ? "default" : "muted"}
-            >
-              <Link search={{ tab: "rendering" }} to="/admin/sponsorships">
-                {t("admin.dashboard.deadLetters.renderFailed", {
-                  count: renderFailed,
                 })}
               </Link>
             </TextLink>

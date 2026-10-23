@@ -7,9 +7,8 @@ import {
 import { type Mux, muxRequest } from "./client";
 
 /**
- * Static MP4 renditions (phase 8 ruling 5, carry 1): the render's fallback
- * source and the wizard's Player read `highest.mp4`, then `high.mp4`
- * (`renditionUrls`). New gesture uploads ask for `highest` at creation
+ * Static MP4 renditions (phase 8 ruling 5, carry 1): (the render pipeline that read
+ * `highest.mp4` is retired, phase 10b task 9). New gesture uploads ask for `highest` at creation
  * (`createDirectUpload`); the migrated gesture assets get it through
  * `enableStaticRendition`, which the importer's `mux renditions` runs
  * (dry by default: Mux bills the stored MP4).

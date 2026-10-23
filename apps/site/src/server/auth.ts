@@ -22,7 +22,7 @@ import {
 } from "@smog/rpc";
 
 /** The queue and R2 bindings, validated (`parseWorkerBindings`). */
-type SiteBindings = ReturnType<typeof parseWorkerBindings<Env>>;
+type SiteBindings = ReturnType<typeof parseWorkerBindings<Cloudflare.Env>>;
 
 export interface SiteEnv {
   auth: AuthEnv;

@@ -183,7 +183,7 @@ const sponsorshipStatusFilter = z.array(z.enum(SPONSORSHIP_STATUSES));
  * its expiry. No sponsor contact data either (data minimisation; the
  * target id links to the sponsorship while it exists).
  * Phase 7 task 7: `sponsorship.retry_render` (A-27), the new job's id and
- * attempt.
+ * attempt (Retry render is removed since phase 10b task 9; old entries stay).
  */
 const SPONSORSHIP_AUDIT_SCHEMAS = {
   "export.sponsorships_csv": z.object({

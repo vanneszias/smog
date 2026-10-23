@@ -145,7 +145,7 @@ function detail(
       ...sponsorship,
     },
     tokens: [],
-    video: { fakeRender: true, playbackId: "original-playback" },
+    video: { playbackId: "original-playback" },
     ...patch,
   };
 }
@@ -299,10 +299,8 @@ describe("sponsorship search", () => {
 
   test("opens on the Review tab (in review), and maps every tab", () => {
     expect(sponsorshipListInput({})).toEqual({ status: ["in_review"] });
-    expect(sponsorshipListInput({ tab: "rendering" }).status).toEqual([
-      "rendering",
-      "render_failed",
-    ]);
+    // The retired Rendering tab is no tab: a bookmarked link opens Review.
+    expect(validateSponsorshipSearch({ tab: "rendering" }).tab).toBeUndefined();
     expect(sponsorshipListInput({ tab: "live" }).status).toEqual([
       "live",
       "expiring",
@@ -501,7 +499,7 @@ describe("SponsorshipDetail", () => {
       "/api/logos/0b5c9c3e-6d1f-4c39-a7d2-2f7e5d1c9a10"
     );
     expect(screen.getByText("Invoice requested")).toBeTruthy();
-    expect(screen.getByText("Fake render (no overlay)")).toBeTruthy();
+    expect(screen.queryByText("Fake render (no overlay)")).toBeNull();
     // The trail names the actor, the system, and the reason.
     const trail = screen.getByRole("list", { name: "History" });
     expect(trail.textContent).toContain("Ada Admin");
@@ -510,9 +508,7 @@ describe("SponsorshipDetail", () => {
   });
 
   test("approve is refused without a video, and says why", async () => {
-    await showDetail(
-      detail({ video: { fakeRender: false, playbackId: null } })
-    );
+    await showDetail(detail({ video: { playbackId: null } }));
     const approve = button("Approve");
     expect(approve.disabled).toBe(true);
     expect(describedBy(approve)).toContain("no video yet");
@@ -668,13 +664,15 @@ describe("SponsorshipDetail", () => {
     expect(alert.textContent).toContain("€120.00");
     expect(alert.textContent).toContain("Hond and Kat");
     expect(alert.textContent).toContain("Bakkerij Zon");
-    expect(alert.textContent).toContain("each one gets its video");
+    expect(alert.textContent).toContain("each one goes to review");
     fireEvent.change(
       within(alert).getByRole("textbox", { name: BANK_REFERENCE }),
       { target: { value: "BE-REF-42" } }
     );
     fireEvent.click(within(alert).getByRole("button", { name: "Mark paid" }));
-    await screen.findByText("Marked paid. The videos are being made.");
+    await screen.findByText(
+      "Marked paid. The sponsorships are now waiting for review."
+    );
     expect(
       site.calls.find((call) => call.path === "admin/sponsorships/markPaid")
         ?.input
@@ -705,7 +703,7 @@ describe("SponsorshipDetail", () => {
   test("mark paid that fails after the payment was marked paid says so", async () => {
     await markPaidFailsThen("paid");
     await screen.findByText(
-      "The payment is marked paid, but the videos may not have started. The hourly check starts any that are missing; check back in an hour."
+      "The payment is marked paid, but the confirmation emails may not have been sent. Check the payment and tell the sponsor yourself if needed."
     );
   });
 
@@ -808,67 +806,30 @@ describe("SponsorshipDetail", () => {
             status: "failed",
           },
         ],
-        video: { fakeRender: false, playbackId: null },
+        video: { playbackId: null },
       },
       { status: "render_failed" }
     );
   }
 
-  test("retry render shows only on render_failed: in the status card and the render jobs, with the job's error", async () => {
+  test("an old render_failed sponsorship shows its history and its note, and no retry (the pipeline is retired)", async () => {
     await showDetail(renderFailed());
-    expect(
-      screen.getAllByRole("button", { name: "Retry render" })
-    ).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Retry render" })).toBeNull();
     const jobs = screen.getByRole("region", { name: "Render jobs" });
-    expect(
-      within(jobs).getByRole("button", { name: "Retry render" })
-    ).toBeTruthy();
     expect(jobs.textContent).toContain("renderer answered 500");
-    expect(jobs.textContent).not.toContain("Read only");
     // The trail names the attempt of each render_started, and the error.
     const trail = screen.getByRole("list", { name: "History" });
     expect(trail.textContent).toContain("Video started");
     expect(trail.textContent).toContain("Attempt 1");
     expect(trail.textContent).toContain("renderer answered 500");
+    expect(
+      screen.getByText(
+        "This sponsorship was waiting for a video that is no longer made. It moves to Review within the hour."
+      )
+    ).toBeTruthy();
     for (const name of ["Approve", "Reject", "End now"]) {
       expect(screen.queryByRole("button", { name })).toBeNull();
     }
-  });
-
-  test("a failure with a known code shows what the admin can do (fix wave infra M-3, I-2)", async () => {
-    const failed = renderFailed();
-    const [job] = failed.renderJobs;
-    if (!job) {
-      throw new Error("[test] no job");
-    }
-    failed.renderJobs = [
-      {
-        ...job,
-        error:
-          "sourceTooLong: the source is 150 s long; at most 120 s can be rendered",
-      },
-      {
-        ...job,
-        attempt: 2,
-        error:
-          "workflowNeverStarted: the Workflow did not start within 6 hours",
-        id: "job-2",
-      },
-    ];
-    await showDetail(failed);
-    const jobs = screen.getByRole("region", { name: "Render jobs" });
-    expect(jobs.textContent).toContain(
-      "The gesture's video is longer than 2 minutes"
-    );
-    expect(jobs.textContent).toContain(
-      "The render never started within 6 hours"
-    );
-  });
-
-  test("a failure without a known code shows no hint", async () => {
-    await showDetail(renderFailed());
-    const jobs = screen.getByRole("region", { name: "Render jobs" });
-    expect(jobs.textContent).not.toContain("then retry");
   });
 
   test.each(["in_review", "rendering", "live", "rejected"] as const)(
@@ -878,129 +839,6 @@ describe("SponsorshipDetail", () => {
       expect(screen.queryByRole("button", { name: "Retry render" })).toBeNull();
     }
   );
-
-  test("retry render: confirm → the mutation → the toast and the announcement; focus returns", async () => {
-    const site = await showDetail(renderFailed(), {
-      "admin/sponsorships/retryRender": {
-        attempt: 2,
-        renderJobId: "job-2",
-      },
-    });
-    const jobs = screen.getByRole("region", { name: "Render jobs" });
-    const trigger = within(jobs).getByRole("button", {
-      name: "Retry render",
-    }) as HTMLButtonElement;
-    trigger.focus();
-    fireEvent.click(trigger);
-    const alert = await screen.findByRole("alertdialog");
-    expect(alert.textContent).toContain("Bakkerij Zon");
-    expect(alert.textContent).toContain("Hond");
-    expect(alert.textContent).toContain("No email is sent");
-    fireEvent.click(
-      within(alert).getByRole("button", { name: "Retry render" })
-    );
-    await screen.findByText("The video is being made again (attempt 2).");
-    expect(
-      site.calls.find((call) => call.path === "admin/sponsorships/retryRender")
-        ?.input
-    ).toEqual({ id: "sp-1" });
-    const announced = screen
-      .getAllByRole("status")
-      .filter((element) => element.getAttribute("aria-live") === "polite")
-      .map((element) => element.textContent);
-    expect(announced).toContain(
-      "Render retried: attempt 2 started for Bakkerij Zon."
-    );
-    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
-    await waitFor(() => expect(document.activeElement).toBe(trigger));
-  });
-
-  test("while one retry runs, the other Retry render button waits too (review M-2)", async () => {
-    let answer: (value: unknown) => void = () => undefined;
-    await showDetail(renderFailed(), {
-      "admin/sponsorships/retryRender": () =>
-        new Promise((resolve) => {
-          answer = resolve;
-        }),
-    });
-    const jobs = screen.getByRole("region", { name: "Render jobs" });
-    fireEvent.click(within(jobs).getByRole("button", { name: "Retry render" }));
-    const alert = await screen.findByRole("alertdialog");
-    fireEvent.click(
-      within(alert).getByRole("button", { name: "Retry render" })
-    );
-    await waitFor(() =>
-      expect(
-        screen
-          .getAllByRole("button", { name: "Retry render" })
-          .every((element) => (element as HTMLButtonElement).disabled)
-      ).toBe(true)
-    );
-    answer({ attempt: 2, renderJobId: "job-2" });
-    await screen.findByText("The video is being made again (attempt 2).");
-  });
-
-  test("once the refetched detail has moved on, focus goes to the announcement (review M-5)", async () => {
-    let retried = false;
-    await showDetail(renderFailed(), {
-      "admin/sponsorships/get": () =>
-        retried ? detail({}, { status: "rendering" }) : renderFailed(),
-      "admin/sponsorships/retryRender": () => {
-        retried = true;
-        return { attempt: 2, renderJobId: "job-2" };
-      },
-    });
-    const jobs = screen.getByRole("region", { name: "Render jobs" });
-    const trigger = within(jobs).getByRole("button", {
-      name: "Retry render",
-    }) as HTMLButtonElement;
-    trigger.focus();
-    fireEvent.click(trigger);
-    const alert = await screen.findByRole("alertdialog");
-    fireEvent.click(
-      within(alert).getByRole("button", { name: "Retry render" })
-    );
-    await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Retry render" })).toBeNull()
-    );
-    await waitFor(() =>
-      expect(document.activeElement?.textContent).toBe(
-        "Render retried: attempt 2 started for Bakkerij Zon."
-      )
-    );
-    expect(document.activeElement?.getAttribute("aria-live")).toBe("polite");
-    // Focus visible (WCAG 2.4.7, review M-7): the focused announcement is
-    // on screen with the focus ring, not a visually hidden region.
-    const focused = document.activeElement as HTMLElement;
-    expect(focused.className).not.toContain("sr-only");
-    expect(focused.className).toContain("focus:outline-ring");
-  });
-
-  test("no empty live region on a detail page without a failed render (review M-7)", async () => {
-    await showDetail(detail({}, { status: "in_review" }));
-    const empty = [
-      ...document.querySelectorAll('[role="status"][aria-live="polite"]'),
-    ].filter((element) => (element.textContent ?? "") === "");
-    expect(empty).toHaveLength(0);
-  });
-
-  test("a refused retry render (another admin was first) shows the reason", async () => {
-    await showDetail(renderFailed(), {
-      "admin/sponsorships/retryRender": rpcError("INVALID_STATE", 409, {
-        reason: "stale",
-      }),
-    });
-    fireEvent.click(
-      screen.getAllByRole("button", { name: "Retry render" })[0] as HTMLElement
-    );
-    const alert = await screen.findByRole("alertdialog");
-    fireEvent.click(
-      within(alert).getByRole("button", { name: "Retry render" })
-    );
-    await screen.findByText(
-      "This sponsorship changed in the meantime. Refresh the page and try again."
-    );
-  });
 
   test("expiring: a new renewal link; changes requested: a new edit link", async () => {
     await showDetail(

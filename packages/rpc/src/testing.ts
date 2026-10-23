@@ -14,7 +14,6 @@ const ENV: RpcEnv = {
   MOLLIE_API_URL: "https://api.mollie.com",
   MUX_API_URL: "https://api.mux.com",
   OPENPANEL_API_URL: "https://analytics.zias.be/api",
-  RENDER_MODE: "fake",
   RL_ANALYTICS: allow,
   RL_API: allow,
   RL_AUTH: allow,

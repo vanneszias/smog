@@ -329,13 +329,13 @@ erDiagram
 
 ## Row rules the services follow
 
-- **Render jobs:** a job's Workflow instance id is its own `id` (`workflow_instance_id = id`, unique). Workflow instance ids cannot be reused, so a retry (automatic or the admin "retry render") inserts a **new** `render_job` row with `attempt` + 1; the old row stays as `failed`. The newest row per sponsorship (`render_job_sponsorship_created_idx`) is the current one.
+- **Render jobs (retired, phase 10b task 9):** the table is history only: nothing writes a job any more, and the stale cron closes any `queued` / `running` one as `failed` (`error = "render pipeline retired"`) when it moves its sponsorship on. While the pipeline ran, a job's Workflow instance id is its own `id` (`workflow_instance_id = id`, unique). Workflow instance ids cannot be reused, so a retry (automatic or the admin "retry render") inserts a **new** `render_job` row with `attempt` + 1; the old row stays as `failed`. The newest row per sponsorship (`render_job_sponsorship_created_idx`) is the current one.
 - **Sponsorship tokens:** regenerating a re-edit or renewal link inserts a new token and sets `expires_at = now` on the sponsorship's older unused tokens of the same purpose (no `revoked_at` column). A token is valid when `used_at IS NULL AND expires_at > now`. The monthly cron deletes expired rows.
 - **Audit targets:** `target_type`/`target_id` name what an action touched: a row (`gesture`, `category`, `user`, `sponsorship`, `payment`, `list` + its id), a KV setting (`setting` + its key, for `maintenance.enable`/`maintenance.disable`), or nothing specific (`system` + NULL, for `export.sponsorships_csv`). `category.reorder` targets the category that moved; a bulk reorder writes one row per category.
 
 ## Sponsorship state machine
 
-Statuses (`SPONSORSHIP_STATUSES`): `awaiting_payment → rendering → in_review → live → expiring → expired`, plus `render_failed`, `changes_requested`, `rejected` and `cancelled`. The blocking statuses are listed above; `rejected`, `cancelled` and `expired` are terminal. Approval sets `starts_at = now` and `ends_at = now + 365 days`; the reminder cron moves `live → expiring` and sets `reminder_sent_at`; a paid renewal adds 365 days to `ends_at` and moves `expiring → live`. Every transition writes a `sponsorship_event` row (type from `SPONSORSHIP_EVENT_TYPES`) in the same D1 batch. The transition table is enforced by `@smog/sponsorships` (phase 6), not by the database; the database only guarantees valid status values and one blocking sponsorship per gesture. Full diagram and rules: spec [§5.5](superpowers/specs/2026-09-29-cloudflare-rewrite-design.md#55-sponsorship-state-machine-enforced-in-smogsponsorships).
+Statuses (`SPONSORSHIP_STATUSES`): `awaiting_payment → rendering → in_review → live → expiring → expired`, plus `render_failed`, `changes_requested`, `rejected` and `cancelled`. **`rendering` and `render_failed` are retired (phase 10b task 9):** no transition enters them any more (paid, revived and resubmitted sponsorships go straight to `in_review`), they stay in the enum and the CHECKs because migrations are append-only, and the hourly stale cron moves any old row in either one to `in_review` (`render_succeeded` event with `retired: true`; the `render_started`, `render_failed` and `render_retried` event types stay for old trails). The blocking statuses are listed above; `rejected`, `cancelled` and `expired` are terminal. Approval sets `starts_at = now` and `ends_at = now + 365 days`; the reminder cron moves `live → expiring` and sets `reminder_sent_at`; a paid renewal adds 365 days to `ends_at` and moves `expiring → live`. Every transition writes a `sponsorship_event` row (type from `SPONSORSHIP_EVENT_TYPES`) in the same D1 batch. The transition table is enforced by `@smog/sponsorships` (phase 6), not by the database; the database only guarantees valid status values and one blocking sponsorship per gesture. Full diagram and rules: spec [§5.5](superpowers/specs/2026-09-29-cloudflare-rewrite-design.md#55-sponsorship-state-machine-enforced-in-smogsponsorships).
 
 ## Decisions
 
@@ -744,6 +744,8 @@ Indexes: `payment_item_sponsorship_id_idx` (sponsorship_id).
 CHECK: `payment_item_amount_check`.
 #### `render_job`
 
+Retired in phase 10b task 9 (history only; see the render job notes above).
+
 | Column | TS | Type | Null | Notes |
 |---|---|---|---|---|
 | `id` | `id` | text |  | PK |
@@ -760,7 +762,7 @@ CHECK: `payment_item_amount_check`.
 | `updated_at` | `updatedAt` | integer (ms) → Date |  |  |
 | `finished_at` | `finishedAt` | integer (ms) → Date | yes |  |
 
-Indexes: `render_job_sponsorship_created_idx` (sponsorship_id, created_at); `render_job_mux_upload_id_idx` (mux_upload_id); `render_job_mux_asset_id_idx` (mux_asset_id); `render_job_status_updated_idx` (status, updated_at), migration 0011: the render watchdog (phase 7 ruling 12) reads the `queued` and the `running` jobs oldest first, each status a seek with no sort.
+Indexes: `render_job_sponsorship_created_idx` (sponsorship_id, created_at); `render_job_mux_upload_id_idx` (mux_upload_id); `render_job_mux_asset_id_idx` (mux_asset_id); `render_job_status_updated_idx` (status, updated_at), migration 0011: the render watchdog (phase 7 ruling 12, removed in phase 10b task 9) read the `queued` and the `running` jobs oldest first, each status a seek with no sort.
 
 CHECK: `render_job_status_check`, `render_job_attempt_check`.
 #### `sponsorship_event`

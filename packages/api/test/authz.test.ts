@@ -156,7 +156,6 @@ const PROCEDURES: Record<string, Row> = {
     "sponsorships.regenerateToken": "audit",
     "sponsorships.reject": "audit",
     "sponsorships.requestChanges": "audit",
-    "sponsorships.retryRender": "audit",
     "users.ban": "audit",
     "users.delete": "audit",
     "users.get": "read",

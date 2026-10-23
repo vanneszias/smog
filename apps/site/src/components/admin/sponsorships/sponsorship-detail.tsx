@@ -20,20 +20,10 @@ import { type ReactNode, useCallback, useEffect, useId, useRef } from "react";
 import { AdminPage } from "../admin-page";
 import { useAuditTime } from "../audit-data";
 import { errorCode } from "../catalog/errors";
-import {
-  RetryRender,
-  SponsorshipActions,
-  sponsorshipAmountCents,
-} from "./action-dialogs";
+import { SponsorshipActions, sponsorshipAmountCents } from "./action-dialogs";
 import { EventTrail } from "./event-trail";
 import { InvoiceBox } from "./invoice-box";
-import {
-  renderFailureHint,
-  renderJobLabel,
-  tokenPurposeLabel,
-  useDay,
-  useMoney,
-} from "./labels";
+import { renderJobLabel, tokenPurposeLabel, useDay, useMoney } from "./labels";
 import { PaymentCard } from "./payment-card";
 import { StatusBadge } from "./status-badge";
 
@@ -105,11 +95,6 @@ function Videos({ detail }: { detail: AdminSponsorshipDetail }): ReactNode {
         <figure className="flex min-w-0 flex-col gap-2">
           <figcaption className="flex flex-wrap items-center gap-2 font-medium text-body-sm">
             {t("admin.sponsorships.detail.sponsored")}
-            {video.fakeRender ? (
-              <Badge variant="warning">
-                {t("admin.sponsorships.detail.fakeRender")}
-              </Badge>
-            ) : null}
           </figcaption>
           {video.playbackId ? (
             <VideoPlayer
@@ -287,15 +272,15 @@ const RENDER_JOB_TONES = {
 } as const satisfies Record<RenderJobStatus, "danger" | "neutral" | "success">;
 
 /**
- * The render jobs, each with its error summary (URL-free), and
- * the retry of a failed render (A-27).
+ * The render jobs of an old sponsorship, each with its error summary
+ * (URL-free): history only, the render pipeline is retired (phase 10b
+ * task 9).
  */
 function RenderJobs({ detail }: { detail: AdminSponsorshipDetail }): ReactNode {
   const { t } = useTranslation();
   const time = useAuditTime();
   return (
     <Section title={t("admin.sponsorships.renderJobs.title")}>
-      <RetryRender detail={detail} />
       {detail.renderJobs.length === 0 ? (
         <Text size="body-sm" tone="muted">
           {t("admin.sponsorships.renderJobs.empty")}
@@ -323,11 +308,6 @@ function RenderJobs({ detail }: { detail: AdminSponsorshipDetail }): ReactNode {
                 <span className="break-words text-body-sm text-danger-strong">
                   {job.error}
                 </span>
-              ) : null}
-              {renderFailureHint(t, job.error) ? (
-                <Text as="span" size="body-sm" tone="muted">
-                  {renderFailureHint(t, job.error)}
-                </Text>
               ) : null}
             </li>
           ))}

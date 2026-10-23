@@ -2,10 +2,6 @@
  * The `payment.settled` fan-out (rulings 7 and 8), which the site's
  * `EVENTS_QUEUE` consumer runs. Everything is derived from D1 on every
  * run, so a duplicate or retried message is safe:
- * - each item in `rendering` without a `queued`/`running` job gets one
- *   (`createRenderJob`: the in-batch guards make it one job however many
- *   messages run), and `render.requested` is returned for every item's
- *   `queued` job (the start is idempotent: it acts on a queued job only);
  * - an initial payment: `sponsorship_received` and `payment_confirmed` per
  *   sponsorship, and `admin_new_sponsorship` per admin;
  * - a renewal: `payment_confirmed` with the new end.
@@ -23,7 +19,6 @@ import {
   invoiceRequest,
   payment,
   paymentItem,
-  renderJob,
   type SponsorshipStatus,
   sponsor,
   sponsorship,
@@ -31,12 +26,10 @@ import {
 } from "@smog/db";
 import type { Db } from "@smog/db/client";
 import type { OutboxEmail } from "@smog/email";
-import type { EventMessage, Outputs } from "@smog/jobs";
-import { type RenderInput, renderInputSchema } from "@smog/render/contract";
+import type { Outputs } from "@smog/jobs";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { firstSettledAt, insideEmailWindow } from "./email-window";
 import { emailAdmins } from "./recipients";
-import { createRenderJob } from "./render";
 
 const PAST_PAYMENT: readonly SponsorshipStatus[] =
   BLOCKING_SPONSORSHIP_STATUSES.filter(
@@ -110,53 +103,10 @@ async function sponsorOf(db: Db, sponsorshipId: string) {
   return row ?? null;
 }
 
-/** The queued job of a sponsorship, if any. */
-async function queuedJobOf(
-  db: Db,
-  sponsorshipId: string
-): Promise<string | null> {
-  const [row] = await db
-    .select({ id: renderJob.id })
-    .from(renderJob)
-    .where(
-      and(
-        eq(renderJob.sponsorshipId, sponsorshipId),
-        eq(renderJob.status, "queued")
-      )
-    )
-    .limit(1);
-  return row?.id ?? null;
-}
-
-/** One job per rendering item; `render.requested` for each queued one. */
-async function renderRequests(
-  db: Db,
-  items: readonly ItemRow[],
-  now: Date
-): Promise<EventMessage[]> {
-  const events: EventMessage[] = [];
-  for (const item of items) {
-    if (item.status !== "rendering") {
-      continue;
-    }
-    // biome-ignore lint/performance/noAwaitInLoops: one guarded batch per item, so one race fails only its own item.
-    const created = await createRenderJob(db, {
-      now,
-      sponsorshipId: item.sponsorshipId,
-    });
-    const renderJobId =
-      created?.renderJobId ?? (await queuedJobOf(db, item.sponsorshipId));
-    if (renderJobId) {
-      events.push({ renderJobId, type: "render.requested" });
-    }
-  }
-  return events;
-}
-
 /**
- * The fan-out of one settled payment (see the module comment): render
- * jobs are written here; the returned events and emails are for the
- * caller to enqueue.
+ * The fan-out of one settled payment (see the module comment): the emails
+ * are for the caller to enqueue (nothing is rendered any more, phase 10b
+ * task 9, so `events` is always empty).
  */
 export async function handlePaymentSettled(
   db: Db,
@@ -189,17 +139,16 @@ export async function handlePaymentSettled(
   if (!first) {
     return { events: [], notify: [] };
   }
-  const events = await renderRequests(db, items, now);
   const since = (await firstSettledAt(db, paymentId)) ?? row.paidAt;
   if (since && !insideEmailWindow(since, now)) {
     // A refund or chargeback weeks later settles `already` and fans out
     // again: the jobs are re-checked, but the emails were sent long ago,
     // and their KV markers are gone.
-    return { events, notify: [] };
+    return { events: [], notify: [] };
   }
   const contact = await sponsorOf(db, first.sponsorshipId);
   if (!contact) {
-    return { events, notify: [] };
+    return { events: [], notify: [] };
   }
   const notify: OutboxEmail[] = [];
   for (const item of items) {
@@ -269,31 +218,5 @@ export async function handlePaymentSettled(
       })))
     );
   }
-  return { events, notify };
-}
-
-/**
- * A `queued` render job and its input, for `render.requested`; `null` for
- * an unknown job or one that already started or finished (acked).
- */
-export async function queuedRenderJob(
-  db: Db,
-  renderJobId: string
-): Promise<{ input: RenderInput; renderJobId: string } | null> {
-  const [row] = await db
-    .select({ input: renderJob.input, status: renderJob.status })
-    .from(renderJob)
-    .where(eq(renderJob.id, renderJobId))
-    .limit(1);
-  if (row?.status !== "queued") {
-    return null;
-  }
-  const input = renderInputSchema.safeParse(row.input);
-  if (!input.success) {
-    console.error(
-      `[sponsorships] Render job ${renderJobId} has an invalid input; not started`
-    );
-    return null;
-  }
-  return { input: input.data, renderJobId };
+  return { events: [], notify };
 }

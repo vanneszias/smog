@@ -502,7 +502,7 @@ test("pays for 2 gestures with a logo and an invoice; the success page shows pai
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Broer, Zus")).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
-  // The webhook, `payment.settled`, the consumer and the fake render ran:
+  // The webhook, `payment.settled`, and the consumer ran:
   // both wait in the admin review queue (task 6's API, its own session).
   await signInAsAdmin(request);
   await expect

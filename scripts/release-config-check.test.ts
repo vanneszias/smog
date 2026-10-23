@@ -14,8 +14,11 @@ import {
   checkEasUpdateScripts,
   checkReleaseConfig,
   checkReleaseScripts,
+  checkRenderClassExports,
   checkRequiredConfig,
+  checkSiteDryRuns,
   checkWranglerConfig,
+  checkWranglerRenderKeys,
   checkWranglerResources,
   migrationsDirFromWrangler,
 } from "./release-config-check";
@@ -375,8 +378,8 @@ describe("checkDeployConfigStep (phase 8 ruling 1)", () => {
       "before `scripts/ensure-cloudflare-resources.ts`"
     );
     const afterMigrations = DEPLOY.replace(CONFIG_CHECK_STEP, "").replace(
-      "      # The render image cache",
-      `${CONFIG_CHECK_STEP}      # The render image cache`
+      "      # The guarded site script",
+      `${CONFIG_CHECK_STEP}      # The guarded site script`
     );
     expect(errorsOf(afterMigrations)).toContain("before the D1 migrations");
   });
@@ -1147,5 +1150,63 @@ describe("checkEasProfiles (phase 8 ruling 3)", () => {
     expect(errorsOf({ eas: "{" })).toEqual([
       "apps/mobile/eas.json: invalid JSON",
     ]);
+  });
+});
+
+describe("the retired render pipeline (phase 10b task 9)", () => {
+  test("the CI matrix is core, tests and mobile: a render lane fails it", () => {
+    expect(checkCiWorkflow(CI)).toEqual([]);
+    expect(
+      checkCiWorkflow(
+        CI.replace(
+          "check: [core, tests, mobile]",
+          "check: [core, tests, mobile, render]"
+        )
+      ).join("\n")
+    ).toContain("must include core, tests and mobile");
+  });
+
+  test("release:check has no render lane", () => {
+    expect(checkReleaseScripts(PACKAGE)).toEqual([]);
+    expect(PACKAGE).not.toContain("release:check:render");
+    expect(PACKAGE).not.toContain("deploy:dry:render");
+  });
+
+  test("wrangler.jsonc has no RENDER_MODE and no render binding", () => {
+    expect(checkWranglerResources(WRANGLER)).toEqual([]);
+    expect(checkWranglerRenderKeys(WRANGLER)).toEqual([]);
+    const withMode = WRANGLER.replace(
+      '"ENVIRONMENT": "staging",',
+      '"ENVIRONMENT": "staging",\n        "RENDER_MODE": "fake",'
+    );
+    expect(checkWranglerResources(withMode).join("\n")).toContain(
+      "vars.RENDER_MODE must be removed"
+    );
+    const withFlow = WRANGLER.replace(
+      '"env": {',
+      '"workflows": [{ "binding": "RENDER_WORKFLOW" }],\n  "env": {'
+    );
+    expect(checkWranglerRenderKeys(withFlow).join("\n")).toContain(
+      "workflows is not allowed"
+    );
+  });
+
+  test("src/worker.ts exports neither render class", () => {
+    expect(checkRenderClassExports("export default {};")).toEqual([]);
+    expect(
+      checkRenderClassExports(
+        'export { SmogRenderer } from "@/worker/renderer";'
+      )
+    ).toEqual([expect.stringContaining("must not export SmogRenderer")]);
+  });
+
+  test("the site dry run is staging's, without the render flags", () => {
+    const site = readFileSync(
+      join(ROOT, "apps", "site", "package.json"),
+      "utf8"
+    );
+    expect(checkSiteDryRuns(site)).toEqual([]);
+    expect(site).not.toContain("SMOG_RENDER_PIPELINE");
+    expect(site).not.toContain("containers-rollout");
   });
 });

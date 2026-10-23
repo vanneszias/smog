@@ -155,7 +155,7 @@ describe("the bindings of env.dev", () => {
     expect(typeof env.EMAIL_QUEUE?.send).toBe("function");
     expect(typeof env.EVENTS_QUEUE?.send).toBe("function");
     expect(typeof env.MEDIA?.head).toBe("function");
-    expect(env.RENDER_MODE).toBe("fake");
+    expect("RENDER_MODE" in env).toBe(false);
     expect(env.MEDIA_BUCKET).toBe("smog-dev-media");
   });
 });

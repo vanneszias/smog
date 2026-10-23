@@ -1,11 +1,11 @@
 import { fileURLToPath } from "node:url";
 import { cloudflare, type WorkerConfig } from "@cloudflare/vite-plugin";
+import { ENVIRONMENTS } from "@smog/config/env/worker";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import { THEME_SCRIPT_HASH_DEFINE } from "./build-defines";
-import { applyRenderGate, type RenderEnv } from "./render-config";
 
 const SRC = fileURLToPath(new URL("./src", import.meta.url));
 const I18N_LAZY_ENTRY = fileURLToPath(
@@ -80,47 +80,26 @@ const devVars: Record<string, string> = {
   ...devMollieVars,
 };
 
-const RENDER_ENVS: readonly RenderEnv[] = ["dev", "staging", "production"];
-
 /**
- * The render gate (render-config.ts, phase 7 ruling 2): the Workflow and
- * the Container reach the build only for `RENDER_MODE` `local` (dev) or
- * `container` with `SMOG_RENDER_PIPELINE=1`; `container` without the flag
- * fails the build here. `SMOG_DEV_RENDER_MODE=local bun dev` picks dev's
- * local mode and sets the var too (`.dev.vars` is read too late for the
- * binding). `SMOG_DRY_RENDER_MODE=container` builds staging or production
- * as `container` for the core lane's gate-on dry run (`deploy:dry:render`;
- * the deploy guard refuses it outside `--dry-run`). Then the dev vars
- * above, which `.dev.vars` still overrides.
+ * The dev vars above are the only build-time change of the Worker config
+ * (`.dev.vars` still overrides them). The render gate that once added the
+ * Workflow and the Container here is gone with the render pipeline (phase
+ * 10b task 9), so a staging or production build is `wrangler.jsonc`'s env,
+ * unchanged.
  */
 function customizeWorker(
   worker: WorkerConfig
 ): Partial<WorkerConfig> | undefined {
-  const env = RENDER_ENVS.find((name) => name === process.env.CLOUDFLARE_ENV);
+  const env = ENVIRONMENTS.find((name) => name === process.env.CLOUDFLARE_ENV);
   if (!env) {
     throw new Error(
-      `[render] CLOUDFLARE_ENV must be one of ${RENDER_ENVS.join(", ")} (got ${JSON.stringify(process.env.CLOUDFLARE_ENV)})`
+      `[build] CLOUDFLARE_ENV must be one of ${ENVIRONMENTS.join(", ")} (got ${JSON.stringify(process.env.CLOUDFLARE_ENV)})`
     );
   }
-  const gate = applyRenderGate({
-    devMode: process.env.SMOG_DEV_RENDER_MODE,
-    dryMode: process.env.SMOG_DRY_RENDER_MODE,
-    env,
-    flag: process.env.SMOG_RENDER_PIPELINE,
-    renderMode: worker.vars.RENDER_MODE,
-  });
-  if ("error" in gate) {
-    throw new Error(gate.error);
-  }
-  const vars = { ...gate.vars, ...devVars };
-  const hasVars = Object.keys(vars).length > 0;
-  if (Object.keys(gate.add).length === 0 && !hasVars) {
+  if (Object.keys(devVars).length === 0) {
     return;
   }
-  return {
-    ...gate.add,
-    ...(hasVars ? { vars: { ...worker.vars, ...vars } } : {}),
-  };
+  return { vars: { ...worker.vars, ...devVars } };
 }
 
 export default defineConfig({
@@ -140,9 +119,9 @@ export default defineConfig({
     __SMOG_THEME_SCRIPT_HASH__: THEME_SCRIPT_HASH_DEFINE,
   },
   // The client build's manifest (`dist/client/.vite/manifest.json`), for the
-  // deploy guard's entry-chunk check: `remotion` and `mediabunny` load only
-  // in a lazy chunk (phase 7 ruling 1). `public/.assetsignore` keeps it
-  // out of the deployed assets.
+  // deploy guard's performance budgets (every route chunk needs an entry of
+  // `perf-budget.json`). `public/.assetsignore` keeps it out of the deployed
+  // assets.
   environments: { client: { build: { manifest: true } } },
   plugins: [
     i18nLazyCatalogues(),

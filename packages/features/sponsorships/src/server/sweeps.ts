@@ -22,7 +22,6 @@ import {
   RetentionPurgeError,
   type RetentionTable,
   ref,
-  renderJob,
   runRetentionPurges,
   type SponsorshipStatus,
   type Statement,
@@ -57,7 +56,6 @@ import {
 } from "drizzle-orm";
 import { REJECTED_VIDEO_PURGE_PER_RUN } from "../schema/retention";
 import { sponsorshipLinkUrl } from "../schema/tokens";
-import { SETTLED_AT_SQL } from "./email-window";
 import {
   ENDED_STATUSES,
   type LogoBucket,
@@ -66,11 +64,7 @@ import {
   releaseTerminalLogos,
 } from "./orphan-logos";
 import { rejectedEventAtSql, rejectedVideoCutoff } from "./rejected-video";
-import {
-  reconcileRenderJobs,
-  type WorkflowStatusPort,
-} from "./render-watchdog";
-import { RENDER_WATCHDOG_CEILING } from "./render-workflow";
+import { retireRenderStates } from "./retire-render";
 import { settlePayment } from "./settle";
 import {
   isStalePayment,
@@ -439,25 +433,12 @@ export interface StaleSweepResult {
    * without Mollie.
    */
   keptOpen: number;
-  /** Render jobs the watchdog failed: their Workflow ended or is gone. */
-  renderFailed: number;
-  /** Queued render jobs whose `render.requested` the watchdog re-sent. */
-  renderRequeued: number;
-  /** Running render jobs past the ceiling: terminated and failed. */
-  renderTimedOut: number;
-  /**
-   * Paid payments whose `payment.settled` was re-sent because an item sat
-   * in `rendering` without a `queued`/`running` render job (the
-   * reconciliation step).
-   */
-  resent: number;
+  /** Sponsorships moved from a retired render state to `in_review`. */
+  retired: number;
+  /** Rows whose retirement batch failed (logged; the next run retries). */
+  retireFailed: number;
   /** Payments Mollie reports paid, settled (never cancelled). */
   settled: number;
-  /**
-   * Paid payments still without a render job after the reconciliation
-   * window: no longer re-sent, logged once a day for an admin.
-   */
-  stuck: number;
 }
 
 interface StaleRow {
@@ -595,29 +576,20 @@ async function staleStep(
  * settled (paid), or cancelled in Mollie when it is cancelable and settled
  * as cancelled, or kept open (no key, a 404, not cancelable). One without
  * a Mollie id never reached Mollie and is cancelled locally. A Mollie
- * error leaves the payment open for the next hour. Then the
- * reconciliation re-sends lost fan-outs, and the render watchdog
- * (`reconcileRenderJobs`, phase 7 ruling 12) re-sends lost
- * `render.requested` and fails jobs whose Workflow died (`workflow` is
- * `null` without a `RENDER_WORKFLOW` binding: only the re-send applies).
+ * error leaves the payment open for the next hour. Last, the retirement of
+ * the render states (`retireRenderStates`, phase 10b task 9) moves any
+ * sponsorship still in `rendering` or `render_failed` to `in_review`.
  */
 export async function runStaleSweep({
   db,
   mollie,
-  mux,
   now,
   queues,
-  siteUrl,
-  workflow,
 }: {
   db: Db;
   mollie: MollieClient | null;
-  /** The render watchdog releases a failed job's Mux upload (fix wave I-1). */
-  mux: Mux | null;
   now: Date;
   queues: JobQueues;
-  siteUrl: string;
-  workflow: WorkflowStatusPort | null;
 }): Promise<StaleSweepResult> {
   const result: StaleSweepResult = {
     cancelled: 0,
@@ -625,12 +597,9 @@ export async function runStaleSweep({
     deferred: 0,
     failed: 0,
     keptOpen: 0,
-    renderFailed: 0,
-    renderRequeued: 0,
-    renderTimedOut: 0,
-    resent: 0,
+    retired: 0,
+    retireFailed: 0,
     settled: 0,
-    stuck: 0,
   };
   const before = new Date(now.getTime() - STALE_PAYMENT_AGE_MS);
   await sweep(
@@ -668,112 +637,10 @@ export async function runStaleSweep({
       }
     }
   );
-  const reconciled = await resendSettled(db, queues, now);
-  result.resent = reconciled.resent;
-  result.stuck = reconciled.stuck;
-  const renders = await reconcileRenderJobs({
-    ceilingMs: RENDER_WATCHDOG_CEILING,
-    db,
-    mux,
-    now,
-    queues,
-    siteUrl,
-    workflow,
-  });
-  result.renderFailed = renders.failed;
-  result.renderRequeued = renders.requeued;
-  result.renderTimedOut = renders.timedOut;
+  const retired = await retireRenderStates({ db, now });
+  result.retired = retired.retired;
+  result.retireFailed = retired.retireFailed;
   return result;
-}
-
-/** At most this many payments are re-sent per run (the next hour continues). */
-export const RECONCILE_MAX_PAYMENTS = 100;
-/**
- * A payment paid this recently may still have its `payment.settled` in
- * flight: the reconciliation leaves it to the next run.
- */
-export const RECONCILE_GRACE_MS = 5 * 60_000;
-/**
- * A payment is re-sent hourly for this long after it was paid (at most
- * 168 attempts); after that it is `stuck`: not re-sent, logged daily.
- */
-export const RECONCILE_WINDOW_MS = 7 * DAY_MS;
-/** The UTC hour of the daily `stuck` log line. */
-const STUCK_LOG_HOUR = 0;
-
-/** A paid payment with an item in `rendering` and no active render job. */
-function waitingForRender(): SQL {
-  return and(
-    eq(sponsorship.status, "rendering"),
-    eq(payment.status, "paid"),
-    sql`NOT EXISTS (SELECT 1 FROM ${renderJob} AS ${sql.raw("rj")} WHERE ${ref("rj", renderJob.sponsorshipId)} = ${ref("sponsorship", sponsorship.id)} AND ${inList(ref("rj", renderJob.status), ["queued", "running"])})`
-  ) as SQL;
-}
-
-/** When the payment was first applied (fix wave, jobs I-1; see `email-window.ts`). */
-const PAID_AT = SETTLED_AT_SQL;
-
-/**
- * The reconciliation step of the hourly sweep (task 4 review): every paid
- * payment with an item in `rendering` and no `queued`/`running` render
- * job, applied by us (its first settling event, else `paid_at`; fix
- * wave, jobs I-1) between 7 days and 5 minutes ago, gets `payment.settled`
- * again, oldest first, at most `RECONCILE_MAX_PAYMENTS` per run, so a
- * fan-out lost after the commit (a crash, a queue outage past the
- * retries, a dead-lettered message) is resumed. Idempotent: the consumer
- * creates at most one job per item in D1 and keys its emails. Older ones
- * are `stuck`: counted, and logged once a day (fix round 1, M-2).
- */
-async function resendSettled(
-  db: Db,
-  queues: JobQueues,
-  now: Date
-): Promise<{ resent: number; stuck: number }> {
-  const windowStart = now.getTime() - RECONCILE_WINDOW_MS;
-  const rows = await db
-    .select({ id: payment.id, paidAt: sql<number>`min(${PAID_AT})` })
-    .from(sponsorship)
-    .innerJoin(paymentItem, eq(paymentItem.sponsorshipId, sponsorship.id))
-    .innerJoin(payment, eq(payment.id, paymentItem.paymentId))
-    .where(
-      and(
-        waitingForRender(),
-        sql`${PAID_AT} < ${now.getTime() - RECONCILE_GRACE_MS}`,
-        sql`${PAID_AT} >= ${windowStart}`
-      )
-    )
-    .groupBy(payment.id)
-    .orderBy(asc(sql`min(${PAID_AT})`), asc(payment.id))
-    .limit(RECONCILE_MAX_PAYMENTS);
-  let resent = 0;
-  for (const row of rows) {
-    // biome-ignore lint/performance/noAwaitInLoops: one message per payment, bounded, oldest first.
-    const sent = await enqueueOutputs(queues, {
-      events: [{ paymentId: row.id, type: "payment.settled" }],
-      notify: [],
-    });
-    if (sent) {
-      resent += 1;
-    }
-  }
-  if (resent > 0) {
-    console.warn(
-      `[sponsorships] Re-sent payment.settled for ${resent} paid payment(s) with an item rendering and no render job`
-    );
-  }
-  const [stuckRow] = await db
-    .select({ n: sql<number>`count(DISTINCT ${payment.id})` })
-    .from(sponsorship)
-    .innerJoin(paymentItem, eq(paymentItem.sponsorshipId, sponsorship.id))
-    .innerJoin(payment, eq(payment.id, paymentItem.paymentId))
-    .where(and(waitingForRender(), sql`${PAID_AT} < ${windowStart}`));
-  const stuck = stuckRow?.n ?? 0;
-  if (stuck > 0 && now.getUTCHours() === STUCK_LOG_HOUR) {
-    console.error(
-      `[sponsorships] ${stuck} paid payment(s) have had an item rendering without a render job for more than 7 days; no longer re-sent, check the events DLQ and the render input`
-    );
-  }
-  return { resent, stuck };
 }
 
 // ── Retention (J-04) ───────────────────────────────────────────────────
