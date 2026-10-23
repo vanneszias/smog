@@ -172,6 +172,21 @@ export async function trailTypes(sponsorshipId: string): Promise<string[]> {
   return rows.map((row) => row.type);
 }
 
+/**
+ * Puts sponsorships on the render path (`rendering`), as an older row is or
+ * as the gate (`RENDER_NEW_SPONSORSHIPS`) would on: new sponsorships go
+ * straight to `in_review` (phase 10b task 8), so the tests of the render
+ * pipeline's fan-out start from this.
+ */
+export async function forceRendering(ids: readonly string[]): Promise<void> {
+  await d1()
+    .prepare(
+      "UPDATE sponsorship SET status = 'rendering' WHERE id IN (SELECT value FROM json_each(?))"
+    )
+    .bind(JSON.stringify(ids))
+    .run();
+}
+
 export async function jobsOf(sponsorshipIds: readonly string[]) {
   const rows = await all<{
     id: string;
