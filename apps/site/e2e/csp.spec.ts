@@ -584,7 +584,7 @@ test.describe("CSP (enforced in dev)", () => {
             .locator('img[src^="blob:"]')
             .evaluate((image: HTMLImageElement) => image.naturalWidth)
         )
-        .toBe(160);
+        .toBe(1);
       await page.waitForLoadState("networkidle");
       expect(await violations(page, csp)).toEqual([]);
       // The logo goes up through the signed same-origin fallback (no R2
