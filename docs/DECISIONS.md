@@ -2044,3 +2044,27 @@ The shared closure grew by about 5 kB gzip once the translation admin (task 4), 
 ## Perf budgets raised again after the task 6 merge (phase 10b)
 
 The media task (audio button, overlay, viewer toggle, new keys) added about 1 kB gzip to every entry on top of the previous raise; the six affected budgets in `apps/site/perf-budget.json` are set to the measurement + 3 kB. This is the last raise by hand: the shipped catalogues (about 75 kB gzip in every entry) are the cause of the creep, and the per-locale split (the active language in the entry, the others behind a lazy import) is scheduled as its own task before the close-out, which brings the budgets back below their phase 10a values.
+
+## Per-locale catalogue split (phase 10b task 7b)
+
+- **2026-10-23 · The browser entry carries no catalogue; each language is a chunk.** `@smog/i18n` holds the shipped catalogues in a registry (`store.ts`): `createI18n`, `buildResources`, `shippedMessages` and `formatList` read what is registered and import no JSON. Two entries: `index.ts` (the full one) imports `shipped.ts`, which registers `nl`, `en` and `fr` statically, and is what the Worker, the tests, the scripts and the mobile app resolve; `index.lazy.ts` is the same API without that import. The site's Vite config (`i18nLazyCatalogues`) resolves the exact specifier `@smog/i18n` to `index.lazy.ts` in the `client` environment only, so the SSR build keeps all three and renders any language synchronously, as before. The browser loads a language with `loadCatalogue` (one dynamic `import()` of its JSON, an `en`, `fr` or `nl` chunk of 27 to 30 kB gzip). `keys.ts` takes the `Messages` type from a type-only import of `nl.json`, so types still derive from nl and `catalog.test.ts` is unchanged. The `ui_string` overlay (task 3) is applied on top of whatever is registered, as before.
+- **2026-10-23 · Where a catalogue is loaded.** (1) `src/client.tsx`, a custom browser entry (Start's default plus one step), awaits `ensureCatalogues(document.documentElement.lang)` before `hydrateRoot`: the server-rendered page is on screen in the right language meanwhile, so there is no flash and no hydration mismatch; interactivity waits for one extra request (the chunk is not preloaded: its URL is only known to the bundler, a documented cost of about one round trip). (2) The root route's `loader` awaits `ensureCatalogues(shell.locale)` after `getShell`, so a language change (`router.invalidate`) or a sign-in that brings the account's language loads the new chunk before the new shell swaps in: no reload, no render with an empty catalogue. It is a no-op on the server and for a loaded language. (3) `/dev/ui?lang=` loads its language in the gallery's lazy boundary and in `beforeLoad`. `ensureCatalogues` also loads `nl` for a language that ships no catalogue (an overlay-only one), whose missing keys fall back to it; a shipped language needs no fallback because en and fr match nl key for key (`catalog.test.ts`).
+- **2026-10-23 · Mobile keeps all three.** `setup-native.ts` imports `shipped.ts`: the app starts offline in any language and has no web budget. The registry's dynamic `import()` of the JSON is statically resolved by Metro; the native bundles did not grow beyond that.
+- **2026-10-23 · The budget now counts the active language's chunk.** `perf-budget.ts` adds the largest `locales/*.json` chunk of the manifest (fr, 30.3 kB gzip) to every visit it measures, because a page cannot render without one lazy catalogue; without it the split would have looked like a 75 kB saving where about 53 kB is real. `perf-budget.test.ts` pins it.
+- **2026-10-23 · Numbers (gzip bytes of initial JavaScript, `bun scripts/deploy-guard.ts --bundle --perf-report`).** Before (three catalogues in the entry) and after (one counted):
+
+  | entry | before | after | saved |
+  |---|---|---|---|
+  | home | 508,718 | 455,300 | 53,418 |
+  | gestures | 509,645 | 456,213 | 53,432 |
+  | gesture | 506,569 | 453,151 | 53,418 |
+  | my | 525,714 | 472,301 | 53,413 |
+  | sponsor | 521,501 | 468,065 | 53,436 |
+  | sponsor-pages | 510,227 | 456,812 | 53,415 |
+  | account | 508,946 | 455,552 | 53,394 |
+  | auth | 513,864 | 460,430 | 53,434 |
+  | legal | 503,262 | 449,857 | 53,405 |
+  | admin | 529,941 | 476,516 | 53,425 |
+
+  A visitor in Dutch or English loads 1.4 to 3.6 kB less than the counted worst case. The Worker is unchanged in kind (2,137,769 before, 2,140,562 after, the registry and the chunk indirection). Every budget in `perf-budget.json` is set to the measurement + 3 kB (rounded up to 0.5 kB), 59 kB under the values raised by hand after the task 6 merge. The 200/300 kB targets are still not met; the closure that blocks them (TanStack/React 132 kB, `@smog/ui-web` 104 kB, one catalogue 30 kB, the zod schemas 26 kB) is in each entry's `note`.
+- **2026-10-23 · E2E.** `shell.spec.ts` gains "only the active language's catalogue loads; a language change fetches the next one without a reload" (a catalogue request log: `nl` alone on first load, `en` after the menu change in the same document, `en` alone after a reload). The layout-shift specs, the language-switch specs and `gesture-languages.spec.ts` pass unchanged. They run against the Vite dev server, which serves the JSON modules unbundled; the production chunking was checked in the build output (three chunks in the manifest, the entry reads `<html lang>`), not in a browser.

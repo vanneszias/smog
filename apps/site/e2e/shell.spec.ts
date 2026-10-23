@@ -14,7 +14,8 @@ const DARK = /\bdark\b/;
 const MY_URL = /\/my$/;
 /** A shipped language's catalogue chunk (`@smog/i18n`, one per language, phase 10b task 7b). */
 const CATALOGUE_CHUNK =
-  /(?:\/locales\/|\/assets\/)(nl|en|fr)(?:\.json|-[\w-]+\.js)$/;
+  /(?:\/locales\/|\/assets\/)(?:nl|en|fr)(?:\.json|-[\w-]+\.js)$/;
+const CATALOGUE_CHUNK_NAME = /^.*\/(nl|en|fr)(?:\.json|-[\w-]+\.js)$/;
 
 const PAGES = [
   {
@@ -125,9 +126,12 @@ test.describe("app shell", () => {
     const errors = watchErrors(page);
     const catalogues: string[] = [];
     page.on("request", (request) => {
-      const match = CATALOGUE_CHUNK.exec(new URL(request.url()).pathname);
-      if (match?.[1]) {
-        catalogues.push(match[1]);
+      const { pathname } = new URL(request.url());
+      const language = CATALOGUE_CHUNK.test(pathname)
+        ? pathname.replace(CATALOGUE_CHUNK_NAME, "$1")
+        : null;
+      if (language) {
+        catalogues.push(language);
       }
     });
     await page.setViewportSize({ height: 900, width: 1280 });

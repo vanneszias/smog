@@ -39,11 +39,6 @@ export function loadedCatalogue(locale: Locale): MessageTree | undefined {
   return loaded.get(locale);
 }
 
-/** Whether the shipped catalogue of `locale` is in memory. */
-export function isCatalogueLoaded(locale: Locale): boolean {
-  return loaded.has(locale);
-}
-
 /** Loads the shipped catalogue of `locale` (a no-op for one that is loaded or not shipped). */
 export async function loadCatalogue(locale: Locale): Promise<void> {
   if (loaded.has(locale) || !isShippedLocale(locale)) {
