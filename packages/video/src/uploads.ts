@@ -3,7 +3,7 @@ import { type Mux, muxRequest } from "./client";
 import { UPLOAD_STATUSES, type UploadStatus } from "./schema";
 
 /** How long the signed upload URL stays valid (Mux's default; 60–604800). */
-export const UPLOAD_TIMEOUT_SECONDS = 3600;
+const UPLOAD_TIMEOUT_SECONDS = 3600;
 
 /** The passthrough prefix of an admin gesture upload. */
 export const GESTURE_UPLOAD_PREFIX = "gesture-upload:";
@@ -14,7 +14,7 @@ export const GESTURE_UPLOAD_PREFIX = "gesture-upload:";
  * (phase 10b task 9); the webhook still recognises the prefix so a late
  * event of an old render is answered and ignored.
  */
-export const RENDER_JOB_PREFIX = "render-job:";
+const RENDER_JOB_PREFIX = "render-job:";
 
 export function isGestureUpload(
   passthrough: string | null | undefined
@@ -58,9 +58,7 @@ export interface MuxUpload {
   url: string | null;
 }
 
-export function toMuxUpload(
-  data: z.infer<typeof muxUploadDataSchema>
-): MuxUpload {
+function toMuxUpload(data: z.infer<typeof muxUploadDataSchema>): MuxUpload {
   return {
     assetId: data.asset_id ?? null,
     error: data.error ? (data.error.message ?? data.error.type ?? null) : null,

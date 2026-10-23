@@ -1866,13 +1866,13 @@
         "action": "Als betaald markeren",
         "note": "Bankreferentie",
         "noteHint": "Komt in de geschiedenis, bv. de mededeling van de overschrijving.",
-        "done": "Als betaald gemarkeerd. De video’s worden gemaakt.",
+        "done": "Als betaald gemarkeerd. De sponsorings wachten nu op beoordeling.",
         "settled": "Mollie had deze betaling al: ze is als betaald verwerkt.",
         "refundNeeded": "Mollie had deze betaling al, maar ze moet terugbetaald worden. Bekijk de betaling hieronder.",
-        "lateFailure": "De betaling is als betaald gemarkeerd, maar de video’s zijn misschien niet gestart. De controle van elk uur start wat ontbreekt; kijk over een uur opnieuw.",
+        "lateFailure": "De betaling is als betaald gemarkeerd, maar de bevestigingsmails zijn misschien niet verstuurd. Controleer de betaling en verwittig de sponsor zelf indien nodig.",
         "title": "{{amount}} van {{name}} als betaald markeren?",
-        "description_one": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: de video wordt gemaakt.",
-        "description_other": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: van elk wordt de video gemaakt."
+        "description_one": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: ze gaat naar beoordeling.",
+        "description_other": "Alleen voor een overschrijving die je ontving. Deze betaling dekt {{gestures}}: elk gaat naar beoordeling."
       },
       "cancel": {
         "action": "Betaling annuleren",

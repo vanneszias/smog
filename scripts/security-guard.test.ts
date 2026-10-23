@@ -386,10 +386,7 @@ function sensitiveNames(args: string): string[] {
 }
 
 /** `file:identifier`, a reason each (what the identifier holds). */
-const ALLOWED: Readonly<Record<string, string>> = {
-  "packages/video/src/webhook-handler.ts:code":
-    "the webhook outcome (OK, DUPLICATE or IGNORED), not a credential",
-};
+const ALLOWED: Readonly<Record<string, string>> = {};
 
 interface Finding {
   file: string;

@@ -84,7 +84,7 @@ export const sponsorshipsSlice = {
      * Mark paid by hand (A-10, a bank transfer) for the whole payment, only
      * while `open`. Mollie is asked first: already paid settles normally;
      * otherwise it is cancelled there when it can be. Every gesture goes to
-     * `rendering` and `payment.settled` follows (bug 32).
+     * `in_review` and `payment.settled` follows (bug 32).
      */
     markPaid: sponsorshipsContract
       .input(markPaidInputSchema)

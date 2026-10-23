@@ -628,10 +628,10 @@ function outputsOf(after: readonly AdminAfterCommit[]): Outputs {
 /**
  * Enqueues what a committed change asks for (ruling 8). By default a
  * failed send is retried, then logged and swallowed, so the committed
- * change stands. `loud` (mark paid: its `payment.settled` starts the
- * render) throws instead: the admin sees the failure, and task 5's
- * reconciliation sweep re-sends `payment.settled` for a paid payment with
- * an item in `rendering` and no job.
+ * change stands. `loud` (mark paid: its `payment.settled` sends the
+ * confirmation emails) throws instead: the admin sees the failure and tells
+ * the sponsor if needed (nothing re-sends it since the render states went
+ * away, phase 10b task 9).
  */
 async function enqueueAfter(
   context: RpcContext,
@@ -645,10 +645,7 @@ async function enqueueAfter(
       loud ? { onFailure: "throw" } : {}
     );
   } catch (error) {
-    console.error(
-      "[admin] Failed to enqueue after the commit (the hourly stale sweep re-sends a lost payment.settled, its render watchdog a lost render.requested):",
-      error
-    );
+    console.error("[admin] Failed to enqueue after the commit:", error);
     if (loud) {
       throw error;
     }
@@ -682,7 +679,7 @@ async function settleAndEnqueue(
   if (!result) {
     throw new StaleError("the payment is not ours");
   }
-  // Loud: the fan-out of a payment the admin acted on starts its render.
+  // Loud: the fan-out of a payment the admin acted on sends its emails.
   await enqueueAfter(context, result, true);
   return result.outcome;
 }
@@ -1061,7 +1058,7 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
               ),
             ]);
             await cancelAtMollie(view);
-            // Loud: `payment.settled` starts the render (the sweep is the backstop).
+            // Loud: `payment.settled` sends the confirmation emails.
             await enqueueAfter(context, outputsOf(plan.after), true);
             return {
               paymentId: input.paymentId,

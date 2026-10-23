@@ -45,7 +45,6 @@ describe("SPONSORSHIP_ACTIONS", () => {
       "regenerateToken",
       "reject",
       "requestChanges",
-      "retryRender",
     ]);
   });
 });

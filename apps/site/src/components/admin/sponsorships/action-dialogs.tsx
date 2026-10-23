@@ -523,8 +523,8 @@ export function PaymentActions({
   );
 
   /**
-   * Mark paid commits first and fails loudly when the render cannot be
-   * started (the hourly check is the backstop). After a failure that is not
+   * Mark paid commits first and fails loudly when its `payment.settled`
+   * (the confirmation emails) cannot be queued. After a failure that is not
    * a refusal the payment is read again: `paid` is that case,
    * `refund_needed` is Mollie's settlement flagging it, and anything else
    * (still open, or cancelled by another write) is a plain error. The

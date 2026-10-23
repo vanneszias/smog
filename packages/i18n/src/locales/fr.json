@@ -1898,14 +1898,14 @@
         "action": "Marquer comme payé",
         "note": "Référence bancaire",
         "noteHint": "Figure dans l’historique, p. ex. la communication du virement.",
-        "done": "Marqué comme payé. Les vidéos sont en préparation.",
+        "done": "Marqué comme payé. Les parrainages attendent maintenant l’examen.",
         "settled": "Mollie avait déjà ce paiement\u00a0: il est traité comme payé.",
         "refundNeeded": "Mollie avait déjà ce paiement, mais il doit être remboursé. Consultez le paiement ci-dessous.",
-        "lateFailure": "Le paiement est marqué comme payé, mais les vidéos n’ont peut-être pas démarré. La vérification horaire lance celles qui manquent\u00a0; revenez dans une heure.",
+        "lateFailure": "Le paiement est marqué comme payé, mais les e-mails de confirmation n’ont peut-être pas été envoyés. Vérifiez le paiement et prévenez le parrain vous-même si nécessaire.",
         "title": "Marquer {{amount}} de {{name}} comme payé\u00a0?",
-        "description_one": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: sa vidéo est préparée.",
-        "description_other": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: la vidéo de chacun est préparée.",
-        "description_many": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: la vidéo de chacun est préparée."
+        "description_one": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: il passe à l’examen.",
+        "description_other": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: chacun passe à l’examen.",
+        "description_many": "Uniquement pour un virement reçu. Ce paiement couvre {{gestures}}\u00a0: chacun passe à l’examen."
       },
       "cancel": {
         "action": "Annuler le paiement",

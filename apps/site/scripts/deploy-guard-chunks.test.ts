@@ -141,8 +141,13 @@ describe("deploy-guard --bundle on a built tree (fixture)", () => {
   const clean = {
     "client/.vite/manifest.json": JSON.stringify({
       "src/client.tsx": { file: "assets/main.js", isEntry: true },
+      "src/routes/sponsor.tsx?tsr-split=component": {
+        file: "assets/route.js",
+        isDynamicEntry: true,
+      },
     }),
     "client/assets/main.js": "export const a = 1",
+    "client/assets/route.js": "export const b = 2",
     "server/index.js": "export default {}",
   };
 

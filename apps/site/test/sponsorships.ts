@@ -187,16 +187,3 @@ export async function makeAdmin() {
     .run();
   return { email, id };
 }
-
-/** One sponsorship's status and video (plain D1 SQL). */
-export async function sponsorshipVideo(sponsorshipId: string) {
-  const [row] = await all<{
-    status: string;
-    video_asset_id: string | null;
-    video_playback_id: string | null;
-  }>(
-    "SELECT status, video_asset_id, video_playback_id FROM sponsorship WHERE id = ?",
-    sponsorshipId
-  );
-  return row;
-}

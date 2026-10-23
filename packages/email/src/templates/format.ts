@@ -51,11 +51,3 @@ export function formatVatNumber(vatNumber: string): string {
   }
   return `BE ${vatNumber.slice(0, 4)}.${vatNumber.slice(4, 7)}.${vatNumber.slice(7)}`;
 }
-
-/** The render-failed email shows at most this much of the error. */
-const ERROR_SUMMARY_MAX = 300;
-
-/** At most `ERROR_SUMMARY_MAX` characters, never half a character. */
-export function errorSummary(error: string): string {
-  return Array.from(error.trim()).slice(0, ERROR_SUMMARY_MAX).join("");
-}

@@ -1866,13 +1866,13 @@
         "action": "Mark paid",
         "note": "Bank reference",
         "noteHint": "Goes into the history, e.g. the transfer’s reference.",
-        "done": "Marked paid. The videos are being made.",
+        "done": "Marked paid. The sponsorships are now waiting for review.",
         "settled": "Mollie already had this payment: it is settled as paid.",
         "refundNeeded": "Mollie already had this payment, but it needs a refund. Check the payment below.",
-        "lateFailure": "The payment is marked paid, but the videos may not have started. The hourly check starts any that are missing; check back in an hour.",
+        "lateFailure": "The payment is marked paid, but the confirmation emails may not have been sent. Check the payment and tell the sponsor yourself if needed.",
         "title": "Mark {{amount}} from {{name}} as paid?",
-        "description_one": "Only for a bank transfer you received. This payment covers {{gestures}}: its video gets made.",
-        "description_other": "Only for a bank transfer you received. This payment covers {{gestures}}: each one gets its video made."
+        "description_one": "Only for a bank transfer you received. This payment covers {{gestures}}: it goes to review.",
+        "description_other": "Only for a bank transfer you received. This payment covers {{gestures}}: each one goes to review."
       },
       "cancel": {
         "action": "Cancel payment",

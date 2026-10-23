@@ -37,11 +37,6 @@ const PREVIEWS = [
     "BE 0123.456.749",
   ],
   [
-    "transactional/admin-render-failed",
-    "Video mislukt (beheer)",
-    "Video maken mislukt",
-  ],
-  [
     "transactional/admin-refund-needed",
     "Terugbetaling nodig (beheer)",
     "Openen in Mollie",

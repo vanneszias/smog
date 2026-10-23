@@ -664,13 +664,15 @@ describe("SponsorshipDetail", () => {
     expect(alert.textContent).toContain("€120.00");
     expect(alert.textContent).toContain("Hond and Kat");
     expect(alert.textContent).toContain("Bakkerij Zon");
-    expect(alert.textContent).toContain("each one gets its video");
+    expect(alert.textContent).toContain("each one goes to review");
     fireEvent.change(
       within(alert).getByRole("textbox", { name: BANK_REFERENCE }),
       { target: { value: "BE-REF-42" } }
     );
     fireEvent.click(within(alert).getByRole("button", { name: "Mark paid" }));
-    await screen.findByText("Marked paid. The videos are being made.");
+    await screen.findByText(
+      "Marked paid. The sponsorships are now waiting for review."
+    );
     expect(
       site.calls.find((call) => call.path === "admin/sponsorships/markPaid")
         ?.input
@@ -701,7 +703,7 @@ describe("SponsorshipDetail", () => {
   test("mark paid that fails after the payment was marked paid says so", async () => {
     await markPaidFailsThen("paid");
     await screen.findByText(
-      "The payment is marked paid, but the videos may not have started. The hourly check starts any that are missing; check back in an hour."
+      "The payment is marked paid, but the confirmation emails may not have been sent. Check the payment and tell the sponsor yourself if needed."
     );
   });
 
