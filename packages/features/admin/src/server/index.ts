@@ -14,7 +14,6 @@ export {
   type DeadLetterDigestDeps,
   type DeadLetterDigestResult,
   type DigestRecipient,
-  RENDER_FAILED_ALERT_MS,
   runDeadLetterDigest,
 } from "./dead-letter-digest";
 export {

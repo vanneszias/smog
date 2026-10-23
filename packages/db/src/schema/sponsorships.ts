@@ -180,7 +180,7 @@ export const paymentItem = sqliteTable(
   ]
 );
 
-/** `input` is the render contract (`@smog/render/contract`). */
+/** `input` is the retired render contract (phase 10b task 9): old rows only. */
 export const renderJob = sqliteTable(
   "render_job",
   {

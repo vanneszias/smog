@@ -13,10 +13,8 @@ import { processEventMessage } from "../src/worker/events-queue";
 import { clearMaintenanceCache } from "../src/worker/maintenance";
 import {
   checkoutVia,
-  forceRendering,
   jobsOf,
   kv,
-  leaveQueued,
   makeAdmin,
   paymentStatusOf,
   type RecordingQueue,
@@ -90,7 +88,6 @@ async function drainEvents(
       email: options.email ?? recordingQueue(),
       events: recordingQueue(),
     },
-    renderStarter: leaveQueued(),
     siteUrl: ORIGIN,
   };
   const messages = queues.events.messages.splice(0);
@@ -317,7 +314,7 @@ describe("the Mollie webhook (ruling 2)", () => {
     expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
   });
 
-  it("a replay and a concurrent storm leave one state and, through the consumer, one render job per item on the render path", async () => {
+  it("a replay and a concurrent storm leave one state and, through the consumer, no render job", async () => {
     const checkout = await checkoutVia(fake);
     fake.setStatus(checkout.mollieId, "paid");
     const answers = await Promise.all(
@@ -330,21 +327,20 @@ describe("the Mollie webhook (ruling 2)", () => {
       expect(await trailTypes(id)).toEqual(["created", "payment_paid"]);
     }
     // Each delivery may enqueue payment.settled (ruling 6; the fan-out
-    // marker skips some `already` ones); the consumer is idempotent: one
-    // job per item, however many messages run.
+    // marker skips some `already` ones); the consumer is idempotent.
     expect(queues.events.messages.length).toBeGreaterThanOrEqual(1);
     expect(queues.events.messages.length).toBeLessThanOrEqual(7);
-    // The new flow renders nothing: the same fan-out on rows that are on the
-    // render path (older rows, or the gate on) makes the jobs.
+    // Nothing is rendered (phase 10b tasks 8 and 9): no job, however many
+    // messages run.
     await drainEvents();
     expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
-    await forceRendering(checkout.sponsorshipIds);
     queues.events.messages.push(settled(checkout.paymentId));
     await drainEvents();
-    const jobs = await jobsOf(checkout.sponsorshipIds);
-    expect(jobs).toHaveLength(2);
-    expect(new Set(jobs.map((job) => job.sponsorshipId)).size).toBe(2);
-    expect(jobs.every((job) => job.status === "queued")).toBe(true);
+    expect(await jobsOf(checkout.sponsorshipIds)).toEqual([]);
+    expect(await statusesOf(checkout.sponsorshipIds)).toEqual([
+      "in_review",
+      "in_review",
+    ]);
   });
 
   it("out of order: canceled after paid leaves the payment paid", async () => {

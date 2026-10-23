@@ -78,11 +78,8 @@ describe("the sweeps' and the webhook's query plans (no full table scan)", () =>
     await runStaleSweep({
       db: recorded,
       mollie: createFakeMollie().mollie,
-      mux: null,
       now: NOW,
       queues,
-      siteUrl: SITE_URL,
-      workflow: null,
     });
     const purgeStart = performance.now();
     await runRetentionPurge({

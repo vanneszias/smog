@@ -3,9 +3,8 @@
  * for changes issues (7 days, single use). It edits the display name and,
  * only when a logo was paid for (`payment_item.includes_logo`), the logo;
  * the gesture is locked and nothing is paid again. The submit moves
- * `changes_requested → in_review` (`resubmitted`; with the render gate on,
- * `→ rendering`, creating the next render job in the same D1 batch as the
- * token's use and enqueueing `render.requested`, ruling 7).
+ * `changes_requested → in_review` (`resubmitted`; nothing is rendered, the
+ * player shows the new name and logo as the end card).
  *
  * A new logo is claimed as the checkout claims one (`claimLogo`, task 4):
  * its verified bytes are copied to a fresh key, which is the one stored,
@@ -14,13 +13,11 @@
  * the batch fails. The replaced logo is left to the daily orphan sweep.
  */
 import type { Db } from "@smog/db/client";
-import { enqueueOutputs } from "@smog/jobs";
 import type { RpcEnv } from "@smog/rpc";
 import type { LogoContentType } from "../schema/wizard";
 import { claimLogo, deleteLogo, isLogoInUse, sniffLogoType } from "./logo";
 import type { SponsorshipsImplementer } from "./procedure";
 import { invalidState, requireOpen, tokenInvalid } from "./refusals";
-import { createRenderJobStatements } from "./render";
 import {
   consumeTokenStatements,
   isTokenUsed,
@@ -28,7 +25,6 @@ import {
   readTokenLink,
 } from "./token-link";
 import { isStaleTransition, transitionStatements } from "./transition";
-import { RENDER_NEW_SPONSORSHIPS } from "./transition-table";
 
 /** The open re-edit link of a sponsorship waiting for changes. */
 async function openReedit(db: Db, raw: string, now: Date) {
@@ -105,19 +101,6 @@ async function submitReedit(
       await deleteLogo(env.MEDIA, logo.claimed);
     }
   };
-  // End card (phase 10b ruling 9): nothing is rendered, the resubmit goes
-  // to `in_review` and the player shows the new name and logo as an overlay.
-  const job = RENDER_NEW_SPONSORSHIPS
-    ? await createRenderJobStatements(db, {
-        now,
-        resubmitted: { displayName: input.displayName, logoKey: logo.logoKey },
-        sponsorshipId: sponsorship.id,
-      })
-    : { after: [], statements: [] };
-  if (!job) {
-    await discardClaim();
-    throw invalidState("stale");
-  }
   try {
     await db.batch([
       ...consumeTokenStatements(db, { now, tokenId: link.tokenId }),
@@ -133,7 +116,6 @@ async function submitReedit(
         patch: { displayName: input.displayName, logoKey: logo.logoKey },
         sponsorshipId: sponsorship.id,
       }),
-      ...job.statements,
     ]);
   } catch (error) {
     await discardClaim();
@@ -148,10 +130,6 @@ async function submitReedit(
   if (env.MEDIA && logo.changed && input.logoKey !== undefined) {
     await deleteLogo(env.MEDIA, input.logoKey);
   }
-  await enqueueOutputs(
-    { events: env.EVENTS_QUEUE },
-    { events: job.after, notify: [] }
-  );
 }
 
 /** The stored logo a re-edit keeps, as its link holder may see it. */

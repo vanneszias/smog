@@ -5,7 +5,6 @@ import {
 } from "@smog/config/constants";
 import type { Category, GestureSummary } from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
-import { RENDER_OVERLAY_LAYOUT } from "@smog/render/contract";
 import type { WizardGesture, WizardState } from "@smog/sponsorships/client";
 import type { AvailabilityItem } from "@smog/sponsorships/schema";
 import {
@@ -20,7 +19,7 @@ import {
   Skeleton,
   Text,
 } from "@smog/ui-web";
-import { formatMoney, muxThumbnailUrl } from "@smog/utils";
+import { END_CARD_SECONDS, formatMoney, muxThumbnailUrl } from "@smog/utils";
 import { Check, Heart } from "lucide-react";
 import { type ReactNode, useCallback, useId, useMemo, useState } from "react";
 import { usePageLocale } from "./page-locale";
@@ -70,7 +69,7 @@ function ValueCards(): ReactNode {
     {
       label: t("sponsor.select.value.nameInVideo"),
       value: t("sponsor.select.value.seconds", {
-        seconds: RENDER_OVERLAY_LAYOUT.overlaySeconds,
+        seconds: END_CARD_SECONDS,
       }),
     },
     {

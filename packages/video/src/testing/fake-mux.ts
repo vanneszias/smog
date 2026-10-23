@@ -5,8 +5,7 @@ import { muxSignature } from "../webhooks";
  * An in-memory Mux Video API: a `fetch` that answers the endpoints
  * `@smog/video` calls (create/get/cancel upload, get/list/delete assets,
  * master access, the playback-id lookup) plus the `PUT` of the file to
- * the upload URL (the browser's for a gesture, the renderer's for a
- * render) and the static renditions (phase 8), so the real client code
+ * the upload URL (the browser's, for a gesture) and the static renditions (phase 8), so the real client code
  * runs against it. No network. The Bun fake server (`./fake-server`) serves the same
  * handler over HTTP for e2e.
  */
@@ -296,11 +295,7 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
     const asset = mustAsset(assetId);
     asset.status = "ready";
     asset.policy = "public";
-    // A render's asset gets its own id: only gesture and picker assets share
-    // the fixed sample id, so a render never resolves as its own source.
-    asset.playbackId ??= asset.passthrough?.startsWith("render-job:")
-      ? randomId(32)
-      : (options.playbackId ?? randomId(32));
+    asset.playbackId ??= options.playbackId ?? randomId(32);
     asset.aspectRatio ??= "3:4";
     asset.duration ??= 4.5;
     return asset;
@@ -427,7 +422,7 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
   /**
    * `GET /video/v1/playback-ids/:id`: the asset behind a playback id. With
    * a fixed `playbackId` option (e2e) every gesture and picker asset shares
-   * it, so the first one inserted answers; render assets get their own.
+   * it, so the first one inserted answers.
    */
   function playbackIdRoute(playbackId: string): Response {
     const asset = [...assets.values()].find(
@@ -617,7 +612,7 @@ export function createFakeMux(options: FakeMuxOptions = {}): FakeMux {
 
   /**
    * The PUT of the file to the signed upload URL: the browser's (a gesture,
-   * with CORS) or the renderer's (a render, server side, no `Origin`).
+   * with CORS).
    */
   async function put(request: Request, uploadId: string): Promise<Response> {
     const upload = uploads.get(uploadId);

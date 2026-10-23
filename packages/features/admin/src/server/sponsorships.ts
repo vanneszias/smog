@@ -528,9 +528,6 @@ async function getSponsorship(
         usedAt: ms(token.usedAt),
       })),
       video: {
-        fakeRender:
-          s.videoPlaybackId !== null &&
-          s.videoPlaybackId === row.gesturePlaybackId,
         playbackId: s.videoPlaybackId,
       },
     };
@@ -1205,39 +1202,6 @@ export function sponsorshipsRoutes(deps: AdminDeps) {
                 })
               );
               return { expiresAt: plan.expiresAt, url: plan.url };
-            }
-          )
-      ),
-      retryRender: procedures.retryRender.handler(
-        ({ context, errors, input }) =>
-          refusing(
-            deps,
-            errors,
-            `retry the render of ${input.id}`,
-            async () => {
-              const plan = await services.retryRender(context.db, {
-                actorId: context.user.id,
-                now: new Date(),
-                sponsorshipId: input.id,
-              });
-              // The job, its events and this entry in one batch; then
-              // `render.requested`, logged on failure (the hourly render
-              // watchdog re-sends a lost one).
-              await run(
-                context,
-                plan,
-                auditStatement(context.db, {
-                  action: "sponsorship.retry_render",
-                  actorId: context.user.id,
-                  data: {
-                    attempt: plan.attempt,
-                    renderJobId: plan.renderJobId,
-                  },
-                  targetId: input.id,
-                  targetType: "sponsorship",
-                })
-              );
-              return { attempt: plan.attempt, renderJobId: plan.renderJobId };
             }
           )
       ),

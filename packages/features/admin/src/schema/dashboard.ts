@@ -22,8 +22,6 @@ export const dashboardSponsorshipsSchema = z.object({
    * gesture (as the sponsorship list's `refundNeeded` filter).
    */
   refundNeeded: count,
-  renderFailed: count,
-  rendering: count,
 });
 
 export const dashboardSchema = z.object({

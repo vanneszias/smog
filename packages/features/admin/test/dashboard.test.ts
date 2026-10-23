@@ -140,8 +140,6 @@ describe("admin.dashboard", () => {
     const admin = await signedUp("admin");
     const before = await callAs<Dashboard>(admin, "dashboard");
     await seedCheckout({ count: 2 });
-    await seedCheckout({ paymentStatus: "paid", status: "rendering" });
-    await seedCheckout({ paymentStatus: "paid", status: "render_failed" });
     await seedCheckout({
       count: 3,
       paymentStatus: "paid",
@@ -185,8 +183,6 @@ describe("admin.dashboard", () => {
     const delta = (key: keyof Dashboard["sponsorships"]) =>
       after.sponsorships[key] - before.sponsorships[key];
     expect(delta("awaitingPayment")).toBe(2);
-    expect(delta("rendering")).toBe(1);
-    expect(delta("renderFailed")).toBe(1);
     expect(delta("inReview")).toBe(3);
     expect(delta("live")).toBe(2);
     expect(delta("expiring")).toBe(1);

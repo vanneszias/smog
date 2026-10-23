@@ -3,15 +3,13 @@
  * workerd): the API, the upload URLs and the master MP4s on one local
  * origin. Point the site at it with `MUX_API_URL` (plus any
  * `MUX_TOKEN_ID` / `MUX_TOKEN_SECRET`: the fake's own, `FAKE_MUX_TOKEN`).
- * After a file is PUT (the browser's gesture upload or the renderer's
- * render upload), the asset becomes ready (or errored, see
+ * After a file is PUT (the browser's gesture upload), the asset becomes ready (or errored, see
  * `/__fake/next-outcome`) after `readyAfterMs`, and the matching signed
  * webhooks are POSTed when `webhook` is set. Turning master access on
  * readies the master after `readyAfterMs` too, and so does a new static
  * rendition (`POST …/static-renditions`, phase 8); the master's URL
  * (`/master/<assetId>/master.mp4?signature=…`) serves the file PUT to the
- * asset's upload, or else `masterFile` (byte ranges supported, as the
- * renderer's reads need).
+ * asset's upload, or else `masterFile` (byte ranges supported).
  *
  * Control endpoints (e2e and local runs only):
  * - `POST /__fake/next-outcome` `{ "outcome": "ready" | "errored" }`
@@ -22,12 +20,10 @@
  *
  * Run it: `bun packages/video/src/testing/fake-server.ts` with
  * `FAKE_MUX_PORT` (4010), `FAKE_MUX_PLAYBACK_ID`, `FAKE_MUX_WEBHOOK_URL`,
- * `FAKE_MUX_WEBHOOK_SECRET` and `FAKE_MUX_MASTER_FILE` (by default the
- * render fixture `packages/render/test/fixtures/source-2s.mp4`, when it
- * exists).
+ * `FAKE_MUX_WEBHOOK_SECRET` and `FAKE_MUX_MASTER_FILE` (optional: without it
+ * a master with no uploaded file answers 404).
  */
 import { existsSync, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { serve } from "bun";
 import {
   createFakeMux,
@@ -35,11 +31,6 @@ import {
   type FakeMux,
   signMuxWebhook,
 } from "./fake-mux";
-
-/** The render package's committed source clip (phase 7 ruling 15). */
-const DEFAULT_MASTER_FILE = fileURLToPath(
-  new URL("../../../render/test/fixtures/source-2s.mp4", import.meta.url)
-);
 
 export interface FakeMuxServerOptions {
   /** The bytes a master URL serves for an asset without an uploaded file. */
@@ -186,7 +177,7 @@ export function startFakeMuxServer(
   options: FakeMuxServerOptions = {}
 ): FakeMuxServer {
   const { readyAfterMs = 1500, webhook } = options;
-  const masterFile = options.masterFile ?? DEFAULT_MASTER_FILE;
+  const { masterFile } = options;
   let masterFallback: Uint8Array | null | undefined;
   let nextOutcome: "ready" | "errored" = "ready";
   let fake: FakeMux | undefined;
@@ -199,9 +190,10 @@ export function startFakeMuxServer(
   /** The fixture, read once; `null` when there is none. */
   function fallbackBytes(): Uint8Array | null {
     if (masterFallback === undefined) {
-      masterFallback = existsSync(masterFile)
-        ? new Uint8Array(readFileSync(masterFile))
-        : null;
+      masterFallback =
+        masterFile && existsSync(masterFile)
+          ? new Uint8Array(readFileSync(masterFile))
+          : null;
     }
     return masterFallback;
   }

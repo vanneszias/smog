@@ -16,8 +16,6 @@ export interface AdminDeadLetterProps {
   eventsOpen: number;
   /** Messages lost while D1 was down since the last digest (`[dlq] lost`). */
   lost: number;
-  /** Sponsorships stuck in `render_failed` for more than 24 hours. */
-  renderFailed: number;
   /**
    * The open dead letters by type (an email template id or an event type),
    * at most 10: types and counts only, never a body or an address.
@@ -29,15 +27,12 @@ export interface AdminDeadLetterProps {
 
 /**
  * `admin_dead_letter` (phase 9 ruling 5): the daily digest to every admin
- * when dead letters wait, messages were lost, or a render has been failed
- * for more than a day (`admin_dead_letter:<yyyy-mm-dd>:<adminId>`). Counts
+ * when dead letters wait or messages were lost
+ * (`admin_dead_letter:<yyyy-mm-dd>:<adminId>`). Counts
  * and types only.
  */
 export const adminDeadLetter: EmailTemplate<AdminDeadLetterProps> = {
-  render: (
-    { emailOpen, eventsOpen, lost, renderFailed, types, url },
-    context
-  ) => {
+  render: ({ emailOpen, eventsOpen, lost, types, url }, context) => {
     const { t } = context;
     return (
       <EmailLayout
@@ -61,10 +56,6 @@ export const adminDeadLetter: EmailTemplate<AdminDeadLetterProps> = {
             {
               label: t("email.transactional.adminDeadLetter.lost"),
               value: String(lost),
-            },
-            {
-              label: t("email.transactional.adminDeadLetter.renderFailed"),
-              value: String(renderFailed),
             },
           ]}
         />

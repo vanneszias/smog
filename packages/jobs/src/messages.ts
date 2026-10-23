@@ -39,6 +39,11 @@ export const eventMessageSchema = z.discriminatedUnion("type", [
     paymentId: z.string().min(1),
     type: z.literal("payment.settled"),
   }),
+  /**
+   * Legacy (phase 10b task 9): nothing produces it any more, but a message
+   * queued or dead-lettered before the render pipeline was retired still
+   * parses, and the events consumer acks it without acting.
+   */
   z.object({
     renderJobId: z.string().min(1),
     type: z.literal("render.requested"),

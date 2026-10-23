@@ -84,10 +84,6 @@ async function openLetter(
 
 async function clean(): Promise<void> {
   await env.DB.prepare("DELETE FROM dead_letter").run();
-  // Earlier tests' failed renders must not count in this one.
-  await env.DB.prepare(
-    "UPDATE sponsorship SET status = 'cancelled' WHERE status = 'render_failed'"
-  ).run();
   const keys = [
     ...(await kv().list({ prefix: "dlq-lost:" })).keys,
     ...(await kv().list({ prefix: "dlq-digest:" })).keys,
@@ -109,16 +105,12 @@ afterEach(() => {
 describe("runDeadLetterDigest", () => {
   it("sends nothing, and writes no marker, when nothing is wrong", async () => {
     const sent: EmailMessage[] = [];
-    // Handled letters and a fresh render_failed do not count.
+    // Handled letters do not count.
     await openLetter("dl-r", "transactional/welcome", "email", {
       replayedAt: 1,
     });
     await openLetter("dl-d", "transactional/welcome", "email", {
       discardedAt: 1,
-    });
-    await seedCheckout({
-      createdAt: new Date(NOW.getTime() - DAY_MS + 60_000),
-      status: "render_failed",
     });
 
     expect(await runDeadLetterDigest(deps(sent))).toEqual({ digestSent: 0 });
@@ -149,7 +141,6 @@ describe("runDeadLetterDigest", () => {
         emailOpen: 2,
         eventsOpen: 1,
         lost: 0,
-        renderFailed: 0,
         types: [
           { count: 2, type: "transactional/welcome" },
           { count: 1, type: "payment.settled" },
@@ -211,7 +202,7 @@ describe("runDeadLetterDigest", () => {
 
     expect(result).toEqual({ digestSent: 2 });
     expect(sent[0]).toMatchObject({
-      props: { emailOpen: 0, eventsOpen: 0, lost: 3, renderFailed: 0 },
+      props: { emailOpen: 0, eventsOpen: 0, lost: 3 },
     });
     expect(await kv().get("dlq-lost:2026-10-19")).toBeNull();
     expect(await kv().get("dlq-lost:2026-10-20")).toBeNull();
@@ -222,20 +213,16 @@ describe("runDeadLetterDigest", () => {
     expect(next).toEqual({ digestSent: 0 });
   });
 
-  it("reports a sponsorship that has been render_failed for more than 24 hours", async () => {
+  it("no longer reports a long render_failed sponsorship (the render pipeline is retired)", async () => {
     const sent: EmailMessage[] = [];
     await seedCheckout({
       createdAt: new Date(NOW.getTime() - DAY_MS - 60_000),
       status: "render_failed",
     });
 
-    await runDeadLetterDigest(deps(sent));
+    expect(await runDeadLetterDigest(deps(sent))).toEqual({ digestSent: 0 });
 
-    expect(sent[0]).toMatchObject({
-      props: { emailOpen: 0, eventsOpen: 0, lost: 0 },
-    });
-    const props = (sent[0]?.props ?? {}) as { renderFailed?: number };
-    expect(props.renderFailed).toBeGreaterThanOrEqual(1);
+    expect(sent).toEqual([]);
   });
 
   it("does not write the marker when a send fails, so a re-run the same day sends again", async () => {

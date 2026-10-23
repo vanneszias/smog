@@ -1,10 +1,6 @@
 import { DAY_MS } from "@smog/utils";
 import { testMollie } from "../sponsorship-fakes";
-import {
-  seedCheckout,
-  seedRenderFailed,
-  seedToken,
-} from "../sponsorship-helpers";
+import { seedCheckout, seedToken } from "../sponsorship-helpers";
 import type { ProcedureInputs } from "./index";
 
 /**
@@ -67,8 +63,5 @@ export const SPONSORSHIPS_INPUTS: ProcedureInputs = {
   "sponsorships.requestChanges": async () => ({
     id: (await seedCheckout({ paymentStatus: "paid", status: "in_review" }))
       .sponsorshipIds[0],
-  }),
-  "sponsorships.retryRender": async () => ({
-    id: (await seedRenderFailed()).sponsorshipIds[0],
   }),
 };

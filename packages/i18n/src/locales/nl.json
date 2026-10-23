@@ -710,13 +710,6 @@
         "invoiceTitle": "Facturatie",
         "button": "Bekijk in het beheer"
       },
-      "adminRenderFailed": {
-        "subject": "Video maken mislukt voor {{gesture}}",
-        "preheader": "De video voor {{displayName}} kon niet gemaakt worden.",
-        "heading": "Video maken mislukt",
-        "body": "De gesponsorde video kon niet gemaakt worden, ook niet na nieuwe pogingen. Bekijk de sponsoring in het beheer.",
-        "button": "Bekijk de sponsoring"
-      },
       "adminRefundNeeded": {
         "subject": "Terugbetaling nodig voor betaling {{paymentId}}",
         "preheader": "Betaal {{amount}} terug in het Mollie-dashboard.",
@@ -748,13 +741,12 @@
       },
       "adminDeadLetter": {
         "subject": "Dead letters vragen aandacht",
-        "preheader": "Berichten konden niet worden afgeleverd, of een video is al meer dan een dag mislukt.",
+        "preheader": "Berichten konden niet worden afgeleverd.",
         "heading": "Dead letters vragen aandacht",
-        "body": "Sommige berichten konden na alle pogingen niet worden afgeleverd, of een video is al meer dan 24 uur mislukt. Speel ze opnieuw af of verwijder ze in het beheer.",
+        "body": "Sommige berichten konden na alle pogingen niet worden afgeleverd. Speel ze opnieuw af of verwijder ze in het beheer.",
         "emailOpen": "E-mails in de wachtrij",
         "eventsOpen": "Sponsorgebeurtenissen in de wachtrij",
         "lost": "Berichten verloren terwijl de database niet beschikbaar was",
-        "renderFailed": "Video’s die al meer dan 24 uur mislukt zijn",
         "types": "Wachtend per type",
         "button": "Dead letters openen"
       }
@@ -1016,10 +1008,6 @@
         "inReview_other": "te beoordelen",
         "awaitingPayment_one": "{{count}} wacht op betaling",
         "awaitingPayment_other": "{{count}} wachten op betaling",
-        "rendering_one": "{{count}} video in de maak",
-        "rendering_other": "{{count}} video’s in de maak",
-        "renderFailed_one": "{{count}} video mislukt",
-        "renderFailed_other": "{{count}} video’s mislukt",
         "live_one": "{{count}} live",
         "live_other": "{{count}} live",
         "expiring_one": "{{count}} loopt binnenkort af",
@@ -1035,9 +1023,7 @@
         "events_one": "{{count}} gebeurtenis wacht",
         "events_other": "{{count}} gebeurtenissen wachten",
         "oldest": "Oudste van {{date}}",
-        "none": "Niets in de wachtrij",
-        "renderFailed_one": "{{count}} video mislukt",
-        "renderFailed_other": "{{count}} video’s mislukt"
+        "none": "Niets in de wachtrij"
       },
       "chart": {
         "title": "In één oogopslag",
@@ -1046,7 +1032,6 @@
         "catalogue": "Gebaren",
         "awaitingPayment": "Wacht op betaling",
         "inReview": "In beoordeling",
-        "rendering": "Wordt gemaakt",
         "live": "Live",
         "published": "Gepubliceerd",
         "hidden": "Verborgen"
@@ -1717,7 +1702,6 @@
         "sponsorshipLive": "Sponsoring online",
         "renewalReminder": "Herinnering verlenging",
         "adminNewSponsorship": "Nieuwe sponsoring (beheer)",
-        "adminRenderFailed": "Video mislukt (beheer)",
         "adminRefundNeeded": "Terugbetaling nodig (beheer)",
         "weMoved": "We zijn verhuisd",
         "adminDeadLetter": "Dead letters (beheer)"
@@ -1746,7 +1730,6 @@
         "awaiting": "Wacht op betaling",
         "refund": "Terug te betalen",
         "closed": "Afgesloten",
-        "rendering": "In de maak/mislukt",
         "live": "Live/loopt af"
       },
       "filters": {
@@ -1818,7 +1801,6 @@
         "originalOf": "Originele video van {{name}}",
         "sponsored": "Gesponsorde video",
         "sponsoredOf": "Gesponsorde video van {{name}}",
-        "fakeRender": "Testvideo (zonder overlay)",
         "noVideo": "Nog geen video.",
         "facts": "Gegevens",
         "gesture": "Gebaar",
@@ -1837,8 +1819,8 @@
         "title": "Acties",
         "notes": {
           "awaitingPayment": "Wacht op betaling. Markeer als betaald of annuleer bij de betaling hieronder.",
-          "rendering": "De video wordt gemaakt. Daarna komt de sponsoring bij Te beoordelen.",
-          "renderFailed": "De video is mislukt. De fout staat bij Videotaken; probeer opnieuw als de oorzaak opgelost of tijdelijk was.",
+          "rendering": "Deze sponsoring wachtte op een video die niet meer gemaakt wordt. Ze komt binnen het uur bij Te beoordelen.",
+          "renderFailed": "Deze sponsoring wachtte op een video die niet meer gemaakt wordt. Ze komt binnen het uur bij Te beoordelen.",
           "closed": "Deze sponsoring is afgesloten."
         }
       },
@@ -1994,19 +1976,7 @@
           "running": "Bezig",
           "succeeded": "Gelukt",
           "failed": "Mislukt"
-        },
-        "hint": {
-          "sourceTooLong": "De video van het gebaar duurt langer dan 2 minuten, het maximum voor een gesponsorde video. Kort de video van het gebaar in of vervang hem, en probeer dan opnieuw.",
-          "workflowNeverStarted": "Het maken van de video is binnen 6 uur niet gestart. Controleer de laatste deploy en het Workflows-dashboard, en probeer dan opnieuw.",
-          "rendererBusy": "Er was een uur lang geen renderer vrij. Probeer opnieuw wanneer er minder video's tegelijk gemaakt worden."
         }
-      },
-      "retryRender": {
-        "action": "Video opnieuw maken",
-        "title": "De video voor {{name}} op {{gesture}} opnieuw maken?",
-        "description": "Er start een nieuwe video met de huidige naam en het huidige logo. De sponsoring gaat terug naar Video wordt gemaakt en komt bij Ter beoordeling zodra de video klaar is. Er gaat geen e-mail uit.",
-        "done": "De video wordt opnieuw gemaakt (poging {{attempt}}).",
-        "announce": "Video opnieuw gestart: poging {{attempt}} voor {{name}}."
       },
       "tokens": {
         "title": "Links",

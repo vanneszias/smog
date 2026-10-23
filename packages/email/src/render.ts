@@ -23,10 +23,6 @@ import {
   adminRefundNeeded,
 } from "./templates/transactional/admin-refund-needed";
 import {
-  type AdminRenderFailedProps,
-  adminRenderFailed,
-} from "./templates/transactional/admin-render-failed";
-import {
   type PaymentConfirmedProps,
   paymentConfirmed,
 } from "./templates/transactional/payment-confirmed";
@@ -55,7 +51,6 @@ export interface EmailTemplateProps {
   "transactional/admin-dead-letter": AdminDeadLetterProps;
   "transactional/admin-new-sponsorship": AdminNewSponsorshipProps;
   "transactional/admin-refund-needed": AdminRefundNeededProps;
-  "transactional/admin-render-failed": AdminRenderFailedProps;
   "transactional/payment-confirmed": PaymentConfirmedProps;
   "transactional/renewal-reminder": RenewalReminderProps;
   "transactional/sponsorship-live": SponsorshipLiveProps;
@@ -76,7 +71,6 @@ const TEMPLATES: {
   "transactional/admin-dead-letter": adminDeadLetter,
   "transactional/admin-new-sponsorship": adminNewSponsorship,
   "transactional/admin-refund-needed": adminRefundNeeded,
-  "transactional/admin-render-failed": adminRenderFailed,
   "transactional/payment-confirmed": paymentConfirmed,
   "transactional/renewal-reminder": renewalReminder,
   "transactional/sponsorship-live": sponsorshipLive,

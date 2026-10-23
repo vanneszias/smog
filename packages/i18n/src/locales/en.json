@@ -710,13 +710,6 @@
         "invoiceTitle": "Invoicing",
         "button": "View in the admin"
       },
-      "adminRenderFailed": {
-        "subject": "Video failed for {{gesture}}",
-        "preheader": "The video for {{displayName}} could not be made.",
-        "heading": "Video failed",
-        "body": "The sponsored video could not be made, even after retrying. Check the sponsorship in the admin.",
-        "button": "View the sponsorship"
-      },
       "adminRefundNeeded": {
         "subject": "Refund needed for payment {{paymentId}}",
         "preheader": "Refund {{amount}} in the Mollie dashboard.",
@@ -748,13 +741,12 @@
       },
       "adminDeadLetter": {
         "subject": "Dead letters need attention",
-        "preheader": "Messages could not be delivered, or a video has been failed for over a day.",
+        "preheader": "Messages could not be delivered.",
         "heading": "Dead letters need attention",
-        "body": "Some messages could not be delivered after every retry, or a video has been failed for more than 24 hours. Replay or discard them in the admin.",
+        "body": "Some messages could not be delivered after every retry. Replay or discard them in the admin.",
         "emailOpen": "Emails waiting",
         "eventsOpen": "Sponsorship events waiting",
         "lost": "Messages lost while the database was down",
-        "renderFailed": "Videos failed for over 24 hours",
         "types": "Waiting by type",
         "button": "Open dead letters"
       }
@@ -1016,10 +1008,6 @@
         "inReview_other": "to review",
         "awaitingPayment_one": "{{count}} awaiting payment",
         "awaitingPayment_other": "{{count}} awaiting payment",
-        "rendering_one": "{{count}} video being made",
-        "rendering_other": "{{count}} videos being made",
-        "renderFailed_one": "{{count}} video failed",
-        "renderFailed_other": "{{count}} videos failed",
         "live_one": "{{count}} live",
         "live_other": "{{count}} live",
         "expiring_one": "{{count}} ending soon",
@@ -1035,9 +1023,7 @@
         "events_one": "{{count}} event waiting",
         "events_other": "{{count}} events waiting",
         "oldest": "Oldest from {{date}}",
-        "none": "Nothing waiting",
-        "renderFailed_one": "{{count}} video failed",
-        "renderFailed_other": "{{count}} videos failed"
+        "none": "Nothing waiting"
       },
       "chart": {
         "title": "At a glance",
@@ -1046,7 +1032,6 @@
         "catalogue": "Gestures",
         "awaitingPayment": "Awaiting payment",
         "inReview": "In review",
-        "rendering": "Rendering",
         "live": "Live",
         "published": "Published",
         "hidden": "Hidden"
@@ -1717,7 +1702,6 @@
         "sponsorshipLive": "Sponsorship live",
         "renewalReminder": "Renewal reminder",
         "adminNewSponsorship": "New sponsorship (admin)",
-        "adminRenderFailed": "Render failed (admin)",
         "adminRefundNeeded": "Refund needed (admin)",
         "weMoved": "We moved",
         "adminDeadLetter": "Dead letters (admin)"
@@ -1746,7 +1730,6 @@
         "awaiting": "Awaiting payment",
         "refund": "Refund needed",
         "closed": "Closed",
-        "rendering": "Rendering/failed",
         "live": "Live/ending"
       },
       "filters": {
@@ -1818,7 +1801,6 @@
         "originalOf": "Original video of {{name}}",
         "sponsored": "Sponsored video",
         "sponsoredOf": "Sponsored video of {{name}}",
-        "fakeRender": "Fake render (no overlay)",
         "noVideo": "No video yet.",
         "facts": "Details",
         "gesture": "Gesture",
@@ -1837,8 +1819,8 @@
         "title": "Actions",
         "notes": {
           "awaitingPayment": "Awaiting payment. Mark it paid or cancel it on the payment below.",
-          "rendering": "The video is being made. Then the sponsorship moves to Review.",
-          "renderFailed": "The video failed. The error is under Render jobs; retry the render when the cause is fixed or was temporary.",
+          "rendering": "This sponsorship was waiting for a video that is no longer made. It moves to Review within the hour.",
+          "renderFailed": "This sponsorship was waiting for a video that is no longer made. It moves to Review within the hour.",
           "closed": "This sponsorship is closed."
         }
       },
@@ -1994,19 +1976,7 @@
           "running": "Running",
           "succeeded": "Succeeded",
           "failed": "Failed"
-        },
-        "hint": {
-          "sourceTooLong": "The gesture's video is longer than 2 minutes, the most a sponsored video can be. Shorten or replace the gesture's video, then retry.",
-          "workflowNeverStarted": "The render never started within 6 hours. Check the last deploy and the Workflows dashboard, then retry.",
-          "rendererBusy": "No renderer was free for an hour. Retry when fewer videos are being made."
         }
-      },
-      "retryRender": {
-        "action": "Retry render",
-        "title": "Make the video for {{name}} on {{gesture}} again?",
-        "description": "A new render starts with the current name and logo. The sponsorship goes back to Making the video and moves to Review when the video is ready. No email is sent.",
-        "done": "The video is being made again (attempt {{attempt}}).",
-        "announce": "Render retried: attempt {{attempt}} started for {{name}}."
       },
       "tokens": {
         "title": "Links",

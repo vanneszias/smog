@@ -717,13 +717,6 @@
         "invoiceTitle": "Facturation",
         "button": "Voir dans l'administration"
       },
-      "adminRenderFailed": {
-        "subject": "Échec de la vidéo pour {{gesture}}",
-        "preheader": "La vidéo pour {{displayName}} n'a pas pu être réalisée.",
-        "heading": "Échec de la vidéo",
-        "body": "La vidéo parrainée n'a pas pu être réalisée, même après de nouvelles tentatives. Vérifiez le parrainage dans l'administration.",
-        "button": "Voir le parrainage"
-      },
       "adminRefundNeeded": {
         "subject": "Remboursement nécessaire pour le paiement {{paymentId}}",
         "preheader": "Remboursez {{amount}} dans le tableau de bord Mollie.",
@@ -755,13 +748,12 @@
       },
       "adminDeadLetter": {
         "subject": "Des dead letters demandent votre attention",
-        "preheader": "Des messages n’ont pas pu être distribués, ou une vidéo est en échec depuis plus d’un jour.",
+        "preheader": "Des messages n’ont pas pu être distribués.",
         "heading": "Des dead letters demandent votre attention",
-        "body": "Certains messages n’ont pas pu être distribués après toutes les tentatives, ou une vidéo est en échec depuis plus de 24\u00a0heures. Rejouez-les ou supprimez-les dans l’administration.",
+        "body": "Certains messages n’ont pas pu être distribués après toutes les tentatives. Rejouez-les ou supprimez-les dans l’administration.",
         "emailOpen": "E-mails en attente",
         "eventsOpen": "Événements de parrainage en attente",
         "lost": "Messages perdus pendant l’indisponibilité de la base de données",
-        "renderFailed": "Vidéos en échec depuis plus de 24\u00a0heures",
         "types": "En attente par type",
         "button": "Ouvrir les dead letters"
       }
@@ -1031,11 +1023,7 @@
         "awaitingPayment_one": "{{count}} en attente de paiement",
         "awaitingPayment_other": "{{count}} en attente de paiement",
         "awaitingPayment_many": "{{count}} en attente de paiement",
-        "rendering_one": "{{count}} vidéo en préparation",
-        "rendering_other": "{{count}} vidéos en préparation",
         "rendering_many": "{{count}} vidéos en préparation",
-        "renderFailed_one": "{{count}} vidéo en échec",
-        "renderFailed_other": "{{count}} vidéos en échec",
         "renderFailed_many": "{{count}} vidéos en échec",
         "live_one": "{{count}} en ligne",
         "live_other": "{{count}} en ligne",
@@ -1058,9 +1046,7 @@
         "events_one": "{{count}} événement en attente",
         "events_many": "{{count}} événements en attente",
         "events_other": "{{count}} événements en attente",
-        "renderFailed_one": "{{count}} vidéo en échec",
-        "renderFailed_many": "{{count}} vidéos en échec",
-        "renderFailed_other": "{{count}} vidéos en échec"
+        "renderFailed_many": "{{count}} vidéos en échec"
       },
       "chart": {
         "title": "En un coup d’œil",
@@ -1069,7 +1055,6 @@
         "catalogue": "Gestes",
         "awaitingPayment": "En attente de paiement",
         "inReview": "En révision",
-        "rendering": "En cours de création",
         "live": "En ligne",
         "published": "Publiés",
         "hidden": "Masqués"
@@ -1752,7 +1737,6 @@
         "sponsorshipLive": "Parrainage en ligne",
         "renewalReminder": "Rappel de renouvellement",
         "adminNewSponsorship": "Nouveau parrainage (admin)",
-        "adminRenderFailed": "Échec de la vidéo (admin)",
         "adminRefundNeeded": "Remboursement nécessaire (admin)",
         "weMoved": "Nous avons déménagé",
         "adminDeadLetter": "Dead letters (administration)"
@@ -1781,7 +1765,6 @@
         "awaiting": "En attente de paiement",
         "refund": "À rembourser",
         "closed": "Clôturés",
-        "rendering": "En cours/en échec",
         "live": "En ligne/bientôt fini"
       },
       "filters": {
@@ -1853,7 +1836,6 @@
         "originalOf": "Vidéo originale de {{name}}",
         "sponsored": "Vidéo parrainée",
         "sponsoredOf": "Vidéo parrainée de {{name}}",
-        "fakeRender": "Rendu factice (sans incrustation)",
         "noVideo": "Pas encore de vidéo.",
         "facts": "Détails",
         "gesture": "Geste",
@@ -1872,8 +1854,8 @@
         "title": "Actions",
         "notes": {
           "awaitingPayment": "En attente de paiement. Marquez-le payé ou annulez-le sur le paiement ci-dessous.",
-          "rendering": "La vidéo est en préparation. Ensuite, le parrainage passe à l’examen.",
-          "renderFailed": "La vidéo a échoué. L’erreur figure sous Tâches de rendu\u00a0; relancez le rendu une fois la cause corrigée ou si elle était passagère.",
+          "rendering": "Ce parrainage attendait une vidéo qui n’est plus réalisée. Il passe à l’examen dans l’heure.",
+          "renderFailed": "Ce parrainage attendait une vidéo qui n’est plus réalisée. Il passe à l’examen dans l’heure.",
           "closed": "Ce parrainage est clôturé."
         }
       },
@@ -2031,19 +2013,7 @@
           "running": "En cours",
           "succeeded": "Réussi",
           "failed": "Échoué"
-        },
-        "hint": {
-          "sourceTooLong": "La vidéo du geste dure plus de 2 minutes, le maximum pour une vidéo sponsorisée. Raccourcissez ou remplacez la vidéo du geste, puis relancez.",
-          "workflowNeverStarted": "Le rendu n'a pas démarré dans les 6 heures. Vérifiez le dernier déploiement et le tableau de bord Workflows, puis relancez.",
-          "rendererBusy": "Aucun moteur de rendu n'a été libre pendant une heure. Relancez quand moins de vidéos sont en cours."
         }
-      },
-      "retryRender": {
-        "action": "Relancer le rendu",
-        "title": "Refaire la vidéo de {{name}} sur {{gesture}}\u00a0?",
-        "description": "Un nouveau rendu démarre avec le nom et le logo actuels. Le parrainage repasse à Vidéo en préparation, puis à l’examen quand la vidéo est prête. Aucun e-mail n’est envoyé.",
-        "done": "La vidéo est refaite (essai {{attempt}}).",
-        "announce": "Rendu relancé\u00a0: essai {{attempt}} démarré pour {{name}}."
       },
       "tokens": {
         "title": "Liens",

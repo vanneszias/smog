@@ -81,10 +81,7 @@ function Stats({ data }: { data: Dashboard }): ReactNode {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <SponsorshipStats stats={data.sponsorships} />
-      <DeadLetterStats
-        renderFailed={data.sponsorships.renderFailed}
-        stats={data.deadLetters}
-      />
+      <DeadLetterStats stats={data.deadLetters} />
       <StatCard
         details={[
           t("admin.dashboard.published", { count: gestures.published }),

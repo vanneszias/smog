@@ -31,11 +31,6 @@ function chartGroups(data: Dashboard): {
           value: sponsorships.inReview,
         },
         {
-          fill: "bg-chart-4",
-          label: "admin.dashboard.chart.rendering",
-          value: sponsorships.rendering,
-        },
-        {
           fill: "bg-chart-1",
           label: "admin.dashboard.chart.live",
           value: sponsorships.live,

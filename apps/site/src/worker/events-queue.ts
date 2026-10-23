@@ -1,27 +1,16 @@
 import { createDb, type Db } from "@smog/db/client";
-import {
-  enqueueOutputs,
-  eventMessageSchema,
-  type JobQueues,
-  type RenderStarter,
-} from "@smog/jobs";
-import {
-  handlePaymentSettled,
-  queuedRenderJob,
-} from "@smog/sponsorships/server";
+import { enqueueOutputs, eventMessageSchema, type JobQueues } from "@smog/jobs";
+import { handlePaymentSettled } from "@smog/sponsorships/server";
 import { siteEnv } from "@/server/auth";
-import { renderStarter } from "@/worker/render";
 
 /**
  * The `EVENTS_QUEUE` (`smog-<env>-sponsorship-events`) consumer (spec
  * §8.1, phase 6 rulings 7 and 8). One message at a time:
  * - `payment.settled`: `handlePaymentSettled` (`@smog/sponsorships`)
- *   creates the render jobs (one per item, however often it runs) and
- *   returns `render.requested` and the keyed emails, which are enqueued
- *   here (a failed enqueue retries the message: every output is derived
- *   from D1 again);
- * - `render.requested`: a `queued` job is started with this Worker's
- *   `RenderStarter` (`worker/render.ts`); any other job is acked.
+ *   returns the keyed emails, which are enqueued here (a failed enqueue
+ *   retries the message: every output is derived from D1 again);
+ * - `render.requested`: legacy (phase 10b task 9, the render pipeline is
+ *   retired); a message queued before that is acked and logged.
  * An invalid message is logged and acked. A failure retries the message
  * after `min(30 × 2^(attempts − 1), 3600)` s; after `max_retries` (10) the
  * platform moves it to `smog-<env>-sponsorship-events-dlq`.
@@ -31,7 +20,6 @@ export interface EventsDeps {
   db: Db;
   now?: () => Date;
   queues: JobQueues;
-  renderStarter: RenderStarter;
   siteUrl: string;
 }
 
@@ -67,14 +55,9 @@ export async function processEventMessage(
       await enqueueOutputs(deps.queues, outputs, { onFailure: "throw" });
       return { action: "ack" };
     }
-    const job = await queuedRenderJob(deps.db, event.renderJobId);
-    if (job) {
-      await deps.renderStarter.start(job);
-    } else {
-      console.log(
-        `[events-queue] Render job ${event.renderJobId} is not queued; acked`
-      );
-    }
+    console.log(
+      `[events-queue] Render job ${event.renderJobId} was queued before the render pipeline was retired; acked`
+    );
     return { action: "ack" };
   } catch (error) {
     const delaySeconds = eventRetryDelaySeconds(message.attempts);
@@ -97,16 +80,10 @@ export async function handleEventsBatch(
   const deps: EventsDeps = {
     db,
     queues,
-    renderStarter: renderStarter({
-      db,
-      queues,
-      renderWorkflow: bindings.RENDER_WORKFLOW,
-      vars,
-    }),
     siteUrl: vars.SITE_URL,
   };
   for (const message of batch.messages) {
-    // biome-ignore lint/performance/noAwaitInLoops: one message at a time, so a render and its fan-out never race each other.
+    // biome-ignore lint/performance/noAwaitInLoops: one message at a time.
     const decision = await processEventMessage(message, deps);
     if (decision.action === "retry") {
       message.retry({ delaySeconds: decision.delaySeconds });
