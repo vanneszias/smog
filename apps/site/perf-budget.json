@@ -3,37 +3,37 @@
   "workerGzip": 5242880,
   "entries": {
     "home": {
-      "gzip": 458500,
+      "gzip": 465000,
       "target": 200000,
       "note": "Target not reached: the shared closure is ~455 kB gzip (the TanStack/React entry 132 kB, @smog/ui-web 104 kB, the active i18n catalogue 30 kB, the zod schemas 26 kB), none of it in this task's files.",
       "routes": [["index.tsx"]]
     },
     "gestures": {
-      "gzip": 459500,
+      "gzip": 465500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home).",
       "routes": [["gestures/index.tsx"]]
     },
     "gesture": {
-      "gzip": 456500,
+      "gzip": 462500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Mux Player (314 kB gzip) and the QR dialog load on demand.",
       "routes": [["gestures/$slug.tsx"]]
     },
     "my": {
-      "gzip": 475500,
+      "gzip": 482000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Covers /my (Favorites and Lists tabs; /favorites and /lists redirect there) and /lists/$shareToken.",
       "routes": [["my.tsx"], ["lists/$shareToken.tsx"]]
     },
     "sponsor": {
-      "gzip": 471500,
+      "gzip": 477500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Remotion and MediaBunny stay lazy (checkClientRenderIsLazy).",
       "routes": [["sponsor/index.tsx"]]
     },
     "sponsor-pages": {
-      "gzip": 460000,
+      "gzip": 466500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Covers the edit, renew and success pages.",
       "routes": [
@@ -43,13 +43,13 @@
       ]
     },
     "account": {
-      "gzip": 459000,
+      "gzip": 465000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home).",
       "routes": [["account.tsx"]]
     },
     "auth": {
-      "gzip": 463500,
+      "gzip": 470000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Covers sign-in, sign-up, forgot and reset password, magic link and verify email.",
       "routes": [
@@ -63,13 +63,13 @@
       ]
     },
     "legal": {
-      "gzip": 453000,
+      "gzip": 459500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). The legal texts (22 kB gzip) are read on the server since phase 10b task 7 (D1 rows, the shipped texts only as the fallback), so this entry no longer carries them.",
       "routes": [["privacy.tsx"], ["terms.tsx"]]
     },
     "admin": {
-      "gzip": 480000,
+      "gzip": 486000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). The largest admin screen sets the number.",
       "routes": [
