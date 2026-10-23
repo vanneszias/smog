@@ -1,39 +1,39 @@
 {
-  "_comment": "Initial JavaScript per entry, gzip bytes: the client entry, its static-import closure and the route's lazy chunks (scripts/perf-budget.ts). Each budget is the measurement + 15 % after the named lazy splits of phase 9 task 6; deploy-guard fails over it and hints to lower it when it sits more than 10 % above measured + 15 %. `target` is ruling 4's 200 kB (home) / 300 kB (any route); the shared closure that blocks it is in `note`. `workerGzip` is the Worker's hard cap (5 MiB).",
+  "_comment": "Initial JavaScript per entry, gzip bytes: the client entry, its static-import closure and the route's lazy chunks (scripts/perf-budget.ts). The largest language catalogue chunk (loaded for the active language, phase 10b task 7b) counts in every entry. Each budget is the measurement + ~3 kB (phase 10b task 7b; it was + 15 % after the named lazy splits of phase 9 task 6); deploy-guard fails over it and hints to lower it when it sits more than 10 % above measured + 15 %. `target` is ruling 4's 200 kB (home) / 300 kB (any route); the shared closure that blocks it is in `note`. `workerGzip` is the Worker's hard cap (5 MiB).",
   "workerGzip": 5242880,
   "entries": {
     "home": {
-      "gzip": 517500,
+      "gzip": 458500,
       "target": 200000,
-      "note": "Target not reached: the shared closure is ~434 kB gzip (the TanStack/React entry 132 kB, @smog/ui-web 104 kB, the three i18n catalogues 70 kB, the zod schemas 26 kB), none of it in this task's files.",
+      "note": "Target not reached: the shared closure is ~455 kB gzip (the TanStack/React entry 132 kB, @smog/ui-web 104 kB, the active i18n catalogue 30 kB, the zod schemas 26 kB), none of it in this task's files.",
       "routes": [["index.tsx"]]
     },
     "gestures": {
-      "gzip": 518500,
+      "gzip": 459500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home).",
       "routes": [["gestures/index.tsx"]]
     },
     "gesture": {
-      "gzip": 515500,
+      "gzip": 456500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Mux Player (314 kB gzip) and the QR dialog load on demand.",
       "routes": [["gestures/$slug.tsx"]]
     },
     "my": {
-      "gzip": 534500,
+      "gzip": 475500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Covers /my (Favorites and Lists tabs; /favorites and /lists redirect there) and /lists/$shareToken.",
       "routes": [["my.tsx"], ["lists/$shareToken.tsx"]]
     },
     "sponsor": {
-      "gzip": 530500,
+      "gzip": 471500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Remotion and MediaBunny stay lazy (checkClientRenderIsLazy).",
       "routes": [["sponsor/index.tsx"]]
     },
     "sponsor-pages": {
-      "gzip": 519000,
+      "gzip": 460000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Covers the edit, renew and success pages.",
       "routes": [
@@ -43,13 +43,13 @@
       ]
     },
     "account": {
-      "gzip": 518000,
+      "gzip": 459000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home).",
       "routes": [["account.tsx"]]
     },
     "auth": {
-      "gzip": 523000,
+      "gzip": 463500,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Covers sign-in, sign-up, forgot and reset password, magic link and verify email.",
       "routes": [
@@ -63,13 +63,13 @@
       ]
     },
     "legal": {
-      "gzip": 512500,
+      "gzip": 453000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). The legal texts (22 kB gzip) are read on the server since phase 10b task 7 (D1 rows, the shipped texts only as the fallback), so this entry no longer carries them.",
       "routes": [["privacy.tsx"], ["terms.tsx"]]
     },
     "admin": {
-      "gzip": 539000,
+      "gzip": 480000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). The largest admin screen sets the number.",
       "routes": [

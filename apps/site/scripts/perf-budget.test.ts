@@ -83,6 +83,27 @@ describe("measureEntries", () => {
     expect(sizes.get("ab")?.gzip).toBe(sizes.get("a")?.gzip ?? 0);
   });
 
+  it("counts the largest language catalogue chunk, lazy as it is", () => {
+    const withCatalogues = {
+      ...MANIFEST,
+      "../../packages/i18n/src/locales/en.json": { file: "assets/en.js" },
+      "../../packages/i18n/src/locales/fr.json": { file: "assets/fr.js" },
+    };
+    const files: Record<string, string> = {
+      ...FILES,
+      "assets/en.js": noise(1500, 6),
+      "assets/fr.js": noise(2500, 7),
+    };
+    const sizes = measureEntries(
+      withCatalogues,
+      budget({ a: 1, b: 1 }),
+      (file) => files[file] ?? ""
+    );
+    // The a visit plus fr (the larger catalogue), not en.
+    expect(sizes.get("a")?.chunks).toBe(5);
+    expect(sizes.get("a")?.raw).toBe(5000 + 4000 + 2000 + 3000 + 2500);
+  });
+
   it("refuses a route with no chunk instead of passing it unmeasured", () => {
     const missing: PerfBudget = {
       entries: { gone: { gzip: 1, routes: [["gone.tsx"]], target: 1 } },

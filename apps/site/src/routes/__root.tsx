@@ -8,6 +8,7 @@ import { createWebAuthClient, type WebAuthClient } from "@smog/auth/web";
 import { isLocalizedQuery } from "@smog/gestures/client";
 import {
   createI18n,
+  ensureCatalogues,
   type LanguageInfo,
   type Locale,
   registerLanguages,
@@ -90,7 +91,16 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   }),
   // The shell (locale, theme, session) changes only through the setters
   // below, which invalidate the router.
-  loader: (): Promise<Shell> => getShell(),
+  // The browser holds the shipped catalogue of one language at a time
+  // (phase 10b task 7b): a reload of the shell that brings another language
+  // (the language menu, a sign-in with a saved language) loads it before the
+  // new shell swaps in, so no render sees an empty catalogue. A no-op on the
+  // server, which has all three, and for a language already loaded.
+  loader: async (): Promise<Shell> => {
+    const shell = await getShell();
+    await ensureCatalogues(shell.locale);
+    return shell;
+  },
   notFoundComponent: NotFound,
   shellComponent: RootDocument,
   staleTime: Number.POSITIVE_INFINITY,

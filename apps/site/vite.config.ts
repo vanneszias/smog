@@ -3,11 +3,33 @@ import { cloudflare, type WorkerConfig } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { THEME_SCRIPT_HASH_DEFINE } from "./build-defines";
 import { applyRenderGate, type RenderEnv } from "./render-config";
 
 const SRC = fileURLToPath(new URL("./src", import.meta.url));
+const I18N_LAZY_ENTRY = fileURLToPath(
+  new URL("../../packages/i18n/src/index.lazy.ts", import.meta.url)
+);
+
+/**
+ * One language in the browser entry (phase 10b task 7b): the client build
+ * resolves `@smog/i18n` to the entry without the shipped catalogues; the
+ * active language is loaded before hydration (`src/client.tsx`) and on a
+ * language change (the root loader). The Worker (SSR) keeps the full entry,
+ * which holds all three.
+ */
+function i18nLazyCatalogues(): Plugin {
+  return {
+    enforce: "pre",
+    name: "smog:i18n-lazy-catalogues",
+    resolveId(source) {
+      return source === "@smog/i18n" && this.environment.name === "client"
+        ? I18N_LAZY_ENTRY
+        : null;
+    },
+  };
+}
 
 // The Cloudflare plugin reads the wrangler environment from CLOUDFLARE_ENV at
 // dev and build time (there are no top-level bindings). Local runs use
@@ -123,6 +145,7 @@ export default defineConfig({
   // out of the deployed assets.
   environments: { client: { build: { manifest: true } } },
   plugins: [
+    i18nLazyCatalogues(),
     cloudflare({
       config: customizeWorker,
       viteEnvironment: { name: "ssr" },
