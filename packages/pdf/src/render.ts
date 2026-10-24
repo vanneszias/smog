@@ -506,7 +506,9 @@ async function participantsRow(
     embedded.length === 2 ? (innerLeft - DRAWING_GAP) / 2 : innerLeft;
   const placed: PlacedDrawing[] = embedded.map(({ credit, image }) => {
     const scale = Math.min(slotW / image.width, DRAWING_MAX_H / image.height);
-    const creditText = credit ? clean(`© ${credit}`, build) : "";
+    // A credit that already starts with the mark is not marked twice.
+    const marked = credit.startsWith("©") ? credit : `© ${credit}`;
+    const creditText = credit ? clean(marked, build) : "";
     return {
       credit: creditText
         ? wrapText(creditText, fonts.regularM, CREDIT_SIZE, slotW)

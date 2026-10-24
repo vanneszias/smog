@@ -162,17 +162,27 @@ test("refuses wrong magic bytes, a WebP, a file over 512 KiB and a side over 120
     )
   ).toBeVisible();
 
-  // A real WebP: the PDF cannot embed it, so the editor refuses it up front.
+  // A real WebP: the PDF cannot embed it, so the editor refuses it up front
+  // (no upload is even requested).
+  let uploadRequests = 0;
+  page.on("request", (request) => {
+    if (request.url().includes("teacher/uploadDrawing")) {
+      uploadRequests += 1;
+    }
+  });
   await input.setInputFiles({
     buffer: Buffer.from(webpBytes(60, 40, "lossless")),
     mimeType: "image/webp",
     name: "hond.webp",
   });
   await expect(
-    page.getByText(
-      "Dit is geen geldige PNG- of JPEG-afbeelding (WebP kan niet in de pdf)."
-    )
+    page
+      .getByText(
+        "Dit is geen geldige PNG- of JPEG-afbeelding (WebP kan niet in de pdf)."
+      )
+      .first()
   ).toBeVisible();
+  expect(uploadRequests).toBe(0);
 
   // Over 512 KiB: the editor says so before uploading anything.
   await input.setInputFiles({
