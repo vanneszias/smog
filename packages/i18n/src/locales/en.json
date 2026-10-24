@@ -423,6 +423,48 @@
     "lesson": "Lesson",
     "fallbackFootnote": "Not yet translated: text in {{language}}."
   },
+  "teacherLessons": {
+    "title": "Lessons",
+    "entryDescription": "Look up lessons and share them as a PDF",
+    "number": "Lesson {{number}}",
+    "gestureCount_one": "{{count}} gesture",
+    "gestureCount_other": "{{count}} gestures",
+    "author": "By {{name}}",
+    "titleIn": "Title in {{language}}",
+    "empty": {
+      "title": "No lessons yet",
+      "description": "Lessons are made on the website. They show up here as soon as a teacher creates one."
+    },
+    "forbidden": {
+      "title": "Only for teachers",
+      "description": "This part of the app is for teachers and admins."
+    },
+    "notFound": {
+      "title": "Lesson not found",
+      "description": "This lesson doesn't exist (anymore)."
+    },
+    "notes": "Notes",
+    "ungrouped": "Gestures",
+    "section": "Section",
+    "emptyLesson": "This lesson has no gestures yet.",
+    "unpublished": "Not published",
+    "unpublishedHint": "This gesture is not published and can't be opened.",
+    "export": {
+      "open": "Export as PDF",
+      "title": "Lesson as a PDF",
+      "description": "Choose who the PDF is for and in which language, then share or save it.",
+      "download": "Download and share",
+      "downloading": "Making the PDF…",
+      "shareTitle": "Share the lesson PDF",
+      "errors": {
+        "unauthorized": "Sign in again to make the PDF.",
+        "forbidden": "Only teachers can make this PDF.",
+        "notFound": "This lesson no longer exists.",
+        "offline": "No connection. Connect to the internet and try again.",
+        "sharingUnavailable": "This device can't share files."
+      }
+    }
+  },
   "drawings": {
     "title": "Drawings",
     "description": "Line drawings for the participants' sheet: one image per step, a second step is optional. PNG or JPEG, at most 512 kB and 1200 pixels on a side. Only teachers, translators and admins can see them.",

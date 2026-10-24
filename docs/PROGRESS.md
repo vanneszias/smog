@@ -167,6 +167,13 @@ Nothing here blocks a deploy of staging; items 1 and 3 block the production laun
 6. **Housekeeping from the render removal** (phase 10b task 9, step 3): delete `SMOG_RENDER_PIPELINE` from the `staging` and `production` GitHub environments and `REMOTION_LICENSE_KEY` from any Worker. There is no render flip any more.
 7. **By eye and on devices:** the name overlay and the audio button on the gesture page (web and the app), the sponsor end card over a real video frame (a very wide logo shows small in its square box), the strings and legal editors in light and dark, and the language switch on a phone. The mobile overlay, audio and end card were only verified by jest (`docs/PROGRESS.md`, step 7's device pass).
 
+## Phase 10c: mobile lessons (task 6)
+
+For teachers and admins only (`session.user.roles`): Settings, "Lessons" lists every lesson, a lesson opens read only (sections, gestures, notes), and "Export as PDF" downloads the file through `GET /api/teacher/lessons/<id>/pdf` and opens the share sheet. No builder, no teacher-info editing, no offline copy (lessons are private and never written to the device cache). Task 7 folds this into the phase's owner list.
+
+- **Device check (no test covers it):** the Lessons entry and the list in light and dark, the lesson view, the export sheet (template, language, the preview), and the share sheet on a real iPhone and Android device (save to Files, mail, print); VoiceOver and TalkBack over the export sheet. `expo-sharing` is already in the binary, so this needs no new native build beyond phase 10b's.
+- **Android keeps the shared PDF** in the cache directory until the next launch, the next export or an account deletion (the receiving app may still be reading it); iOS deletes it when the share sheet closes.
+
 ## Owner actions in order
 
 **The owner sequence.** Everything below needs a credential or a decision the session did not have; nothing here has been done. The details live in `docs/deployment.md` (setup) and `docs/cutover-runbook.md` (the switch-over); each step names where. Steps 1 to 3 are staging, 4 to 7 prepare and start production, 8 to 12 are the cutover. Phase 9's additions are slotted into the steps where their prerequisites are met (the numbers did not change, so every reference to a step stays valid); the summary at the top of this file lists what is blocked on you.

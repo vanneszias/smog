@@ -92,6 +92,54 @@ interface ScreenCase {
   readyTestId?: string;
 }
 
+const LESSON_ITEM = {
+  hasDrawing: false,
+  id: "g-hond",
+  name: "Hond",
+  playbackId: "playback-hond",
+  published: true,
+  slug: "hond",
+};
+
+const LESSON_ROUTES = {
+  "lessons/get": {
+    authorId: "u-els",
+    authorName: "Els",
+    canEdit: false,
+    createdAt: 0,
+    id: "l1",
+    number: 1,
+    sections: [
+      {
+        id: "s-1",
+        items: [{ ...LESSON_ITEM, id: "g-oud", name: "Oud", published: false }],
+        titles: { en: "Pets" },
+      },
+    ],
+    translations: { en: { notes: "Notes", title: "Dieren" } },
+    ungrouped: [LESSON_ITEM],
+    updatedAt: 1,
+    version: 1,
+  },
+  "lessons/list": {
+    items: [
+      {
+        authorName: "Els",
+        canEdit: false,
+        gestureCount: 2,
+        id: "l1",
+        mine: false,
+        number: 1,
+        title: "Dieren",
+        titleLocale: "nl",
+        updatedAt: 1,
+        version: 1,
+      },
+    ],
+    nextCursor: null,
+  },
+};
+
 const SCREENS: ScreenCase[] = [
   {
     name: "home",
@@ -204,6 +252,18 @@ const SCREENS: ScreenCase[] = [
     ready: "Sign in",
   },
   {
+    name: "lessons (teacher)",
+    options: { roles: ["teacher"], routes: LESSON_ROUTES, signedIn: true },
+    push: "/settings/lessons",
+    ready: "Dieren",
+  },
+  {
+    name: "lesson (teacher)",
+    options: { roles: ["teacher"], routes: LESSON_ROUTES, signedIn: true },
+    push: "/settings/lessons/l1",
+    ready: "Export as PDF",
+  },
+  {
     name: "sign in",
     options: {
       authScreens: true,
@@ -254,7 +314,12 @@ describe("every screen, audited", () => {
       expect(routes.has(url)).toBe(true);
     }
     const pushed = new Set(SCREENS.map((row) => row.push));
-    for (const url of ["/lists/loc_les-1", "/settings/account"]) {
+    for (const url of [
+      "/lists/loc_les-1",
+      "/settings/account",
+      "/settings/lessons",
+      "/settings/lessons/l1",
+    ]) {
       expect(pushed.has(url)).toBe(true);
     }
   });
