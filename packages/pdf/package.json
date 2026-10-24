@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./assets/*": "./assets/*",
+    "./coverage": "./src/glyph-coverage.ts",
     "./png": "./src/png-guard.ts"
   },
   "scripts": {

@@ -477,6 +477,7 @@
     "stepOptional": "Étape {{step}} (facultative)",
     "none": "Pas encore de dessin",
     "needFirst": "Ajoutez d'abord l'étape 1.",
+    "removeStep2First": "Supprimez d'abord l'étape 2.",
     "choose": "Choisir un dessin",
     "replace": "Remplacer le dessin",
     "remove": "Supprimer le dessin",
@@ -1701,21 +1702,26 @@
         "skippedTitle_one": "{{count}} geste n’est pas publié et reste hors du PDF",
         "skippedTitle_many": "{{count}} gestes ne sont pas publiés et restent hors du PDF",
         "skippedTitle_other": "{{count}} gestes ne sont pas publiés et restent hors du PDF",
+        "unsupportedLessonText": "Le titre, les notes ou une partie de cette leçon contiennent des caractères absents de la police du PDF (une autre écriture ou un émoji). Ils s’impriment comme des points d’interrogation.",
         "issuesTitle": "À vérifier pour ces gestes",
         "issue": {
           "fallback": "Texte dans la langue par défaut",
           "missing": "Aucune info pour les enseignants",
           "noDrawing": "Pas de dessin",
+          "unsupportedText": "Contient des caractères que le PDF ne peut pas afficher, ils s’impriment comme des points d’interrogation",
           "unsupportedDrawing": "Le dessin est un WebP et reste absent : envoyez-le à nouveau en PNG ou JPEG"
         },
         "download": "Télécharger le PDF",
         "downloading": "Création du PDF…",
+        "truncated": "Attention, le texte d’un ou de plusieurs gestes a été raccourci car il ne tient pas sur une page.",
         "done": "PDF téléchargé.",
         "errors": {
           "tooMany": "Cette leçon compte trop de gestes pour ce PDF. Scindez la leçon en deux.",
           "tooLarge": "Le PDF est trop volumineux. Scindez la leçon ou utilisez des dessins plus petits.",
           "timeout": "La création du PDF a pris trop de temps. Scindez la leçon en deux et réessayez.",
           "rateLimited": "Vous venez de créer beaucoup de PDF. Patientez un instant et réessayez.",
+          "signIn": "Votre session a expiré. Reconnectez-vous et réessayez.",
+          "forbidden": "Votre compte ne peut plus créer ce PDF. Adressez-vous à un administrateur.",
           "generic": "Le PDF n’a pas pu être créé. Réessayez."
         }
       },

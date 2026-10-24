@@ -16,6 +16,7 @@
 
 import type { Db } from "@smog/db/client";
 import type { LessonPdfDocumentInput, PdfAssets } from "@smog/pdf";
+import { unsupportedCharacterCount } from "@smog/pdf/coverage";
 import {
   LESSON_PDF_BUDGET_MS,
   LESSON_PDF_LIMITS,
@@ -25,10 +26,10 @@ import {
 import { auditStatement } from "./audit";
 import {
   type ExportPlan,
-  LESSON_PDF_LAYOUT_VERSION,
   LessonExportError,
   planLessonExport,
 } from "./export-plan";
+import { LESSON_PDF_LAYOUT_VERSION } from "./layout-version";
 
 /** The texts of the PDF that come from the translation catalogue, in the export language. */
 export interface ExportLabels {
@@ -80,8 +81,12 @@ export interface ExportResult {
   gestures: number;
   key: string;
   lessonNumber: number | null;
+  /** Characters the font lacks, printed as question marks (0 on a cache hit: not counted). */
+  replacedCharacters: number;
   size: number;
   skipped: number;
+  /** Rows whose text was cut because one row would not fit a page (0 on a cache hit). */
+  truncatedRows: number;
 }
 
 async function sha256Hex(text: string): Promise<string> {
@@ -266,7 +271,9 @@ export async function exportLessonPdf(
         body: hit.body,
         cached: true,
         droppedDrawings: 0,
+        replacedCharacters: 0,
         size: hit.size,
+        truncatedRows: 0,
       };
     }
     if (deps.allowRender && !(await deps.allowRender())) {
@@ -318,7 +325,9 @@ export async function exportLessonPdf(
       body: output,
       cached: false,
       droppedDrawings: dropped + report.droppedDrawings.length,
+      replacedCharacters: report.replacedCharacters,
       size: output.byteLength,
+      truncatedRows: report.truncatedRows.length,
     };
   } catch (error) {
     if (!(error instanceof LessonExportError)) {
@@ -337,8 +346,10 @@ export async function recordLessonExport(
     gestures: number;
     lessonId: string;
     locale: string;
+    replacedCharacters?: number;
     skipped: number;
     template: LessonTemplate;
+    truncatedRows?: number;
   }
 ): Promise<void> {
   try {
@@ -349,8 +360,12 @@ export async function recordLessonExport(
         cached: entry.cached,
         gestures: entry.gestures,
         locale: entry.locale,
+        ...(entry.replacedCharacters
+          ? { replacedCharacters: entry.replacedCharacters }
+          : {}),
         skipped: entry.skipped,
         template: entry.template,
+        ...(entry.truncatedRows ? { truncatedRows: entry.truncatedRows } : {}),
       },
       targetId: entry.lessonId,
       targetType: "lesson",
@@ -359,6 +374,32 @@ export async function recordLessonExport(
     console.error("[lessons] Failed to audit a lesson export:", error);
     throw error;
   }
+}
+
+/** Every text a row prints on the template, for the font coverage check (keywords and credits included). */
+function printedTexts(
+  row: ExportPlan["sections"][number]["rows"][number],
+  template: LessonTemplate
+): string[] {
+  const fields =
+    template === "teachers"
+      ? [
+          row.fields.hc,
+          row.fields.pl,
+          row.fields.or,
+          row.fields.bw,
+          row.fields.cNote,
+          row.fields.note,
+        ]
+      : [row.fields.summary, row.fields.hc];
+  return [
+    row.word,
+    ...fields,
+    ...row.keywords,
+    ...(template === "participants"
+      ? row.drawings.map((drawing) => drawing.credit)
+      : []),
+  ];
 }
 
 /**
@@ -388,11 +429,15 @@ export async function previewLessonExport(
           unsupportedDrawing: row.drawings.some(
             (drawing) => !EMBEDDABLE.has(drawing.contentType)
           ),
+          unsupportedText: printedTexts(row, input.template).some(
+            (text) => unsupportedCharacterCount(text) > 0
+          ),
         };
         return issue.fallback ||
           issue.missing ||
           issue.noDrawing ||
-          issue.unsupportedDrawing
+          issue.unsupportedDrawing ||
+          issue.unsupportedText
           ? [issue]
           : [];
       })
@@ -403,6 +448,11 @@ export async function previewLessonExport(
       limit: LESSON_PDF_LIMITS[input.template],
       overLimit: false,
       skipped: plan.skipped,
+      unsupportedLessonText: [
+        plan.lesson.title,
+        plan.lesson.notes,
+        ...plan.sections.map((section) => section.title ?? ""),
+      ].some((text) => unsupportedCharacterCount(text) > 0),
     };
   } catch (error) {
     if (error instanceof LessonExportError && error.code === "TOO_MANY") {
@@ -412,6 +462,7 @@ export async function previewLessonExport(
         limit: LESSON_PDF_LIMITS[input.template],
         overLimit: true,
         skipped: [],
+        unsupportedLessonText: false,
       };
     }
     throw error;

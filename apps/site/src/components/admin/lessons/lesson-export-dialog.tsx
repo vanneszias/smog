@@ -31,8 +31,10 @@ import {
 } from "./lesson-pdf-download";
 
 const PROBLEM_KEYS = {
+  forbidden: "admin.lessons.export.errors.forbidden",
   generic: "admin.lessons.export.errors.generic",
   rateLimited: "admin.lessons.export.errors.rateLimited",
+  signIn: "admin.lessons.export.errors.signIn",
   timeout: "admin.lessons.export.errors.timeout",
   tooLarge: "admin.lessons.export.errors.tooLarge",
   tooMany: "admin.lessons.export.errors.tooMany",
@@ -47,6 +49,7 @@ const ISSUE_BADGES = [
     "admin.lessons.export.issue.unsupportedDrawing",
     "warning",
   ],
+  ["unsupportedText", "admin.lessons.export.issue.unsupportedText", "warning"],
 ] as const satisfies readonly [
   keyof LessonExportIssue,
   string,
@@ -98,7 +101,16 @@ function Preview({
       <Text size="body-sm">
         {t("admin.lessons.export.summary", { count: preview.gestures })}
       </Text>
-      {preview.issues.length === 0 && preview.skipped.length === 0 ? (
+      {preview.unsupportedLessonText ? (
+        <Alert variant="warning">
+          <AlertDescription>
+            {t("admin.lessons.export.unsupportedLessonText")}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {preview.issues.length === 0 &&
+      preview.skipped.length === 0 &&
+      !preview.unsupportedLessonText ? (
         <Alert variant="success">
           <AlertDescription>
             {t("admin.lessons.export.clean", { language })}
@@ -239,6 +251,12 @@ export function LessonExportDialog({
       .then((result) => {
         if (result.ok) {
           toast({ title: t("admin.lessons.export.done"), variant: "success" });
+          if (result.truncatedRows > 0) {
+            toast({
+              title: t("admin.lessons.export.truncated"),
+              variant: "warning",
+            });
+          }
           onClose();
         } else {
           setProblem(result.problem);

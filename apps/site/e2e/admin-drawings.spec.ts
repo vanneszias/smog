@@ -128,6 +128,10 @@ test("uploads step 1 with a credit and step 2 after it, replaces step 1 and remo
   const replacedImage = await page.request.get(replaced?.path ?? "");
   expect(replacedImage.headers()["content-type"]).toBe("image/jpeg");
 
+  // Step 1 cannot be removed while step 2 exists: the card says so, no button.
+  await expect(first.getByText("Verwijder eerst stap 2.")).toBeVisible();
+  await expect(first.getByRole("button", { name: REMOVE })).toHaveCount(0);
+
   // Remove step 2 after the confirmation.
   await second.getByRole("button", { name: REMOVE }).click();
   await page

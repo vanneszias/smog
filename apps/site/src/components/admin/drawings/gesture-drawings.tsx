@@ -51,6 +51,8 @@ interface StepProps {
   name: string;
   /** Step 2 waits for step 1. */
   ready: boolean;
+  /** Step 1 cannot be removed while step 2 exists (the server refuses too). */
+  removeBlocked: boolean;
   row: DrawingRow | undefined;
   step: 1 | 2;
 }
@@ -94,9 +96,13 @@ function StepPreview({
 
 function StepActions({
   gestureId,
+  removeBlocked,
   row,
   step,
-}: Pick<StepProps, "gestureId" | "row" | "step">): ReactNode {
+}: Pick<
+  StepProps,
+  "gestureId" | "removeBlocked" | "row" | "step"
+>): ReactNode {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { remove, upload } = useDrawingActions();
@@ -181,7 +187,12 @@ function StepActions({
           {row ? t("drawings.replace") : t("drawings.choose")}
           <span className="sr-only"> ({t("drawings.step", { step })})</span>
         </Button>
-        {row ? (
+        {row && removeBlocked ? (
+          <Text size="body-sm" tone="muted">
+            {t("drawings.removeStep2First")}
+          </Text>
+        ) : null}
+        {row && !removeBlocked ? (
           <AlertDialog
             confirmLabel={t("drawings.removeConfirm")}
             description={t("drawings.removeDescription", { step })}
@@ -206,6 +217,7 @@ function DrawingStep({
   gestureId,
   name,
   ready,
+  removeBlocked,
   row,
   step,
 }: StepProps): ReactNode {
@@ -215,8 +227,14 @@ function DrawingStep({
   });
   let controls: ReactNode = null;
   if (canWrite) {
-    controls = ready ? (
-      <StepActions gestureId={gestureId} row={row} step={step} />
+    // Only an absent step waits for step 1: a stored drawing keeps Replace and Remove.
+    controls = ready || row ? (
+      <StepActions
+        gestureId={gestureId}
+        removeBlocked={removeBlocked}
+        row={row}
+        step={step}
+      />
     ) : (
       <Text size="body-sm" tone="muted">
         {t("drawings.needFirst")}
@@ -273,6 +291,7 @@ function DrawingCardBody({
           key={`${step}-${byStep.get(step)?.updatedAt ?? 0}`}
           name={name}
           ready={step === 1 || byStep.has(1)}
+          removeBlocked={step === 1 && byStep.has(2)}
           row={byStep.get(step)}
           step={step}
         />

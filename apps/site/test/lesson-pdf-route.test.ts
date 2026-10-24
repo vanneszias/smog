@@ -1,6 +1,6 @@
 // biome-ignore-all lint/performance/noAwaitInLoops: requests are made one after the other so each answer is read in order.
 import { env, exports } from "cloudflare:workers";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { ORIGIN, signedUp } from "./helpers";
 
 /*
@@ -283,6 +283,46 @@ describe("the cache and the audit", () => {
       )
       .bind(GESTURE_ID)
       .run();
+  });
+});
+
+describe("a failing audit write", () => {
+  it("does not turn a rendered file into a 500: the file is served and the failure is logged", async () => {
+    const lessonId = crypto.randomUUID();
+    await d1.batch([
+      d1
+        .prepare(
+          "INSERT INTO lesson (id, author_id, number, version, created_at, updated_at) VALUES (?, ?, NULL, 1, 1, 1)"
+        )
+        .bind(lessonId, teacher.id),
+      d1
+        .prepare(
+          "INSERT INTO lesson_translation (lesson_id, locale, title, notes) VALUES (?, 'nl', 'Audit', '')"
+        )
+        .bind(lessonId),
+    ]);
+    await d1
+      .prepare(
+        "CREATE TRIGGER fail_lesson_export_audit BEFORE INSERT ON audit_log WHEN NEW.action = 'lesson.export' BEGIN SELECT RAISE(ABORT, 'audit down'); END"
+      )
+      .run();
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const response = await pdf(lessonId, TEACHERS_NL, teacher.cookie);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe("application/pdf");
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
+      expect(
+        errors.mock.calls.some((call) =>
+          String(call[0]).startsWith("[lessons] The export was not audited")
+        )
+      ).toBe(true);
+      expect(await exportAudits(lessonId)).toEqual([]);
+    } finally {
+      errors.mockRestore();
+      await d1.prepare("DROP TRIGGER fail_lesson_export_audit").run();
+    }
   });
 });
 

@@ -504,6 +504,35 @@ describe("deleteDrawing and listDrawings", () => {
     ).toEqual([["teacher.drawing_delete", `${GESTURE_ID}:2`, { step: 2 }]]);
   });
 
+  it("refuses to delete step 1 while step 2 exists; step 2 first, then step 1", async () => {
+    await stored(pngBytes(), "image/png", 1);
+    await stored(pngBytes(), "image/png", 2);
+    const mark = await auditMark();
+    expect(
+      (
+        await failureOf(
+          callAs(teacher, "deleteDrawing", { gestureId: GESTURE_ID, step: 1 })
+        )
+      ).data
+    ).toMatchObject({ fieldErrors: { step: ["step2Exists"] } });
+    expect(await auditRowsSince(mark)).toEqual([]);
+    expect(
+      (
+        await callAs<{ items: DrawingRow[] }>(teacher, "listDrawings", {
+          gestureId: GESTURE_ID,
+        })
+      ).items.map((row) => row.step)
+    ).toEqual([1, 2]);
+    for (const step of [2, 1]) {
+      expect(
+        await callAs(teacher, "deleteDrawing", {
+          gestureId: GESTURE_ID,
+          step,
+        })
+      ).toEqual({ deleted: true });
+    }
+  });
+
   it("deleting a drawing that is not there changes and audits nothing", async () => {
     const mark = await auditMark();
     expect(

@@ -359,6 +359,27 @@ describe("layout", () => {
     }
   });
 
+  test("a section title is never alone on a page, even when its first row fills a page", async () => {
+    const long = "woord ".repeat(330);
+    const input = {
+      ...doc("teachers", []),
+      sections: [
+        {
+          rows: [
+            row({ hc: long, note: long, or: long, pl: long, word: "reuzenrij" }),
+          ],
+          title: "ALLEENSTAANDE-SECTIE",
+        },
+      ],
+    };
+    const report = await renderLessonPdfDetailed(input, assets);
+    const texts = await pageTexts(report.bytes);
+    const page = texts.findIndex((text) =>
+      text.includes("ALLEENSTAANDE-SECTIE")
+    );
+    expect(texts[page]).toContain("reuzenrij");
+  });
+
   test("a default-language row is marked and the footnote shows only on pages that have one", async () => {
     const rows: PdfRow[] = [];
     for (let i = 0; i < 30; i += 1) {

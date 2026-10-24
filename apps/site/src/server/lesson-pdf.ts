@@ -93,6 +93,10 @@ function refusal(error: LessonExportError): Response {
 function pdfResponse(result: ExportResult): Response {
   return new Response(result.body, {
     headers: {
+      // What the engine had to work around, for the dialog's note after the download (fresh renders only).
+      ...(result.truncatedRows > 0
+        ? { "x-lesson-pdf-truncated": String(result.truncatedRows) }
+        : {}),
       "cache-control": "private, no-store",
       "content-disposition": `attachment; filename="${result.filename}"`,
       "content-length": String(result.size),
@@ -153,15 +157,22 @@ export async function handleLessonPdf(
     if (!result) {
       return json(404, { code: "NOT_FOUND" });
     }
-    await recordLessonExport(createDb(db), {
-      actorId: user.id,
-      cached: result.cached,
-      gestures: result.gestures,
-      lessonId,
-      locale,
-      skipped: result.skipped,
-      template: template.data,
-    });
+    try {
+      await recordLessonExport(createDb(db), {
+        actorId: user.id,
+        cached: result.cached,
+        gestures: result.gestures,
+        lessonId,
+        locale,
+        replacedCharacters: result.replacedCharacters,
+        skipped: result.skipped,
+        template: template.data,
+        truncatedRows: result.truncatedRows,
+      });
+    } catch (error) {
+      // The file is made and cached: a failed audit write must not turn it into a 500 (DECISIONS, fix wave).
+      console.error("[lessons] The export was not audited:", error);
+    }
     return pdfResponse(result);
   } catch (error) {
     if (error instanceof LessonExportError) {

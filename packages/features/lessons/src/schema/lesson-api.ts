@@ -232,6 +232,8 @@ export const lessonExportIssueSchema = z.object({
   name: z.string(),
   /** Participants' sheet: no drawing at all. */
   noDrawing: z.boolean(),
+  /** The row prints characters the font lacks (they would show as question marks: another script, an emoji). */
+  unsupportedText: z.boolean(),
   /** Participants' sheet: a drawing exists but is a WebP, which the PDF cannot hold (upload it again as PNG or JPEG). */
   unsupportedDrawing: z.boolean(),
 });
@@ -249,5 +251,7 @@ export const lessonExportPreviewSchema = z.object({
   limit: z.number().int().positive(),
   overLimit: z.boolean(),
   skipped: z.array(z.object({ id: z.string(), name: z.string() })),
+  /** The lesson's title, notes or a section title has characters the font lacks. */
+  unsupportedLessonText: z.boolean(),
 });
 export type LessonExportPreview = z.infer<typeof lessonExportPreviewSchema>;

@@ -26,9 +26,6 @@ import {
 } from "../schema";
 import { readLesson } from "./lesson-read";
 
-/** Bump when the engine's layout or this module's mapping changes: it is part of every cache key, so an old file is never served after a deploy that would print differently. */
-export const LESSON_PDF_LAYOUT_VERSION = 1;
-
 /** The default language when none is flagged (never in a migrated database). */
 const FALLBACK_DEFAULT = "nl";
 
