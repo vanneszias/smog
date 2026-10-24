@@ -330,6 +330,36 @@ describe("exportLessonPdf", () => {
     });
   });
 
+  it("flags text the PDF font lacks in the preview and counts the replaced characters of a render", async () => {
+    const before = await previewLessonExport(testDb(), {
+      lessonId,
+      locale: "nl",
+      template: "teachers",
+    });
+    expect(before?.unsupportedLessonText).toBe(false);
+    expect(before?.issues.some((issue) => issue.unsupportedText)).toBe(false);
+    await env.DB.prepare("UPDATE gesture SET name = ? WHERE id = ?")
+      .bind("مرحبا", hallo)
+      .run();
+    await env.DB.prepare("UPDATE lesson SET version = version + 1 WHERE id = ?")
+      .bind(lessonId)
+      .run();
+    const preview = await previewLessonExport(testDb(), {
+      lessonId,
+      locale: "nl",
+      template: "teachers",
+    });
+    const byId = new Map(preview?.issues.map((issue) => [issue.id, issue]));
+    expect(byId.get(hallo)).toMatchObject({ unsupportedText: true });
+    expect(byId.get(dag)).toBeUndefined();
+    const result = await exportLessonPdf(deps(), input({ locale: "nl" }));
+    expect(result).toMatchObject({
+      cached: false,
+      replacedCharacters: 5,
+      truncatedRows: 0,
+    });
+  });
+
   it("embeds PNG and JPEG drawings and reports a WebP as dropped, not as a failure", async () => {
     await drawing(hallo, 1, fromBase64(env.DRAWING_B64));
     await drawing(hallo, 2, fromBase64(env.DRAWING_JPG_B64), "image/jpeg");

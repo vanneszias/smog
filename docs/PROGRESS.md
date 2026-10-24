@@ -234,6 +234,7 @@ For teachers and admins only (`session.user.roles`): Settings, "Lessons" lists e
 
 ## Known gaps
 
+- **Lesson PDF labels are not localised (phase 10c review B-m7).** HC, PL, OR, BW and the participants' `C:` stay the Dutch acronyms in the French and English PDFs; only "Les" and the footnote are translated. This follows the spec's list of labels; a product decision if the teachers want them translated. Also open from the same reviews: a concurrent `finalizeDrawing` of one gesture and step can leave an orphan object that the daily sweep removes after 24 hours (A-m2), and an unfinalized upload stays 24 to 48 hours (A-m5). The PDF engine's `LESSON_PDF_LAYOUT_VERSION` is now guarded by `scripts/lesson-pdf-version.test.ts`.
 - The admin e2e uses the local dev D1 and the Mux fake; the `serial` project runs `admin-catalog` then `admin-settings` (the maintenance window) on one worker. Screenshots: `ADMIN_SHOTS_DIR=<dir> bunx playwright test admin-screenshots` (and `--project serial` for the settings with maintenance on). The e2e is not part of `release:check`: it is the `e2e` CI job and `bun run test:e2e`.
 - The legal texts (`/privacy`, `/terms`) need the owner's sign-off before any develop → master merge (see "Pending before develop → master").
 - Bun is pinned at 1.3.11 (`packageManager`) and Biome at 2.5.14; the upgrade is the owner's checklist (Post-launch carries).

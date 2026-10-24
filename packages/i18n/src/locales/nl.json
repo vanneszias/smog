@@ -472,6 +472,7 @@
     "stepOptional": "Stap {{step}} (optioneel)",
     "none": "Nog geen tekening",
     "needFirst": "Voeg eerst stap 1 toe.",
+    "removeStep2First": "Verwijder eerst stap 2.",
     "choose": "Tekening kiezen",
     "replace": "Tekening vervangen",
     "remove": "Tekening verwijderen",
@@ -1521,6 +1522,7 @@
       "numbered": "Les {{number}}",
       "numberLabel": "Lesnummer",
       "numberHint": "Optioneel. Staat gedrukt als “Les 3”.",
+      "numberInvalid": "Gebruik een geheel getal van 0 tot en met 9999.",
       "loadMore": "Meer lessen tonen",
       "backToList": "Alle lessen",
       "duplicated": "Les gekopieerd. Je zit nu in je eigen kopie.",
@@ -1619,6 +1621,9 @@
         "actions": "Acties voor {{name}}",
         "moveUp": "Sectie omhoog",
         "moveDown": "Sectie omlaag",
+        "removeTitle": "{{name}} verwijderen?",
+        "removeDescription": "De gebaren van dit onderdeel gaan naar het onderdeel ervoor. Er worden geen gebaren verwijderd.",
+        "removeConfirm": "Onderdeel verwijderen",
         "remove": "Sectie verwijderen"
       },
       "item": {
@@ -1665,21 +1670,26 @@
         "overLimit": "Deze les heeft {{count}} gebaren, maar deze pdf neemt er hoogstens {{limit}}. Splits de les in twee lessen.",
         "skippedTitle_one": "{{count}} gebaar is niet gepubliceerd en komt niet in de pdf",
         "skippedTitle_other": "{{count}} gebaren zijn niet gepubliceerd en komen niet in de pdf",
+        "unsupportedLessonText": "De titel, de notities of een onderdeel van deze les bevat tekens die het lettertype van de pdf niet heeft (een ander schrift of een emoji). Ze komen als vraagtekens in de pdf.",
         "issuesTitle": "Let op bij deze gebaren",
         "issue": {
           "fallback": "Tekst in de standaardtaal",
           "missing": "Geen lesgeversinfo",
           "noDrawing": "Geen tekening",
+          "unsupportedText": "Bevat tekens die de pdf niet kan tonen: ze komen als vraagtekens",
           "unsupportedDrawing": "Tekening is een WebP en blijft weg: upload ze opnieuw als PNG of JPEG"
         },
         "download": "Pdf downloaden",
         "downloading": "Pdf maken…",
+        "truncated": "Let op, de tekst van een of meer gebaren is ingekort omdat hij niet op één pagina past.",
         "done": "Pdf gedownload.",
         "errors": {
           "tooMany": "Deze les heeft te veel gebaren voor deze pdf. Splits de les in twee lessen.",
           "tooLarge": "De pdf is te groot. Splits de les of gebruik kleinere tekeningen.",
           "timeout": "Het maken van de pdf duurde te lang. Splits de les in twee en probeer opnieuw.",
           "rateLimited": "Je hebt net veel pdf’s gemaakt. Wacht even en probeer opnieuw.",
+          "signIn": "Je sessie is verlopen. Meld je opnieuw aan en probeer opnieuw.",
+          "forbidden": "Je account mag deze pdf niet meer maken. Vraag het na bij een beheerder.",
           "generic": "De pdf kon niet worden gemaakt. Probeer opnieuw."
         }
       },

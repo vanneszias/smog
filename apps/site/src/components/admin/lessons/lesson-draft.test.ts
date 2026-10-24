@@ -8,6 +8,7 @@ import {
   hasRoom,
   type LessonDraft,
   moveItem,
+  parseLessonNumber,
   problemOf,
   removeItem,
   removeSection,
@@ -136,6 +137,20 @@ describe("lesson draft operations", () => {
     expect(
       problemOf(setText(setText(EMPTY, "fr", "notes", "n"), "fr", "title", "T"))
     ).toBeNull();
+  });
+
+  test("a typed lesson number is empty, 0 to 9999, or not a number yet", () => {
+    expect(parseLessonNumber("")).toEqual({ number: null, valid: true });
+    expect(parseLessonNumber("  ")).toEqual({ number: null, valid: true });
+    expect(parseLessonNumber("0")).toEqual({ number: 0, valid: true });
+    expect(parseLessonNumber(" 12 ")).toEqual({ number: 12, valid: true });
+    expect(parseLessonNumber("9999")).toEqual({ number: 9999, valid: true });
+    for (const typed of ["10000", "-1", "1e", "12.", "1.5", "abc", "٣"]) {
+      expect(parseLessonNumber(typed), typed).toEqual({
+        number: null,
+        valid: false,
+      });
+    }
   });
 
   test("toInput sends the whole lesson with the version it was read at", () => {

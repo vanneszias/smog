@@ -87,7 +87,8 @@ async function gestureItems(
       hasDrawing: drawn.has(row.id),
       id: row.id,
       name: translated.get(row.id) ?? row.name,
-      playbackId: row.playbackId,
+      // A teacher has no use for the stream of a gesture that is not public (it only shows as a flagged name).
+      playbackId: row.publishedAt === null ? "" : row.playbackId,
       published: row.publishedAt !== null,
       slug: row.slug,
     });
@@ -102,24 +103,22 @@ export async function readLesson(
   locale: string,
   viewer: Viewer
 ): Promise<LessonDetail | null> {
-  const [head] = await db
-    .select({
-      authorId: lesson.authorId,
-      authorName: user.name,
-      createdAt: lesson.createdAt,
-      id: lesson.id,
-      number: lesson.number,
-      updatedAt: lesson.updatedAt,
-      version: lesson.version,
-    })
-    .from(lesson)
-    .leftJoin(user, eq(user.id, lesson.authorId))
-    .where(eq(lesson.id, id))
-    .limit(1);
-  if (!head) {
-    return null;
-  }
-  const [texts, sections, sectionTexts, items] = await Promise.all([
+  // One batch is one consistent snapshot: an update that lands between the head and the items cannot give a torn lesson (duplicate copies what it reads).
+  const [headRows, texts, sections, sectionTexts, items] = await db.batch([
+    db
+      .select({
+        authorId: lesson.authorId,
+        authorName: user.name,
+        createdAt: lesson.createdAt,
+        id: lesson.id,
+        number: lesson.number,
+        updatedAt: lesson.updatedAt,
+        version: lesson.version,
+      })
+      .from(lesson)
+      .leftJoin(user, eq(user.id, lesson.authorId))
+      .where(eq(lesson.id, id))
+      .limit(1),
     db
       .select()
       .from(lessonTranslation)
@@ -147,6 +146,10 @@ export async function readLesson(
       .where(eq(lessonItem.lessonId, id))
       .orderBy(asc(lessonItem.sectionId), asc(lessonItem.position)),
   ]);
+  const [head] = headRows;
+  if (!head) {
+    return null;
+  }
   const byGesture = await gestureItems(
     db,
     items.map((row) => row.gestureId),

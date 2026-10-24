@@ -309,6 +309,11 @@ describe("update", () => {
       ["Hallo", true],
       ["Dag", false],
     ]);
+    // Its stream id is not handed to a teacher; a published item keeps it.
+    expect(mid.ungrouped.map((item) => item.playbackId !== "")).toEqual([
+      true,
+      false,
+    ]);
     // Saving again with the unpublished gesture still in it is fine.
     const saved = await update(
       author,

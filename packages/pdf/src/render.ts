@@ -16,6 +16,7 @@ import {
   type PDFPage,
   rgb,
 } from "pdf-lib";
+import { pngInflatesWithin } from "./png-guard";
 import {
   type LessonPdfDocument,
   type LessonPdfDocumentInput,
@@ -460,7 +461,10 @@ async function embedDrawing(
 ): Promise<PDFImage | undefined> {
   try {
     if (isPng(bytes)) {
-      return await doc.embedPng(bytes);
+      // pdf-lib inflates synchronously: a stream that inflates past what its header implies is a bomb, no drawing.
+      return (await pngInflatesWithin(bytes))
+        ? await doc.embedPng(bytes)
+        : undefined;
     }
     if (isJpeg(bytes)) {
       return await doc.embedJpg(bytes);
@@ -823,16 +827,21 @@ export async function renderLessonPdfDetailed(
 
   const items: Item[] = noteItems(doc.notes, build);
   for (const section of doc.sections) {
+    // The row after a title is clamped to what is left of a page below it, so the pair always fits one page.
+    let rowBuild = build;
     if (section.title !== null && section.title.trim() !== "") {
-      items.push(sectionItem(section.title, build));
+      const titleItem = sectionItem(section.title, build);
+      items.push(titleItem);
+      rowBuild = { ...build, bodyH: build.bodyH - titleItem.height };
     }
     for (const row of section.rows) {
       if (doc.template === "teachers") {
-        items.push(teachersRow(row, build));
-        continue;
+        items.push(teachersRow(row, rowBuild));
+      } else {
+        // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose, see embedDrawing.
+        items.push(await participantsRow(row, rowBuild, pdf));
       }
-      // biome-ignore lint/performance/noAwaitInLoops: sequential on purpose, see embedDrawing.
-      items.push(await participantsRow(row, build, pdf));
+      rowBuild = build;
     }
   }
 

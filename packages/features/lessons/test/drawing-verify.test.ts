@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { inspectDrawing } from "../src/server/drawing-verify";
-import { jpegBytes, pngBytes, webpBytes } from "../src/testing";
+import {
+  inspectDrawing,
+  inspectDrawingData,
+} from "../src/server/drawing-verify";
+import { jpegBytes, pngBombBytes, pngBytes, webpBytes } from "../src/testing";
 
 describe("inspectDrawing", () => {
   it("reads the type and size of a PNG and a JPEG", () => {
@@ -85,5 +88,31 @@ describe("inspectDrawing", () => {
     forged.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     forged.set(new TextEncoder().encode("<script>"), 8);
     expect(inspectDrawing(forged).ok).toBe(false);
+  });
+});
+
+describe("inspectDrawingData (bounded inflate of a PNG)", () => {
+  it("accepts a real PNG and a JPEG like the header check does", async () => {
+    expect((await inspectDrawingData(pngBytes(120, 80))).ok).toBe(true);
+    expect((await inspectDrawingData(jpegBytes(64, 64))).ok).toBe(true);
+    expect((await inspectDrawingData(pngBytes(1200, 1200))).ok).toBe(true);
+  });
+
+  it("refuses a decompression bomb the header check lets through", async () => {
+    const bomb = await pngBombBytes();
+    expect(bomb.length).toBeLessThan(524_288);
+    expect(inspectDrawing(bomb).ok).toBe(true);
+    expect(await inspectDrawingData(bomb)).toEqual({
+      ok: false,
+      reason: "format",
+    });
+  });
+
+  it("refuses an IDAT that is not a zlib stream", async () => {
+    const png = pngBytes(8, 8);
+    // Corrupt the zlib header (first IDAT data byte at 8 + 25 + 8 = 41).
+    png[41] = 0;
+    png[42] = 0;
+    expect((await inspectDrawingData(png)).ok).toBe(false);
   });
 });

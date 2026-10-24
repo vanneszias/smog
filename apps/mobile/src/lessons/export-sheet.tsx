@@ -4,6 +4,7 @@ import {
   LESSON_TEMPLATES,
   type LessonExportPreview,
   type LessonTemplate,
+  lessonPdfPath,
 } from "@smog/lessons/schema";
 import {
   Alert,
@@ -29,7 +30,6 @@ import {
   LessonPdfError,
   type LessonPdfErrorCode,
   lessonPdfFileName,
-  lessonPdfPath,
   shareLessonPdf,
 } from "@/lib/lesson-file";
 import { apiUrl } from "@/lib/site";

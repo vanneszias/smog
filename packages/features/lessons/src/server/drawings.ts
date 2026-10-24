@@ -28,7 +28,7 @@ import {
 } from "../schema";
 import { auditStatement } from "./audit";
 import { drawingUploadUrl } from "./drawing-upload";
-import { type DrawingVerdict, inspectDrawing } from "./drawing-verify";
+import { type DrawingVerdict, inspectDrawingData } from "./drawing-verify";
 import { teacherWriteProcedure, teachingProcedure } from "./procedure";
 
 interface GestureRef {
@@ -155,7 +155,7 @@ async function checkUpload(media: R2Bucket, key: string): Promise<UploadCheck> {
     }
     return { ok: false, reason: upload.reason };
   }
-  const verdict = inspectDrawing(upload.bytes);
+  const verdict = await inspectDrawingData(upload.bytes);
   if (verdict.ok && upload.declaredType === verdict.contentType) {
     return { ok: true, upload, verdict };
   }
@@ -169,12 +169,24 @@ async function checkUpload(media: R2Bucket, key: string): Promise<UploadCheck> {
 export function drawingRoutes() {
   return {
     deleteDrawing: teacherWriteProcedure.deleteDrawing.handler(
-      async ({ context, input }) => {
+      async ({ context, errors, input }) => {
         const { db } = context;
         const stored = await readStored(db, input.gestureId, input.step);
         if (!stored) {
           markUnchanged(db);
           return { deleted: false };
+        }
+        // Step 2 is "the second picture of step 1": it never outlives it.
+        if (
+          input.step === 1 &&
+          (await readStored(db, input.gestureId, 2)) !== null
+        ) {
+          throw errors.VALIDATION({
+            data: {
+              fieldErrors: { step: ["step2Exists"] },
+              formErrors: [] as string[],
+            },
+          });
         }
         try {
           await db.batch([

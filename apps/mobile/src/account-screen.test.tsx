@@ -332,6 +332,9 @@ describe("settings/account", () => {
         .spyOn(Alert, "alert")
         .mockImplementation(() => undefined);
       const signOut = jest.fn(() => Promise.resolve({ error: null }));
+      // A lesson PDF Android kept for the share sheet goes with the session.
+      const leftover = "file:///cache/les-aaaa1111-teachers-nl.pdf";
+      mockFiles.set(leftover, "%PDF");
       const { result } = await renderApp({
         auth: { signOut },
         routes: signedInRoutes(),
@@ -343,6 +346,7 @@ describe("settings/account", () => {
       });
       await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
       expect(await screen.findByText("You're signed out.")).toBeOnTheScreen();
+      expect(mockFiles.has(leftover)).toBe(false);
       await waitFor(() => expect(result.getPathname()).toBe("/"));
     });
 

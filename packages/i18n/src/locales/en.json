@@ -472,6 +472,7 @@
     "stepOptional": "Step {{step}} (optional)",
     "none": "No drawing yet",
     "needFirst": "Add step 1 first.",
+    "removeStep2First": "Remove step 2 first.",
     "choose": "Choose drawing",
     "replace": "Replace drawing",
     "remove": "Remove drawing",
@@ -1521,6 +1522,7 @@
       "numbered": "Lesson {{number}}",
       "numberLabel": "Lesson number",
       "numberHint": "Optional. Printed as “Lesson 3”.",
+      "numberInvalid": "Use a whole number from 0 to 9999.",
       "loadMore": "Show more lessons",
       "backToList": "All lessons",
       "duplicated": "Lesson copied. You are now in your own copy.",
@@ -1619,6 +1621,9 @@
         "actions": "Actions for {{name}}",
         "moveUp": "Move section up",
         "moveDown": "Move section down",
+        "removeTitle": "Remove {{name}}?",
+        "removeDescription": "The gestures of this part move to the part before it. No gesture is deleted.",
+        "removeConfirm": "Remove part",
         "remove": "Remove section"
       },
       "item": {
@@ -1665,21 +1670,26 @@
         "overLimit": "This lesson has {{count}} gestures, but this PDF takes at most {{limit}}. Split the lesson in two.",
         "skippedTitle_one": "{{count}} gesture is not published and stays out of the PDF",
         "skippedTitle_other": "{{count}} gestures are not published and stay out of the PDF",
+        "unsupportedLessonText": "The title, the notes or a part of this lesson has characters the PDF font does not have (another script or an emoji). They print as question marks.",
         "issuesTitle": "Check these gestures",
         "issue": {
           "fallback": "Text in the default language",
           "missing": "No teacher info",
           "noDrawing": "No drawing",
+          "unsupportedText": "Has characters the PDF cannot show: they print as question marks",
           "unsupportedDrawing": "The drawing is a WebP and is left out: upload it again as PNG or JPEG"
         },
         "download": "Download PDF",
         "downloading": "Making the PDF…",
+        "truncated": "Note that the text of one or more gestures was shortened because it does not fit on one page.",
         "done": "PDF downloaded.",
         "errors": {
           "tooMany": "This lesson has too many gestures for this PDF. Split the lesson in two.",
           "tooLarge": "The PDF is too large. Split the lesson or use smaller drawings.",
           "timeout": "Making the PDF took too long. Split the lesson in two and try again.",
           "rateLimited": "You just made a lot of PDFs. Wait a moment and try again.",
+          "signIn": "Your session has expired. Sign in again and try again.",
+          "forbidden": "Your account may no longer make this PDF. Ask an administrator.",
           "generic": "The PDF could not be made. Try again."
         }
       },

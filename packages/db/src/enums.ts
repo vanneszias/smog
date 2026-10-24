@@ -50,9 +50,11 @@ export const AUDIO_MAX_DURATION_MS = 10_000;
 export const TEACHER_FIELD_MAX = 2000;
 
 /**
- * The drawings of a gesture (`gesture_drawing`): PNG, JPEG or WebP verified
- * by magic bytes after the upload, at most 1 MiB and 2,000 px on a side
- * (the PDF embeds the file as it is), one image per step (1, optionally 2).
+ * The drawings of a gesture (`gesture_drawing`), one image per step (1,
+ * optionally 2). These are the types and ceilings the TABLE allows (its
+ * CHECKs: PNG, JPEG or WebP, 1 MiB, 2,000 px), a backstop that is looser than
+ * the upload path on purpose: what a new upload may be is `DRAWING_UPLOAD_*`
+ * below (PNG or JPEG, 512 KiB, 1,200 px, verified by magic bytes).
  */
 export const DRAWING_CONTENT_TYPES = [
   "image/png",

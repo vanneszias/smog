@@ -10,7 +10,7 @@ import {
   signDrawingUpload,
   verifyDrawingUpload,
 } from "../src/server/drawing-upload";
-import { jpegBytes, pngBytes, webpBytes } from "../src/testing";
+import { jpegBytes, pngBombBytes, pngBytes, webpBytes } from "../src/testing";
 import {
   type Authed,
   auditMark,
@@ -359,6 +359,15 @@ describe("finalizeDrawing", () => {
     ).toEqual({ items: [] });
   });
 
+  it("refuses a decompression bomb (a 1 x 1 PNG whose pixel stream inflates to 20 MB) and deletes it", async () => {
+    const upload = await issue(teacher);
+    await put(upload, await pngBombBytes());
+    expect((await failureOf(finalize(teacher, upload))).data).toMatchObject({
+      fieldErrors: { file: ["format"] },
+    });
+    expect(await objectExists(upload.key)).toBe(false);
+  });
+
   it("refuses a file over 512 KiB and one over 1,200 px on a side", async () => {
     const big = await issue(teacher);
     await put(big, new Uint8Array(524_289).fill(1));
@@ -493,6 +502,35 @@ describe("deleteDrawing and listDrawings", () => {
         row.data,
       ])
     ).toEqual([["teacher.drawing_delete", `${GESTURE_ID}:2`, { step: 2 }]]);
+  });
+
+  it("refuses to delete step 1 while step 2 exists; step 2 first, then step 1", async () => {
+    await stored(pngBytes(), "image/png", 1);
+    await stored(pngBytes(), "image/png", 2);
+    const mark = await auditMark();
+    expect(
+      (
+        await failureOf(
+          callAs(teacher, "deleteDrawing", { gestureId: GESTURE_ID, step: 1 })
+        )
+      ).data
+    ).toMatchObject({ fieldErrors: { step: ["step2Exists"] } });
+    expect(await auditRowsSince(mark)).toEqual([]);
+    expect(
+      (
+        await callAs<{ items: DrawingRow[] }>(teacher, "listDrawings", {
+          gestureId: GESTURE_ID,
+        })
+      ).items.map((row) => row.step)
+    ).toEqual([1, 2]);
+    for (const step of [2, 1]) {
+      expect(
+        await callAs(teacher, "deleteDrawing", {
+          gestureId: GESTURE_ID,
+          step,
+        })
+      ).toEqual({ deleted: true });
+    }
   });
 
   it("deleting a drawing that is not there changes and audits nothing", async () => {

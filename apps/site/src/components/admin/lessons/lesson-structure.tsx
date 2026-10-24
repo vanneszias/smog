@@ -7,6 +7,7 @@ import type {
   TeacherCoverageState,
 } from "@smog/lessons/schema";
 import {
+  AlertDialog,
   Badge,
   Button,
   GestureRow,
@@ -35,6 +36,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useState,
 } from "react";
 import {
   type ReorderEvent,
@@ -51,6 +53,8 @@ export interface StructureValue {
   /** The default language's code: its section title is the placeholder of an untitled one. */
   defaultLocale: string;
   draft: LessonDraft;
+  /** Puts the focus on the structure heading: the control that was used is gone. */
+  onFocusStructure: () => void;
   onMoveItem: (gestureId: string, to: SectionRef) => void;
   onRemoveItem: (gestureId: string) => void;
   onRemoveSection: (id: string) => void;
@@ -197,12 +201,18 @@ function ItemMenu({
   within: SectionRef;
 }): ReactNode {
   const { t } = useTranslation();
-  const { activeLocale, defaultLocale, draft, onMoveItem, onRemoveItem } =
-    useStructure();
-  const remove = useCallback(
-    () => onRemoveItem(item.id),
-    [item.id, onRemoveItem]
-  );
+  const {
+    activeLocale,
+    defaultLocale,
+    draft,
+    onFocusStructure,
+    onMoveItem,
+    onRemoveItem,
+  } = useStructure();
+  const remove = useCallback(() => {
+    onRemoveItem(item.id);
+    onFocusStructure();
+  }, [item.id, onFocusStructure, onRemoveItem]);
   const untitled = useCallback(
     (n: number) => t("admin.lessons.section.untitled", { number: n }),
     [t]
@@ -382,9 +392,15 @@ function SectionCard({
   args: SortableRowArgs<LessonSection & { name: string }>;
 }): ReactNode {
   const { t } = useTranslation();
-  const { activeLocale, defaultLocale, onRemoveSection, onRenameSection } =
-    useStructure();
+  const {
+    activeLocale,
+    defaultLocale,
+    onFocusStructure,
+    onRemoveSection,
+    onRenameSection,
+  } = useStructure();
   const { dragHandle, index, isDragging, item, moveDown, moveUp } = args;
+  const [confirming, setConfirming] = useState(false);
   const typed = item.titles[activeLocale] ?? "";
   const placeholder =
     item.titles[defaultLocale] ??
@@ -394,10 +410,19 @@ function SectionCard({
       onRenameSection(item.id, event.target.value),
     [item.id, onRenameSection]
   );
-  const remove = useCallback(
-    () => onRemoveSection(item.id),
-    [item.id, onRemoveSection]
-  );
+  const removeNow = useCallback(() => {
+    setConfirming(false);
+    onRemoveSection(item.id);
+    onFocusStructure();
+  }, [item.id, onFocusStructure, onRemoveSection]);
+  // A part with gestures hands them to the part before it: ask first. An empty one just goes.
+  const remove = useCallback(() => {
+    if (item.items.length === 0) {
+      removeNow();
+    } else {
+      setConfirming(true);
+    }
+  }, [item.items.length, removeNow]);
   return (
     <div
       className={
@@ -448,6 +473,15 @@ function SectionCard({
         </Menu>
       </div>
       <ItemList items={item.items} within={item.id} />
+      <AlertDialog
+        confirmLabel={t("admin.lessons.section.removeConfirm")}
+        description={t("admin.lessons.section.removeDescription")}
+        onConfirm={removeNow}
+        onOpenChange={setConfirming}
+        open={confirming}
+        title={t("admin.lessons.section.removeTitle", { name: item.name })}
+        tone="danger"
+      />
     </div>
   );
 }

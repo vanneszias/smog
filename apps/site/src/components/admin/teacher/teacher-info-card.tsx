@@ -43,8 +43,10 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
+import { LeaveGuard } from "@/components/admin/leave-guard";
 import { useLocale } from "@/lib/locale";
 
 /** The label of each field (HC, PL, OR, BW, the C note, the free note, the summary). */
@@ -157,11 +159,14 @@ function LanguageForm({
   defaultLanguage,
   detail,
   language,
+  onDirty,
   readOnly,
 }: {
   defaultLanguage: LanguageInfo;
   detail: TeacherInfoDetail;
   language: LanguageInfo;
+  /** Tells the card whether this language holds unsaved text (the leave guard). */
+  onDirty: (code: string, dirty: boolean) => void;
   readOnly: boolean;
 }): ReactNode {
   const { t } = useTranslation();
@@ -181,6 +186,11 @@ function LanguageForm({
     version: number | null;
   } | null>(null);
   const dirty = !sameDraft(draft, base);
+  const { code } = language;
+  useEffect(() => {
+    onDirty(code, dirty);
+    return () => onDirty(code, false);
+  }, [code, dirty, onDirty]);
   useEffect(() => {
     if (savedVersion === expected || savedVersion === conflict?.version) {
       return;
@@ -367,11 +377,22 @@ function InfoTabs({
       ? languages[0]
       : languages.find((language) => !language.isDefault);
   const [active, setActive] = useState(first?.code ?? "");
+  // Every tab stays mounted with its own draft: leaving the page with any of them unsaved asks first.
+  const dirtyCodes = useRef(new Set<string>());
+  const onDirty = useCallback((code: string, dirty: boolean) => {
+    if (dirty) {
+      dirtyCodes.current.add(code);
+    } else {
+      dirtyCodes.current.delete(code);
+    }
+  }, []);
+  const shouldBlock = useCallback(() => dirtyCodes.current.size > 0, []);
   if (!(first && defaultLanguage)) {
     return null;
   }
   return (
     <Tabs onValueChange={setActive} value={active}>
+      <LeaveGuard shouldBlock={shouldBlock} />
       <TabsList aria-label={t("admin.teacherInfo.tabsLabel")}>
         {languages.map((language) => (
           <TabsTrigger
@@ -407,6 +428,7 @@ function InfoTabs({
             defaultLanguage={defaultLanguage}
             detail={detail}
             language={language}
+            onDirty={onDirty}
             readOnly={!canAuthor && language.code === defaultLanguage.code}
           />
         </TabsContent>

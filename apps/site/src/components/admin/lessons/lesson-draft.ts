@@ -273,6 +273,22 @@ export function setText(
   };
 }
 
+/** The lesson number the server accepts: a whole number 0..9999 (`lessonNumberSchema`). */
+const NUMBER_TEXT = /^\d{1,4}$/;
+
+/** What typed text means as a lesson number: empty clears it, 0..9999 sets it, anything else is not a number yet (the draft keeps its last good one). */
+export function parseLessonNumber(
+  raw: string
+): { number: number | null; valid: true } | { number: null; valid: false } {
+  const text = raw.trim();
+  if (text === "") {
+    return { number: null, valid: true };
+  }
+  return NUMBER_TEXT.test(text)
+    ? { number: Number(text), valid: true }
+    : { number: null, valid: false };
+}
+
 export function setNumber(
   draft: LessonDraft,
   number: number | null

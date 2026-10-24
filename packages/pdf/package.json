@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./assets/*": "./assets/*"
+    "./assets/*": "./assets/*",
+    "./coverage": "./src/glyph-coverage.ts",
+    "./png": "./src/png-guard.ts"
   },
   "scripts": {
     "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.test.json",

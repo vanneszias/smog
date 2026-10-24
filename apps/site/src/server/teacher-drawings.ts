@@ -4,7 +4,7 @@ import { DRAWING_UPLOAD_MAX_BYTES, DRAWING_UPLOAD_TYPES } from "@smog/db/enums";
 import { DRAWING_KEY_PATTERN } from "@smog/lessons/schema";
 import {
   findDrawing,
-  inspectDrawing,
+  inspectDrawingData,
   verifyDrawingUpload,
 } from "@smog/lessons/server";
 import { checkRateLimit, isForeignRequest } from "@smog/rpc";
@@ -22,15 +22,17 @@ import { clientIp } from "./context";
  *   admin; a guest gets 401 and any other account 403 before the path is
  *   looked at, so the answer never says whether a drawing exists. For an
  *   allowed role an unknown gesture, step or a gesture without that drawing
- *   is 404. `private, max-age=300` (the URL carries `?v=<updatedAt>`, so a
- *   replace shows at once), never a shared cache (`vary: cookie`), `nosniff`,
+ *   is 404. `private, no-cache` (revalidated with the ETag on every use, so
+ *   a sign-out or demotion applies at once, and a replace shows at once; the
+ *   URL also carries `?v=<updatedAt>`), never a shared cache (`vary: cookie`), `nosniff`,
  *   the sandbox CSP and `same-origin` CORP. `RL_API` per IP.
  * - `PUT /api/teacher/drawings/upload/<gestureId>/<step>/<uuid>?exp=<ms>&
  *   sig=<hmac>`: the signed same-origin fallback of `teacher.uploadDrawing`
  *   when the R2 tokens are unset. It checks `isForeignRequest`, `RL_API` per
  *   IP, the signature (key, `Content-Type` and expiry), the size (at most
- *   1 MiB, by `Content-Length` and by counting the stream) and the bytes (a
- *   PNG, JPEG or WebP of at most 2,000 px), then writes `MEDIA` once: a key
+ *   512 KiB, by `Content-Length` and by counting the stream) and the bytes (a
+ *   PNG or JPEG of at most 1,200 px, a PNG whose pixel stream does not
+ *   inflate past its header), then writes `MEDIA` once: a key
  *   that exists is a 409. `finalizeDrawing` checks everything again before it
  *   records the drawing.
  */
@@ -76,7 +78,7 @@ async function readImage(
       code: body.status === 413 ? "TOO_LARGE" : "BAD_REQUEST",
     });
   }
-  const inspected = inspectDrawing(body.bytes);
+  const inspected = await inspectDrawingData(body.bytes);
   if (!inspected.ok) {
     const [status, code] = REFUSALS[inspected.reason];
     return json(status, { code });
@@ -155,7 +157,7 @@ export async function handleDrawingUpload(
 /** The headers every drawing answer carries (an image to show, never a document to run, never shared). */
 function imageHeaders(etag: string, type: string): Headers {
   return new Headers({
-    "cache-control": "private, max-age=300",
+    "cache-control": "private, no-cache",
     "content-security-policy": "default-src 'none'; sandbox",
     "content-type": type,
     "cross-origin-resource-policy": "same-origin",

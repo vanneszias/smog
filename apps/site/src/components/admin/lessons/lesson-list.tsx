@@ -55,6 +55,7 @@ import {
   useState,
 } from "react";
 import { useLocale } from "@/lib/locale";
+import { parseLessonNumber } from "./lesson-draft";
 
 /** Typing pauses this long before the list is searched. */
 const SEARCH_DELAY_MS = 300;
@@ -172,15 +173,19 @@ export function NewLessonButton(): ReactNode {
     (event: ChangeEvent<HTMLInputElement>) => setNumber(event.target.value),
     []
   );
+  const numberValid = parseLessonNumber(number).valid;
   const openDialog = useCallback(() => setOpen(true), []);
   const submit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      const parsed = number.trim() === "" ? null : Number(number);
+      const parsed = parseLessonNumber(number);
+      if (!parsed.valid) {
+        return;
+      }
       create
         .mutateAsync({
           locale: chosen,
-          number: Number.isInteger(parsed) ? parsed : null,
+          number: parsed.number,
           title: title.trim(),
         })
         .then(async (created) => {
@@ -228,22 +233,22 @@ export function NewLessonButton(): ReactNode {
               />
             </Field>
             <Field
+              error={numberValid ? undefined : t("admin.lessons.numberInvalid")}
               hint={t("admin.lessons.numberHint")}
               label={t("admin.lessons.numberLabel")}
               optional
             >
               <Input
+                autoComplete="off"
                 inputMode="numeric"
-                max={9999}
-                min={0}
+                maxLength={4}
                 onChange={onNumber}
-                type="number"
                 value={number}
               />
             </Field>
             <DialogFooter>
               <Button
-                disabled={title.trim() === ""}
+                disabled={title.trim() === "" || !numberValid}
                 loading={create.isPending}
                 type="submit"
               >

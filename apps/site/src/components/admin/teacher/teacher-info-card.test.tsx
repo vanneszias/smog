@@ -62,6 +62,30 @@ function sent(calls: { input: unknown; path: string }[]): unknown[] {
 }
 
 describe("TeacherInfoCard", () => {
+  test("leaving with unsaved text in any language asks first; a saved card lets go", async () => {
+    const { router } = await renderSite(page(true), {
+      api: { "teacher/getInfo": DETAIL },
+    });
+    const hc = (await screen.findByRole("textbox", {
+      name: HC_LABEL,
+    })) as HTMLTextAreaElement;
+    // A clean card never asks.
+    await router.navigate({ to: "/ergens" as never });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await router.navigate({ to: "/" as never });
+    const again = (await screen.findByRole("textbox", {
+      name: HC_LABEL,
+    })) as HTMLTextAreaElement;
+    expect(again.value).toBe(hc.value === "" ? "" : "vlakke hand");
+    fireEvent.change(again, { target: { value: "andere hand" } });
+    router.navigate({ to: "/elders" as never }).catch(() => undefined);
+    const ask = await screen.findByRole("alertdialog", {
+      name: "Leave without saving?",
+    });
+    fireEvent.click(within(ask).getByRole("button", { name: "Stay" }));
+    expect(router.state.location.pathname).toBe("/");
+  });
+
   test("a tab per language, the default first and filled, the public keywords above the private C note", async () => {
     await renderSite(page(true), { api: { "teacher/getInfo": DETAIL } });
     const dutch = await screen.findByRole("tab", { name: DUTCH_TAB });

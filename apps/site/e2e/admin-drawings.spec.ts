@@ -93,7 +93,7 @@ test("uploads step 1 with a credit and step 2 after it, replaces step 1 and remo
   const served = await page.request.get(one?.path ?? "");
   expect(served.status()).toBe(200);
   expect(served.headers()["content-type"]).toBe("image/png");
-  expect(served.headers()["cache-control"]).toBe("private, max-age=300");
+  expect(served.headers()["cache-control"]).toBe("private, no-cache");
   expect(served.headers()["x-content-type-options"]).toBe("nosniff");
   const guest = await playwright.request.newContext({ baseURL: ORIGIN });
   try {
@@ -127,6 +127,10 @@ test("uploads step 1 with a credit and step 2 after it, replaces step 1 and remo
   expect(replaced?.credit).toBe("© Nieuw");
   const replacedImage = await page.request.get(replaced?.path ?? "");
   expect(replacedImage.headers()["content-type"]).toBe("image/jpeg");
+
+  // Step 1 cannot be removed while step 2 exists: the card says so, no button.
+  await expect(first.getByText("Verwijder eerst stap 2.")).toBeVisible();
+  await expect(first.getByRole("button", { name: REMOVE })).toHaveCount(0);
 
   // Remove step 2 after the confirmation.
   await second.getByRole("button", { name: REMOVE }).click();
