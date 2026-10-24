@@ -7,5 +7,5 @@
     "types": ["@cloudflare/vitest-plugin/types", "bun"]
   },
   "files": ["worker-configuration.d.ts"],
-  "include": ["src", "test", "vitest.config.ts"]
+  "include": ["src", "test", "fixtures", "scripts", "vitest.config.ts"]
 }

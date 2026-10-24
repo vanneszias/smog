@@ -16,11 +16,13 @@ export default defineConfig({
     cloudflareTest({
       miniflare: {
         bindings: {
+          DRAWING_B64: asset("packages/pdf/fixtures/drawing-1.png"),
           FONT_BOLD_B64: asset("apps/mobile/assets/fonts/Figtree-Bold.ttf"),
           FONT_REGULAR_B64: asset(
             "apps/mobile/assets/fonts/Figtree-Regular.ttf"
           ),
           IMAGE_B64: asset("packages/brand/src/art/icon.png"),
+          LOGO_B64: asset("packages/pdf/assets/logo.png"),
         },
       },
       wrangler: { configPath: "./test/wrangler.jsonc" },
