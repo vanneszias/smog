@@ -1522,6 +1522,7 @@
       "numbered": "Lesson {{number}}",
       "numberLabel": "Lesson number",
       "numberHint": "Optional. Printed as “Lesson 3”.",
+      "numberInvalid": "Use a whole number from 0 to 9999.",
       "loadMore": "Show more lessons",
       "backToList": "All lessons",
       "duplicated": "Lesson copied. You are now in your own copy.",
@@ -1620,6 +1621,9 @@
         "actions": "Actions for {{name}}",
         "moveUp": "Move section up",
         "moveDown": "Move section down",
+        "removeTitle": "Remove {{name}}?",
+        "removeDescription": "The gestures of this part move to the part before it. No gesture is deleted.",
+        "removeConfirm": "Remove part",
         "remove": "Remove section"
       },
       "item": {

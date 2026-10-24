@@ -1553,6 +1553,7 @@
       "numbered": "Leçon {{number}}",
       "numberLabel": "Numéro de la leçon",
       "numberHint": "Facultatif. Imprimé comme «\u00a0Leçon 3\u00a0».",
+      "numberInvalid": "Utilisez un nombre entier de 0 à 9999.",
       "loadMore": "Afficher plus de leçons",
       "backToList": "Toutes les leçons",
       "duplicated": "Leçon copiée. Vous êtes maintenant dans votre propre copie.",
@@ -1654,6 +1655,9 @@
         "actions": "Actions pour {{name}}",
         "moveUp": "Monter la section",
         "moveDown": "Descendre la section",
+        "removeTitle": "Supprimer {{name}} ?",
+        "removeDescription": "Les gestes de cette partie passent à la partie précédente. Aucun geste n’est supprimé.",
+        "removeConfirm": "Supprimer la partie",
         "remove": "Supprimer la section"
       },
       "item": {

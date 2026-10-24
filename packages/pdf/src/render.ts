@@ -16,6 +16,7 @@ import {
   type PDFPage,
   rgb,
 } from "pdf-lib";
+import { pngInflatesWithin } from "./png-guard";
 import {
   type LessonPdfDocument,
   type LessonPdfDocumentInput,
@@ -26,7 +27,6 @@ import {
   type PdfRenderReport,
   type PdfRow,
 } from "./schema";
-import { pngInflatesWithin } from "./png-guard";
 import {
   type Measurer,
   measurerFor,

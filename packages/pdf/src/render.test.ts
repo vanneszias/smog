@@ -366,7 +366,13 @@ describe("layout", () => {
       sections: [
         {
           rows: [
-            row({ hc: long, note: long, or: long, pl: long, word: "reuzenrij" }),
+            row({
+              hc: long,
+              note: long,
+              or: long,
+              pl: long,
+              word: "reuzenrij",
+            }),
           ],
           title: "ALLEENSTAANDE-SECTIE",
         },

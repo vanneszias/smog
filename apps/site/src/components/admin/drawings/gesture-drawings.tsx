@@ -99,10 +99,7 @@ function StepActions({
   removeBlocked,
   row,
   step,
-}: Pick<
-  StepProps,
-  "gestureId" | "removeBlocked" | "row" | "step"
->): ReactNode {
+}: Pick<StepProps, "gestureId" | "removeBlocked" | "row" | "step">): ReactNode {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { remove, upload } = useDrawingActions();
@@ -228,18 +225,19 @@ function DrawingStep({
   let controls: ReactNode = null;
   if (canWrite) {
     // Only an absent step waits for step 1: a stored drawing keeps Replace and Remove.
-    controls = ready || row ? (
-      <StepActions
-        gestureId={gestureId}
-        removeBlocked={removeBlocked}
-        row={row}
-        step={step}
-      />
-    ) : (
-      <Text size="body-sm" tone="muted">
-        {t("drawings.needFirst")}
-      </Text>
-    );
+    controls =
+      ready || row ? (
+        <StepActions
+          gestureId={gestureId}
+          removeBlocked={removeBlocked}
+          row={row}
+          step={step}
+        />
+      ) : (
+        <Text size="body-sm" tone="muted">
+          {t("drawings.needFirst")}
+        </Text>
+      );
   }
   return (
     <li

@@ -35,7 +35,9 @@ import {
   type ReactNode,
   Suspense,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { LeaveGuard } from "@/components/admin/leave-guard";
@@ -53,6 +55,7 @@ import {
   gestureCount,
   hasRoom,
   moveItem,
+  parseLessonNumber,
   removeItem,
   removeSection,
   renameSection,
@@ -105,17 +108,38 @@ function SaveIndicator({ auto }: { auto: Autosave }): ReactNode {
   ) {
     icon = <CircleAlert aria-hidden="true" className="size-4" />;
   }
+  // The visible text changes with every keystroke pause; the spoken one only when
+  // the lesson goes wrong or recovers (a screen reader user typing is not told
+  // "Saving" and "All changes saved" after every pause).
+  const failing =
+    status === "error" || status === "invalid" || status === "conflict";
+  // True from a failure until the lesson is saved again.
+  const recovering = useRef(false);
+  const [spoken, setSpoken] = useState("");
+  useEffect(() => {
+    if (failing) {
+      recovering.current = true;
+      setSpoken(t(STATUS_KEYS[status]));
+    } else if (status === "saved" && recovering.current) {
+      recovering.current = false;
+      setSpoken(t(STATUS_KEYS.saved));
+    } else {
+      setSpoken("");
+    }
+  }, [failing, status, t]);
   return (
     <div className="flex flex-wrap items-center gap-2">
       <p
         className="flex items-center gap-2 text-body-sm text-muted-foreground"
         data-status={status}
         data-testid="lesson-save-status"
-        role="status"
       >
         {icon}
         {t(STATUS_KEYS[status])}
       </p>
+      <span className="sr-only" data-testid="lesson-save-live" role="status">
+        {spoken}
+      </span>
       {status === "error" ? (
         <Button onClick={auto.retry} size="sm" variant="secondary">
           {t("admin.lessons.status.retry")}
@@ -231,16 +255,28 @@ function DetailsCard({
       edit((now) => setText(now, locale, "notes", value)),
     [edit]
   );
+  // The typed text is kept as typed ("1e", "12." are not numbers yet) and only a valid number reaches the draft.
+  const [typed, setTyped] = useState(
+    draft.number === null ? "" : String(draft.number)
+  );
+  const numberProblem = !parseLessonNumber(typed).valid;
+  useEffect(() => {
+    setTyped((now) => {
+      const parsed = parseLessonNumber(now);
+      // Text that is not a number yet stays as typed; a draft that moved (their version taken) rewrites the field.
+      if (!parsed.valid || parsed.number === draft.number) {
+        return now;
+      }
+      return String(draft.number ?? "");
+    });
+  }, [draft.number]);
   const onNumber = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
-      const raw = event.target.value.trim();
-      const parsed = raw === "" ? null : Number(raw);
-      edit((now) =>
-        setNumber(
-          now,
-          parsed !== null && Number.isInteger(parsed) ? parsed : null
-        )
-      );
+      setTyped(event.target.value);
+      const parsed = parseLessonNumber(event.target.value);
+      if (parsed.valid) {
+        edit((now) => setNumber(now, parsed.number));
+      }
     },
     [edit]
   );
@@ -252,18 +288,18 @@ function DetailsCard({
         </CardTitle>
         <Field
           className="max-w-48"
+          error={numberProblem ? t("admin.lessons.numberInvalid") : undefined}
           hint={t("admin.lessons.numberHint")}
           label={t("admin.lessons.numberLabel")}
           optional
         >
           <Input
+            autoComplete="off"
             inputMode="numeric"
-            max={9999}
-            min={0}
+            maxLength={4}
             onChange={onNumber}
             readOnly={readOnly}
-            type="number"
-            value={draft.number === null ? "" : String(draft.number)}
+            value={typed}
           />
         </Field>
         <Tabs onValueChange={onActive} value={active}>
@@ -390,6 +426,12 @@ function Builder({
   const [active, setActive] = useState(first?.code ?? defaultLocale);
   const activeLanguage = languages.find((l) => l.code === active) ?? first;
   const [picking, setPicking] = useState(false);
+  // Removing a row or a part unmounts the control that had the focus: it goes to the heading of the structure.
+  const structureHeading = useRef<HTMLDivElement>(null);
+  const focusStructure = useCallback(() => {
+    // After the menu or the dialog has given the focus back to nothing.
+    setTimeout(() => structureHeading.current?.focus(), 80);
+  }, []);
 
   const readiness = useLessonReadiness(lesson.id, active, auto.version);
   const states = useMemo(
@@ -449,6 +491,7 @@ function Builder({
       activeLocale: active,
       defaultLocale,
       draft,
+      onFocusStructure: focusStructure,
       onMoveItem,
       onRemoveItem,
       onRemoveSection,
@@ -462,6 +505,7 @@ function Builder({
       active,
       defaultLocale,
       draft,
+      focusStructure,
       onMoveItem,
       onRemoveItem,
       onRemoveSection,
@@ -553,9 +597,15 @@ function Builder({
       <Card className="gap-3 sm:p-4">
         <CardContent className="gap-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <CardTitle className="text-body" level={2}>
-              {t("admin.lessons.structure")}
-            </CardTitle>
+            <div
+              className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              ref={structureHeading}
+              tabIndex={-1}
+            >
+              <CardTitle className="text-body" level={2}>
+                {t("admin.lessons.structure")}
+              </CardTitle>
+            </div>
             <span className="flex flex-wrap items-center gap-3">
               <Text size="body-sm" tone="muted">
                 {t("admin.lessons.count", { count: gestureCount(draft) })}

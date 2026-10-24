@@ -61,6 +61,9 @@ const READINESS = {
 const DUTCH_TAB = /Nederlands/;
 const TITLE = "Title";
 const SAVED = "All changes saved";
+const NUMBER_LABEL = /^Lesson number/;
+const NO_GESTURE_DELETED = /No gesture is deleted/;
+const NUMBER_INVALID = "Use a whole number from 0 to 9999.";
 const AUTOSAVE_WAIT = { timeout: 4000 };
 
 function page(lesson: LessonDetail) {
@@ -297,6 +300,107 @@ describe("LessonBuilder", () => {
       gestureIds: [],
       titles: { en: "Greetings" },
     });
+  });
+
+  test("a lesson number the server would refuse is flagged and never sent; half-typed text does not clear it", async () => {
+    const { calls } = await renderSite(page(LESSON), {
+      api: {
+        "lessons/readiness": READINESS,
+        "lessons/update": { unchanged: false, updatedAt: 2000, version: 4 },
+      },
+    });
+    const number = (await screen.findByRole("textbox", {
+      name: NUMBER_LABEL,
+    })) as HTMLInputElement;
+    expect(number.value).toBe("1");
+    fireEvent.change(number, { target: { value: "12345" } });
+    expect(await screen.findByText(NUMBER_INVALID)).toBeDefined();
+    // Half-typed text stays in the field and the draft keeps its last good number.
+    fireEvent.change(number, { target: { value: "1e" } });
+    expect(number.value).toBe("1e");
+    await new Promise((resolve) => setTimeout(resolve, 1300));
+    expect(updates(calls)).toHaveLength(0);
+    fireEvent.change(number, { target: { value: "42" } });
+    expect(screen.queryByText(NUMBER_INVALID)).toBeNull();
+    await waitFor(() => {
+      expect(updates(calls)).toHaveLength(1);
+    }, AUTOSAVE_WAIT);
+    expect(updates(calls)[0]).toMatchObject({ number: 42 });
+  });
+
+  test("removing a part that holds gestures asks first; Cancel keeps it, the confirmation moves the gestures and the focus goes to the structure heading", async () => {
+    const { calls } = await renderSite(page(LESSON), {
+      api: {
+        "lessons/readiness": READINESS,
+        "lessons/update": { unchanged: false, updatedAt: 2000, version: 4 },
+      },
+    });
+    const open = async () => {
+      const menu = await screen.findByRole("button", {
+        name: "Actions for Begroetingen",
+      });
+      fireEvent.pointerDown(menu, { button: 0, ctrlKey: false });
+      fireEvent.click(menu);
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: "Remove section" })
+      );
+      return await screen.findByRole("alertdialog");
+    };
+    let ask = await open();
+    expect(within(ask).getByText(NO_GESTURE_DELETED)).toBeDefined();
+    fireEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(screen.getAllByTestId("lesson-section")).toHaveLength(1);
+    ask = await open();
+    fireEvent.click(within(ask).getByRole("button", { name: "Remove part" }));
+    await waitFor(() =>
+      expect(screen.queryAllByTestId("lesson-section")).toHaveLength(0)
+    );
+    // The gestures of the part went before it: nothing is lost.
+    expect(screen.getByText("Dag")).toBeDefined();
+    await waitFor(() => {
+      expect(updates(calls)).toHaveLength(1);
+    }, AUTOSAVE_WAIT);
+    expect(updates(calls)[0]).toMatchObject({
+      sections: [],
+      ungrouped: ["g1", "g2"],
+    });
+    await waitFor(() => {
+      expect(document.activeElement?.textContent).toContain("Gestures");
+    });
+  });
+
+  test("the save indicator speaks only when the lesson goes wrong and when it recovers, not after every pause", async () => {
+    let fail = true;
+    await renderSite(page(LESSON), {
+      api: {
+        "lessons/readiness": READINESS,
+        "lessons/update": () =>
+          fail
+            ? rpcError("INTERNAL_SERVER_ERROR", 500)
+            : { unchanged: false, updatedAt: 2000, version: 4 },
+      },
+    });
+    const live = await screen.findByTestId("lesson-save-live");
+    expect(live.textContent).toBe("");
+    const title = await screen.findByRole("textbox", { name: TITLE });
+    fireEvent.change(title, { target: { value: "One" } });
+    // Dirty and saving are silent; the failure is spoken.
+    expect(live.textContent).toBe("");
+    await waitFor(() => {
+      expect(live.textContent).not.toBe("");
+    }, AUTOSAVE_WAIT);
+    expect(live.textContent).toContain("Saving failed");
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => {
+      expect(live.textContent).toBe(SAVED);
+    }, AUTOSAVE_WAIT);
+    // A later ordinary save is silent again.
+    fireEvent.change(title, { target: { value: "One two" } });
+    await waitFor(() => {
+      expect(live.textContent).toBe("");
+    }, AUTOSAVE_WAIT);
   });
 
   test("another teacher's lesson is read-only, with a button to copy it", async () => {

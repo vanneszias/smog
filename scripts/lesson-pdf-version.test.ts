@@ -17,6 +17,8 @@ import {
 
 const PDF = join(import.meta.dir, "..", "packages", "pdf");
 
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
 function files(dir: string, keep: (name: string) => boolean): string[] {
   return readdirSync(dir)
     .filter(keep)
@@ -60,7 +62,7 @@ describe("LESSON_PDF_LAYOUT_VERSION", () => {
     const hashes = Object.values(LESSON_PDF_ENGINE_HASHES);
     expect(new Set(hashes).size).toBe(hashes.length);
     for (const hash of hashes) {
-      expect(hash).toMatch(/^[0-9a-f]{64}$/);
+      expect(hash).toMatch(SHA256_HEX);
     }
   });
 });

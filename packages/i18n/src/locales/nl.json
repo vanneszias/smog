@@ -1522,6 +1522,7 @@
       "numbered": "Les {{number}}",
       "numberLabel": "Lesnummer",
       "numberHint": "Optioneel. Staat gedrukt als “Les 3”.",
+      "numberInvalid": "Gebruik een geheel getal van 0 tot en met 9999.",
       "loadMore": "Meer lessen tonen",
       "backToList": "Alle lessen",
       "duplicated": "Les gekopieerd. Je zit nu in je eigen kopie.",
@@ -1620,6 +1621,9 @@
         "actions": "Acties voor {{name}}",
         "moveUp": "Sectie omhoog",
         "moveDown": "Sectie omlaag",
+        "removeTitle": "{{name}} verwijderen?",
+        "removeDescription": "De gebaren van dit onderdeel gaan naar het onderdeel ervoor. Er worden geen gebaren verwijderd.",
+        "removeConfirm": "Onderdeel verwijderen",
         "remove": "Sectie verwijderen"
       },
       "item": {

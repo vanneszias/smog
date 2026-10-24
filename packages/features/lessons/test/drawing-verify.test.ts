@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { inspectDrawing, inspectDrawingData } from "../src/server/drawing-verify";
+import {
+  inspectDrawing,
+  inspectDrawingData,
+} from "../src/server/drawing-verify";
 import { jpegBytes, pngBombBytes, pngBytes, webpBytes } from "../src/testing";
 
 describe("inspectDrawing", () => {

@@ -232,10 +232,10 @@ export const lessonExportIssueSchema = z.object({
   name: z.string(),
   /** Participants' sheet: no drawing at all. */
   noDrawing: z.boolean(),
-  /** The row prints characters the font lacks (they would show as question marks: another script, an emoji). */
-  unsupportedText: z.boolean(),
   /** Participants' sheet: a drawing exists but is a WebP, which the PDF cannot hold (upload it again as PNG or JPEG). */
   unsupportedDrawing: z.boolean(),
+  /** The row prints characters the font lacks (they would show as question marks: another script, an emoji). */
+  unsupportedText: z.boolean(),
 });
 export type LessonExportIssue = z.infer<typeof lessonExportIssueSchema>;
 

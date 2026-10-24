@@ -18,7 +18,13 @@ export const PNG_MAX_DECODED_BYTES = 16 * 1024 * 1024;
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 /** Samples per pixel by colour type. */
-const SAMPLES: Readonly<Record<number, number>> = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 };
+const SAMPLES: Readonly<Record<number, number>> = {
+  0: 1,
+  2: 3,
+  3: 1,
+  4: 2,
+  6: 4,
+};
 
 /** Adam7 passes: x start, y start, x step, y step. */
 const ADAM7 = [
@@ -47,8 +53,13 @@ export function pngExpectedSize(bytes: Uint8Array): number | null {
   const width = view.getUint32(16);
   const height = view.getUint32(20);
   const samples = SAMPLES[bytes[25] ?? -1];
-  const interlace = bytes[28];
-  if (!samples || width < 1 || height < 1 || (interlace !== 0 && interlace !== 1)) {
+  const interlace = bytes.at(28);
+  if (
+    !samples ||
+    width < 1 ||
+    height < 1 ||
+    (interlace !== 0 && interlace !== 1)
+  ) {
     return null;
   }
   const bitsPerPixel = samples * (bytes[24] ?? 0);

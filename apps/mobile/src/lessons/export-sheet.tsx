@@ -2,9 +2,9 @@ import { useTranslation } from "@smog/i18n/react";
 import { useLessonExportPreview } from "@smog/lessons/client";
 import {
   LESSON_TEMPLATES,
-  lessonPdfPath,
   type LessonExportPreview,
   type LessonTemplate,
+  lessonPdfPath,
 } from "@smog/lessons/schema";
 import {
   Alert,
