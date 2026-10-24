@@ -110,16 +110,30 @@ describe("the admin gate (ruling 10)", () => {
     ]);
   });
 
-  it("lets a teacher open one gesture's teacher information and nothing else, with no sidebar", async () => {
+  it("sends a teacher from the dashboard to the lessons, with the teaching group only in the rail", async () => {
+    const { cookie } = await signedIn("teacher");
+    const home = await open("/admin", cookie);
+    expect([302, 307]).toContain(home.status);
+    expect(new URL(home.headers.get("location") ?? "", ORIGIN).pathname).toBe(
+      "/admin/lessons"
+    );
+    for (const path of ["/admin/lessons", "/admin/lessons/some-lesson"]) {
+      // biome-ignore lint/performance/noAwaitInLoops: two requests, in order.
+      expect((await open(path, cookie)).status, path).toBe(200);
+    }
+    const html = await (await open("/admin/lessons", cookie)).text();
+    expect(html).toContain("Lesgeven");
+    expect(html).not.toContain("Logboek");
+    expect(html).not.toContain("Gebruikers");
+    expect(html).not.toContain("/admin/translation/strings");
+  });
+
+  it("lets a teacher open one gesture's teacher information and nothing else besides the lessons", async () => {
     const { cookie } = await signedIn("teacher");
     const info = await open("/admin/teacher-info/some-gesture", cookie);
     expect(info.status).toBe(200);
-    const html = await info.text();
-    expect(html).not.toContain("Logboek");
-    expect(html).not.toContain("/admin/translation/strings");
     const statuses = await Promise.all(
       [
-        "/admin",
         "/admin/users",
         "/admin/gestures",
         "/admin/gestures/some-gesture",
@@ -127,7 +141,7 @@ describe("the admin gate (ruling 10)", () => {
         "/admin/teacher-info",
       ].map(async (path) => (await open(path, cookie)).status)
     );
-    expect(statuses).toEqual([404, 404, 404, 404, 404, 404]);
+    expect(statuses).toEqual([404, 404, 404, 404, 404]);
   });
 
   it("lets a translator open the teacher information too, and a plain user not", async () => {
@@ -135,6 +149,8 @@ describe("the admin gate (ruling 10)", () => {
     expect(
       (await open("/admin/teacher-info/some-gesture", translator.cookie)).status
     ).toBe(200);
+    // Lessons are the teacher's: a translator has none.
+    expect((await open("/admin/lessons", translator.cookie)).status).toBe(404);
     const learner = await signedIn("user");
     expect(
       (await open("/admin/teacher-info/some-gesture", learner.cookie)).status

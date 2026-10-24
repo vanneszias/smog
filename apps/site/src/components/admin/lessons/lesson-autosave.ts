@@ -11,7 +11,7 @@ import {
 } from "./lesson-draft";
 
 /** Typing pauses this long before the lesson is saved. */
-export const AUTOSAVE_DELAY_MS = 800;
+const AUTOSAVE_DELAY_MS = 800;
 
 /**
  * Where the lesson stands: `saved` (the server has this draft), `dirty` (an
