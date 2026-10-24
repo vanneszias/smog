@@ -427,6 +427,49 @@
     "lesson": "Leçon",
     "fallbackFootnote": "Pas encore traduit : texte en {{language}}."
   },
+  "teacherLessons": {
+    "title": "Leçons",
+    "entryDescription": "Consultez les leçons et partagez-les en PDF",
+    "number": "Leçon {{number}}",
+    "gestureCount_one": "{{count}} geste",
+    "gestureCount_many": "{{count}} gestes",
+    "gestureCount_other": "{{count}} gestes",
+    "author": "Par {{name}}",
+    "titleIn": "Titre en {{language}}",
+    "empty": {
+      "title": "Aucune leçon pour l'instant",
+      "description": "Les leçons se créent sur le site web. Elles apparaissent ici dès qu'un enseignant en crée une."
+    },
+    "forbidden": {
+      "title": "Réservé aux enseignants",
+      "description": "Cette partie de l'application est réservée aux enseignants et aux administrateurs."
+    },
+    "notFound": {
+      "title": "Leçon introuvable",
+      "description": "Cette leçon n'existe pas (ou plus)."
+    },
+    "notes": "Notes",
+    "ungrouped": "Gestes",
+    "section": "Section",
+    "emptyLesson": "Cette leçon ne contient pas encore de gestes.",
+    "unpublished": "Non publié",
+    "unpublishedHint": "Ce geste n'est pas publié et ne peut pas être ouvert.",
+    "export": {
+      "open": "Exporter en PDF",
+      "title": "Leçon en PDF",
+      "description": "Choisissez à qui s'adresse le PDF et dans quelle langue, puis partagez-le ou enregistrez-le.",
+      "download": "Télécharger et partager",
+      "downloading": "Création du PDF…",
+      "shareTitle": "Partager le PDF de la leçon",
+      "errors": {
+        "unauthorized": "Reconnectez-vous pour créer le PDF.",
+        "forbidden": "Seuls les enseignants peuvent créer ce PDF.",
+        "notFound": "Cette leçon n'existe plus.",
+        "offline": "Pas de connexion. Connectez-vous à Internet et réessayez.",
+        "sharingUnavailable": "Cet appareil ne peut pas partager de fichiers."
+      }
+    }
+  },
   "drawings": {
     "title": "Dessins",
     "description": "Dessins au trait pour la feuille des participants. Une image par étape, la deuxième étape est facultative. PNG ou JPEG, 512 ko et 1200 pixels de côté au maximum. Seuls les enseignants, les traducteurs et les administrateurs les voient.",

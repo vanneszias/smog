@@ -190,6 +190,10 @@ export interface RenderAppOptions {
   guest?: Partial<GuestData>;
   initialUrl?: string;
   queryClient?: QueryClient;
+  /** The real settings screen instead of the stub (the lessons entry). */
+  realSettings?: boolean;
+  /** The signed-in user's roles (`session.user.roles`); none by default. */
+  roles?: readonly string[];
   routes?: Routes;
   signedIn?: boolean;
 }
@@ -209,7 +213,8 @@ function SettingsStub(): ReactElement {
 /** The app's routes, as files (`require` keeps the real module objects). */
 function appRoutes(
   root: () => ReactElement,
-  authScreens: boolean
+  authScreens: boolean,
+  realSettings = false
 ): Record<string, RouteModule> {
   const layout = require("../../app/_layout");
   return {
@@ -232,7 +237,11 @@ function appRoutes(
     "gestures/[slug]": require("../../app/gestures/[slug]"),
     "settings/_layout": require("../../app/settings/_layout"),
     "settings/account": require("../../app/settings/account"),
-    "settings/index": { default: SettingsStub },
+    "settings/index": realSettings
+      ? require("../../app/settings/index")
+      : { default: SettingsStub },
+    "settings/lessons/[id]": require("../../app/settings/lessons/[id]"),
+    "settings/lessons/index": require("../../app/settings/lessons/index"),
     "shared/[token]": require("../../app/shared/[token]"),
   };
 }
@@ -267,6 +276,8 @@ export async function renderApp({
       queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
     },
   }),
+  realSettings = false,
+  roles = [],
   routes = {},
   signedIn = false,
 }: RenderAppOptions = {}): Promise<RenderedApp> {
@@ -274,7 +285,7 @@ export async function renderApp({
     ? jest.fn(customFetch)
     : fakeFetch({ ...CATALOG_ROUTES, ...routes });
   const session: SessionHookResult = {
-    data: signedIn ? { user: USER } : null,
+    data: signedIn ? { user: { ...USER, roles } } : null,
     error: null,
     isPending: false,
   };
@@ -303,7 +314,9 @@ export async function renderApp({
   }
   // RNTL 14 renders asynchronously: the router helpers (`getPathname`) are
   // on the returned promise, which resolves once the first render is done.
-  const result = renderRouter(appRoutes(Root, authScreens), { initialUrl });
+  const result = renderRouter(appRoutes(Root, authScreens, realSettings), {
+    initialUrl,
+  });
   await result;
   return { clients, fetch, result };
 }

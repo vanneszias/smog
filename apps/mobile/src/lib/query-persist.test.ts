@@ -94,6 +94,12 @@ const keys = {
   ),
   guestIds: userScopedKey(rpc.favorites.ids.key({ type: "query" }), undefined),
   i18n: rpc.system.i18n.queryKey({ input: { locale: "fr" } }),
+  // A teacher's lessons are private material: never written to the device cache.
+  lesson: userScopedKey(
+    rpc.lessons.get.queryKey({ input: { id: "les-1" } }),
+    "u1"
+  ),
+  lessons: userScopedKey(rpc.lessons.list.key({ type: "infinite" }), "u1"),
   list: rpc.gestures.list.infiniteKey({
     initialPageParam: undefined,
     input: (cursor: string | undefined) => ({ cursor }),
@@ -136,6 +142,11 @@ function fillCache(queryClient: QueryClient): void {
     pages: [{ items: [HOND], nextCursor: null }],
   });
   queryClient.setQueryData(keys.mine, [{ id: "l1", name: "Les 1" }]);
+  queryClient.setQueryData(keys.lesson, { notes: "Geheime notitie" });
+  queryClient.setQueryData(keys.lessons, {
+    pageParams: [undefined],
+    pages: [{ items: [{ title: "Geheime les" }], nextCursor: null }],
+  });
   queryClient.setQueryData(keys.search, {
     items: [{ ...HOND, matchedField: "name", matchType: "exact", score: 1 }],
     total: 1,
@@ -194,7 +205,10 @@ describe("the offline query cache", () => {
     expect(restored.getQueryData(keys.search)).toBeUndefined();
     expect(restored.getQueryData(keys.mine)).toBeUndefined();
     expect(restored.getQueryData(keys.guestIds)).toBeUndefined();
+    expect(restored.getQueryData(keys.lesson)).toBeUndefined();
+    expect(restored.getQueryData(keys.lessons)).toBeUndefined();
     const stored = storage.map.get(QUERY_CACHE_KEY) ?? "";
+    expect(stored).not.toContain("Geheime");
     expect(stored).not.toContain("Les 1");
     expect(stored).not.toContain("g9");
   });

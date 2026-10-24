@@ -2,10 +2,15 @@ import { File, Paths } from "expo-file-system";
 import { shareAsync } from "expo-sharing";
 import { Platform } from "react-native";
 
-/** The export's file names (`exportFileName`): `smog-export-YYYY-MM-DD.json`. */
-const EXPORT_FILE = /^smog-export-.*\.json$/;
+/**
+ * The files this app writes to the cache directory to share: the account
+ * export (`exportFileName`, `smog-export-YYYY-MM-DD.json`) and a teacher's
+ * lesson PDF (`lessonPdfFileName`, `les-<…>.pdf`). Both hold private data and
+ * are swept together.
+ */
+const EXPORT_FILE = /^(smog-export-.*\.json|les-.*\.pdf)$/;
 
-function remove(file: File): void {
+export function remove(file: File): void {
   try {
     file.delete();
   } catch (error) {

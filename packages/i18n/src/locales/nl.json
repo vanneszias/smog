@@ -423,6 +423,48 @@
     "lesson": "Les",
     "fallbackFootnote": "Nog niet vertaald: tekst in {{language}}."
   },
+  "teacherLessons": {
+    "title": "Lessen",
+    "entryDescription": "Bekijk lessen en deel ze als pdf",
+    "number": "Les {{number}}",
+    "gestureCount_one": "{{count}} gebaar",
+    "gestureCount_other": "{{count}} gebaren",
+    "author": "Door {{name}}",
+    "titleIn": "Titel in {{language}}",
+    "empty": {
+      "title": "Nog geen lessen",
+      "description": "Lessen maak je op de website. Ze verschijnen hier zodra een leerkracht er een maakt."
+    },
+    "forbidden": {
+      "title": "Alleen voor leerkrachten",
+      "description": "Dit deel van de app is voor leerkrachten en beheerders."
+    },
+    "notFound": {
+      "title": "Les niet gevonden",
+      "description": "Deze les bestaat niet (meer)."
+    },
+    "notes": "Notities",
+    "ungrouped": "Gebaren",
+    "section": "Onderdeel",
+    "emptyLesson": "Deze les heeft nog geen gebaren.",
+    "unpublished": "Niet gepubliceerd",
+    "unpublishedHint": "Dit gebaar is niet gepubliceerd en kan niet geopend worden.",
+    "export": {
+      "open": "Exporteer als pdf",
+      "title": "Les als pdf",
+      "description": "Kies voor wie de pdf is en in welke taal, en deel of bewaar hem dan.",
+      "download": "Downloaden en delen",
+      "downloading": "Pdf maken…",
+      "shareTitle": "Deel de lespdf",
+      "errors": {
+        "unauthorized": "Meld je opnieuw aan om de pdf te maken.",
+        "forbidden": "Alleen leerkrachten kunnen deze pdf maken.",
+        "notFound": "Deze les bestaat niet meer.",
+        "offline": "Geen verbinding. Maak verbinding met het internet en probeer opnieuw.",
+        "sharingUnavailable": "Dit toestel kan geen bestanden delen."
+      }
+    }
+  },
   "drawings": {
     "title": "Tekeningen",
     "description": "Lijntekeningen voor het blad van de cursisten: één afbeelding per stap, een tweede stap is optioneel. PNG of JPEG, hoogstens 512 kB en 1200 pixels per zijde. Alleen leerkrachten, vertalers en beheerders zien ze.",
