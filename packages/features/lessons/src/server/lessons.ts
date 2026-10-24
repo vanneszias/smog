@@ -33,6 +33,7 @@ import {
 } from "../schema";
 import { auditStatement } from "./audit";
 import { teacherInfoCoverage } from "./coverage";
+import { previewLessonExport } from "./export-run";
 import { listLessons, mayEdit, readLesson, type Viewer } from "./lesson-read";
 import { lessonProcedure } from "./procedure";
 
@@ -547,6 +548,23 @@ export function lessonRoutes() {
           throw error;
         }
         return { id, version: 1 };
+      }
+    ),
+    exportPreview: lessonProcedure.exportPreview.handler(
+      async ({ context, errors, input }) => {
+        const { db } = context;
+        if (!(await isEnabledLanguage(db, input.locale))) {
+          throw errors.VALIDATION(validation("locale", "notEnabled"));
+        }
+        const preview = await previewLessonExport(db, {
+          lessonId: input.id,
+          locale: input.locale,
+          template: input.template,
+        });
+        if (!preview) {
+          throw errors.NOT_FOUND();
+        }
+        return preview;
       }
     ),
     gestureMarkers: lessonProcedure.gestureMarkers.handler(

@@ -42,7 +42,7 @@ const PROBLEM_KEYS = {
   tooLarge: "drawings.errors.tooLarge",
 } as const satisfies Record<DrawingProblem, TranslationKey>;
 
-const ACCEPT = ".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp";
+const ACCEPT = ".png,.jpg,.jpeg,image/png,image/jpeg";
 const KILOBYTE = 1024;
 
 interface StepProps {

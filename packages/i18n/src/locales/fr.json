@@ -423,9 +423,13 @@
       }
     }
   },
+  "lessonPdf": {
+    "lesson": "Leçon",
+    "fallbackFootnote": "Pas encore traduit : texte en {{language}}."
+  },
   "drawings": {
     "title": "Dessins",
-    "description": "Dessins au trait pour la feuille des participants. Une image par étape, la deuxième étape est facultative. PNG, JPEG ou WebP, 1 Mo et 2000 pixels de côté au maximum. Seuls les enseignants, les traducteurs et les administrateurs les voient.",
+    "description": "Dessins au trait pour la feuille des participants. Une image par étape, la deuxième étape est facultative. PNG ou JPEG, 512 ko et 1200 pixels de côté au maximum. Seuls les enseignants, les traducteurs et les administrateurs les voient.",
     "step": "Étape {{step}}",
     "stepOptional": "Étape {{step}} (facultative)",
     "none": "Pas encore de dessin",
@@ -446,9 +450,9 @@
     "removeDescription": "Le dessin de l'étape {{step}} est supprimé. Les leçons qui utilisent ce geste sont imprimées sans dessin.",
     "removeConfirm": "Supprimer",
     "errors": {
-      "format": "Ce fichier n'est pas une image PNG, JPEG ou WebP valide.",
-      "dimensions": "L'image dépasse 2000 pixels de côté.",
-      "tooLarge": "Le fichier dépasse 1 Mo.",
+      "format": "Ce fichier n'est pas une image PNG ou JPEG valide (un WebP ne peut pas aller dans le PDF).",
+      "dimensions": "L'image dépasse 1200 pixels de côté.",
+      "tooLarge": "Le fichier dépasse 512 ko.",
       "missing": "L'envoi n'est pas arrivé. Réessayez.",
       "key": "Cet envoi n'appartient pas à ce geste.",
       "network": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
@@ -1633,6 +1637,44 @@
         "held": "Dans cette leçon",
         "full": "Une leçon contient au plus {{max}} gestes.",
         "error": "La recherche a échoué. Réessayez."
+      },
+      "export": {
+        "open": "Créer le PDF",
+        "title": "La leçon en PDF",
+        "description": "Choisissez à qui s’adresse le PDF et dans quelle langue. Vous voyez d’abord ce qu’il contiendra.",
+        "templateLabel": "Feuille",
+        "teachers": "Pour les enseignants",
+        "teachersHint": "Le mot avec la configuration de la main, le lieu, l’orientation, le mouvement et les sens voisins.",
+        "participants": "Pour les participants",
+        "participantsHint": "Le mot avec son dessin et un court résumé.",
+        "languageLabel": "Langue du PDF",
+        "loading": "Vérification du contenu du PDF…",
+        "failed": "L’aperçu n’a pas pu être chargé. Réessayez.",
+        "summary_one": "{{count}} geste figure dans le PDF.",
+        "summary_many": "{{count}} gestes figurent dans le PDF.",
+        "summary_other": "{{count}} gestes figurent dans le PDF.",
+        "clean": "Tous les gestes sont complets en {{language}}.",
+        "overLimit": "Cette leçon compte {{count}} gestes, mais ce PDF en accepte {{limit}} au maximum. Scindez la leçon en deux.",
+        "skippedTitle_one": "{{count}} geste n’est pas publié et reste hors du PDF",
+        "skippedTitle_many": "{{count}} gestes ne sont pas publiés et restent hors du PDF",
+        "skippedTitle_other": "{{count}} gestes ne sont pas publiés et restent hors du PDF",
+        "issuesTitle": "À vérifier pour ces gestes",
+        "issue": {
+          "fallback": "Texte dans la langue par défaut",
+          "missing": "Aucune info pour les enseignants",
+          "noDrawing": "Pas de dessin",
+          "unsupportedDrawing": "Le dessin est un WebP et reste absent : envoyez-le à nouveau en PNG ou JPEG"
+        },
+        "download": "Télécharger le PDF",
+        "downloading": "Création du PDF…",
+        "done": "PDF téléchargé.",
+        "errors": {
+          "tooMany": "Cette leçon compte trop de gestes pour ce PDF. Scindez la leçon en deux.",
+          "tooLarge": "Le PDF est trop volumineux. Scindez la leçon ou utilisez des dessins plus petits.",
+          "timeout": "La création du PDF a pris trop de temps. Scindez la leçon en deux et réessayez.",
+          "rateLimited": "Vous venez de créer beaucoup de PDF. Patientez un instant et réessayez.",
+          "generic": "Le PDF n’a pas pu être créé. Réessayez."
+        }
       },
       "reorder": {
         "instructions": "Appuyez sur espace ou Entrée pour saisir un élément. Déplacez-le avec les flèches et appuyez de nouveau sur espace ou Entrée pour le déposer. Échap annule.",

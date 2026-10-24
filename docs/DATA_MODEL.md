@@ -621,7 +621,7 @@ What a teacher knows about a gesture in one language: `gesture_id` (CASCADE), `l
 
 #### `gesture_drawing` (migration 0025)
 
-A drawing, language-neutral: `gesture_id` (CASCADE), `step` (1 or 2), `r2_key` (unique, `teacher/drawings/<gestureId>/<step>/<uuid>`, a new key on every replace), `content_type` (`image/png`, `image/jpeg`, `image/webp`), `size` (1..1 MiB), `width` and `height` (1..2,000), `credit` (default "", at most 120), `updated_by` (SET NULL), `updated_at` (part of the PDF cache fingerprint); PK `(gesture_id, step)`. The caps are CHECKs as well as upload rules. Served only by the private route `GET /api/teacher/drawings/<gestureId>/<step>` (teacher or admin), never from a public URL.
+A drawing, language-neutral: `gesture_id` (CASCADE), `step` (1 or 2), `r2_key` (unique, `teacher/drawings/<gestureId>/<step>/<uuid>`, a new key on every replace), `content_type` (`image/png`, `image/jpeg`, `image/webp`), `size` (1..1 MiB), `width` and `height` (1..2,000), `credit` (default "", at most 120), `updated_by` (SET NULL), `updated_at` (part of the PDF cache fingerprint); PK `(gesture_id, step)`. The CHECKs are the storage ceiling; since task 5b an **upload** is stricter (PNG or JPEG, at most 512 KiB and 1,200 px, `DRAWING_UPLOAD_*` in `@smog/db/enums`), because `pdf-lib` cannot embed a WebP and 80 large drawings cost the export too much. A row stored before that (a WebP, a larger file) stays valid and prints as no drawing when it cannot embed. Served only by the private route `GET /api/teacher/drawings/<gestureId>/<step>` (teacher or admin), never from a public URL.
 
 #### `lesson`, `lesson_translation`, `lesson_section`, `lesson_section_translation`, `lesson_item` (migration 0026)
 

@@ -3,21 +3,21 @@
  * What an uploaded drawing is, read from its bytes (phase 10c ruling 6): the
  * declared type is never trusted. A PNG is a signature, an `IHDR` chunk with
  * a valid CRC and an `IEND`; a JPEG starts with `SOI` and has a baseline or
- * progressive `SOF` marker; a WebP is a `RIFF`/`WEBP` container whose first
- * chunk is `VP8 `, `VP8L` or `VP8X` (an animated one is refused). The width
- * and height come from the header, so a file over `DRAWING_MAX_PIXELS` on a
- * side is refused whatever its size. Pure: it takes the whole object (at
- * most 1 MiB) and never decodes pixels.
+ * progressive `SOF` marker. A WebP is refused as a format: `pdf-lib` cannot
+ * embed it (task 5b). The width and height come from the header, so a file
+ * over `DRAWING_UPLOAD_MAX_PIXELS` (1,200) on a side is refused whatever its
+ * size. Pure: it takes the whole object (at most 512 KiB) and never decodes
+ * pixels.
  */
 import {
-  DRAWING_MAX_BYTES,
-  DRAWING_MAX_PIXELS,
-  type DrawingContentType,
+  DRAWING_UPLOAD_MAX_BYTES,
+  DRAWING_UPLOAD_MAX_PIXELS,
+  type DrawingUploadType,
 } from "@smog/db/enums";
 
 export type DrawingVerdict =
   | {
-      contentType: DrawingContentType;
+      contentType: DrawingUploadType;
       height: number;
       ok: true;
       width: number;
@@ -150,94 +150,25 @@ function readJpeg(bytes: Uint8Array): Size {
   return null;
 }
 
-/** 24-bit little-endian. */
-function u24(bytes: Uint8Array, at: number): number {
-  return (
-    (bytes[at] ?? 0) |
-    ((bytes[at + 1] ?? 0) << 8) |
-    ((bytes[at + 2] ?? 0) << 16)
-  );
-}
-
-function webpLossy(bytes: Uint8Array, data: number): Size {
-  // Frame tag (3 bytes, bit 0 = 0 for a key frame), then the start code.
-  if (
-    (bytes[data] ?? 1) & 1 ||
-    bytes[data + 3] !== 0x9d ||
-    bytes[data + 4] !== 0x01 ||
-    bytes[data + 5] !== 0x2a
-  ) {
-    return null;
-  }
-  return {
-    height: ((bytes[data + 8] ?? 0) | ((bytes[data + 9] ?? 0) << 8)) & 0x3f_ff,
-    width: ((bytes[data + 6] ?? 0) | ((bytes[data + 7] ?? 0) << 8)) & 0x3f_ff,
-  };
-}
-
-function webpLossless(bytes: Uint8Array, data: number): Size {
-  if (bytes[data] !== 0x2f) {
-    return null;
-  }
-  const bits =
-    (bytes[data + 1] ?? 0) |
-    ((bytes[data + 2] ?? 0) << 8) |
-    ((bytes[data + 3] ?? 0) << 16) |
-    ((bytes[data + 4] ?? 0) << 24);
-  return { height: ((bits >>> 14) & 0x3f_ff) + 1, width: (bits & 0x3f_ff) + 1 };
-}
-
-function readWebp(bytes: Uint8Array): Size {
-  if (bytes.length < 25 || ascii(bytes, 0, 4) !== "RIFF") {
-    return null;
-  }
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (
-    ascii(bytes, 8, 4) !== "WEBP" ||
-    view.getUint32(4, true) + 8 > bytes.length
-  ) {
-    return null;
-  }
-  const kind = ascii(bytes, 12, 4);
-  const size = view.getUint32(16, true);
-  if (20 + size > bytes.length) {
-    return null;
-  }
-  if (kind === "VP8 ") {
-    return webpLossy(bytes, 20);
-  }
-  if (kind === "VP8L") {
-    return webpLossless(bytes, 20);
-  }
-  if (kind === "VP8X" && size >= 10) {
-    // Flags: bit 1 is the animation flag; an animated file is not a drawing.
-    if ((bytes[20] ?? 0) & 0x02) {
-      return null;
-    }
-    return { height: u24(bytes, 27) + 1, width: u24(bytes, 24) + 1 };
-  }
-  return null;
-}
-
-function verdictOf(
-  contentType: DrawingContentType,
-  size: Size
-): DrawingVerdict {
+function verdictOf(contentType: DrawingUploadType, size: Size): DrawingVerdict {
   if (!size || size.width < 1 || size.height < 1) {
     return FORMAT;
   }
-  if (size.width > DRAWING_MAX_PIXELS || size.height > DRAWING_MAX_PIXELS) {
+  if (
+    size.width > DRAWING_UPLOAD_MAX_PIXELS ||
+    size.height > DRAWING_UPLOAD_MAX_PIXELS
+  ) {
     return { ok: false, reason: "dimensions" };
   }
   return { contentType, height: size.height, ok: true, width: size.width };
 }
 
-/** The type and the size of a PNG, JPEG or WebP drawing; the reason when it is none of them, too large or too wide. */
+/** The type and the size of a PNG or JPEG drawing; the reason when it is none of them, too large or too wide. */
 export function inspectDrawing(bytes: Uint8Array): DrawingVerdict {
   if (bytes.length < 1) {
     return FORMAT;
   }
-  if (bytes.length > DRAWING_MAX_BYTES) {
+  if (bytes.length > DRAWING_UPLOAD_MAX_BYTES) {
     return { ok: false, reason: "tooLarge" };
   }
   if (bytes[0] === 0x89) {
@@ -245,9 +176,6 @@ export function inspectDrawing(bytes: Uint8Array): DrawingVerdict {
   }
   if (bytes[0] === 0xff) {
     return verdictOf("image/jpeg", readJpeg(bytes));
-  }
-  if (bytes[0] === 0x52) {
-    return verdictOf("image/webp", readWebp(bytes));
   }
   return FORMAT;
 }

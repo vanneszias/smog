@@ -265,6 +265,21 @@ describe("the scheduled dispatch (ruling 9)", () => {
     await media.delete(recorded);
   });
 
+  it(`retention (${CRON.retention}) deletes cached lesson PDFs older than 30 days and keeps younger ones`, async () => {
+    const key = `teacher/pdf/${newId()}/0123456789abcdef-teachers-nl.pdf`;
+    await media.put(key, new Uint8Array([1, 2, 3]));
+    const young = new Date(Date.now() + 29 * DAY_MS);
+    const old = new Date(Date.now() + 31 * DAY_MS);
+
+    const keep = await runCron("retention", young);
+    expect(await media.head(key)).not.toBeNull();
+    expect(counts(keep).pdfsDeleted).toBe(0);
+    const purge = await runCron("retention", old);
+    expect(await media.head(key)).toBeNull();
+    expect(counts(purge).pdfsDeleted).toBeGreaterThanOrEqual(1);
+    expect(counts(await runCron("retention", old)).pdfsDeleted).toBe(0);
+  });
+
   it(`retention (${CRON.retention}) purges dead letters older than 14 days and keeps the rest`, async () => {
     const later = new Date(Date.now() + DAY_MS + 60_000);
     const row = (id: string, receivedAt: Date) => ({

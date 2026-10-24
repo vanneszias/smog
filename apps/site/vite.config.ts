@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
+import { bytesModules } from "./build-bytes";
 import { THEME_SCRIPT_HASH_DEFINE } from "./build-defines";
 
 const SRC = fileURLToPath(new URL("./src", import.meta.url));
@@ -125,6 +126,7 @@ export default defineConfig({
   environments: { client: { build: { manifest: true } } },
   plugins: [
     i18nLazyCatalogues(),
+    bytesModules(),
     cloudflare({
       config: customizeWorker,
       viteEnvironment: { name: "ssr" },

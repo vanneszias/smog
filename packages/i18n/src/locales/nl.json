@@ -419,9 +419,13 @@
       }
     }
   },
+  "lessonPdf": {
+    "lesson": "Les",
+    "fallbackFootnote": "Nog niet vertaald: tekst in {{language}}."
+  },
   "drawings": {
     "title": "Tekeningen",
-    "description": "Lijntekeningen voor het blad van de cursisten: één afbeelding per stap, een tweede stap is optioneel. PNG, JPEG of WebP, hoogstens 1 MB en 2000 pixels per zijde. Alleen leerkrachten, vertalers en beheerders zien ze.",
+    "description": "Lijntekeningen voor het blad van de cursisten: één afbeelding per stap, een tweede stap is optioneel. PNG of JPEG, hoogstens 512 kB en 1200 pixels per zijde. Alleen leerkrachten, vertalers en beheerders zien ze.",
     "step": "Stap {{step}}",
     "stepOptional": "Stap {{step}} (optioneel)",
     "none": "Nog geen tekening",
@@ -442,9 +446,9 @@
     "removeDescription": "De tekening van stap {{step}} wordt verwijderd. Lessen met dit gebaar worden zonder tekening afgedrukt.",
     "removeConfirm": "Verwijderen",
     "errors": {
-      "format": "Dit is geen geldige PNG-, JPEG- of WebP-afbeelding.",
-      "dimensions": "De afbeelding is groter dan 2000 pixels per zijde.",
-      "tooLarge": "Het bestand is groter dan 1 MB.",
+      "format": "Dit is geen geldige PNG- of JPEG-afbeelding (WebP kan niet in de pdf).",
+      "dimensions": "De afbeelding is groter dan 1200 pixels per zijde.",
+      "tooLarge": "Het bestand is groter dan 512 kB.",
       "missing": "De upload is niet aangekomen. Probeer opnieuw.",
       "key": "Deze upload hoort niet bij dit gebaar.",
       "network": "De upload is mislukt. Controleer je verbinding en probeer opnieuw.",
@@ -1600,6 +1604,42 @@
         "held": "In deze les",
         "full": "Een les bevat hoogstens {{max}} gebaren.",
         "error": "Zoeken is mislukt. Probeer opnieuw."
+      },
+      "export": {
+        "open": "Pdf maken",
+        "title": "Les als pdf",
+        "description": "Kies voor wie de pdf is en in welke taal. Je ziet eerst wat erin komt.",
+        "templateLabel": "Blad",
+        "teachers": "Voor lesgevers",
+        "teachersHint": "Het woord met handconfiguratie, plaats, oriëntatie, beweging en verwante begrippen.",
+        "participants": "Voor cursisten",
+        "participantsHint": "Het woord met de tekening en een korte samenvatting.",
+        "languageLabel": "Taal van de pdf",
+        "loading": "Nagaan wat er in de pdf komt…",
+        "failed": "Het overzicht kon niet worden geladen. Probeer opnieuw.",
+        "summary_one": "{{count}} gebaar komt in de pdf.",
+        "summary_other": "{{count}} gebaren komen in de pdf.",
+        "clean": "Alle gebaren zijn volledig ingevuld in {{language}}.",
+        "overLimit": "Deze les heeft {{count}} gebaren, maar deze pdf neemt er hoogstens {{limit}}. Splits de les in twee lessen.",
+        "skippedTitle_one": "{{count}} gebaar is niet gepubliceerd en komt niet in de pdf",
+        "skippedTitle_other": "{{count}} gebaren zijn niet gepubliceerd en komen niet in de pdf",
+        "issuesTitle": "Let op bij deze gebaren",
+        "issue": {
+          "fallback": "Tekst in de standaardtaal",
+          "missing": "Geen lesgeversinfo",
+          "noDrawing": "Geen tekening",
+          "unsupportedDrawing": "Tekening is een WebP en blijft weg: upload ze opnieuw als PNG of JPEG"
+        },
+        "download": "Pdf downloaden",
+        "downloading": "Pdf maken…",
+        "done": "Pdf gedownload.",
+        "errors": {
+          "tooMany": "Deze les heeft te veel gebaren voor deze pdf. Splits de les in twee lessen.",
+          "tooLarge": "De pdf is te groot. Splits de les of gebruik kleinere tekeningen.",
+          "timeout": "Het maken van de pdf duurde te lang. Splits de les in twee en probeer opnieuw.",
+          "rateLimited": "Je hebt net veel pdf’s gemaakt. Wacht even en probeer opnieuw.",
+          "generic": "De pdf kon niet worden gemaakt. Probeer opnieuw."
+        }
       },
       "reorder": {
         "instructions": "Druk op spatie of Enter om een onderdeel op te pakken. Verplaats het met de pijltjestoetsen en druk opnieuw op spatie of Enter om het neer te zetten. Escape annuleert.",

@@ -192,6 +192,10 @@ const PROCEDURES: Record<string, Row> = {
   },
   "lessons.delete": { input: { id: "l" }, level: "teacher" },
   "lessons.duplicate": { input: { id: "l" }, level: "teacher" },
+  "lessons.exportPreview": {
+    input: { id: "l", locale: "nl", template: "teachers" },
+    level: "teacher",
+  },
   "lessons.gestureMarkers": { input: { gestureIds: [] }, level: "teacher" },
   "lessons.get": { input: { id: "l" }, level: "teacher" },
   "lessons.list": { input: {}, level: "teacher" },
@@ -573,7 +577,13 @@ describe("the authorization table", () => {
         audit: `lesson.${path}`,
       });
     }
-    for (const path of ["gestureMarkers", "get", "list", "readiness"]) {
+    for (const path of [
+      "exportPreview",
+      "gestureMarkers",
+      "get",
+      "list",
+      "readiness",
+    ]) {
       expect(LESSON_PROCEDURE_KINDS[`lessons.${path}`], path).toBe("read");
     }
   });

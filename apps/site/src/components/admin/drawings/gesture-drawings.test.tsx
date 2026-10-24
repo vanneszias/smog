@@ -176,7 +176,7 @@ describe("GestureDrawingCard", () => {
     expect(init.headers).toEqual({ "content-type": "image/png" });
   });
 
-  test("refuses a file that is not an image or is over 1 MB before asking for a URL", async () => {
+  test("refuses a file that is not an image or is over 512 kB before asking for a URL", async () => {
     const { calls } = await renderCard(["teacher"], {
       "teacher/listDrawings": { items: [] },
     });
@@ -185,26 +185,28 @@ describe("GestureDrawingCard", () => {
       target: { files: [file("notes.pdf", "application/pdf")] },
     });
     expect(
-      await screen.findByText("This is not a valid PNG, JPEG or WebP image.")
+      await screen.findByText(
+        "This is not a valid PNG or JPEG image (a WebP cannot go into the PDF)."
+      )
     ).toBeDefined();
     fireEvent.change(screen.getByTestId("drawing-file-1"), {
-      target: { files: [file("big.png", "image/png", 1_048_577)] },
+      target: { files: [file("big.png", "image/png", 524_289)] },
     });
     expect(
-      await screen.findByText("The file is larger than 1 MB.")
+      await screen.findByText("The file is larger than 512 kB.")
     ).toBeDefined();
     expect(calls.some((call) => call.path === "teacher/uploadDrawing")).toBe(
       false
     );
   });
 
-  test("shows what the server refused: a side over 2000 px", async () => {
+  test("shows what the server refused: a side over 1200 px", async () => {
     await renderCard(["teacher"], {
       "teacher/listDrawings": { items: [] },
       "teacher/uploadDrawing": TICKET,
     });
     await waitFor(() => step(1));
-    // The signed fallback's refusal for a side over 2,000 px.
+    // The signed fallback's refusal for a side over 1,200 px.
     globalThis.fetch = mock(() =>
       Promise.resolve(new Response(null, { status: 422 }))
     ) as unknown as typeof fetch;
@@ -212,7 +214,7 @@ describe("GestureDrawingCard", () => {
       target: { files: [file("wide.png", "image/png")] },
     });
     expect(
-      await screen.findByText("The image is larger than 2000 pixels on a side.")
+      await screen.findByText("The image is larger than 1200 pixels on a side.")
     ).toBeDefined();
   });
 

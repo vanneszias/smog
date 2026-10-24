@@ -28,6 +28,30 @@ export const LESSON_PDF_LIMITS = {
 /** The wall-clock budget of one PDF render in the Worker (spec 5.4). */
 export const LESSON_PDF_BUDGET_MS = 25_000;
 
+/** The route that serves a lesson's PDF (teacher or admin session; the web dialog and the mobile app both use it). */
+export function lessonPdfPath(
+  lessonId: string,
+  template: LessonTemplate,
+  locale: string
+): string {
+  const query = new URLSearchParams({ locale, template });
+  return `/api/teacher/lessons/${lessonId}/pdf?${query.toString()}`;
+}
+
+/** Why the PDF route refuses (`code` of its JSON body). */
+export const LESSON_PDF_REFUSALS = [
+  "BAD_REQUEST",
+  "FORBIDDEN",
+  "LOCALE_NOT_ENABLED",
+  "NOT_FOUND",
+  "RATE_LIMITED",
+  "TIMEOUT",
+  "TOO_LARGE",
+  "TOO_MANY",
+  "UNAUTHORIZED",
+] as const;
+export type LessonPdfRefusal = (typeof LESSON_PDF_REFUSALS)[number];
+
 export const lessonTitleSchema = z.string().trim().min(1).max(LESSON_TITLE_MAX);
 export const lessonNotesSchema = z.string().max(LESSON_NOTES_MAX);
 

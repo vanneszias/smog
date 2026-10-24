@@ -1,18 +1,18 @@
 /**
  * The drawing upload and the drawing card (phase 10c task 3, spec 5.2): one
- * PNG, JPEG or WebP per gesture and step, at most 1 MiB and 2,000 px on a
- * side, uploaded with a presigned PUT and then finalized (the server reads
+ * PNG or JPEG per gesture and step, at most 512 KiB and 1,200 px on a
+ * side (a WebP cannot be embedded in the PDF), uploaded with a presigned PUT and then finalized (the server reads
  * the object and checks its bytes). Client-safe. **Private material:** the
  * image is served only by `GET /api/teacher/drawings/<gestureId>/<step>`.
  */
-import { DRAWING_MAX_BYTES } from "@smog/db/enums";
+import { DRAWING_UPLOAD_MAX_BYTES } from "@smog/db/enums";
 import { z } from "zod";
 import {
-  drawingContentTypeSchema,
   drawingCreditSchema,
   drawingKeySchema,
   drawingRowSchema,
   drawingStepSchema,
+  drawingUploadTypeSchema,
 } from "./teacher";
 
 /** The private route a drawing is served from (`?v=` is the change stamp that renews the browser's 5-minute copy). */
@@ -26,9 +26,9 @@ export function drawingPath(
 }
 
 export const drawingUploadInputSchema = z.object({
-  contentType: drawingContentTypeSchema,
+  contentType: drawingUploadTypeSchema,
   gestureId: z.uuid(),
-  size: z.number().int().min(1).max(DRAWING_MAX_BYTES),
+  size: z.number().int().min(1).max(DRAWING_UPLOAD_MAX_BYTES),
   step: drawingStepSchema,
 });
 export type DrawingUploadInput = z.infer<typeof drawingUploadInputSchema>;
@@ -37,7 +37,7 @@ export type DrawingUploadInput = z.infer<typeof drawingUploadInputSchema>;
 export const drawingUploadResultSchema = z.object({
   /** Epoch ms after which the URL no longer works. */
   expiresAt: z.number().int(),
-  headers: z.object({ "content-type": drawingContentTypeSchema }),
+  headers: z.object({ "content-type": drawingUploadTypeSchema }),
   key: drawingKeySchema,
   uploadUrl: z.url(),
 });

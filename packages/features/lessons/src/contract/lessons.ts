@@ -8,6 +8,8 @@ import {
   lessonCreateInputSchema,
   lessonDeletedSchema,
   lessonDetailSchema,
+  lessonExportPreviewInputSchema,
+  lessonExportPreviewSchema,
   lessonIdInputSchema,
   lessonListInputSchema,
   lessonListSchema,
@@ -45,6 +47,16 @@ export const lessonsContract = {
   duplicate: baseContract
     .input(lessonIdInputSchema)
     .output(lessonCreatedSchema),
+  /**
+   * What the PDF in a template and language would contain: its gestures, the
+   * unpublished ones left out, those that print default-language text or
+   * have nothing to print, and the template's cap (`overLimit`).
+   * `NOT_FOUND` for an unknown lesson; `VALIDATION` (field `locale`:
+   * `notEnabled`). The PDF itself is `GET /api/teacher/lessons/<id>/pdf`.
+   */
+  exportPreview: baseContract
+    .input(lessonExportPreviewInputSchema)
+    .output(lessonExportPreviewSchema),
   /** Which of the asked gestures have a drawing (the picker's marker). */
   gestureMarkers: baseContract
     .input(gestureMarkersInputSchema)
@@ -78,6 +90,7 @@ export const LESSON_KINDS = {
   create: { audit: "lesson.create" },
   delete: { audit: "lesson.delete" },
   duplicate: { audit: "lesson.duplicate" },
+  exportPreview: "read",
   gestureMarkers: "read",
   get: "read",
   list: "read",

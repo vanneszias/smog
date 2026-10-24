@@ -62,6 +62,7 @@ import {
   setNumber,
   setText,
 } from "./lesson-draft";
+import { LessonExportButton } from "./lesson-export-button";
 import {
   Sections,
   StructureActions,
@@ -555,9 +556,16 @@ function Builder({
             <CardTitle className="text-body" level={2}>
               {t("admin.lessons.structure")}
             </CardTitle>
-            <Text size="body-sm" tone="muted">
-              {t("admin.lessons.count", { count: gestureCount(draft) })}
-            </Text>
+            <span className="flex flex-wrap items-center gap-3">
+              <Text size="body-sm" tone="muted">
+                {t("admin.lessons.count", { count: gestureCount(draft) })}
+              </Text>
+              <LessonExportButton
+                lessonId={lesson.id}
+                pending={!readOnly && auto.status !== "saved"}
+                version={auto.version}
+              />
+            </span>
           </div>
           {activeLanguage ? (
             <ReadinessBar

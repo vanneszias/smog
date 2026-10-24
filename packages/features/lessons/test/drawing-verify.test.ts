@@ -3,7 +3,7 @@ import { inspectDrawing } from "../src/server/drawing-verify";
 import { jpegBytes, pngBytes, webpBytes } from "../src/testing";
 
 describe("inspectDrawing", () => {
-  it("reads the type and size of a PNG, a JPEG and the three WebP codecs", () => {
+  it("reads the type and size of a PNG and a JPEG", () => {
     expect(inspectDrawing(pngBytes(120, 80))).toEqual({
       contentType: "image/png",
       height: 80,
@@ -16,19 +16,20 @@ describe("inspectDrawing", () => {
       ok: true,
       width: 640,
     });
+  });
+
+  it("refuses every WebP codec: pdf-lib cannot embed it", () => {
     for (const kind of ["lossy", "lossless", "extended"] as const) {
       expect(inspectDrawing(webpBytes(300, 200, kind)), kind).toEqual({
-        contentType: "image/webp",
-        height: 200,
-        ok: true,
-        width: 300,
+        ok: false,
+        reason: "format",
       });
     }
   });
 
-  it("accepts exactly 2000 px on a side and refuses 2001", () => {
-    expect(inspectDrawing(pngBytes(2000, 2000)).ok).toBe(true);
-    expect(inspectDrawing(pngBytes(2001, 10))).toEqual({
+  it("accepts exactly 1200 px on a side and refuses 1201", () => {
+    expect(inspectDrawing(pngBytes(1200, 1200)).ok).toBe(true);
+    expect(inspectDrawing(pngBytes(1201, 10))).toEqual({
       ok: false,
       reason: "dimensions",
     });
@@ -36,18 +37,10 @@ describe("inspectDrawing", () => {
       ok: false,
       reason: "dimensions",
     });
-    expect(inspectDrawing(webpBytes(3000, 10, "lossless"))).toEqual({
-      ok: false,
-      reason: "dimensions",
-    });
-    expect(inspectDrawing(webpBytes(10, 4000, "extended"))).toEqual({
-      ok: false,
-      reason: "dimensions",
-    });
   });
 
-  it("refuses a file over 1 MiB, an empty file and files that are not images", () => {
-    expect(inspectDrawing(new Uint8Array(1_048_577))).toEqual({
+  it("refuses a file over 512 KiB, an empty file and files that are not images", () => {
+    expect(inspectDrawing(new Uint8Array(524_289))).toEqual({
       ok: false,
       reason: "tooLarge",
     });
@@ -85,20 +78,6 @@ describe("inspectDrawing", () => {
     expect(inspectDrawing(Uint8Array.from([0xff, 0xd8, 0xff, 0xd9])).ok).toBe(
       false
     );
-  });
-
-  it("refuses an animated WebP, an unknown chunk and a RIFF that is not WebP", () => {
-    expect(
-      inspectDrawing(webpBytes(8, 8, "extended", { animated: true })).ok
-    ).toBe(false);
-    const unknown = webpBytes();
-    unknown.set(new TextEncoder().encode("ABCD"), 12);
-    expect(inspectDrawing(unknown).ok).toBe(false);
-    const wave = webpBytes();
-    wave.set(new TextEncoder().encode("WAVE"), 8);
-    expect(inspectDrawing(wave).ok).toBe(false);
-    const short = webpBytes();
-    expect(inspectDrawing(short.slice(0, short.length - 4)).ok).toBe(false);
   });
 
   it("does not trust a magic number alone: a PNG signature with an HTML body is refused", () => {

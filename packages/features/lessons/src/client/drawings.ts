@@ -5,10 +5,13 @@
  * headers, and `finalizeDrawing` has the server read and check it. The
  * checks here only save a trip; the server never trusts them.
  */
-import { DRAWING_MAX_BYTES, type DrawingContentType } from "@smog/db/enums";
+import {
+  DRAWING_UPLOAD_MAX_BYTES,
+  type DrawingUploadType,
+} from "@smog/db/enums";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { type DrawingRow, drawingContentTypeSchema } from "../schema";
+import { type DrawingRow, drawingUploadTypeSchema } from "../schema";
 import {
   TEACHER_STALE_TIME,
   type TeacherClient,
@@ -27,11 +30,10 @@ export interface DrawingFile {
 
 const PNG = /\.png$/i;
 const JPEG = /\.jpe?g$/i;
-const WEBP = /\.webp$/i;
 
 /** The accepted type of a file (a name decides when the browser gives no type), or `null`. */
-export function drawingTypeOf(file: DrawingFile): DrawingContentType | null {
-  const declared = drawingContentTypeSchema.safeParse(file.type);
+export function drawingTypeOf(file: DrawingFile): DrawingUploadType | null {
+  const declared = drawingUploadTypeSchema.safeParse(file.type);
   if (declared.success) {
     return declared.data;
   }
@@ -39,10 +41,7 @@ export function drawingTypeOf(file: DrawingFile): DrawingContentType | null {
     if (PNG.test(file.name)) {
       return "image/png";
     }
-    if (JPEG.test(file.name)) {
-      return "image/jpeg";
-    }
-    return WEBP.test(file.name) ? "image/webp" : null;
+    return JPEG.test(file.name) ? "image/jpeg" : null;
   }
   return null;
 }
@@ -57,12 +56,14 @@ export type DrawingProblem =
   | "network"
   | "tooLarge";
 
-/** `null` for a PNG, JPEG or WebP of at most 1 MiB. */
+/** `null` for a PNG or JPEG of at most 512 KiB. */
 export function drawingFileProblem(file: DrawingFile): DrawingProblem | null {
   if (drawingTypeOf(file) === null) {
     return "format";
   }
-  return file.size < 1 || file.size > DRAWING_MAX_BYTES ? "tooLarge" : null;
+  return file.size < 1 || file.size > DRAWING_UPLOAD_MAX_BYTES
+    ? "tooLarge"
+    : null;
 }
 
 /** The PUT was refused. */

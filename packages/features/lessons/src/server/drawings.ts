@@ -1,7 +1,7 @@
 /**
  * `teacher.uploadDrawing`, `finalizeDrawing`, `deleteDrawing` and
  * `listDrawings` (phase 10c task 3, plan ruling 6): a gesture's drawings,
- * one PNG, JPEG or WebP per step in R2 under
+ * one PNG or JPEG per step in R2 under
  * `teacher/drawings/<gestureId>/<step>/<uuid>`.
  *
  * The browser PUTs the file itself (`drawingUploadUrl`). `finalizeDrawing`
@@ -16,7 +16,7 @@
  */
 import { gesture, gestureDrawing } from "@smog/db";
 import type { Db } from "@smog/db/client";
-import { DRAWING_MAX_BYTES } from "@smog/db/enums";
+import { DRAWING_UPLOAD_MAX_BYTES } from "@smog/db/enums";
 import { markUnchanged } from "@smog/rpc/audit";
 import { and, eq } from "drizzle-orm";
 import {
@@ -121,7 +121,7 @@ async function readUpload(
   if (!head) {
     return { reason: "missing" };
   }
-  if (head.size < 1 || head.size > DRAWING_MAX_BYTES) {
+  if (head.size < 1 || head.size > DRAWING_UPLOAD_MAX_BYTES) {
     return { reason: "tooLarge" };
   }
   const object = await media.get(key);
@@ -129,7 +129,7 @@ async function readUpload(
     return { reason: "missing" };
   }
   const bytes = new Uint8Array(await object.arrayBuffer());
-  return bytes.byteLength > DRAWING_MAX_BYTES
+  return bytes.byteLength > DRAWING_UPLOAD_MAX_BYTES
     ? { reason: "tooLarge" }
     : { bytes, declaredType: object.httpMetadata?.contentType };
 }

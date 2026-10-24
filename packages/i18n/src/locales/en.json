@@ -419,9 +419,13 @@
       }
     }
   },
+  "lessonPdf": {
+    "lesson": "Lesson",
+    "fallbackFootnote": "Not yet translated: text in {{language}}."
+  },
   "drawings": {
     "title": "Drawings",
-    "description": "Line drawings for the participants' sheet: one image per step, a second step is optional. PNG, JPEG or WebP, at most 1 MB and 2000 pixels on a side. Only teachers, translators and admins can see them.",
+    "description": "Line drawings for the participants' sheet: one image per step, a second step is optional. PNG or JPEG, at most 512 kB and 1200 pixels on a side. Only teachers, translators and admins can see them.",
     "step": "Step {{step}}",
     "stepOptional": "Step {{step}} (optional)",
     "none": "No drawing yet",
@@ -442,9 +446,9 @@
     "removeDescription": "The drawing of step {{step}} is deleted. Lessons that use this gesture print it without the drawing.",
     "removeConfirm": "Remove",
     "errors": {
-      "format": "This is not a valid PNG, JPEG or WebP image.",
-      "dimensions": "The image is larger than 2000 pixels on a side.",
-      "tooLarge": "The file is larger than 1 MB.",
+      "format": "This is not a valid PNG or JPEG image (a WebP cannot go into the PDF).",
+      "dimensions": "The image is larger than 1200 pixels on a side.",
+      "tooLarge": "The file is larger than 512 kB.",
       "missing": "The upload did not arrive. Try again.",
       "key": "This upload does not belong to this gesture.",
       "network": "The upload failed. Check your connection and try again.",
@@ -1600,6 +1604,42 @@
         "held": "In this lesson",
         "full": "A lesson holds at most {{max}} gestures.",
         "error": "The search failed. Try again."
+      },
+      "export": {
+        "open": "Make PDF",
+        "title": "Lesson as a PDF",
+        "description": "Choose who the PDF is for and in which language. You see what it will contain first.",
+        "templateLabel": "Sheet",
+        "teachers": "For teachers",
+        "teachersHint": "The word with hand configuration, place, orientation, movement and related meanings.",
+        "participants": "For participants",
+        "participantsHint": "The word with its drawing and a short summary.",
+        "languageLabel": "Language of the PDF",
+        "loading": "Checking what the PDF will contain…",
+        "failed": "The overview could not be loaded. Try again.",
+        "summary_one": "{{count}} gesture goes into the PDF.",
+        "summary_other": "{{count}} gestures go into the PDF.",
+        "clean": "Every gesture is complete in {{language}}.",
+        "overLimit": "This lesson has {{count}} gestures, but this PDF takes at most {{limit}}. Split the lesson in two.",
+        "skippedTitle_one": "{{count}} gesture is not published and stays out of the PDF",
+        "skippedTitle_other": "{{count}} gestures are not published and stay out of the PDF",
+        "issuesTitle": "Check these gestures",
+        "issue": {
+          "fallback": "Text in the default language",
+          "missing": "No teacher info",
+          "noDrawing": "No drawing",
+          "unsupportedDrawing": "The drawing is a WebP and is left out: upload it again as PNG or JPEG"
+        },
+        "download": "Download PDF",
+        "downloading": "Making the PDF…",
+        "done": "PDF downloaded.",
+        "errors": {
+          "tooMany": "This lesson has too many gestures for this PDF. Split the lesson in two.",
+          "tooLarge": "The PDF is too large. Split the lesson or use smaller drawings.",
+          "timeout": "Making the PDF took too long. Split the lesson in two and try again.",
+          "rateLimited": "You just made a lot of PDFs. Wait a moment and try again.",
+          "generic": "The PDF could not be made. Try again."
+        }
       },
       "reorder": {
         "instructions": "Press space or Enter to pick up an item. Move it with the arrow keys and press space or Enter again to drop it. Escape cancels.",

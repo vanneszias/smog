@@ -210,7 +210,7 @@ describe("participants' template", () => {
         drawings: [
           {
             bytes: new Uint8Array(drawingFixtures.jpegWide),
-            credit: "Other",
+            credit: "© Other",
             step: 1,
           },
         ],
@@ -224,6 +224,7 @@ describe("participants' template", () => {
     const [text = ""] = await pageTexts(report.bytes);
     expect(text).toContain("© Invented Artist");
     expect(text).toContain("© Other");
+    expect(text).not.toContain("© ©");
     expect(text).toContain("1");
     expect(text).toContain("2");
   });

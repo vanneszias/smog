@@ -7,7 +7,7 @@ import { getAuth, siteEnv } from "../src/server/auth";
 const ORIGIN = "http://localhost:5173";
 const PASSWORD = "correct horse battery";
 const GESTURE_ID = "7d0c1a52-9a3e-4a0b-8a54-0f5f3c1b2e11";
-const MAX = 1_048_576;
+const MAX = 524_288;
 
 type Who = "admin" | "teacher" | "translator" | "user";
 
@@ -140,7 +140,7 @@ describe("PUT /api/teacher/drawings/upload/<key> (the signed fallback)", () => {
     expect((await put(upload.uploadUrl, pngBytes(30, 20))).status).toBe(409);
   });
 
-  it("stores a JPEG and a WebP signed as their own types", async () => {
+  it("stores a JPEG signed as its own type and refuses to sign a WebP", async () => {
     const jpeg = await requestUpload(cookies.teacher, "image/jpeg");
     expect(
       (
@@ -149,23 +149,23 @@ describe("PUT /api/teacher/drawings/upload/<key> (the signed fallback)", () => {
         })
       ).status
     ).toBe(200);
-    const webp = await requestUpload(cookies.teacher, "image/webp", 2);
+    // A WebP cannot be embedded in the PDF: a PUT claiming it is refused.
     expect(
       (
-        await put(webp.uploadUrl, webpBytes(50, 50, "extended"), {
+        await put(jpeg.uploadUrl, webpBytes(50, 50, "extended"), {
           "content-type": "image/webp",
         })
       ).status
-    ).toBe(200);
+    ).toBe(415);
   });
 
-  it("refuses wrong bytes, a type that is not the signed one, a side over 2,000 px and a file over 1 MiB", async () => {
+  it("refuses wrong bytes, a type that is not the signed one, a side over 1,200 px and a file over 512 KiB", async () => {
     const upload = await requestUpload(cookies.teacher);
     const html = new TextEncoder().encode("<script>alert(1)</script>");
     expect((await put(upload.uploadUrl, html)).status).toBe(415);
     // A JPEG sent as the signed PNG type.
     expect((await put(upload.uploadUrl, jpegBytes())).status).toBe(415);
-    expect((await put(upload.uploadUrl, pngBytes(2500, 10))).status).toBe(422);
+    expect((await put(upload.uploadUrl, pngBytes(1300, 10))).status).toBe(422);
     expect((await put(upload.uploadUrl, new Uint8Array(MAX + 1))).status).toBe(
       413
     );
@@ -173,6 +173,14 @@ describe("PUT /api/teacher/drawings/upload/<key> (the signed fallback)", () => {
       (
         await put(upload.uploadUrl, pngBytes(), {
           "content-type": "image/webp",
+        })
+      ).status
+    ).toBe(415);
+    // A type that is allowed but not the signed one.
+    expect(
+      (
+        await put(upload.uploadUrl, jpegBytes(), {
+          "content-type": "image/jpeg",
         })
       ).status
     ).toBe(403);

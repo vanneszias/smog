@@ -103,6 +103,7 @@ describe("lessons", () => {
       ["lessons/duplicate", { id }],
       ["lessons/delete", { id }],
       ["lessons/readiness", { id, locale: "nl" }],
+      ["lessons/exportPreview", { id, locale: "nl", template: "teachers" }],
       ["lessons/gestureMarkers", { gestureIds: [] }],
     ];
     for (const [path, input] of calls) {

@@ -1,6 +1,6 @@
 import { AuthError, getSession, requireRoleUser } from "@smog/auth";
 import { createDb } from "@smog/db/client";
-import { DRAWING_CONTENT_TYPES, DRAWING_MAX_BYTES } from "@smog/db/enums";
+import { DRAWING_UPLOAD_MAX_BYTES, DRAWING_UPLOAD_TYPES } from "@smog/db/enums";
 import { DRAWING_KEY_PATTERN } from "@smog/lessons/schema";
 import {
   findDrawing,
@@ -52,7 +52,7 @@ function media(): R2Bucket {
 }
 
 function isDrawingType(value: string): boolean {
-  return DRAWING_CONTENT_TYPES.some((type) => type === value);
+  return DRAWING_UPLOAD_TYPES.some((type) => type === value);
 }
 
 const REFUSALS = {
@@ -63,14 +63,14 @@ const REFUSALS = {
 
 /**
  * The body of an upload when it is a drawing of the signed type within the
- * caps (size, then the bytes: PNG, JPEG or WebP, at most 2,000 px); else
+ * caps (size, then the bytes: PNG or JPEG, at most 1,200 px); else
  * the refusal.
  */
 async function readImage(
   request: Request,
   contentType: string
 ): Promise<{ bytes: Uint8Array<ArrayBuffer> } | Response> {
-  const body = await readCappedBody(request, DRAWING_MAX_BYTES);
+  const body = await readCappedBody(request, DRAWING_UPLOAD_MAX_BYTES);
   if (!body.ok) {
     return json(body.status, {
       code: body.status === 413 ? "TOO_LARGE" : "BAD_REQUEST",
