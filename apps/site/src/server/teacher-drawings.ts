@@ -4,7 +4,7 @@ import { DRAWING_UPLOAD_MAX_BYTES, DRAWING_UPLOAD_TYPES } from "@smog/db/enums";
 import { DRAWING_KEY_PATTERN } from "@smog/lessons/schema";
 import {
   findDrawing,
-  inspectDrawing,
+  inspectDrawingData,
   verifyDrawingUpload,
 } from "@smog/lessons/server";
 import { checkRateLimit, isForeignRequest } from "@smog/rpc";
@@ -76,7 +76,7 @@ async function readImage(
       code: body.status === 413 ? "TOO_LARGE" : "BAD_REQUEST",
     });
   }
-  const inspected = inspectDrawing(body.bytes);
+  const inspected = await inspectDrawingData(body.bytes);
   if (!inspected.ok) {
     const [status, code] = REFUSALS[inspected.reason];
     return json(status, { code });

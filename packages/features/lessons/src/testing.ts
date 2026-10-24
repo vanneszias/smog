@@ -101,6 +101,28 @@ export function pngBytes(width = 8, height = 8): Uint8Array<ArrayBuffer> {
   );
 }
 
+/**
+ * A decompression bomb: a valid 1 x 1 PNG whose IDAT is a real deflate stream
+ * of `inflatedBytes` zeros (default 20 MB, a few tens of KB of stream).
+ */
+export async function pngBombBytes(
+  inflatedBytes = 20_000_000
+): Promise<Uint8Array<ArrayBuffer>> {
+  const compressed = new Uint8Array(
+    await new Response(
+      new Blob([new Uint8Array(inflatedBytes)])
+        .stream()
+        .pipeThrough(new CompressionStream("deflate"))
+    ).arrayBuffer()
+  );
+  return concat(
+    Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk("IHDR", concat(u32(1), u32(1), Uint8Array.from([8, 0, 0, 0, 0]))),
+    pngChunk("IDAT", compressed),
+    pngChunk("IEND", new Uint8Array(0))
+  );
+}
+
 /** A baseline JPEG frame header with the size and an empty scan. */
 export function jpegBytes(width = 8, height = 8): Uint8Array<ArrayBuffer> {
   const sof = Uint8Array.from([

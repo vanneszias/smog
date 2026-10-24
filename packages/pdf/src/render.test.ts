@@ -259,6 +259,57 @@ describe("participants' template", () => {
   });
 });
 
+describe("decompression bombs (review fix wave A-M1)", () => {
+  /** A 1 x 1 PNG whose IDAT inflates to 20 MB: the header says nothing of it. */
+  async function bomb(): Promise<Uint8Array> {
+    const zlib = new Uint8Array(
+      await new Response(
+        new Blob([new Uint8Array(20_000_000)])
+          .stream()
+          .pipeThrough(new CompressionStream("deflate"))
+      ).arrayBuffer()
+    );
+    const chunk = (type: string, data: Uint8Array): Uint8Array => {
+      const out = new Uint8Array(12 + data.length);
+      const view = new DataView(out.buffer);
+      view.setUint32(0, data.length);
+      out.set(new TextEncoder().encode(type), 4);
+      out.set(data, 8);
+      return out;
+    };
+    const ihdr = new Uint8Array(13);
+    new DataView(ihdr.buffer).setUint32(0, 1);
+    new DataView(ihdr.buffer).setUint32(4, 1);
+    ihdr[8] = 8;
+    const parts = [
+      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk("IHDR", ihdr),
+      chunk("IDAT", zlib),
+      chunk("IEND", new Uint8Array(0)),
+    ];
+    const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+    let at = 0;
+    for (const part of parts) {
+      out.set(part, at);
+      at += part.length;
+    }
+    return out;
+  }
+
+  test("a PNG that inflates past its header is not embedded: no drawing, the export goes on", async () => {
+    const input = doc("participants", [
+      row({
+        drawings: [{ bytes: await bomb(), credit: "", step: 1 }],
+        word: "bom",
+      }),
+    ]);
+    const started = performance.now();
+    const report = await renderLessonPdfDetailed(input, assets);
+    expect(performance.now() - started).toBeLessThan(2000);
+    expect(report.droppedDrawings).toEqual(["bom"]);
+  });
+});
+
 describe("layout", () => {
   test("rows are never split, the header repeats and every page is numbered", async () => {
     const rows: PdfRow[] = [];

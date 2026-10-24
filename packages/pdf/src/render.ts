@@ -26,6 +26,7 @@ import {
   type PdfRenderReport,
   type PdfRow,
 } from "./schema";
+import { pngInflatesWithin } from "./png-guard";
 import {
   type Measurer,
   measurerFor,
@@ -460,7 +461,10 @@ async function embedDrawing(
 ): Promise<PDFImage | undefined> {
   try {
     if (isPng(bytes)) {
-      return await doc.embedPng(bytes);
+      // pdf-lib inflates synchronously: a stream that inflates past what its header implies is a bomb, no drawing.
+      return (await pngInflatesWithin(bytes))
+        ? await doc.embedPng(bytes)
+        : undefined;
     }
     if (isJpeg(bytes)) {
       return await doc.embedJpg(bytes);

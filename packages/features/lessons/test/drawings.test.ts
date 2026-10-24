@@ -10,7 +10,7 @@ import {
   signDrawingUpload,
   verifyDrawingUpload,
 } from "../src/server/drawing-upload";
-import { jpegBytes, pngBytes, webpBytes } from "../src/testing";
+import { jpegBytes, pngBombBytes, pngBytes, webpBytes } from "../src/testing";
 import {
   type Authed,
   auditMark,
@@ -357,6 +357,15 @@ describe("finalizeDrawing", () => {
     expect(
       await callAs(teacher, "listDrawings", { gestureId: GESTURE_ID })
     ).toEqual({ items: [] });
+  });
+
+  it("refuses a decompression bomb (a 1 x 1 PNG whose pixel stream inflates to 20 MB) and deletes it", async () => {
+    const upload = await issue(teacher);
+    await put(upload, await pngBombBytes());
+    expect((await failureOf(finalize(teacher, upload))).data).toMatchObject({
+      fieldErrors: { file: ["format"] },
+    });
+    expect(await objectExists(upload.key)).toBe(false);
   });
 
   it("refuses a file over 512 KiB and one over 1,200 px on a side", async () => {

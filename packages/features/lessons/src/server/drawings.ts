@@ -28,7 +28,7 @@ import {
 } from "../schema";
 import { auditStatement } from "./audit";
 import { drawingUploadUrl } from "./drawing-upload";
-import { type DrawingVerdict, inspectDrawing } from "./drawing-verify";
+import { type DrawingVerdict, inspectDrawingData } from "./drawing-verify";
 import { teacherWriteProcedure, teachingProcedure } from "./procedure";
 
 interface GestureRef {
@@ -155,7 +155,7 @@ async function checkUpload(media: R2Bucket, key: string): Promise<UploadCheck> {
     }
     return { ok: false, reason: upload.reason };
   }
-  const verdict = inspectDrawing(upload.bytes);
+  const verdict = await inspectDrawingData(upload.bytes);
   if (verdict.ok && upload.declaredType === verdict.contentType) {
     return { ok: true, upload, verdict };
   }

@@ -6,14 +6,18 @@
  * progressive `SOF` marker. A WebP is refused as a format: `pdf-lib` cannot
  * embed it (task 5b). The width and height come from the header, so a file
  * over `DRAWING_UPLOAD_MAX_PIXELS` (1,200) on a side is refused whatever its
- * size. Pure: it takes the whole object (at most 512 KiB) and never decodes
- * pixels.
+ * size. `inspectDrawing` is pure and reads headers only; the upload paths call
+ * `inspectDrawingData`, which also inflates a PNG's `IDAT` stream through a
+ * bounded sink and refuses one that inflates past what its header implies (a
+ * decompression bomb: 400 KB of stream for a 1 x 1 picture). It takes the
+ * whole object (at most 512 KiB) and never decodes pixels.
  */
 import {
   DRAWING_UPLOAD_MAX_BYTES,
   DRAWING_UPLOAD_MAX_PIXELS,
   type DrawingUploadType,
 } from "@smog/db/enums";
+import { pngInflatesWithin } from "@smog/pdf/png";
 
 export type DrawingVerdict =
   | {
@@ -178,4 +182,19 @@ export function inspectDrawing(bytes: Uint8Array): DrawingVerdict {
     return verdictOf("image/jpeg", readJpeg(bytes));
   }
   return FORMAT;
+}
+
+/** `inspectDrawing` plus the bounded inflate of a PNG's pixel stream: a bomb is refused as `format`. */
+export async function inspectDrawingData(
+  bytes: Uint8Array
+): Promise<DrawingVerdict> {
+  const verdict = inspectDrawing(bytes);
+  if (
+    verdict.ok &&
+    verdict.contentType === "image/png" &&
+    !(await pngInflatesWithin(bytes))
+  ) {
+    return FORMAT;
+  }
+  return verdict;
 }

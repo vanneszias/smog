@@ -6,7 +6,7 @@ export {
 } from "./coverage";
 export { findDrawing, type StoredDrawing } from "./drawing-read";
 export { verifyDrawingUpload } from "./drawing-upload";
-export { type DrawingVerdict, inspectDrawing } from "./drawing-verify";
+export { type DrawingVerdict, inspectDrawingData } from "./drawing-verify";
 export { LessonExportError } from "./export-plan";
 export {
   type ExportDeps,
