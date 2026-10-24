@@ -21,7 +21,7 @@ function rpcEnv() {
 }
 const PASSWORD = "correct horse battery";
 
-export function testDb(): Db {
+function testDb(): Db {
   return createDb(env.DB);
 }
 
