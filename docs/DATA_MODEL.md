@@ -309,6 +309,12 @@ erDiagram
 | `category_translation.category_id` | `category` | CASCADE |
 | `user_role.user_id` | `user` | CASCADE |
 | `user_role.granted_by`, `ui_string.updated_by`, `gesture_translation.updated_by`, `category_translation.updated_by`, `gesture_audio.updated_by`, `legal_text.updated_by`, `legal_text.published_by` | `user` | SET NULL |
+| `gesture_teacher_info.gesture_id`, `gesture_drawing.gesture_id`, `lesson_item.gesture_id` | `gesture` | CASCADE |
+| `gesture_teacher_info.locale`, `lesson_translation.locale`, `lesson_section_translation.locale` | `language` | NO ACTION |
+| `gesture_teacher_info.updated_by`, `gesture_drawing.updated_by`, `lesson.author_id` | `user` | SET NULL |
+| `lesson_translation.lesson_id`, `lesson_section.lesson_id`, `lesson_item.lesson_id` | `lesson` | CASCADE |
+| `lesson_section_translation.section_id` | `lesson_section` | CASCADE |
+| `lesson_item.section_id` | `lesson_section` | SET NULL (a deleted section leaves its items ungrouped) |
 | `sponsorship.sponsor_id` | `sponsor` | RESTRICT |
 | `sponsorship.gesture_id` | `gesture` | RESTRICT (a sponsored gesture cannot be deleted; unpublish it) |
 | `payment_item.payment_id` | `payment` | CASCADE |
@@ -605,6 +611,30 @@ One row per (kind, language, version), history kept: `id`, `kind` (`privacy`, `t
 
 D1 applies a migration in a transaction where `PRAGMA foreign_keys = OFF` is a no-op, so the 12-step rebuild (create `__new_x`, copy, `DROP TABLE x`, rename) **runs the foreign key actions of the drop**: dropping `user` cascade-deletes every session, account, passkey, favorite and list and nulls `audit_log.actor_id`; dropping `sponsor` fails on `sponsorship` (RESTRICT) and would delete every `invoice_request`. A rebuild of such a table must copy every dependent row (and the SET NULL columns) into `_bk_*` tables first, delete what the drop would restrict, rebuild, put the rows back in foreign key order and drop the backups; migration 0015 does this for `user` and `sponsor` and `packages/db/test/migrations-phase-10b.test.ts` proves it on seeded data (every table compared before and after). A table nothing references (`audit_log`, `gesture_keyword`) can be rebuilt plainly. A rebuild of `user` also drops its triggers: recreate them in the same file.
 
+### Teacher information, drawings and lessons (phase 10c)
+
+Private teaching material, never read by a public query (`packages/api/test/teacher-privacy.test.ts`, `packages/features/gestures/test/teacher-privacy.test.ts` and `scripts/teacher-privacy-guard.test.ts` fail on a teacher column or a drawing key in a public output, SQL statement, search index or source file outside `@smog/lessons`). Migrations 0024 to 0027, one per concern.
+
+#### `gesture_teacher_info` (migration 0024)
+
+What a teacher knows about a gesture in one language: `gesture_id` (CASCADE), `locale`, `hc`, `pl`, `or_` (`OR` is an SQL keyword), `bw`, `c_note` (the private text around the public C keywords), `note`, `summary` (all text, default "", at most 2,000 characters each: a CHECK per column), `version` (>= 1, default 1; bumped on every write: the editor's stale-lock and part of the PDF cache fingerprint), `updated_by` (SET NULL), `updated_at`; PK `(gesture_id, locale)`; indexes `(locale, gesture_id)` (coverage per language, the readiness bar) and `updated_by`. One row per language like `gesture_translation`; a missing language falls back to the default language per field. The C words themselves are the public `gesture_keyword` rows of that language.
+
+#### `gesture_drawing` (migration 0025)
+
+A drawing, language-neutral: `gesture_id` (CASCADE), `step` (1 or 2), `r2_key` (unique, `teacher/drawings/<gestureId>/<step>/<uuid>`, a new key on every replace), `content_type` (`image/png`, `image/jpeg`, `image/webp`), `size` (1..1 MiB), `width` and `height` (1..2,000), `credit` (default "", at most 120), `updated_by` (SET NULL), `updated_at` (part of the PDF cache fingerprint); PK `(gesture_id, step)`. The caps are CHECKs as well as upload rules. Served only by the private route `GET /api/teacher/drawings/<gestureId>/<step>` (teacher or admin), never from a public URL.
+
+#### `lesson`, `lesson_translation`, `lesson_section`, `lesson_section_translation`, `lesson_item` (migration 0026)
+
+- `lesson`: `id`, `author_id` (SET NULL: an admin then edits it), `number` (nullable, 0..9999), `version` (>= 1; bumped on every write to the lesson: the builder's stale-lock and part of the PDF cache fingerprint), `created_at`, `updated_at`; indexes `(updated_at, id)` (the list, newest first, keyset) and `(author_id, updated_at)` ("mine").
+- `lesson_translation`: `lesson_id` (CASCADE), `locale`, `title` (1..200), `notes` (default "", at most 2,000); PK `(lesson_id, locale)`; index `(locale, lesson_id)`. A language the teacher did not fill in has no row.
+- `lesson_section`: `id`, `lesson_id` (CASCADE), `position` (>= 0); index `(lesson_id, position)` (not unique: a reorder rewrites positions row by row). `lesson_section_translation`: `section_id` (CASCADE), `locale`, `title` (1..200); PK `(section_id, locale)`.
+- `lesson_item`: `lesson_id` (CASCADE), `section_id` (nullable, SET NULL), `gesture_id` (CASCADE), `position` (>= 0); PK `(lesson_id, gesture_id)` (a gesture appears once per lesson); indexes `(lesson_id, section_id, position)` (the item load), `(section_id)` and `(gesture_id, lesson_id)` (the lessons containing a gesture: the fingerprint, the delete cascade). Order: the sections by `lesson_section.position`; the items of a section (or of no section) by `position`; items with no section come first. A gesture that is later unpublished stays in the lesson (flagged, skipped in the PDF); a deleted gesture leaves it.
+- Query plans of the lesson list, the item load, the teacher info and drawings reads and the coverage count are tested with `fullScans` (`packages/db/test/lessons-plan.test.ts`); the only named scan is the lesson search by title.
+
+#### New audit kinds (migration 0027)
+
+`audit_log` was rebuilt like in 0023 (nothing references it; rows and the five indexes are copied back: `packages/db/test/migrations-phase-10c.test.ts` proves it on a migrated database with data). `AUDIT_ACTIONS` gained `teacher.info_save`, `teacher.drawing_upload`, `teacher.drawing_delete`, `lesson.create`, `lesson.update`, `lesson.delete`, `lesson.duplicate`, `lesson.export`, and `AUDIT_TARGET_TYPES` gained `gesture_teacher_info` (`<gestureId>:<locale>` for a save, `<gestureId>:<step>` for a drawing) and `lesson` (the lesson id). Entries carry ids, language codes, field names and counts, never a text, a title or a PDF (`LESSON_AUDIT_SCHEMAS` in `@smog/admin/schema`).
+
 ### Account, consent, audit
 #### `consent_event`
 
@@ -814,7 +844,7 @@ CHECK: `sponsorship_token_purpose_check`.
 
 ## Migrations, seed and tests
 
-**Migrations are append-only.** `0000`–`0023` are merged (the next free number is `0024`); never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
+**Migrations are append-only.** `0000`–`0027` are merged (the next free number is `0028`); never edit or regenerate an existing migration, add a new one (a later deploy applies only the files it has not seen, so an edited file is silently skipped on every D1 that already ran it).
 
 - **Retention** (phase 6 ruling 9, `packages/db/src/retention.ts`): the daily `15 3 * * *` cron deletes `audit_log` rows older than 3 × 365 days, `dead_letter` rows older than 14 days (phase 9), expired `session` and `verification` rows, and `sponsorship_token` rows used or expired more than 29 days ago (so a daily run removes them within 30 days), in chunks of 500 (`rowid IN (SELECT rowid … LIMIT 500)`, at most 20 per purge per run). Each chunk read seeks an index except the used-token one (`used_at` has no index; the table is small). The same run (`runRetentionPurge`, `@smog/sponsorships/server`) clears `sponsorship.logo_key` on sponsorships that ended (`rejected`, `cancelled`, `expired`) more than 30 days ago and can no longer use the logo (`payment_item.includes_logo` keeps the fact), and deletes R2 `logos/*` objects that no sponsorship references and that were uploaded more than 24 h ago (a KV cursor resumes the listing across runs). `bun run retention --env <env> --dry-run` counts what it would delete.
 - `bun -F @smog/db db:generate` runs `drizzle-kit generate` (generate only; wrangler applies migrations). Hand-written SQL (such as the FTS table) goes in a file made with `drizzle-kit generate --custom --name <name>`, so the drizzle journal stays in step.

@@ -38,6 +38,3 @@ export const lessonNumberSchema = z
   .min(0)
   .max(LESSON_NUMBER_MAX)
   .nullable();
-
-/** A section's title in one language. */
-export const lessonSectionTitleSchema = lessonTitleSchema;
