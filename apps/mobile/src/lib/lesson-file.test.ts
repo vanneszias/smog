@@ -5,7 +5,6 @@ import {
   fetchLessonPdf,
   LessonPdfError,
   lessonPdfFileName,
-  lessonPdfPath,
   shareLessonPdf,
 } from "./lesson-file";
 
@@ -35,9 +34,6 @@ async function codeOf(promise: Promise<unknown>): Promise<string> {
 
 describe("lesson PDF names", () => {
   it("builds the route path and a file name that is safe in the cache", () => {
-    expect(lessonPdfPath("l 1", "participants", "fr-CA")).toBe(
-      "/api/teacher/lessons/l%201/pdf?template=participants&locale=fr-CA"
-    );
     expect(
       lessonPdfFileName(
         "1234abcd-0000-4000-8000-000000000000",

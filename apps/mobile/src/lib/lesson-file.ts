@@ -65,15 +65,6 @@ async function refusalOf(response: Response): Promise<LessonPdfError> {
   );
 }
 
-/** `/api/teacher/lessons/<id>/pdf?template=&locale=`, to put on the API origin. */
-export function lessonPdfPath(
-  lessonId: string,
-  template: LessonTemplate,
-  locale: string
-): string {
-  return `/api/teacher/lessons/${encodeURIComponent(lessonId)}/pdf?template=${template}&locale=${encodeURIComponent(locale)}`;
-}
-
 const UNSAFE_FILE_CHARS = /[^A-Za-z0-9-]/g;
 
 /** The cache file's name: each template and language of a lesson gets its own. */
@@ -90,7 +81,7 @@ export interface LessonPdfRequest {
   /** The session cookie, as every authenticated call sends it. */
   cookie: string;
   fetchImpl?: typeof fetch;
-  /** The PDF route on the API origin (`apiUrl(lessonPdfPath(…))`). */
+  /** The PDF route on the API origin (`apiUrl(lessonPdfPath(…))`, `lessonPdfPath` of `@smog/lessons/schema`). */
   url: string;
 }
 

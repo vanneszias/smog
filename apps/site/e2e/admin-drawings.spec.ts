@@ -93,7 +93,7 @@ test("uploads step 1 with a credit and step 2 after it, replaces step 1 and remo
   const served = await page.request.get(one?.path ?? "");
   expect(served.status()).toBe(200);
   expect(served.headers()["content-type"]).toBe("image/png");
-  expect(served.headers()["cache-control"]).toBe("private, max-age=300");
+  expect(served.headers()["cache-control"]).toBe("private, no-cache");
   expect(served.headers()["x-content-type-options"]).toBe("nosniff");
   const guest = await playwright.request.newContext({ baseURL: ORIGIN });
   try {

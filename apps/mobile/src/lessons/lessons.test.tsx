@@ -317,7 +317,7 @@ describe("the export", () => {
     await fireEvent.press(screen.getByTestId("export-download"));
     await waitFor(() => expect(shareAsync).toHaveBeenCalled());
     expect(pdf).toHaveBeenCalledWith(
-      `https://smog.test/api/teacher/lessons/${LESSON_ID}/pdf?template=teachers&locale=en`,
+      `https://smog.test/api/teacher/lessons/${LESSON_ID}/pdf?locale=en&template=teachers`,
       { credentials: "omit", headers: { cookie: "smog.session_token=t" } }
     );
     const [uri, options] = (shareAsync as jest.Mock).mock.calls[0] as [

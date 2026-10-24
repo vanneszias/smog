@@ -19,7 +19,7 @@
  *   it is served (200 or 206): a year, immutable (a new key on every
  *   replace);
  * - a teacher drawing, `/api/teacher/drawings/<gestureId>/<step>`, when it
- *   is served (200 or 304): `private, max-age=300`, for the signed-in
+ *   is served (200 or 304): `private, no-cache` (the browser keeps its copy but asks the route, with the ETag, before every use, so a sign-out or a demotion applies at once; fix wave A-m1), for the signed-in
  *   teacher, translator or admin only (never a shared cache; the route sets
  *   the same value itself and adds `Vary: Cookie`);
  * - a lesson PDF, `/api/teacher/lessons/<id>/pdf` (phase 10c): `private,
@@ -37,8 +37,6 @@ export const ONE_DAY = "public, max-age=86400";
 export const ONE_HOUR = "public, max-age=3600";
 export const NO_STORE = "no-store";
 export const NO_CACHE = "private, no-cache";
-/** A teacher drawing (phase 10c): the browser's own copy for 5 minutes, no shared cache. */
-export const PRIVATE_FIVE_MINUTES = "private, max-age=300";
 
 /**
  * A gesture's spoken name, `GET /api/audio/<gestureId>/<locale>/<uuid>`
@@ -110,7 +108,7 @@ export function cacheControlFor({
     !pathname.startsWith(TEACHER_DRAWING_UPLOAD_PREFIX) &&
     (status === 200 || status === 304)
   ) {
-    return PRIVATE_FIVE_MINUTES;
+    return NO_CACHE;
   }
   if (pathname.startsWith(SPONSOR_LOGO_PREFIX) && status === 200) {
     return ONE_HOUR;

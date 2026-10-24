@@ -197,6 +197,9 @@ function SignedIn(): ReactElement | null {
     } catch (error) {
       console.error("[account] Failed to sign out:", error);
       toast({ title: t("auth.errors.generic"), variant: "danger" });
+    } finally {
+      // A lesson PDF Android keeps until the next launch must not outlive the session on a shared device.
+      sweepExportFiles();
     }
   }, [client, router, t, toast]);
   // U-11: signing out asks first (the old app's confirm alert).

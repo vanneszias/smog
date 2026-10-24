@@ -2,6 +2,7 @@ import { useTranslation } from "@smog/i18n/react";
 import { useLessonExportPreview } from "@smog/lessons/client";
 import {
   LESSON_TEMPLATES,
+  lessonPdfPath,
   type LessonExportPreview,
   type LessonTemplate,
 } from "@smog/lessons/schema";
@@ -29,7 +30,6 @@ import {
   LessonPdfError,
   type LessonPdfErrorCode,
   lessonPdfFileName,
-  lessonPdfPath,
   shareLessonPdf,
 } from "@/lib/lesson-file";
 import { apiUrl } from "@/lib/site";
