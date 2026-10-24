@@ -13,6 +13,7 @@ import {
   LESSON_PDF_LIMITS,
   lessonNotesSchema,
   lessonNumberSchema,
+  lessonTemplateSchema,
   lessonTitleSchema,
 } from "./lessons";
 import { TEACHER_COVERAGE_STATES } from "./teacher-info";
@@ -209,3 +210,44 @@ export const gestureMarkersSchema = z.object({
   withDrawing: z.array(z.string()),
 });
 export type GestureMarkers = z.infer<typeof gestureMarkersSchema>;
+
+// ---- the export dialog's preview -------------------------------------------
+
+export const lessonExportPreviewInputSchema = z.object({
+  id: z.string().min(1),
+  locale: localeCodeSchema,
+  template: lessonTemplateSchema,
+});
+export type LessonExportPreviewInput = z.infer<
+  typeof lessonExportPreviewInputSchema
+>;
+
+/** A gesture the PDF would print with a gap or a default-language text. */
+export const lessonExportIssueSchema = z.object({
+  /** It prints text of the default language (grey, dagger). */
+  fallback: z.boolean(),
+  id: z.string(),
+  /** Nothing to print for it in either language, the name apart. */
+  missing: z.boolean(),
+  name: z.string(),
+  /** Participants' sheet: no drawing at all. */
+  noDrawing: z.boolean(),
+  /** Participants' sheet: a drawing exists but is a WebP, which the PDF cannot hold (upload it again as PNG or JPEG). */
+  unsupportedDrawing: z.boolean(),
+});
+export type LessonExportIssue = z.infer<typeof lessonExportIssueSchema>;
+
+/**
+ * What a PDF of the lesson would contain: how many gestures, the cap of the
+ * template, the unpublished gestures left out and the gestures with a gap.
+ * `overLimit`: the lesson has more gestures than the template takes, and the
+ * download is refused ("split the lesson").
+ */
+export const lessonExportPreviewSchema = z.object({
+  gestures: z.number().int().nonnegative(),
+  issues: z.array(lessonExportIssueSchema),
+  limit: z.number().int().positive(),
+  overLimit: z.boolean(),
+  skipped: z.array(z.object({ id: z.string(), name: z.string() })),
+});
+export type LessonExportPreview = z.infer<typeof lessonExportPreviewSchema>;
