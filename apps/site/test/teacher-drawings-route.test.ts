@@ -232,7 +232,10 @@ describe("PUT /api/teacher/drawings/upload/<key> (the signed fallback)", () => {
 describe("GET /api/teacher/drawings/<gestureId>/<step>", () => {
   const path = `/api/teacher/drawings/${GESTURE_ID}/1`;
 
-  async function recorded(bytes: Uint8Array, contentType = "image/png") {
+  async function recorded(
+    bytes: Uint8Array<ArrayBuffer>,
+    contentType = "image/png"
+  ) {
     const upload = await requestUpload(cookies.teacher, contentType);
     expect(
       (await put(upload.uploadUrl, bytes, { "content-type": contentType }))
