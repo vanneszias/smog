@@ -8,7 +8,7 @@
  * afterwards. The fallback's key is derived from `BETTER_AUTH_SECRET` with
  * its own HKDF label, so a drawing signature is no audio signature.
  */
-import type { DrawingContentType } from "@smog/db/enums";
+import type { DrawingUploadType } from "@smog/db/enums";
 import { AwsClient } from "aws4fetch";
 import type { DrawingUploadResult } from "../schema";
 
@@ -136,12 +136,12 @@ function r2Credentials(env: DrawingUploadEnv) {
  * The PUT the browser makes for `key`: an `aws4fetch` presigned URL (300 s,
  * `Content-Type` and the declared `Content-Length` signed) when the R2
  * tokens are set; otherwise the signed same-origin fallback, whose route
- * caps the size at 1 MiB and takes one upload per key.
+ * caps the size at 512 KiB and takes one upload per key.
  */
 export async function drawingUploadUrl(
   env: DrawingUploadEnv,
   input: {
-    contentType: DrawingContentType;
+    contentType: DrawingUploadType;
     key: string;
     now: number;
     size: number;

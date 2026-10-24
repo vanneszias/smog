@@ -62,8 +62,20 @@ export const DRAWING_CONTENT_TYPES = [
 export type DrawingContentType = (typeof DRAWING_CONTENT_TYPES)[number];
 export const DRAWING_STEPS = [1, 2] as const;
 export type DrawingStep = (typeof DRAWING_STEPS)[number];
+/** The storage ceiling the table's CHECKs allow (rows from before the stricter upload rules stay valid). */
 export const DRAWING_MAX_BYTES = 1_048_576;
 export const DRAWING_MAX_PIXELS = 2000;
+/**
+ * What an upload may be since phase 10c task 5b: `pdf-lib` embeds PNG and
+ * JPEG only (a WebP would print as an empty cell), and a worst-case lesson of
+ * 80 drawings must stay inside the export's CPU and size budget, so a new
+ * drawing is at most 512 KiB and 1,200 px on a side. The table's CHECKs are
+ * left as they were (a rebuild would buy nothing); the upload path is the gate.
+ */
+export const DRAWING_UPLOAD_TYPES = ["image/png", "image/jpeg"] as const;
+export type DrawingUploadType = (typeof DRAWING_UPLOAD_TYPES)[number];
+export const DRAWING_UPLOAD_MAX_BYTES = 524_288;
+export const DRAWING_UPLOAD_MAX_PIXELS = 1200;
 export const DRAWING_CREDIT_MAX = 120;
 
 /** Lessons (phase 10c): the caps of the text columns, and of the lesson number. */

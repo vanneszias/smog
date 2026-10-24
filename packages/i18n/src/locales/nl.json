@@ -421,7 +421,7 @@
   },
   "drawings": {
     "title": "Tekeningen",
-    "description": "Lijntekeningen voor het blad van de cursisten: één afbeelding per stap, een tweede stap is optioneel. PNG, JPEG of WebP, hoogstens 1 MB en 2000 pixels per zijde. Alleen leerkrachten, vertalers en beheerders zien ze.",
+    "description": "Lijntekeningen voor het blad van de cursisten: één afbeelding per stap, een tweede stap is optioneel. PNG of JPEG, hoogstens 512 kB en 1200 pixels per zijde. Alleen leerkrachten, vertalers en beheerders zien ze.",
     "step": "Stap {{step}}",
     "stepOptional": "Stap {{step}} (optioneel)",
     "none": "Nog geen tekening",
@@ -442,9 +442,9 @@
     "removeDescription": "De tekening van stap {{step}} wordt verwijderd. Lessen met dit gebaar worden zonder tekening afgedrukt.",
     "removeConfirm": "Verwijderen",
     "errors": {
-      "format": "Dit is geen geldige PNG-, JPEG- of WebP-afbeelding.",
-      "dimensions": "De afbeelding is groter dan 2000 pixels per zijde.",
-      "tooLarge": "Het bestand is groter dan 1 MB.",
+      "format": "Dit is geen geldige PNG- of JPEG-afbeelding (WebP kan niet in de pdf).",
+      "dimensions": "De afbeelding is groter dan 1200 pixels per zijde.",
+      "tooLarge": "Het bestand is groter dan 512 kB.",
       "missing": "De upload is niet aangekomen. Probeer opnieuw.",
       "key": "Deze upload hoort niet bij dit gebaar.",
       "network": "De upload is mislukt. Controleer je verbinding en probeer opnieuw.",

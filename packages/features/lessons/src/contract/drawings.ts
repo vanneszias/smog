@@ -10,8 +10,8 @@
  *   drawings; a translator sees them and cannot change them).
  * `UNAUTHORIZED` for a guest, `FORBIDDEN` for any other account; the roles
  * are read from D1 on every request. A refused finalize is `VALIDATION`,
- * field `file`: `missing`, `tooLarge`, `format` (not a PNG, JPEG or WebP by
- * its bytes), `dimensions` (over 2,000 px on a side), `key`; the refused
+ * field `file`: `missing`, `tooLarge`, `format` (not a PNG or JPEG by
+ * its bytes), `dimensions` (over 1,200 px on a side), `key`; the refused
  * upload is deleted from storage. A replaced drawing's object is removed.
  */
 import type { AdminProcedures } from "@smog/admin/contract";

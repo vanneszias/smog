@@ -8,6 +8,7 @@ import { localeCodeSchema } from "@smog/config/locale";
 import {
   DRAWING_CONTENT_TYPES,
   DRAWING_CREDIT_MAX,
+  DRAWING_UPLOAD_TYPES,
   TEACHER_FIELD_MAX,
 } from "@smog/db/enums";
 import { z } from "zod";
@@ -78,6 +79,8 @@ export const drawingStepSchema = z.union([z.literal(1), z.literal(2)]);
 export type DrawingStepValue = z.infer<typeof drawingStepSchema>;
 
 export const drawingContentTypeSchema = z.enum(DRAWING_CONTENT_TYPES);
+/** What an upload may be (PNG or JPEG); a stored row can still be an older WebP. */
+export const drawingUploadTypeSchema = z.enum(DRAWING_UPLOAD_TYPES);
 
 /** The credit line printed under a drawing in the participants' PDF. */
 export const drawingCreditSchema = z.string().trim().max(DRAWING_CREDIT_MAX);

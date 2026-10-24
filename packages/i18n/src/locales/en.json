@@ -421,7 +421,7 @@
   },
   "drawings": {
     "title": "Drawings",
-    "description": "Line drawings for the participants' sheet: one image per step, a second step is optional. PNG, JPEG or WebP, at most 1 MB and 2000 pixels on a side. Only teachers, translators and admins can see them.",
+    "description": "Line drawings for the participants' sheet: one image per step, a second step is optional. PNG or JPEG, at most 512 kB and 1200 pixels on a side. Only teachers, translators and admins can see them.",
     "step": "Step {{step}}",
     "stepOptional": "Step {{step}} (optional)",
     "none": "No drawing yet",
@@ -442,9 +442,9 @@
     "removeDescription": "The drawing of step {{step}} is deleted. Lessons that use this gesture print it without the drawing.",
     "removeConfirm": "Remove",
     "errors": {
-      "format": "This is not a valid PNG, JPEG or WebP image.",
-      "dimensions": "The image is larger than 2000 pixels on a side.",
-      "tooLarge": "The file is larger than 1 MB.",
+      "format": "This is not a valid PNG or JPEG image (a WebP cannot go into the PDF).",
+      "dimensions": "The image is larger than 1200 pixels on a side.",
+      "tooLarge": "The file is larger than 512 kB.",
       "missing": "The upload did not arrive. Try again.",
       "key": "This upload does not belong to this gesture.",
       "network": "The upload failed. Check your connection and try again.",

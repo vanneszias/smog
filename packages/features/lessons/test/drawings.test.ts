@@ -197,7 +197,11 @@ describe("uploadDrawing", () => {
     expect(
       (await failureOf(issue(teacher, { contentType: "image/svg+xml" }))).code
     ).toBe("BAD_REQUEST");
-    expect((await failureOf(issue(teacher, { size: 2_000_000 }))).code).toBe(
+    // A WebP cannot be embedded in the PDF: no longer a type an upload may declare.
+    expect(
+      (await failureOf(issue(teacher, { contentType: "image/webp" }))).code
+    ).toBe("BAD_REQUEST");
+    expect((await failureOf(issue(teacher, { size: 524_289 }))).code).toBe(
       "BAD_REQUEST"
     );
     expect((await failureOf(issue(teacher, { size: 0 }))).code).toBe(
@@ -231,7 +235,7 @@ describe("uploadDrawing", () => {
 });
 
 describe("finalizeDrawing", () => {
-  it("stores a PNG, a JPEG and a WebP under fresh keys, with size, dimensions, credit and an audit entry", async () => {
+  it("stores a PNG and a JPEG under fresh keys, with size, dimensions, credit and an audit entry", async () => {
     const mark = await auditMark();
     const png = await stored(pngBytes(120, 80), "image/png", 1);
     const jpeg = await stored(
@@ -277,8 +281,6 @@ describe("finalizeDrawing", () => {
     ]);
     // The entry names ids and the step, never the credit or any bytes.
     expect(JSON.stringify(audits)).not.toContain("Invented");
-    const webp = await stored(webpBytes(64, 64, "lossless"), "image/webp", 1);
-    expect(webp).toMatchObject({ contentType: "image/webp", step: 1 });
   });
 
   it("copies to a fresh key and removes the upload, so a still-valid PUT URL cannot change what was checked", async () => {
@@ -357,17 +359,16 @@ describe("finalizeDrawing", () => {
     ).toEqual({ items: [] });
   });
 
-  it("refuses a file over 1 MiB and one over 2,000 px on a side", async () => {
+  it("refuses a file over 512 KiB and one over 1,200 px on a side", async () => {
     const big = await issue(teacher);
-    await put(big, new Uint8Array(1_048_577).fill(1));
+    await put(big, new Uint8Array(524_289).fill(1));
     expect((await failureOf(finalize(teacher, big))).data).toMatchObject({
       fieldErrors: { file: ["tooLarge"] },
     });
     expect(await objectExists(big.key)).toBe(false);
     for (const [bytes, type] of [
-      [pngBytes(2001, 100), "image/png"],
+      [pngBytes(1201, 100), "image/png"],
       [jpegBytes(100, 2500), "image/jpeg"],
-      [webpBytes(3000, 3000, "lossless"), "image/webp"],
     ] as const) {
       const upload = await issue(teacher, { contentType: type });
       await put(upload, bytes);

@@ -425,7 +425,7 @@
   },
   "drawings": {
     "title": "Dessins",
-    "description": "Dessins au trait pour la feuille des participants. Une image par étape, la deuxième étape est facultative. PNG, JPEG ou WebP, 1 Mo et 2000 pixels de côté au maximum. Seuls les enseignants, les traducteurs et les administrateurs les voient.",
+    "description": "Dessins au trait pour la feuille des participants. Une image par étape, la deuxième étape est facultative. PNG ou JPEG, 512 ko et 1200 pixels de côté au maximum. Seuls les enseignants, les traducteurs et les administrateurs les voient.",
     "step": "Étape {{step}}",
     "stepOptional": "Étape {{step}} (facultative)",
     "none": "Pas encore de dessin",
@@ -446,9 +446,9 @@
     "removeDescription": "Le dessin de l'étape {{step}} est supprimé. Les leçons qui utilisent ce geste sont imprimées sans dessin.",
     "removeConfirm": "Supprimer",
     "errors": {
-      "format": "Ce fichier n'est pas une image PNG, JPEG ou WebP valide.",
-      "dimensions": "L'image dépasse 2000 pixels de côté.",
-      "tooLarge": "Le fichier dépasse 1 Mo.",
+      "format": "Ce fichier n'est pas une image PNG ou JPEG valide (un WebP ne peut pas aller dans le PDF).",
+      "dimensions": "L'image dépasse 1200 pixels de côté.",
+      "tooLarge": "Le fichier dépasse 512 ko.",
       "missing": "L'envoi n'est pas arrivé. Réessayez.",
       "key": "Cet envoi n'appartient pas à ce geste.",
       "network": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",

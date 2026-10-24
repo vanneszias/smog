@@ -16,7 +16,7 @@ import { signInAsAdmin } from "./maintenance";
  * tokens): step 1 with a credit, step 2 after it, a replace, a delete, the
  * private route (an image to the signed-in admin, 401 to a guest, a
  * private 5-minute cache), and the refusals: wrong magic bytes, over 1 MiB
- * and over 2000 px store nothing. A hidden gesture of the spec's own
+ * and over 1200 px store nothing. A hidden gesture of the spec's own
  * carries it all, deleted again at the end.
  */
 
@@ -117,16 +117,16 @@ test("uploads step 1 with a credit and step 2 after it, replaces step 1 and remo
   // Replace step 1: a new stamp, one row, the new bytes.
   await first.getByLabel("Bronvermelding").fill("© Nieuw");
   await card.getByTestId("drawing-file-1").setInputFiles({
-    buffer: Buffer.from(webpBytes(60, 40, "lossless")),
-    mimeType: "image/webp",
-    name: "hond.webp",
+    buffer: Buffer.from(jpegBytes(60, 40)),
+    mimeType: "image/jpeg",
+    name: "hond.jpg",
   });
   await expect(first.getByText("Bron: © Nieuw")).toBeVisible();
   const replaced = (await stored(page.request)).find((row) => row.step === 1);
   expect(replaced?.path).not.toBe(one?.path);
   expect(replaced?.credit).toBe("© Nieuw");
   const replacedImage = await page.request.get(replaced?.path ?? "");
-  expect(replacedImage.headers()["content-type"]).toBe("image/webp");
+  expect(replacedImage.headers()["content-type"]).toBe("image/jpeg");
 
   // Remove step 2 after the confirmation.
   await second.getByRole("button", { name: REMOVE }).click();
@@ -141,7 +141,7 @@ test("uploads step 1 with a credit and step 2 after it, replaces step 1 and remo
   ).toBe(404);
 });
 
-test("refuses wrong magic bytes, a file over 1 MiB and a side over 2000 px, and stores nothing new", async ({
+test("refuses wrong magic bytes, a WebP, a file over 512 KiB and a side over 1200 px, and stores nothing new", async ({
   page,
 }) => {
   await stubMuxMedia(page);
@@ -157,25 +157,41 @@ test("refuses wrong magic bytes, a file over 1 MiB and a side over 2000 px, and 
     name: "geen-tekening.png",
   });
   await expect(
-    page.getByText("Dit is geen geldige PNG-, JPEG- of WebP-afbeelding.")
+    page.getByText(
+      "Dit is geen geldige PNG- of JPEG-afbeelding (WebP kan niet in de pdf)."
+    )
   ).toBeVisible();
 
-  // Over 1 MiB: the editor says so before uploading anything.
+  // A real WebP: the PDF cannot embed it, so the editor refuses it up front.
   await input.setInputFiles({
-    buffer: Buffer.alloc(1_048_577),
+    buffer: Buffer.from(webpBytes(60, 40, "lossless")),
+    mimeType: "image/webp",
+    name: "hond.webp",
+  });
+  await expect(
+    page.getByText(
+      "Dit is geen geldige PNG- of JPEG-afbeelding (WebP kan niet in de pdf)."
+    )
+  ).toBeVisible();
+
+  // Over 512 KiB: the editor says so before uploading anything.
+  await input.setInputFiles({
+    buffer: Buffer.alloc(524_289),
     mimeType: "image/png",
     name: "te-groot.png",
   });
-  await expect(page.getByText("Het bestand is groter dan 1 MB.")).toBeVisible();
+  await expect(
+    page.getByText("Het bestand is groter dan 512 kB.")
+  ).toBeVisible();
 
-  // Under 1 MiB, but 2500 px wide: the server reads the header.
+  // Under 512 KiB, but 1300 px wide: the server reads the header.
   await input.setInputFiles({
-    buffer: Buffer.from(pngBytes(2500, 10)),
+    buffer: Buffer.from(pngBytes(1300, 10)),
     mimeType: "image/png",
     name: "te-breed.png",
   });
   await expect(
-    page.getByText("De afbeelding is groter dan 2000 pixels per zijde.")
+    page.getByText("De afbeelding is groter dan 1200 pixels per zijde.")
   ).toBeVisible();
 
   expect(await stored(page.request)).toEqual(before);
