@@ -1,6 +1,11 @@
 import { implementRpc, requireRole } from "@smog/rpc";
 import { adminGuard } from "@smog/rpc/audit";
-import { TEACHER_PROCEDURE_KINDS, teacherSlice } from "../contract";
+import {
+  LESSON_PROCEDURE_KINDS,
+  lessonsContract,
+  TEACHER_PROCEDURE_KINDS,
+  teacherSlice,
+} from "../contract";
 
 const os = implementRpc(teacherSlice);
 const guard = adminGuard(TEACHER_PROCEDURE_KINDS);
@@ -30,3 +35,18 @@ export const teacherRouterBuilder = os;
 export function mayAuthor(roles: readonly string[]): boolean {
   return roles.includes("teacher") || roles.includes("admin");
 }
+
+const lessonsOs = implementRpc(lessonsContract);
+
+/**
+ * The lesson procedures: the `teacher` role only (an `admin` passes; a
+ * translator is `FORBIDDEN`: lessons are not theirs, plan ruling 5), then
+ * the audit guard. Who may edit a given lesson (its author or an admin) is
+ * checked by the procedure itself.
+ */
+export const lessonProcedure = lessonsOs
+  .use(requireRole("teacher"))
+  .use(adminGuard(LESSON_PROCEDURE_KINDS));
+
+/** The router builder of the `lessons` slice: each procedure carries its own guard. */
+export const lessonsRouterBuilder = lessonsOs;

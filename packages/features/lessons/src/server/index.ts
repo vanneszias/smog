@@ -12,4 +12,9 @@ export {
   type DrawingCursorStore,
   sweepOrphanDrawings,
 } from "./orphan-drawings";
-export { createTeacherRouter, type TeacherRouter } from "./router";
+export {
+  createLessonsRouter,
+  createTeacherRouter,
+  type LessonsRouter,
+  type TeacherRouter,
+} from "./router";

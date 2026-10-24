@@ -10,7 +10,7 @@ import type { User } from "@smog/db";
 import { createDb, type Db } from "@smog/db/client";
 import { DirectEmailOutbox, MemoryEmailSender } from "@smog/email";
 import { makeRpcContext } from "@smog/rpc/testing";
-import { createTeacherRouter } from "../src/server";
+import { createLessonsRouter, createTeacherRouter } from "../src/server";
 
 const SITE_URL = "http://localhost:5173";
 export const TEST_SECRET = "lessons-test-secret-at-least-32-characters";
@@ -87,19 +87,20 @@ export async function signedUp(
   return { auth, cookie, user: row };
 }
 
-async function contextAs(as: Authed | null) {
+/** The request context of `as`; `db` swaps the database (a recording one for the plan tests). */
+export async function contextAs(as: Authed | null, db: Db = testDb()) {
   const rpcEnv = {
     BETTER_AUTH_SECRET: TEST_SECRET,
     MEDIA: env.MEDIA,
     SITE_URL,
   };
   if (!as) {
-    return makeRpcContext({ db: testDb(), env: rpcEnv, kv: env.KV });
+    return makeRpcContext({ db, env: rpcEnv, kv: env.KV });
   }
   const headers = new Headers({ cookie: as.cookie, origin: SITE_URL });
   return makeRpcContext({
     auth: as.auth,
-    db: testDb(),
+    db,
     env: rpcEnv,
     kv: env.KV,
     request: new Request(`${SITE_URL}/api/rpc/teacher`, {
@@ -132,6 +133,24 @@ export async function callAs<T = unknown>(
     context: await contextAs(as),
     // As `/api/rpc` routes it: the guard reads the path.
     path: ["teacher", path],
+  })) as T;
+}
+
+const lessonsRouter = createLessonsRouter();
+
+/** Calls `lessons.<path>` as `as` (one request: the session is read now). */
+export async function lessonsAs<T = unknown>(
+  as: Authed | null,
+  path: string,
+  input?: unknown
+): Promise<T> {
+  const node = (lessonsRouter as unknown as Record<string, unknown>)[path];
+  if (!node) {
+    throw new Error(`[test] No lessons procedure at ${path}`);
+  }
+  return (await call(node as AnyProcedure, input, {
+    context: await contextAs(as),
+    path: ["lessons", path],
   })) as T;
 }
 
@@ -174,16 +193,20 @@ export async function auditRowsSince(mark: number): Promise<StoredAudit[]> {
 }
 
 /** Inserts a gesture (named `name`) and returns its id. */
-export async function addGesture(name: string): Promise<string> {
+export async function addGesture(
+  name: string,
+  { published = false }: { published?: boolean } = {}
+): Promise<string> {
   const id = crypto.randomUUID();
   await env.DB.prepare(
-    "INSERT INTO gesture (id, slug, name, sort_name, playback_id, created_at, updated_at) VALUES (?, ?, ?, ?, 'pb', 1, 1)"
+    "INSERT INTO gesture (id, slug, name, sort_name, playback_id, published_at, created_at, updated_at) VALUES (?, ?, ?, ?, 'pb', ?, 1, 1)"
   )
     .bind(
       id,
       `${name.toLowerCase()}-${id.slice(0, 6)}`,
       name,
-      name.toLowerCase()
+      name.toLowerCase(),
+      published ? 1 : null
     )
     .run();
   return id;
@@ -192,6 +215,7 @@ export async function addGesture(name: string): Promise<string> {
 /** Removes every teaching row between tests (the gestures cascade). */
 export async function resetTeacherData(): Promise<void> {
   await env.DB.batch([
+    env.DB.prepare("DELETE FROM lesson"),
     env.DB.prepare("DELETE FROM gesture_teacher_info"),
     env.DB.prepare("DELETE FROM gesture"),
   ]);

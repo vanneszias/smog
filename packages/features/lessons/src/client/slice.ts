@@ -8,7 +8,7 @@ import {
 } from "@smog/rpc/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import type { TeacherContract } from "../contract";
+import type { LessonsContract, TeacherContract } from "../contract";
 
 /** The contract slice these hooks know, keyed as `appContract` mounts it. */
 interface TeacherSlice {
@@ -51,6 +51,28 @@ export function useInvalidateTeacher(): () => Promise<void> {
   const rpc = useRpcQuery<TeacherSlice>();
   return useCallback(
     () => queryClient.invalidateQueries({ queryKey: rpc.teacher.key() }),
+    [queryClient, rpc]
+  );
+}
+
+/** The contract slice of the lesson hooks, keyed as `appContract` mounts it. */
+interface LessonsSlice {
+  lessons: LessonsContract;
+}
+
+export type LessonsQueryUtils = RpcQueryUtils<LessonsSlice>["lessons"];
+
+/** The TanStack Query utils for `lessons.*`. */
+export function useLessonsRpc(): LessonsQueryUtils {
+  return useRpcQuery<LessonsSlice>().lessons;
+}
+
+/** What a lesson write calls when it settles: refetch every `lessons.*` query. */
+export function useInvalidateLessons(): () => Promise<void> {
+  const queryClient = useQueryClient();
+  const rpc = useRpcQuery<LessonsSlice>();
+  return useCallback(
+    () => queryClient.invalidateQueries({ queryKey: rpc.lessons.key() }),
     [queryClient, rpc]
   );
 }

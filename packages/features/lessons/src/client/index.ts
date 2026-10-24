@@ -17,4 +17,14 @@ export {
   useSaveTeacherInfo,
   useTeacherInfo,
 } from "./hooks";
+export {
+  type LessonListFilter,
+  lessonConflictOf,
+  lessonRefusalOf,
+  useGestureMarkers,
+  useLesson,
+  useLessonActions,
+  useLessonList,
+  useLessonReadiness,
+} from "./lessons";
 export { TEACHER_STALE_TIME } from "./slice";

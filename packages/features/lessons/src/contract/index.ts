@@ -26,3 +26,10 @@ export const TEACHER_PROCEDURE_KINDS: Readonly<
 > = Object.fromEntries(
   Object.entries(KINDS).map(([path, kind]) => [`teacher.${path}`, kind])
 );
+
+export {
+  LESSON_KINDS,
+  LESSON_PROCEDURE_KINDS,
+  type LessonsContract,
+  lessonsContract,
+} from "./lessons";

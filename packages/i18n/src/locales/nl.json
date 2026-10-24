@@ -1002,11 +1002,13 @@
         "content": "Inhoud",
         "community": "Gemeenschap",
         "operations": "Opvolging",
-        "translation": "Vertalen"
+        "translation": "Vertalen",
+        "teaching": "Lesgeven"
       },
       "strings": "Teksten",
       "languages": "Talen",
-      "legal": "Juridische teksten"
+      "legal": "Juridische teksten",
+      "lessons": "Lessen"
     },
     "comingSoon": {
       "title": "Komt in deze fase",
@@ -1459,6 +1461,154 @@
       "hiddenName": "{{name}} (verborgen)",
       "countWithPublished_one": "{{count}} gebaar · {{published}} gepubliceerd",
       "countWithPublished_other": "{{count}} gebaren · {{published}} gepubliceerd"
+    },
+    "lessons": {
+      "title": "Lessen",
+      "description": "Lessen die lesgevers samenstellen uit gebaren. Elke lesgever kan elke les lezen en kopiëren; de auteur en beheerders bewerken ze.",
+      "untitled": "Les zonder titel",
+      "new": "Nieuwe les",
+      "search": "Lessen zoeken",
+      "searchPlaceholder": "Zoek op titel",
+      "mine": "Mijn lessen",
+      "mineBadge": "Van jou",
+      "noAuthor": "de auteur",
+      "numbered": "Les {{number}}",
+      "numberLabel": "Lesnummer",
+      "numberHint": "Optioneel. Staat gedrukt als “Les 3”.",
+      "loadMore": "Meer lessen tonen",
+      "backToList": "Alle lessen",
+      "duplicated": "Les gekopieerd. Je zit nu in je eigen kopie.",
+      "duplicateFailed": "De les kon niet worden gekopieerd. Probeer opnieuw.",
+      "columns": {
+        "title": "Titel",
+        "number": "Nummer",
+        "author": "Auteur",
+        "gestures": "Gebaren",
+        "updated": "Gewijzigd",
+        "actions": "Acties"
+      },
+      "empty": {
+        "title": "Nog geen lessen",
+        "description": "Maak de eerste les en voeg er gebaren aan toe."
+      },
+      "noResults": {
+        "title": "Geen lessen gevonden",
+        "description": "Geen enkele les past bij deze zoekopdracht. Probeer een andere titel of zet “Mijn lessen” uit."
+      },
+      "notFound": {
+        "title": "Les niet gevonden",
+        "description": "Deze les bestaat niet (meer)."
+      },
+      "actions": {
+        "label": "Acties voor {{title}}",
+        "open": "Openen",
+        "duplicate": "Kopie maken",
+        "delete": "Verwijderen"
+      },
+      "create": {
+        "title": "Nieuwe les",
+        "description": "Geef de les een titel. Op het volgende scherm voeg je de gebaren toe en kun je de titel vertalen.",
+        "titleLabel": "Titel",
+        "languageLabel": "Taal van de titel",
+        "submit": "Les maken",
+        "failed": "De les kon niet worden gemaakt. Probeer opnieuw."
+      },
+      "delete": {
+        "title": "Deze les verwijderen?",
+        "description": "“{{title}}” en de secties ervan worden voor iedereen verwijderd. De gebaren zelf blijven bestaan.",
+        "confirm": "Les verwijderen",
+        "done": "Les verwijderd.",
+        "failed": "De les kon niet worden verwijderd. Probeer opnieuw."
+      },
+      "builder": {
+        "title": "Les"
+      },
+      "readOnly": "{{author}} bewerkt deze les. Je kunt ze lezen en er een eigen kopie van maken.",
+      "details": "Gegevens van de les",
+      "tabsLabel": "Taal van de titel en de notities",
+      "tabFilled": "Ingevuld",
+      "tabEmpty": "Leeg",
+      "fields": {
+        "title": "Titel",
+        "notes": "Notities"
+      },
+      "problem": {
+        "noTitle": "Voeg een titel toe in minstens één taal om de les te bewaren.",
+        "notesWithoutTitle": "Een taal met notities heeft ook een titel nodig. Voeg er een toe of wis de notities."
+      },
+      "status": {
+        "saved": "Alle wijzigingen bewaard",
+        "saving": "Bewaren…",
+        "dirty": "Wijzigingen worden bewaard…",
+        "error": "Bewaren mislukt. Je wijzigingen blijven op deze pagina staan.",
+        "invalid": "Nog niet bewaard: zie de melding hieronder.",
+        "conflict": "Iemand anders heeft deze les gewijzigd.",
+        "retry": "Opnieuw proberen"
+      },
+      "conflict": {
+        "title": "Deze les is elders gewijzigd",
+        "body": "{{author}} of een andere bewerker heeft een nieuwere versie bewaard. Gebruik die van hen en verlies je laatste wijzigingen hier, of behoud de jouwe en vervang die van hen.",
+        "useTheirs": "Hun versie gebruiken",
+        "keepMine": "Mijn versie houden"
+      },
+      "structure": "Gebaren",
+      "count_one": "{{count}} gebaar",
+      "count_other": "{{count}} gebaren",
+      "add": "Gebaren toevoegen",
+      "readiness": {
+        "label": "Lesgeversinfo in {{language}}",
+        "summary": "{{own}} van {{total}} gebaren hebben lesgeversinfo in {{language}}.",
+        "fallback_one": "{{count}} valt terug op de standaardtaal.",
+        "fallback_other": "{{count}} vallen terug op de standaardtaal.",
+        "none_one": "{{count}} heeft helemaal geen lesgeversinfo.",
+        "none_other": "{{count}} hebben helemaal geen lesgeversinfo.",
+        "empty": "Voeg gepubliceerde gebaren toe om te zien hoe klaar deze les is."
+      },
+      "section": {
+        "add": "Sectie toevoegen",
+        "untitled": "Sectie {{number}}",
+        "ungrouped": "Vóór de eerste sectie",
+        "empty": "Hier staan nog geen gebaren.",
+        "titleLabel": "Titel van sectie {{number}}",
+        "actions": "Acties voor {{name}}",
+        "moveUp": "Sectie omhoog",
+        "moveDown": "Sectie omlaag",
+        "remove": "Sectie verwijderen"
+      },
+      "item": {
+        "actions": "Acties voor {{name}}",
+        "moveUp": "Omhoog",
+        "moveDown": "Omlaag",
+        "moveTo": "Verplaatsen naar {{section}}",
+        "moveToStart": "Verplaatsen vóór de eerste sectie",
+        "remove": "Uit de les halen",
+        "unpublished": "Niet gepubliceerd",
+        "drawing": "Tekening",
+        "readiness": {
+          "own": "Lesgeversinfo",
+          "fallback": "Standaardtaal",
+          "none": "Geen lesgeversinfo"
+        }
+      },
+      "picker": {
+        "title": "Gebaren toevoegen",
+        "description": "Zoek in de catalogus en kies gebaren. Elk gebaar komt meteen in de les; een gebaar staat er maar één keer in.",
+        "placeholder": "Gebaren zoeken",
+        "categories": "Filter op categorie",
+        "destination": "Toevoegen aan",
+        "done": "Klaar",
+        "held": "In deze les",
+        "full": "Een les bevat hoogstens {{max}} gebaren.",
+        "error": "Zoeken is mislukt. Probeer opnieuw."
+      },
+      "reorder": {
+        "instructions": "Druk op spatie of Enter om een onderdeel op te pakken. Verplaats het met de pijltjestoetsen en druk opnieuw op spatie of Enter om het neer te zetten. Escape annuleert.",
+        "picked": "{{name}} opgepakt, positie {{position}} van {{total}}.",
+        "moved": "{{name}} verplaatst naar positie {{position}} van {{total}}.",
+        "dropped": "{{name}} neergezet op positie {{position}} van {{total}}.",
+        "cancelled": "Verplaatsen geannuleerd. {{name}} staat terug op positie {{position}}.",
+        "failed": "De nieuwe volgorde kon niet worden toegepast."
+      }
     },
     "teacherInfo": {
       "title": "Info voor lesgevers",
