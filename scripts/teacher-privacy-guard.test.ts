@@ -53,6 +53,11 @@ const ALLOWED: { because: string; prefix: string }[] = [
     prefix: "packages/features/lessons/",
   },
   {
+    because:
+      "the PDF engine draws the private C note it is handed (pure: no query, no route; only @smog/lessons and the site may depend on it)",
+    prefix: "packages/pdf/",
+  },
+  {
     because: "the audit entry shapes name the target type, never a text",
     prefix: "packages/features/admin/src/schema/audit.ts",
   },
