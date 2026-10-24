@@ -1,0 +1,22 @@
+{
+  "name": "@smog/lessons",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "check-types": "tsc -b",
+    "test": "bun ../../../scripts/test-deadline.ts -- bun test src"
+  },
+  "dependencies": {
+    "@smog/config": "workspace:*",
+    "@smog/db": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}
