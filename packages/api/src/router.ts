@@ -16,6 +16,7 @@ import {
 } from "@smog/gestures/server";
 import { resolveLocale } from "@smog/i18n";
 import { loadCatalogue } from "@smog/i18n/server";
+import { createTeacherRouter } from "@smog/lessons/server";
 import {
   appendItemsStmt,
   createListsRouter,
@@ -107,6 +108,9 @@ export const appRouter = os.router({
   // and renewal slices.
   sponsorships: createSponsorshipsRouter(),
   system,
+  // Teachers (and, for reads, translators): drawings now, the teacher info
+  // and lessons later. Each procedure carries its role guard and the audit guard.
+  teacher: createTeacherRouter(),
   // Translators and admins: the strings, languages and coverage. Each
   // procedure carries its role guard and the audit guard.
   translation: createTranslationRouter(),

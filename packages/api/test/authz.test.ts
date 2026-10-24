@@ -1,6 +1,7 @@
 import { isContractProcedure, oc } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { ADMIN_PROCEDURE_KINDS } from "@smog/admin/contract";
+import { TEACHER_PROCEDURE_KINDS } from "@smog/lessons/contract";
 import { loadSession, teacherProcedure, translatorProcedure } from "@smog/rpc";
 import { makeRpcContext, makeSession } from "@smog/rpc/testing";
 import { TRANSLATION_PROCEDURE_KINDS } from "@smog/translation/contract";
@@ -55,6 +56,7 @@ type Level =
   | "public"
   | "session"
   | "teacher"
+  | "teacherRead"
   | "token"
   | "translator"
   | "verified"
@@ -216,6 +218,35 @@ const PROCEDURES: Record<string, Row> = {
   // and the coverage need the translator role (an admin passes); creating
   // or changing a language needs the admin role. Every change carries an
   // audit kind (`TRANSLATION_PROCEDURE_KINDS`, checked below).
+  // Phase 10c task 3: a gesture's drawings. A teacher (or an admin) uploads,
+  // finalizes and deletes; a teacher, a translator or an admin lists them
+  // (the card is read-only for a translator, plan ruling 5).
+  "teacher.deleteDrawing": {
+    input: { gestureId: "00000000-0000-4000-8000-000000000000", step: 1 },
+    level: "teacher",
+  },
+  "teacher.finalizeDrawing": {
+    input: {
+      credit: "",
+      gestureId: "00000000-0000-4000-8000-000000000000",
+      key: "teacher/drawings/00000000-0000-4000-8000-000000000000/1/00000000-0000-4000-8000-000000000001",
+      step: 1,
+    },
+    level: "teacher",
+  },
+  "teacher.listDrawings": {
+    input: { gestureId: "00000000-0000-4000-8000-000000000000" },
+    level: "teacherRead",
+  },
+  "teacher.uploadDrawing": {
+    input: {
+      contentType: "image/png",
+      gestureId: "00000000-0000-4000-8000-000000000000",
+      size: 1000,
+      step: 1,
+    },
+    level: "teacher",
+  },
   "translation.coverage": { level: "translator" },
   // Task 6: a gesture's spoken name. A translator or an admin uploads,
   // checks and removes it; the file itself never passes through a procedure.
@@ -428,6 +459,7 @@ describe("the authorization table", () => {
       "public",
       "session",
       "teacher",
+      "teacherRead",
       "token",
       "translator",
     ];
@@ -456,6 +488,25 @@ describe("the authorization table", () => {
       "translation.languages.update",
       "translation.legal.restore",
     ]);
+  });
+
+  it("agrees with the teacher kinds: every teacher procedure has a kind, reads are the only rows a translator may call", () => {
+    const teacherRows = Object.entries(PROCEDURES).filter(([path]) =>
+      path.startsWith("teacher.")
+    );
+    expect(teacherRows.map(([path]) => path).sort()).toEqual(
+      Object.keys(TEACHER_PROCEDURE_KINDS).sort()
+    );
+    for (const [path, row] of teacherRows) {
+      const kind = TEACHER_PROCEDURE_KINDS[path];
+      // A procedure a translator may call writes nothing; the converse is not
+      // true (`uploadDrawing` writes nothing and is still the teacher's).
+      if (row.level === "teacherRead") {
+        expect(kind, path).toBe("read");
+      } else {
+        expect(row.level, path).toBe("teacher");
+      }
+    }
   });
 
   it("agrees with the admin kinds: a row per admin procedure, writes audited", () => {
@@ -494,7 +545,8 @@ describe("anonymous calls", () => {
     } else if (
       row.level === "admin" ||
       row.level === "translator" ||
-      row.level === "teacher"
+      row.level === "teacher" ||
+      row.level === "teacherRead"
     ) {
       it(`${path} (${row.level}) is UNAUTHORIZED`, async () => {
         expect(await outcome(path, "anonymous", undefined)).toBe(
@@ -521,6 +573,16 @@ describe("signed-in and admin calls", () => {
         expect(refusedByGuard(await outcome(path, "admin", undefined))).toBe(
           false
         );
+      });
+    } else if (row.level === "teacherRead") {
+      it(`${path} (teacherRead) is FORBIDDEN for a user, let through for a teacher, a translator and an admin`, async () => {
+        expect(await outcome(path, "user", row.input)).toBe("FORBIDDEN");
+        const codes = await Promise.all(
+          (["teacher", "translator", "admin"] as const).map((who) =>
+            outcome(path, who, row.input)
+          )
+        );
+        expect(codes.map(refusedByGuard)).toEqual([false, false, false]);
       });
     } else if (row.level === "translator" || row.level === "teacher") {
       const holder = row.level;
