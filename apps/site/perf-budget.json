@@ -90,6 +90,15 @@
         ["admin.tsx", "admin/translation/strings.tsx"],
         ["admin.tsx", "admin/users.tsx"]
       ]
+    },
+    "lessons": {
+      "gzip": 495500,
+      "target": 300000,
+      "note": "Target not reached: the shared closure (see home). The lesson list and the builder (phase 10c task 4); the gesture picker (cmdk) loads when it first opens.",
+      "routes": [
+        ["admin.tsx", "admin/lessons/index.tsx"],
+        ["admin.tsx", "admin/lessons/$id.tsx"]
+      ]
     }
   }
 }

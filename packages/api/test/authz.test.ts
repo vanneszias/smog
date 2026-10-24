@@ -1,7 +1,10 @@
 import { isContractProcedure, oc } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { ADMIN_PROCEDURE_KINDS } from "@smog/admin/contract";
-import { TEACHER_PROCEDURE_KINDS } from "@smog/lessons/contract";
+import {
+  LESSON_PROCEDURE_KINDS,
+  TEACHER_PROCEDURE_KINDS,
+} from "@smog/lessons/contract";
 import { loadSession, teacherProcedure, translatorProcedure } from "@smog/rpc";
 import { makeRpcContext, makeSession } from "@smog/rpc/testing";
 import { TRANSLATION_PROCEDURE_KINDS } from "@smog/translation/contract";
@@ -179,6 +182,31 @@ const PROCEDURES: Record<string, Row> = {
   "gestures.related": { level: "public" },
   "gestures.search": { level: "public" },
   "gestures.sitemap": { level: "public" },
+  // Phase 10c task 4: the lessons. A teacher or an admin reads every lesson
+  // and writes their own (an admin any); a translator has no lesson access
+  // (plan ruling 5). The author-only rule is the procedure's own check:
+  // `packages/features/lessons/test/lessons.test.ts`.
+  "lessons.create": {
+    input: { locale: "nl", title: "Les 1" },
+    level: "teacher",
+  },
+  "lessons.delete": { input: { id: "l" }, level: "teacher" },
+  "lessons.duplicate": { input: { id: "l" }, level: "teacher" },
+  "lessons.gestureMarkers": { input: { gestureIds: [] }, level: "teacher" },
+  "lessons.get": { input: { id: "l" }, level: "teacher" },
+  "lessons.list": { input: {}, level: "teacher" },
+  "lessons.readiness": { input: { id: "l", locale: "nl" }, level: "teacher" },
+  "lessons.update": {
+    input: {
+      expectedVersion: 1,
+      id: "l",
+      number: null,
+      sections: [],
+      translations: { nl: { notes: "", title: "Les 1" } },
+      ungrouped: [],
+    },
+    level: "teacher",
+  },
   "lists.addItem": { input: { gestureId: "g", id: "l" }, level: "session" },
   "lists.containing": { input: { gestureId: "g" }, level: "session" },
   "lists.create": { input: { name: "Dieren" }, level: "session" },
@@ -528,6 +556,26 @@ describe("the authorization table", () => {
     expect(TEACHER_PROCEDURE_KINDS["teacher.saveInfo"]).toMatchObject({
       audit: "teacher.info_save",
     });
+  });
+
+  it("agrees with the lesson kinds: every lesson procedure has a kind and a row at the teacher level, and each write is audited", () => {
+    const lessonRows = Object.entries(PROCEDURES).filter(([path]) =>
+      path.startsWith("lessons.")
+    );
+    expect(lessonRows.map(([path]) => path).sort()).toEqual(
+      Object.keys(LESSON_PROCEDURE_KINDS).sort()
+    );
+    for (const [path, row] of lessonRows) {
+      expect(row.level, path).toBe("teacher");
+    }
+    for (const path of ["create", "delete", "duplicate", "update"]) {
+      expect(LESSON_PROCEDURE_KINDS[`lessons.${path}`], path).toMatchObject({
+        audit: `lesson.${path}`,
+      });
+    }
+    for (const path of ["gestureMarkers", "get", "list", "readiness"]) {
+      expect(LESSON_PROCEDURE_KINDS[`lessons.${path}`], path).toBe("read");
+    }
   });
 
   it("agrees with the admin kinds: a row per admin procedure, writes audited", () => {

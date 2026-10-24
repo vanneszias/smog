@@ -31,7 +31,8 @@ export interface AdminGate {
  *   gets the 404 page (the admin surface is not disclosed);
  * - an admin, a translator or a teacher gets `{ user }`; the layout then
  *   narrows a translator to the translation screens and the teacher
- *   information and a teacher to the teacher information (`lib/admin-access.ts`).
+ *   information and a teacher to the lessons and the teacher information
+ *   (`lib/admin-access.ts`).
  * The procedures check the role again (`requireAdmin`, `requireRole`); this
  * only decides what the page shows.
  */

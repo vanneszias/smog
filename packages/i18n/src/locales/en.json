@@ -1002,11 +1002,13 @@
         "content": "Content",
         "community": "Community",
         "operations": "Operations",
-        "translation": "Translation"
+        "translation": "Translation",
+        "teaching": "Teaching"
       },
       "strings": "Strings",
       "languages": "Languages",
-      "legal": "Legal texts"
+      "legal": "Legal texts",
+      "lessons": "Lessons"
     },
     "comingSoon": {
       "title": "Coming in this phase",
@@ -1459,6 +1461,154 @@
       "hiddenName": "{{name}} (hidden)",
       "countWithPublished_one": "{{count}} gesture · {{published}} published",
       "countWithPublished_other": "{{count}} gestures · {{published}} published"
+    },
+    "lessons": {
+      "title": "Lessons",
+      "description": "Lessons that teachers build from gestures. Every teacher can read every lesson and copy it; the author and admins edit it.",
+      "untitled": "Untitled lesson",
+      "new": "New lesson",
+      "search": "Search lessons",
+      "searchPlaceholder": "Search by title",
+      "mine": "My lessons",
+      "mineBadge": "Yours",
+      "noAuthor": "its author",
+      "numbered": "Lesson {{number}}",
+      "numberLabel": "Lesson number",
+      "numberHint": "Optional. Printed as “Lesson 3”.",
+      "loadMore": "Show more lessons",
+      "backToList": "All lessons",
+      "duplicated": "Lesson copied. You are now in your own copy.",
+      "duplicateFailed": "The lesson couldn't be copied. Try again.",
+      "columns": {
+        "title": "Title",
+        "number": "Number",
+        "author": "Author",
+        "gestures": "Gestures",
+        "updated": "Changed",
+        "actions": "Actions"
+      },
+      "empty": {
+        "title": "No lessons yet",
+        "description": "Create the first lesson and add gestures to it."
+      },
+      "noResults": {
+        "title": "No lessons found",
+        "description": "No lesson matches this search. Try another title or switch off “My lessons”."
+      },
+      "notFound": {
+        "title": "Lesson not found",
+        "description": "This lesson doesn't exist (any more)."
+      },
+      "actions": {
+        "label": "Actions for {{title}}",
+        "open": "Open",
+        "duplicate": "Make a copy",
+        "delete": "Delete"
+      },
+      "create": {
+        "title": "New lesson",
+        "description": "Give the lesson a title. You add the gestures on the next screen and can translate the title there.",
+        "titleLabel": "Title",
+        "languageLabel": "Language of the title",
+        "submit": "Create lesson",
+        "failed": "The lesson couldn't be created. Try again."
+      },
+      "delete": {
+        "title": "Delete this lesson?",
+        "description": "“{{title}}” and its sections are deleted for everyone. The gestures themselves stay.",
+        "confirm": "Delete lesson",
+        "done": "Lesson deleted.",
+        "failed": "The lesson couldn't be deleted. Try again."
+      },
+      "builder": {
+        "title": "Lesson"
+      },
+      "readOnly": "{{author}} edits this lesson. You can read it and make your own copy.",
+      "details": "Lesson details",
+      "tabsLabel": "Language of the title and notes",
+      "tabFilled": "Filled in",
+      "tabEmpty": "Empty",
+      "fields": {
+        "title": "Title",
+        "notes": "Notes"
+      },
+      "problem": {
+        "noTitle": "Add a title in at least one language to save the lesson.",
+        "notesWithoutTitle": "A language with notes needs a title too. Add one or clear the notes."
+      },
+      "status": {
+        "saved": "All changes saved",
+        "saving": "Saving…",
+        "dirty": "Changes are being saved…",
+        "error": "Saving failed. Your changes are kept on this page.",
+        "invalid": "Not saved yet: see the message below.",
+        "conflict": "Someone else changed this lesson.",
+        "retry": "Try again"
+      },
+      "conflict": {
+        "title": "This lesson was changed elsewhere",
+        "body": "{{author}} or another editor saved a newer version. Use theirs and lose your latest changes here, or keep yours and replace theirs.",
+        "useTheirs": "Use their version",
+        "keepMine": "Keep mine"
+      },
+      "structure": "Gestures",
+      "count_one": "{{count}} gesture",
+      "count_other": "{{count}} gestures",
+      "add": "Add gestures",
+      "readiness": {
+        "label": "Teacher info in {{language}}",
+        "summary": "{{own}} of {{total}} gestures have teacher info in {{language}}.",
+        "fallback_one": "{{count}} falls back to the default language.",
+        "fallback_other": "{{count}} fall back to the default language.",
+        "none_one": "{{count}} has no teacher info at all.",
+        "none_other": "{{count}} have no teacher info at all.",
+        "empty": "Add published gestures to see how ready this lesson is."
+      },
+      "section": {
+        "add": "Add section",
+        "untitled": "Section {{number}}",
+        "ungrouped": "Before the first section",
+        "empty": "No gestures here yet.",
+        "titleLabel": "Title of section {{number}}",
+        "actions": "Actions for {{name}}",
+        "moveUp": "Move section up",
+        "moveDown": "Move section down",
+        "remove": "Remove section"
+      },
+      "item": {
+        "actions": "Actions for {{name}}",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "moveTo": "Move to {{section}}",
+        "moveToStart": "Move before the first section",
+        "remove": "Remove from lesson",
+        "unpublished": "Unpublished",
+        "drawing": "Drawing",
+        "readiness": {
+          "own": "Teacher info",
+          "fallback": "Default language",
+          "none": "No teacher info"
+        }
+      },
+      "picker": {
+        "title": "Add gestures",
+        "description": "Search the catalogue and pick gestures. Each one goes straight into the lesson; a gesture appears once.",
+        "placeholder": "Search gestures",
+        "categories": "Filter by category",
+        "destination": "Add to",
+        "done": "Done",
+        "held": "In this lesson",
+        "full": "A lesson holds at most {{max}} gestures.",
+        "error": "The search failed. Try again."
+      },
+      "reorder": {
+        "instructions": "Press space or Enter to pick up an item. Move it with the arrow keys and press space or Enter again to drop it. Escape cancels.",
+        "picked": "Picked up {{name}}, position {{position}} of {{total}}.",
+        "moved": "Moved {{name}} to position {{position}} of {{total}}.",
+        "dropped": "Dropped {{name}} at position {{position}} of {{total}}.",
+        "cancelled": "Move cancelled. {{name}} is back at position {{position}}.",
+        "failed": "The new order couldn't be applied."
+      }
     },
     "teacherInfo": {
       "title": "Teacher information",
