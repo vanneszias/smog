@@ -1,11 +1,13 @@
 {
-  // Teacher lessons and PDFs (phase 10c). Task 1 holds the client-safe
-  // `./schema` only; `./contract`, `./server` and `./client` follow with the
-  // tasks that need them, with the tsconfig split of `@smog/translation`.
-  "extends": "@smog/config/tsconfig/library.json",
+  // The Worker side (./server), with the Workers types. The D1 tests are
+  // checked by tsconfig.test.json (they reach the gestures server by
+  // relative path, which a composite project cannot hold), and the
+  // client-safe entries by tsconfig.client.json too (no Workers types).
+  "extends": "@smog/config/tsconfig/worker.json",
   "compilerOptions": {
-    "lib": ["ESNext", "DOM"],
-    "types": ["bun"]
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["@cloudflare/vitest-plugin/types"]
   },
-  "include": ["src"]
+  "include": ["src", "vitest.config.ts"]
 }

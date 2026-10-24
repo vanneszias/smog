@@ -1,4 +1,3 @@
-import { describe, expect, test } from "bun:test";
 import {
   AUDIT_ACTIONS,
   AUDIT_TARGET_TYPES,
@@ -7,6 +6,7 @@ import {
   LESSON_NOTES_MAX,
   TEACHER_FIELD_MAX,
 } from "@smog/db/enums";
+import { describe, expect, test } from "vitest";
 import {
   DRAWING_KEY_PATTERN,
   drawingCreditSchema,
@@ -22,7 +22,7 @@ import {
   TEACHER_FIELD_COLUMNS,
   TEACHER_INFO_FIELDS,
   teacherInfoFieldsSchema,
-} from "./index";
+} from "../src/schema";
 
 const GESTURE = "5eed0002-0000-4000-8000-000000000001";
 const UUID = "0b7e4f0e-6c1a-4c9e-8a53-2f4f1d9a7b11";

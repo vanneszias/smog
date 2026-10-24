@@ -2,3 +2,4 @@
 /** `@smog/lessons/schema`: the shapes, caps and constants of teacher info, drawings and lessons. */
 export * from "./lessons";
 export * from "./teacher";
+export * from "./teacher-info";
