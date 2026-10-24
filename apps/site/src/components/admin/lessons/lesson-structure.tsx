@@ -139,8 +139,11 @@ function ItemBadges({ item }: { item: LessonItem }): ReactNode {
   const { t } = useTranslation();
   const { readiness } = useStructure();
   const state = item.published ? readiness.get(item.id) : undefined;
+  if (item.published && !item.hasDrawing && !state) {
+    return null;
+  }
   return (
-    <span className="flex flex-wrap items-center justify-end gap-1">
+    <span className="flex flex-wrap items-center gap-1 ps-2 pb-1">
       {item.published ? null : (
         <Badge icon={<EyeOff />} variant="warning">
           {t("admin.lessons.item.unpublished")}
@@ -273,32 +276,30 @@ function ItemRow({
 }): ReactNode {
   const { dragHandle, isDragging, item, moveDown, moveUp } = args;
   return (
-    <GestureRow
-      className={isDragging ? "bg-popover shadow-2" : undefined}
-      dragHandle={dragHandle}
-      gesture={{ ...item, categories: [] }}
-      trailing={
-        <span className="flex items-center gap-1">
-          <ItemBadges item={item} />
+    <div className="flex flex-col">
+      <GestureRow
+        className={isDragging ? "bg-popover shadow-2" : undefined}
+        dragHandle={dragHandle}
+        gesture={{ ...item, categories: [] }}
+        trailing={
           <ItemMenu
             item={item}
             moveDown={moveDown}
             moveUp={moveUp}
             within={within}
           />
-        </span>
-      }
-    />
+        }
+      />
+      <ItemBadges item={item} />
+    </div>
   );
 }
 
 function ReadOnlyRow({ item }: { item: LessonItem }): ReactNode {
   return (
-    <li>
-      <GestureRow
-        gesture={{ ...item, categories: [] }}
-        trailing={<ItemBadges item={item} />}
-      />
+    <li className="flex flex-col">
+      <GestureRow gesture={{ ...item, categories: [] }} />
+      <ItemBadges item={item} />
     </li>
   );
 }
