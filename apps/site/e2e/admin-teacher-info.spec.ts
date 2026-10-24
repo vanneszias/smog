@@ -100,6 +100,27 @@ async function saveAsAdmin(
   });
 }
 
+test("dark theme: the teacher info page passes axe at 1280 and 390 px", async ({
+  page,
+}) => {
+  await page
+    .context()
+    .addCookies([{ name: "theme", url: ORIGIN, value: "dark" }]);
+  await page.emulateMedia({ colorScheme: "dark" });
+  await stubMuxMedia(page);
+  await signedInAs(page, "teacher");
+  for (const width of [1280, 390]) {
+    // biome-ignore lint/performance/noAwaitInLoops: one viewport after the other.
+    await page.setViewportSize({ height: 900, width });
+    await openAdmin(page, `/admin/teacher-info/${gestureId}`);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Info voor lesgevers" })
+    ).toBeVisible();
+    await waitForTabs(page);
+    expect(await blockingViolations(page), String(width)).toEqual([]);
+  }
+});
+
 test("a teacher fills a field in French and sees it after a reload", async ({
   page,
 }) => {

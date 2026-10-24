@@ -371,12 +371,12 @@ describe("LessonBuilder", () => {
   });
 
   test("the save indicator speaks only when the lesson goes wrong and when it recovers, not after every pause", async () => {
-    let fail = true;
+    const mode: { fail: boolean } = { fail: true };
     await renderSite(page(LESSON), {
       api: {
         "lessons/readiness": READINESS,
         "lessons/update": () =>
-          fail
+          mode.fail
             ? rpcError("INTERNAL_SERVER_ERROR", 500)
             : { unchanged: false, updatedAt: 2000, version: 4 },
       },
@@ -391,7 +391,7 @@ describe("LessonBuilder", () => {
       expect(live.textContent).not.toBe("");
     }, AUTOSAVE_WAIT);
     expect(live.textContent).toContain("Saving failed");
-    fail = false;
+    mode.fail = false;
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => {
       expect(live.textContent).toBe(SAVED);

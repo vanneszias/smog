@@ -170,7 +170,7 @@ test("a teacher lands on the lessons, creates a lesson and fills it with gesture
   await authorPage.getByRole("button", { name: "Nieuwe les" }).click();
   const dialog = authorPage.getByRole("dialog", { name: "Nieuwe les" });
   await dialog.getByRole("textbox", { name: TITLE_LABEL }).fill(TITLE);
-  await dialog.getByRole("spinbutton", { name: NUMBER_LABEL }).fill("3");
+  await dialog.getByRole("textbox", { name: NUMBER_LABEL }).fill("3");
   await dialog.getByRole("button", { name: "Les maken" }).click();
   await expect(authorPage).toHaveURL(BUILDER_URL, { timeout: STEP_MS });
   lessonUrl = new URL(authorPage.url()).pathname;
@@ -404,6 +404,41 @@ test("another teacher reads the lesson read-only and makes their own copy, then 
   // The original is untouched.
   await page.getByRole("switch", { name: "Mijn lessen" }).click();
   await expect(page.getByRole("row", { name: TITLE_CELL })).toHaveCount(1);
+});
+
+test("dark theme: the lessons list, the builder and the export dialog pass axe at 1280 and 390 px", async () => {
+  const page = authorPage;
+  await author.addCookies([{ name: "theme", url: ORIGIN, value: "dark" }]);
+  await page.emulateMedia({ colorScheme: "dark" });
+  try {
+    for (const width of [1280, 390]) {
+      // biome-ignore lint/performance/noAwaitInLoops: one viewport after the other.
+      await page.setViewportSize({ height: 900, width });
+      await openAdmin(page, "/admin/lessons");
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Lessen" })
+      ).toBeVisible();
+      expect(await blockingViolations(page), `list ${width}`).toEqual([]);
+      await openAdmin(page, lessonUrl);
+      await expect(
+        page.getByRole("heading", { level: 1, name: TITLE })
+      ).toBeVisible();
+      await expectSaved(page);
+      expect(await blockingViolations(page), `builder ${width}`).toEqual([]);
+      await page.getByRole("button", { name: "Exporteer als pdf" }).click();
+      const dialog = page.getByRole("dialog", { name: "Les als pdf" });
+      await expect(dialog.getByTestId("export-preview")).toBeVisible({
+        timeout: STEP_MS,
+      });
+      expect(await blockingViolations(page), `dialog ${width}`).toEqual([]);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+    }
+  } finally {
+    await author.addCookies([{ name: "theme", url: ORIGIN, value: "light" }]);
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ height: 900, width: 1280 });
+  }
 });
 
 test("the author deletes the lesson from its row menu", async () => {
