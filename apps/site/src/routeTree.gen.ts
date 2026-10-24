@@ -69,6 +69,8 @@ import { Route as ApiWebhooksMollieRouteImport } from './routes/api/webhooks/mol
 import { Route as ApiWebhooksMuxRouteImport } from './routes/api/webhooks/mux'
 import { Route as ApiAudioUploadSplatRouteImport } from './routes/api/audio/upload/$'
 import { Route as ApiLogosUploadKeyRouteImport } from './routes/api/logos/upload.$key'
+import { Route as ApiTeacherDrawingsSplatRouteImport } from './routes/api/teacher/drawings/$'
+import { Route as ApiTeacherDrawingsUploadSplatRouteImport } from './routes/api/teacher/drawings/upload/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -371,6 +373,17 @@ const ApiLogosUploadKeyRoute = ApiLogosUploadKeyRouteImport.update({
   path: '/api/logos/upload/$key',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTeacherDrawingsSplatRoute = ApiTeacherDrawingsSplatRouteImport.update({
+  id: '/api/teacher/drawings/$',
+  path: '/api/teacher/drawings/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTeacherDrawingsUploadSplatRoute =
+  ApiTeacherDrawingsUploadSplatRouteImport.update({
+    id: '/api/teacher/drawings/upload/$',
+    path: '/api/teacher/drawings/upload/$',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -433,6 +446,8 @@ export interface FileRoutesByFullPath {
   '/admin/translation/': typeof AdminTranslationIndexRoute
   '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
+  '/api/teacher/drawings/$': typeof ApiTeacherDrawingsSplatRoute
+  '/api/teacher/drawings/upload/$': typeof ApiTeacherDrawingsUploadSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -494,6 +509,8 @@ export interface FileRoutesByTo {
   '/admin/translation': typeof AdminTranslationIndexRoute
   '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
+  '/api/teacher/drawings/$': typeof ApiTeacherDrawingsSplatRoute
+  '/api/teacher/drawings/upload/$': typeof ApiTeacherDrawingsUploadSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -557,6 +574,8 @@ export interface FileRoutesById {
   '/admin/translation/': typeof AdminTranslationIndexRoute
   '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
+  '/api/teacher/drawings/$': typeof ApiTeacherDrawingsSplatRoute
+  '/api/teacher/drawings/upload/$': typeof ApiTeacherDrawingsUploadSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -621,6 +640,8 @@ export interface FileRouteTypes {
     | '/admin/translation/'
     | '/api/audio/upload/$'
     | '/api/logos/upload/$key'
+    | '/api/teacher/drawings/$'
+    | '/api/teacher/drawings/upload/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -682,6 +703,8 @@ export interface FileRouteTypes {
     | '/admin/translation'
     | '/api/audio/upload/$'
     | '/api/logos/upload/$key'
+    | '/api/teacher/drawings/$'
+    | '/api/teacher/drawings/upload/$'
   id:
     | '__root__'
     | '/'
@@ -744,6 +767,8 @@ export interface FileRouteTypes {
     | '/admin/translation/'
     | '/api/audio/upload/$'
     | '/api/logos/upload/$key'
+    | '/api/teacher/drawings/$'
+    | '/api/teacher/drawings/upload/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -790,6 +815,8 @@ export interface RootRouteChildren {
   ApiWebhooksMuxRoute: typeof ApiWebhooksMuxRoute
   ApiAudioUploadSplatRoute: typeof ApiAudioUploadSplatRoute
   ApiLogosUploadKeyRoute: typeof ApiLogosUploadKeyRoute
+  ApiTeacherDrawingsSplatRoute: typeof ApiTeacherDrawingsSplatRoute
+  ApiTeacherDrawingsUploadSplatRoute: typeof ApiTeacherDrawingsUploadSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1214,6 +1241,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLogosUploadKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/teacher/drawings/$': {
+      id: '/api/teacher/drawings/$'
+      path: '/api/teacher/drawings/$'
+      fullPath: '/api/teacher/drawings/$'
+      preLoaderRoute: typeof ApiTeacherDrawingsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/teacher/drawings/upload/$': {
+      id: '/api/teacher/drawings/upload/$'
+      path: '/api/teacher/drawings/upload/$'
+      fullPath: '/api/teacher/drawings/upload/$'
+      preLoaderRoute: typeof ApiTeacherDrawingsUploadSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1303,6 +1344,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWebhooksMuxRoute: ApiWebhooksMuxRoute,
   ApiAudioUploadSplatRoute: ApiAudioUploadSplatRoute,
   ApiLogosUploadKeyRoute: ApiLogosUploadKeyRoute,
+  ApiTeacherDrawingsSplatRoute: ApiTeacherDrawingsSplatRoute,
+  ApiTeacherDrawingsUploadSplatRoute: ApiTeacherDrawingsUploadSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

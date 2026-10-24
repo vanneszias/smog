@@ -1,6 +1,8 @@
 import { useAuthState } from "@smog/auth/react";
 import {
+  type RpcClient,
   type RpcQueryUtils,
+  useRpcClient,
   useRpcQuery,
   userScopedKey,
 } from "@smog/rpc/react";
@@ -14,6 +16,14 @@ interface TeacherSlice {
 }
 
 export type TeacherQueryUtils = RpcQueryUtils<TeacherSlice>["teacher"];
+
+/** The typed client for `teacher.*` (the drawing upload calls it directly). */
+export type TeacherClient = RpcClient<TeacherSlice>["teacher"];
+
+/** The client for `teacher.*`. */
+export function useTeacherClient(): TeacherClient {
+  return useRpcClient<TeacherSlice>().teacher;
+}
 
 /** Other teachers edit the same texts: refetch after 30 s. */
 export const TEACHER_STALE_TIME = 30_000;

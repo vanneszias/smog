@@ -419,6 +419,39 @@
       }
     }
   },
+  "drawings": {
+    "title": "Tekeningen",
+    "description": "Lijntekeningen voor het blad van de cursisten: één afbeelding per stap, een tweede stap is optioneel. PNG, JPEG of WebP, hoogstens 1 MB en 2000 pixels per zijde. Alleen leerkrachten, vertalers en beheerders zien ze.",
+    "step": "Stap {{step}}",
+    "stepOptional": "Stap {{step}} (optioneel)",
+    "none": "Nog geen tekening",
+    "needFirst": "Voeg eerst stap 1 toe.",
+    "choose": "Tekening kiezen",
+    "replace": "Tekening vervangen",
+    "remove": "Tekening verwijderen",
+    "creditLabel": "Bronvermelding",
+    "creditHint": "Staat onder de tekening. Wil je ze wijzigen, upload de tekening dan opnieuw.",
+    "credit": "Bron: {{credit}}",
+    "noCredit": "Geen bronvermelding",
+    "details": "{{width}} × {{height}} px, {{size}} kB",
+    "previewAlt": "Tekening van {{name}}, stap {{step}}",
+    "readOnly": "Je kunt de tekeningen bekijken. Leerkrachten en beheerders wijzigen ze.",
+    "saved": "Tekening opgeslagen",
+    "removed": "Tekening verwijderd",
+    "removeTitle": "Deze tekening verwijderen?",
+    "removeDescription": "De tekening van stap {{step}} wordt verwijderd. Lessen met dit gebaar worden zonder tekening afgedrukt.",
+    "removeConfirm": "Verwijderen",
+    "errors": {
+      "format": "Dit is geen geldige PNG-, JPEG- of WebP-afbeelding.",
+      "dimensions": "De afbeelding is groter dan 2000 pixels per zijde.",
+      "tooLarge": "Het bestand is groter dan 1 MB.",
+      "missing": "De upload is niet aangekomen. Probeer opnieuw.",
+      "key": "Deze upload hoort niet bij dit gebaar.",
+      "network": "De upload is mislukt. Controleer je verbinding en probeer opnieuw.",
+      "generic": "Opslaan is mislukt. Probeer opnieuw.",
+      "removeFailed": "Verwijderen is mislukt. Probeer opnieuw."
+    }
+  },
   "gesture": {
     "sponsored": "Gesponsord",
     "disclaimer": {

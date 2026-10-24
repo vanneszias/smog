@@ -10,12 +10,18 @@ const guard = adminGuard(TEACHER_PROCEDURE_KINDS);
  * passes both; `UNAUTHORIZED` for a guest, `FORBIDDEN` for any other
  * account), then the audit guard, which holds every read read-only and
  * makes each mutation build and run its audit entry in its own batch. What a
- * translator may not do (write the default language, touch drawings) is
- * checked by the procedure itself.
+ * translator may not do (write the default language) is checked by the
+ * procedure itself.
  */
 export const teachingProcedure = os
   .use(requireRole("teacher", "translator"))
   .use(guard);
+
+/**
+ * Writing drawings: the `teacher` role only (an `admin` passes; a translator
+ * is `FORBIDDEN`), same audit guard.
+ */
+export const teacherWriteProcedure = os.use(requireRole("teacher")).use(guard);
 
 /** The router builder: no guard of its own, each procedure carries its own. */
 export const teacherRouterBuilder = os;

@@ -13,7 +13,7 @@ import { makeRpcContext } from "@smog/rpc/testing";
 import { createTeacherRouter } from "../src/server";
 
 const SITE_URL = "http://localhost:5173";
-const TEST_SECRET = "lessons-test-secret-at-least-32-characters";
+export const TEST_SECRET = "lessons-test-secret-at-least-32-characters";
 const PASSWORD = "correct horse battery";
 
 export function testDb(): Db {

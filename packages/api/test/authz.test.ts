@@ -215,6 +215,22 @@ const PROCEDURES: Record<string, Row> = {
   "system.health": { level: "public" },
   "system.i18n": { input: {}, level: "public" },
   "system.whoami": { level: "public" },
+  // Phase 10c task 3: a gesture's drawings. A teacher (or an admin) uploads,
+  // finalizes and deletes; a teacher, a translator or an admin lists them
+  // (the card is read-only for a translator, plan ruling 5).
+  "teacher.deleteDrawing": {
+    input: { gestureId: "00000000-0000-4000-8000-000000000000", step: 1 },
+    level: "teacher",
+  },
+  "teacher.finalizeDrawing": {
+    input: {
+      credit: "",
+      gestureId: "00000000-0000-4000-8000-000000000000",
+      key: "teacher/drawings/00000000-0000-4000-8000-000000000000/1/00000000-0000-4000-8000-000000000001",
+      step: 1,
+    },
+    level: "teacher",
+  },
   // Phase 10b task 4: the translation screens. Strings, the language list
   // and the coverage need the translator role (an admin passes); creating
   // or changing a language needs the admin role. Every change carries an
@@ -223,6 +239,10 @@ const PROCEDURES: Record<string, Row> = {
   // admin; a translator may not write the default language, which the
   // procedure checks: `packages/features/lessons/test/teacher-info.test.ts`).
   "teacher.getInfo": { input: { gestureId: "g1" }, level: "teaching" },
+  "teacher.listDrawings": {
+    input: { gestureId: "00000000-0000-4000-8000-000000000000" },
+    level: "teaching",
+  },
   "teacher.saveInfo": {
     input: {
       expectedVersion: null,
@@ -239,6 +259,15 @@ const PROCEDURES: Record<string, Row> = {
       locale: "fr",
     },
     level: "teaching",
+  },
+  "teacher.uploadDrawing": {
+    input: {
+      contentType: "image/png",
+      gestureId: "00000000-0000-4000-8000-000000000000",
+      size: 1000,
+      step: 1,
+    },
+    level: "teacher",
   },
   "translation.coverage": { level: "translator" },
   // Task 6: a gesture's spoken name. A translator or an admin uploads,
