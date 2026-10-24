@@ -266,9 +266,7 @@ describe("GET /api/teacher/drawings/<gestureId>/<step>", () => {
       const response = await get(row.path, { cookie: cookies[who] });
       expect(response.status, who).toBe(200);
       expect(response.headers.get("content-type")).toBe("image/png");
-      expect(response.headers.get("cache-control")).toBe(
-        "private, no-cache"
-      );
+      expect(response.headers.get("cache-control")).toBe("private, no-cache");
       expect(response.headers.get("vary")).toBe("Cookie");
       expect(response.headers.get("x-content-type-options")).toBe("nosniff");
       expect(response.headers.get("content-security-policy")).toContain(

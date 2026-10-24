@@ -105,6 +105,30 @@ function idatOf(bytes: Uint8Array): Uint8Array | null {
   return out;
 }
 
+/** The part of the web stream API the check uses (the engine's tsconfig has no DOM or Workers types; every runtime it runs in has `DecompressionStream`). */
+interface InflateStream {
+  readable: {
+    getReader: () => {
+      cancel: () => Promise<void>;
+      read: () => Promise<{ done: boolean; value?: Uint8Array }>;
+    };
+  };
+  writable: {
+    getWriter: () => {
+      abort: () => Promise<void>;
+      close: () => Promise<void>;
+      write: (chunk: Uint8Array) => Promise<void>;
+    };
+  };
+}
+
+const inflateStream = (): InflateStream =>
+  new (
+    globalThis as unknown as {
+      DecompressionStream: new (format: "deflate") => InflateStream;
+    }
+  ).DecompressionStream("deflate");
+
 /** True when the `IDAT` stream of the PNG inflates to no more than its header implies (and `PNG_MAX_DECODED_BYTES`). A stream that is not valid zlib is refused. */
 export async function pngInflatesWithin(bytes: Uint8Array): Promise<boolean> {
   const expected = pngExpectedSize(bytes);
@@ -115,10 +139,14 @@ export async function pngInflatesWithin(bytes: Uint8Array): Promise<boolean> {
   if (!data || data.length === 0) {
     return false;
   }
-  const reader = new Blob([data])
-    .stream()
-    .pipeThrough(new DecompressionStream("deflate"))
-    .getReader();
+  const stream = inflateStream();
+  const writer = stream.writable.getWriter();
+  const reader = stream.readable.getReader();
+  // Written alongside the reads (back-pressure would block a write-then-read); a failed or aborted write only means the read side says so.
+  writer
+    .write(data)
+    .then(() => writer.close())
+    .catch(() => undefined);
   let total = 0;
   try {
     for (;;) {
@@ -127,9 +155,10 @@ export async function pngInflatesWithin(bytes: Uint8Array): Promise<boolean> {
       if (done) {
         return true;
       }
-      total += value.length;
+      total += value?.length ?? 0;
       if (total > expected) {
         await reader.cancel();
+        await writer.abort().catch(() => undefined);
         return false;
       }
     }

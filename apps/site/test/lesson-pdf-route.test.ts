@@ -306,7 +306,9 @@ describe("a failing audit write", () => {
         "CREATE TRIGGER fail_lesson_export_audit BEFORE INSERT ON audit_log WHEN NEW.action = 'lesson.export' BEGIN SELECT RAISE(ABORT, 'audit down'); END"
       )
       .run();
-    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const errors = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     try {
       const response = await pdf(lessonId, TEACHERS_NL, teacher.cookie);
       expect(response.status).toBe(200);

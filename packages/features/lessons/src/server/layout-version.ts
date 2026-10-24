@@ -15,9 +15,12 @@
  */
 
 /** Bump together with a new entry in `LESSON_PDF_ENGINE_HASHES`. */
-export const LESSON_PDF_LAYOUT_VERSION = 1;
+export const LESSON_PDF_LAYOUT_VERSION = 2;
 
 /** Version to engine fingerprint; an entry is never edited, a new version adds one. */
 export const LESSON_PDF_ENGINE_HASHES: Readonly<Record<number, string>> = {
-  1: "pending",
+  // The engine of phase 10c task 5a/5b (the first release).
+  1: "8b82a08e80880176cc40945cf036d475009cc2b491165ec6257b1587a113bb63",
+  // Review fix wave: a section title never alone on a page, bounded PNG inflate, glyph coverage module.
+  2: "8ea46f5cf528ee7d61b557bdf6fafe334608866a9677912f9e785d5690992fe1",
 };
