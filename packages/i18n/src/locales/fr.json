@@ -1156,6 +1156,18 @@
           "draft_save": "Brouillon de texte juridique enregistré",
           "publish": "Texte juridique publié",
           "restore": "Texte juridique restauré"
+        },
+        "lesson": {
+          "create": "Leçon créée",
+          "update": "Leçon mise à jour",
+          "delete": "Leçon supprimée",
+          "duplicate": "Leçon dupliquée",
+          "export": "Leçon exportée en PDF"
+        },
+        "teacher": {
+          "info_save": "Infos enseignant enregistrées",
+          "drawing_upload": "Dessin téléversé",
+          "drawing_delete": "Dessin supprimé"
         }
       },
       "targetTypes": {
@@ -1170,7 +1182,9 @@
         "dead_letter": "Dead letter",
         "language": "Langue",
         "ui_string": "Texte d’interface",
-        "legal_text": "Texte juridique"
+        "legal_text": "Texte juridique",
+        "gesture_teacher_info": "Infos enseignant",
+        "lesson": "Leçon"
       }
     },
     "gestures": {

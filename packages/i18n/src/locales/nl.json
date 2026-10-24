@@ -1136,6 +1136,18 @@
           "draft_save": "Juridische tekst bewaard als concept",
           "publish": "Juridische tekst gepubliceerd",
           "restore": "Juridische tekst hersteld"
+        },
+        "lesson": {
+          "create": "Les aangemaakt",
+          "update": "Les bijgewerkt",
+          "delete": "Les verwijderd",
+          "duplicate": "Les gedupliceerd",
+          "export": "Les geëxporteerd als pdf"
+        },
+        "teacher": {
+          "info_save": "Lesgeversinfo opgeslagen",
+          "drawing_upload": "Tekening geüpload",
+          "drawing_delete": "Tekening verwijderd"
         }
       },
       "targetTypes": {
@@ -1150,7 +1162,9 @@
         "dead_letter": "Dead letter",
         "language": "Taal",
         "ui_string": "Interfacetekst",
-        "legal_text": "Juridische tekst"
+        "legal_text": "Juridische tekst",
+        "gesture_teacher_info": "Lesgeversinfo",
+        "lesson": "Les"
       }
     },
     "gestures": {

@@ -29,6 +29,41 @@ export const SEED_ADMIN_EMAIL = "admin@smog.test";
 export const SEED_ADMIN_PASSWORD = "smog-dev-admin";
 /** A fixed salt keeps the seed file deterministic (dev only). */
 const SEED_ADMIN_SALT = "5eed5a175eed5a175eed5a175eed5a17";
+/**
+ * Invented teacher information (nl) for the first seeded gestures, so the
+ * "Teacher info" tab of phase 10c has something to show in dev. Private
+ * material: no public output may ever contain these texts.
+ */
+const SEED_TEACHER_INFO: Record<string, Record<string, string>> = {
+  "1": {
+    bw: "Kleine beweging naar voor.",
+    c_note: "(ook bij afscheid)",
+    hc: "Vlakke hand, vingers bij elkaar.",
+    note: "Oefen met een buur.",
+    or_: "Handpalm naar voor.",
+    pl: "Naast het hoofd.",
+    summary: "Vlakke hand bij het hoofd.",
+  },
+  "2": {
+    bw: "Twee keer zwaaien.",
+    c_note: "",
+    hc: "Open hand.",
+    note: "",
+    or_: "Handpalm naar de ander.",
+    pl: "Voor de borst.",
+    summary: "Open hand, twee keer zwaaien.",
+  },
+  "3": {
+    bw: "",
+    c_note: "",
+    hc: "Vuist met duim omhoog.",
+    note: "",
+    or_: "",
+    pl: "",
+    summary: "",
+  },
+};
+
 /** 2026-01-01T00:00:00.000Z */
 const SEED_TIME = Date.UTC(2026, 0, 1);
 
@@ -248,6 +283,24 @@ export function buildSeedSql(): string {
         ),
         ...ftsStatements(gestureId)
       );
+      const teacherInfo = SEED_TEACHER_INFO[String(gestureNumber)];
+      if (teacherInfo) {
+        lines.push(
+          upsert(
+            "gesture_teacher_info",
+            {
+              ...teacherInfo,
+              gesture_id: gestureId,
+              locale: "nl",
+              updated_at: SEED_TIME,
+              version: 1,
+            },
+            ["gesture_id", "locale"],
+            // A save in dev bumps the version; re-seeding does not reset it.
+            ["version"]
+          )
+        );
+      }
     }
   });
   lines.push(
