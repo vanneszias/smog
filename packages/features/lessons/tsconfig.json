@@ -1,0 +1,11 @@
+{
+  // Teacher lessons and PDFs (phase 10c). Task 1 holds the client-safe
+  // `./schema` only; `./contract`, `./server` and `./client` follow with the
+  // tasks that need them, with the tsconfig split of `@smog/translation`.
+  "extends": "@smog/config/tsconfig/library.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "types": ["bun"]
+  },
+  "include": ["src"]
+}

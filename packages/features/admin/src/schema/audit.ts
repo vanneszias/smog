@@ -316,6 +316,65 @@ const LEGAL_AUDIT_SCHEMAS = {
 } satisfies AuditSchemaBlock;
 
 /**
+ * Phase 10c: private teaching material and lessons. The entries carry ids,
+ * language codes, field names and counts, never a teacher text, a lesson
+ * title or a PDF. `teacher.*` target `gesture_teacher_info` (`target_id`
+ * `<gestureId>:<locale>` for a save, `<gestureId>:<step>` for a drawing);
+ * `lesson.*` target `lesson` (`target_id` the lesson id).
+ */
+const lessonTemplate = z.enum(["participants", "teachers"]);
+
+const LESSON_AUDIT_SCHEMAS = {
+  "lesson.create": z.object({
+    /** The lesson number, when one was set. */
+    number: z.number().int().nonnegative().nullable(),
+  }),
+  "lesson.delete": z.object({
+    gestures: z.number().int().nonnegative(),
+    sections: z.number().int().nonnegative(),
+  }),
+  "lesson.duplicate": z.object({
+    gestures: z.number().int().nonnegative(),
+    /** The lesson that was copied. */
+    sourceId: z.string(),
+  }),
+  "lesson.export": z.object({
+    /** Served from the R2 cache instead of rendered. */
+    cached: z.boolean(),
+    /** Gestures in the lesson, and how many the PDF skipped (unpublished). */
+    gestures: z.number().int().nonnegative(),
+    locale: z.string(),
+    skipped: z.number().int().nonnegative(),
+    template: lessonTemplate,
+  }),
+  "lesson.update": z.object({
+    /** The parts the update changed. */
+    fields: z
+      .array(z.enum(["items", "notes", "number", "sections", "title"]))
+      .min(1),
+    /** The version the lesson has after the update. */
+    version: z.number().int().positive(),
+  }),
+  "teacher.drawing_delete": z.object({
+    step: z.union([z.literal(1), z.literal(2)]),
+  }),
+  "teacher.drawing_upload": z.object({
+    /** Set when an earlier drawing of that step was replaced. */
+    replaced: z.literal(true).optional(),
+    step: z.union([z.literal(1), z.literal(2)]),
+  }),
+  "teacher.info_save": z.object({
+    /** The fields the save changed. */
+    fields: z
+      .array(z.enum(["bw", "cNote", "hc", "note", "or", "pl", "summary"]))
+      .min(1),
+    locale: z.string(),
+    /** The version the row has after the save. */
+    version: z.number().int().positive(),
+  }),
+} satisfies AuditSchemaBlock;
+
+/**
  * `audit_log.data` per action. The writer validates `data` with it before
  * any write, and `admin.audit.list` parses stored rows with it.
  */
@@ -330,6 +389,7 @@ export const AUDIT_DATA_SCHEMAS = {
   ...DEAD_LETTER_AUDIT_SCHEMAS,
   ...TRANSLATION_AUDIT_SCHEMAS,
   ...LEGAL_AUDIT_SCHEMAS,
+  ...LESSON_AUDIT_SCHEMAS,
 } satisfies AuditSchemaBlock;
 
 /** Actions that are parsed on read but never written. */

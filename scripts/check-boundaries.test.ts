@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkBoundaries, formatViolation } from "./check-boundaries";
 
@@ -73,6 +74,31 @@ describe("checkBoundaries", () => {
 
   test("passes on the real repository", () => {
     expect(checkBoundaries(join(import.meta.dir, ".."))).toEqual([]);
+  });
+});
+
+describe("the PDF engine (phase 10c ruling 1)", () => {
+  test("only @smog/lessons and the site depend on @smog/pdf", () => {
+    const root = join(import.meta.dir, "..");
+    const dependents: string[] = [];
+    for (const pattern of ["apps/*", "packages/*", "packages/features/*"]) {
+      for (const path of new Bun.Glob(`${pattern}/package.json`).scanSync({
+        cwd: root,
+      })) {
+        const manifest = JSON.parse(readFileSync(join(root, path), "utf8")) as {
+          dependencies?: Record<string, string>;
+          devDependencies?: Record<string, string>;
+          name: string;
+        };
+        const deps = { ...manifest.dependencies, ...manifest.devDependencies };
+        if (deps["@smog/pdf"]) {
+          dependents.push(manifest.name);
+        }
+      }
+    }
+    for (const name of dependents) {
+      expect(["@smog/lessons", "@smog/site"]).toContain(name);
+    }
   });
 });
 

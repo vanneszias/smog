@@ -43,6 +43,34 @@ export type AudioContentType = (typeof AUDIO_CONTENT_TYPES)[number];
 export const AUDIO_MAX_BYTES = 1_048_576;
 export const AUDIO_MAX_DURATION_MS = 10_000;
 
+/**
+ * Teacher information (phase 10c, `gesture_teacher_info`): every long text
+ * field is bounded at 2,000 characters (the same number is a CHECK).
+ */
+export const TEACHER_FIELD_MAX = 2000;
+
+/**
+ * The drawings of a gesture (`gesture_drawing`): PNG, JPEG or WebP verified
+ * by magic bytes after the upload, at most 1 MiB and 2,000 px on a side
+ * (the PDF embeds the file as it is), one image per step (1, optionally 2).
+ */
+export const DRAWING_CONTENT_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+] as const;
+export type DrawingContentType = (typeof DRAWING_CONTENT_TYPES)[number];
+export const DRAWING_STEPS = [1, 2] as const;
+export type DrawingStep = (typeof DRAWING_STEPS)[number];
+export const DRAWING_MAX_BYTES = 1_048_576;
+export const DRAWING_MAX_PIXELS = 2000;
+export const DRAWING_CREDIT_MAX = 120;
+
+/** Lessons (phase 10c): the caps of the text columns, and of the lesson number. */
+export const LESSON_TITLE_MAX = 200;
+export const LESSON_NOTES_MAX = 2000;
+export const LESSON_NUMBER_MAX = 9999;
+
 export const LIST_SHARE_ROLES = ["view", "edit"] as const;
 export type ListShareRole = (typeof LIST_SHARE_ROLES)[number];
 
@@ -191,6 +219,16 @@ export const AUDIT_ACTIONS = [
   "legal.draft_save",
   "legal.publish",
   "legal.restore",
+  /** Phase 10c: private teaching information and drawings (ids and counts, never texts). */
+  "teacher.info_save",
+  "teacher.drawing_upload",
+  "teacher.drawing_delete",
+  /** Phase 10c: lessons and their PDF exports. */
+  "lesson.create",
+  "lesson.update",
+  "lesson.delete",
+  "lesson.duplicate",
+  "lesson.export",
   "legacy",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -214,6 +252,10 @@ export const AUDIT_TARGET_TYPES = [
   "ui_string",
   /** A legal text version (`target_id` = its id), phase 10b. */
   "legal_text",
+  /** A gesture's teacher information (`target_id` = `<gestureId>:<locale>`) or drawing (`<gestureId>:<step>`), phase 10c. */
+  "gesture_teacher_info",
+  /** A lesson (`target_id` = its id), phase 10c. */
+  "lesson",
 ] as const;
 export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number];
 

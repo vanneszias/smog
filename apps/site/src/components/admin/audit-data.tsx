@@ -44,6 +44,11 @@ const ACTION_LABEL_KEYS = {
   "legal.draft_save": "admin.audit.actions.legal.draft_save",
   "legal.publish": "admin.audit.actions.legal.publish",
   "legal.restore": "admin.audit.actions.legal.restore",
+  "lesson.create": "admin.audit.actions.lesson.create",
+  "lesson.delete": "admin.audit.actions.lesson.delete",
+  "lesson.duplicate": "admin.audit.actions.lesson.duplicate",
+  "lesson.export": "admin.audit.actions.lesson.export",
+  "lesson.update": "admin.audit.actions.lesson.update",
   "maintenance.disable": "admin.audit.actions.maintenance.disable",
   "maintenance.enable": "admin.audit.actions.maintenance.enable",
   "payment.refund": "admin.audit.actions.payment.refund",
@@ -57,6 +62,9 @@ const ACTION_LABEL_KEYS = {
   "sponsorship.request_changes":
     "admin.audit.actions.sponsorship.request_changes",
   "sponsorship.retry_render": "admin.audit.actions.sponsorship.retry_render",
+  "teacher.drawing_delete": "admin.audit.actions.teacher.drawing_delete",
+  "teacher.drawing_upload": "admin.audit.actions.teacher.drawing_upload",
+  "teacher.info_save": "admin.audit.actions.teacher.info_save",
   "translation.audio_delete": "admin.audit.actions.translation.audio_delete",
   "translation.audio_upload": "admin.audit.actions.translation.audio_upload",
   "translation.category_save": "admin.audit.actions.translation.category_save",
@@ -76,8 +84,10 @@ const TARGET_TYPE_LABEL_KEYS = {
   category: "admin.audit.targetTypes.category",
   dead_letter: "admin.audit.targetTypes.dead_letter",
   gesture: "admin.audit.targetTypes.gesture",
+  gesture_teacher_info: "admin.audit.targetTypes.gesture_teacher_info",
   language: "admin.audit.targetTypes.language",
   legal_text: "admin.audit.targetTypes.legal_text",
+  lesson: "admin.audit.targetTypes.lesson",
   list: "admin.audit.targetTypes.list",
   payment: "admin.audit.targetTypes.payment",
   setting: "admin.audit.targetTypes.setting",
@@ -122,6 +132,12 @@ export function auditTargetLink(entry: AuditEntry): AuditTargetLink | null {
   switch (entry.targetType) {
     case "gesture":
       return { params: { id }, to: "/admin/gestures/$id" };
+    case "gesture_teacher_info":
+      // `<gestureId>:<locale or step>`: the gesture's editor.
+      return {
+        params: { id: id.split(":")[0] ?? id },
+        to: "/admin/gestures/$id",
+      };
     case "category":
       return { to: "/admin/categories" };
     case "user":

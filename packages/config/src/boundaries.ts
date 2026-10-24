@@ -30,6 +30,7 @@ export const FEATURE_PACKAGES = [
   "@smog/sponsorships",
   "@smog/admin",
   "@smog/translation",
+  "@smog/lessons",
 ] as const;
 
 export const BOUNDARIES: Record<string, readonly string[]> = {
@@ -77,6 +78,7 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/email",
     "@smog/payments",
     "@smog/video",
+    "@smog/pdf",
     FEATURE_PATTERN,
     "@smog/local-store",
     "@smog/i18n",
@@ -95,6 +97,9 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/video",
     "@smog/email",
     "@smog/jobs",
+    // The PDF layout engine (phase 10c): only `@smog/lessons` and the site use
+    // it, which `scripts/check-boundaries.test.ts` asserts on the real graph.
+    "@smog/pdf",
     "@smog/analytics/server",
     // Client hooks track through `useAnalytics()` (a no-op without a provider).
     "@smog/analytics/react",
@@ -149,6 +154,9 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/payments",
   ],
   "@smog/payments": ["@smog/config", "@smog/utils"],
+  // Pure: a validated document description in, bytes out (phase 10c ruling 1);
+  // `@smog/config` is for the test configs only.
+  "@smog/pdf": ["@smog/config"],
   "@smog/rpc": ["@smog/auth", "@smog/db", "@smog/config", "@smog/utils"],
   "@smog/styles": ["@smog/config"],
   "@smog/ui-native": [

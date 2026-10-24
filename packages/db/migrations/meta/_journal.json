@@ -169,6 +169,34 @@
       "when": 1792694359420,
       "tag": "0023_audit_log_i18n_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1792823785111,
+      "tag": "0024_gesture_teacher_info",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1792823791342,
+      "tag": "0025_gesture_drawing",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1792823796863,
+      "tag": "0026_lessons",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1792823801487,
+      "tag": "0027_audit_log_lesson_actions",
+      "breakpoints": true
     }
   ]
 }

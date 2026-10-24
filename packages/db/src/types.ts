@@ -9,11 +9,18 @@ import type {
   gesture,
   gestureAudio,
   gestureCategory,
+  gestureDrawing,
   gestureKeyword,
+  gestureTeacherInfo,
   gestureTranslation,
   invoiceRequest,
   language,
   legalText,
+  lesson,
+  lessonItem,
+  lessonSection,
+  lessonSectionTranslation,
+  lessonTranslation,
   list,
   listItem,
   listShare,
@@ -79,3 +86,21 @@ export type LegalText = typeof legalText.$inferSelect;
 export type NewLegalText = typeof legalText.$inferInsert;
 export type UserRoleRow = typeof userRole.$inferSelect;
 export type NewUserRoleRow = typeof userRole.$inferInsert;
+
+/** Phase 10c: private teaching material and lessons. */
+export type GestureTeacherInfo = typeof gestureTeacherInfo.$inferSelect;
+export type NewGestureTeacherInfo = typeof gestureTeacherInfo.$inferInsert;
+export type GestureDrawing = typeof gestureDrawing.$inferSelect;
+export type NewGestureDrawing = typeof gestureDrawing.$inferInsert;
+export type Lesson = typeof lesson.$inferSelect;
+export type NewLesson = typeof lesson.$inferInsert;
+export type LessonTranslation = typeof lessonTranslation.$inferSelect;
+export type NewLessonTranslation = typeof lessonTranslation.$inferInsert;
+export type LessonSection = typeof lessonSection.$inferSelect;
+export type NewLessonSection = typeof lessonSection.$inferInsert;
+export type LessonSectionTranslation =
+  typeof lessonSectionTranslation.$inferSelect;
+export type NewLessonSectionTranslation =
+  typeof lessonSectionTranslation.$inferInsert;
+export type LessonItem = typeof lessonItem.$inferSelect;
+export type NewLessonItem = typeof lessonItem.$inferInsert;

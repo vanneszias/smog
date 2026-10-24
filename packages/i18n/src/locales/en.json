@@ -1136,6 +1136,18 @@
           "draft_save": "Legal text draft saved",
           "publish": "Legal text published",
           "restore": "Legal text restored"
+        },
+        "lesson": {
+          "create": "Lesson created",
+          "update": "Lesson updated",
+          "delete": "Lesson deleted",
+          "duplicate": "Lesson duplicated",
+          "export": "Lesson exported as PDF"
+        },
+        "teacher": {
+          "info_save": "Teacher info saved",
+          "drawing_upload": "Drawing uploaded",
+          "drawing_delete": "Drawing deleted"
         }
       },
       "targetTypes": {
@@ -1150,7 +1162,9 @@
         "dead_letter": "Dead letter",
         "language": "Language",
         "ui_string": "Interface string",
-        "legal_text": "Legal text"
+        "legal_text": "Legal text",
+        "gesture_teacher_info": "Teacher info",
+        "lesson": "Lesson"
       }
     },
     "gestures": {
