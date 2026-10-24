@@ -86,6 +86,7 @@
         ["admin.tsx", "admin/sponsorships/index.tsx"],
         ["admin.tsx", "admin/translation/languages.tsx"],
         ["admin.tsx", "admin/translation/legal.tsx"],
+        ["admin.tsx", "admin/teacher-info/$id.tsx"],
         ["admin.tsx", "admin/translation/strings.tsx"],
         ["admin.tsx", "admin/users.tsx"]
       ]

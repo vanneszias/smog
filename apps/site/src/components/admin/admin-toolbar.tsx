@@ -11,7 +11,7 @@ import {
 } from "@smog/ui-web";
 import { Link, useLocation } from "@tanstack/react-router";
 import { Fragment, type ReactNode } from "react";
-import { activeHref, RAIL_GROUPS, trimSlash } from "./admin-rail";
+import { activeHref, RAIL_GROUPS, trimSlash, useHasRail } from "./admin-rail";
 
 interface Crumb {
   href?: string;
@@ -51,9 +51,10 @@ export function AdminToolbar(): ReactNode {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const crumbs = crumbsFor(pathname);
+  const hasRail = useHasRail();
   return (
     <div className="flex items-center gap-2 border-border-subtle border-b px-4 py-1 md:px-6 lg:px-8">
-      <SidebarTrigger label={t("admin.rail.open")} />
+      {hasRail ? <SidebarTrigger label={t("admin.rail.open")} /> : null}
       <Breadcrumb>
         <BreadcrumbList>
           {crumbs.map((crumb, index) => (

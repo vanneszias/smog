@@ -1427,6 +1427,36 @@
       "countWithPublished_one": "{{count}} gesture · {{published}} published",
       "countWithPublished_other": "{{count}} gestures · {{published}} published"
     },
+    "teacherInfo": {
+      "title": "Teacher information",
+      "description": "Private teaching notes for this gesture, one tab per language. Only teachers, translators and admins can see them; they never appear on the public site.",
+      "tabsLabel": "Language of the teacher information",
+      "sourceLabel": "Reference ({{language}})",
+      "sourceEmpty": "Nothing has been written in {{language}} yet.",
+      "filled": "Filled in",
+      "empty": "Empty",
+      "fields": {
+        "hc": "HC (handshape)",
+        "pl": "PL (place)",
+        "or": "OR (orientation)",
+        "bw": "BW (movement)",
+        "cNote": "C (related meanings), private note",
+        "note": "Free note",
+        "summary": "Short summary for participants"
+      },
+      "keywords": "Public keywords (C)",
+      "keywordsNone": "No keywords in this language yet.",
+      "cHint": "The keywords above are public search words. This note stays private and is printed after them on the teachers’ sheet.",
+      "summaryHint": "Printed on the participants’ sheet. Without one, the handshape is used.",
+      "readOnly": "You translate this gesture: only a teacher or an admin writes in {{language}}.",
+      "save": "Save teacher information",
+      "saved": "Teacher information saved.",
+      "saveFailed": "The teacher information could not be saved.",
+      "stale": "Someone else saved this language first. Their text is offered above: choose which to keep.",
+      "loadFailed": "The teacher information could not be loaded.",
+      "open": "Teacher information",
+      "backToGesture": "Back to the gesture"
+    },
     "catalogTranslation": {
       "title": "Translations",
       "description": "Translate the name, description and keywords for each language. The text in the default language is shown next to it.",

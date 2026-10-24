@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   isAdminHome,
   TRANSLATION_HOME,
+  teacherInfoMayOpen,
   translatorMayOpen,
 } from "./admin-access";
 
@@ -33,5 +34,25 @@ describe("what a translator may open", () => {
     expect(isAdminHome("/admin")).toBe(true);
     expect(isAdminHome("/admin/")).toBe(true);
     expect(isAdminHome("/admin/users")).toBe(false);
+  });
+});
+
+describe("what a teacher or a translator may open besides", () => {
+  test("one gesture's teacher information", () => {
+    expect(teacherInfoMayOpen("/admin/teacher-info/abc")).toBe(true);
+    expect(teacherInfoMayOpen("/admin/teacher-info/abc/")).toBe(true);
+  });
+
+  test("not the index, a deeper path, a look-alike or the gesture editor", () => {
+    for (const path of [
+      "/admin/teacher-info",
+      "/admin/teacher-info/",
+      "/admin/teacher-info/abc/extra",
+      "/admin/teacher-infox/abc",
+      "/admin/gestures/abc",
+      "/admin",
+    ]) {
+      expect(teacherInfoMayOpen(path), path).toBe(false);
+    }
   });
 });
