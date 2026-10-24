@@ -53,6 +53,7 @@ import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id
 import { Route as AdminGesturesNewRouteImport } from './routes/admin/gestures/new'
 import { Route as AdminSponsorshipsIndexRouteImport } from './routes/admin/sponsorships/index'
 import { Route as AdminSponsorshipsIdRouteImport } from './routes/admin/sponsorships/$id'
+import { Route as AdminTeacherInfoIdRouteImport } from './routes/admin/teacher-info/$id'
 import { Route as AdminTranslationIndexRouteImport } from './routes/admin/translation/index'
 import { Route as AdminTranslationLanguagesRouteImport } from './routes/admin/translation/languages'
 import { Route as AdminTranslationLegalRouteImport } from './routes/admin/translation/legal'
@@ -291,6 +292,11 @@ const AdminSponsorshipsIdRoute = AdminSponsorshipsIdRouteImport.update({
   path: '/sponsorships/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminTeacherInfoIdRoute = AdminTeacherInfoIdRouteImport.update({
+  id: '/teacher-info/$id',
+  path: '/teacher-info/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminTranslationIndexRoute = AdminTranslationIndexRouteImport.update({
   id: '/translation/',
   path: '/translation/',
@@ -422,6 +428,7 @@ export interface FileRoutesByFullPath {
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
+  '/admin/teacher-info/$id': typeof AdminTeacherInfoIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
   '/admin/translation/legal': typeof AdminTranslationLegalRoute
   '/admin/translation/strings': typeof AdminTranslationStringsRoute
@@ -484,6 +491,7 @@ export interface FileRoutesByTo {
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
+  '/admin/teacher-info/$id': typeof AdminTeacherInfoIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
   '/admin/translation/legal': typeof AdminTranslationLegalRoute
   '/admin/translation/strings': typeof AdminTranslationStringsRoute
@@ -548,6 +556,7 @@ export interface FileRoutesById {
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
+  '/admin/teacher-info/$id': typeof AdminTeacherInfoIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
   '/admin/translation/legal': typeof AdminTranslationLegalRoute
   '/admin/translation/strings': typeof AdminTranslationStringsRoute
@@ -613,6 +622,7 @@ export interface FileRouteTypes {
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
+    | '/admin/teacher-info/$id'
     | '/admin/translation/languages'
     | '/admin/translation/legal'
     | '/admin/translation/strings'
@@ -675,6 +685,7 @@ export interface FileRouteTypes {
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
+    | '/admin/teacher-info/$id'
     | '/admin/translation/languages'
     | '/admin/translation/legal'
     | '/admin/translation/strings'
@@ -738,6 +749,7 @@ export interface FileRouteTypes {
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
     | '/admin/sponsorships/$id'
+    | '/admin/teacher-info/$id'
     | '/admin/translation/languages'
     | '/admin/translation/legal'
     | '/admin/translation/strings'
@@ -1117,6 +1129,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSponsorshipsIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/teacher-info/$id': {
+      id: '/admin/teacher-info/$id'
+      path: '/teacher-info/$id'
+      fullPath: '/admin/teacher-info/$id'
+      preLoaderRoute: typeof AdminTeacherInfoIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/translation/': {
       id: '/admin/translation/'
       path: '/translation'
@@ -1250,6 +1269,7 @@ interface AdminRouteChildren {
   AdminGesturesIdRoute: typeof AdminGesturesIdRoute
   AdminGesturesNewRoute: typeof AdminGesturesNewRoute
   AdminSponsorshipsIdRoute: typeof AdminSponsorshipsIdRoute
+  AdminTeacherInfoIdRoute: typeof AdminTeacherInfoIdRoute
   AdminTranslationLanguagesRoute: typeof AdminTranslationLanguagesRoute
   AdminTranslationLegalRoute: typeof AdminTranslationLegalRoute
   AdminTranslationStringsRoute: typeof AdminTranslationStringsRoute
@@ -1269,6 +1289,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminGesturesIdRoute: AdminGesturesIdRoute,
   AdminGesturesNewRoute: AdminGesturesNewRoute,
   AdminSponsorshipsIdRoute: AdminSponsorshipsIdRoute,
+  AdminTeacherInfoIdRoute: AdminTeacherInfoIdRoute,
   AdminTranslationLanguagesRoute: AdminTranslationLanguagesRoute,
   AdminTranslationLegalRoute: AdminTranslationLegalRoute,
   AdminTranslationStringsRoute: AdminTranslationStringsRoute,

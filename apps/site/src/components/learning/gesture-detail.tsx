@@ -105,6 +105,34 @@ function endCardOf(
 }
 
 /**
+ * A link to the gesture's private teaching text (phase 10c) for a teacher, a
+ * translator or an admin; nothing for anyone else.
+ */
+function TeacherInfoLink({
+  gestureId,
+  roles,
+}: {
+  gestureId: string;
+  roles: readonly string[];
+}): ReactNode {
+  const { t } = useTranslation();
+  if (
+    !["admin", "teacher", "translator"].some((role) => roles.includes(role))
+  ) {
+    return null;
+  }
+  return (
+    <div>
+      <Button asChild size="sm" variant="secondary">
+        <Link params={{ id: gestureId }} to="/admin/teacher-info/$id">
+          {t("admin.teacherInfo.open")}
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
+/**
  * A gesture: the video on top (3:4, the course banner under it when due),
  * then the name, its categories (links to the filtered browse), the
  * actions, description, related concepts, the sponsor card (L-17: the
@@ -197,6 +225,7 @@ export function GestureDetailView({
                 {t("admin.catalogTranslation.needs")}
               </Badge>
             ) : null}
+            <TeacherInfoLink gestureId={gesture.id} roles={roles} />
             {gesture.categories.length > 0 ? (
               <ul
                 aria-label={t("search.categories")}

@@ -6,18 +6,27 @@ const os = implementRpc(teacherSlice);
 const guard = adminGuard(TEACHER_PROCEDURE_KINDS);
 
 /**
- * Writing teaching material: the `teacher` role (an `admin` passes too;
- * `UNAUTHORIZED` for a guest, `FORBIDDEN` for everybody else, a translator
- * included), then the audit guard of `@smog/rpc/audit`, which holds every
- * read read-only and makes each mutation build and run its audit entry in
- * its own batch.
+ * The teacher procedures: the `teacher` or `translator` role (an `admin`
+ * passes both; `UNAUTHORIZED` for a guest, `FORBIDDEN` for any other
+ * account), then the audit guard, which holds every read read-only and
+ * makes each mutation build and run its audit entry in its own batch. What a
+ * translator may not do (write the default language) is checked by the
+ * procedure itself.
  */
-export const teacherWriteProcedure = os.use(requireRole("teacher")).use(guard);
-
-/** Reading it for the editor: a teacher, a translator or an admin, same guard. */
-export const teacherReadProcedure = os
+export const teachingProcedure = os
   .use(requireRole("teacher", "translator"))
   .use(guard);
 
+/**
+ * Writing drawings: the `teacher` role only (an `admin` passes; a translator
+ * is `FORBIDDEN`), same audit guard.
+ */
+export const teacherWriteProcedure = os.use(requireRole("teacher")).use(guard);
+
 /** The router builder: no guard of its own, each procedure carries its own. */
 export const teacherRouterBuilder = os;
+
+/** Whether `roles` may author teaching material (any language, drawings): a teacher or an admin. */
+export function mayAuthor(roles: readonly string[]): boolean {
+  return roles.includes("teacher") || roles.includes("admin");
+}

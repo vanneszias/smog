@@ -1460,6 +1460,36 @@
       "countWithPublished_one": "{{count}} gebaar · {{published}} gepubliceerd",
       "countWithPublished_other": "{{count}} gebaren · {{published}} gepubliceerd"
     },
+    "teacherInfo": {
+      "title": "Info voor lesgevers",
+      "description": "Privé lesnotities bij dit gebaar, een tabblad per taal. Alleen lesgevers, vertalers en beheerders zien ze; ze komen nooit op de publieke site.",
+      "tabsLabel": "Taal van de lesgeversinfo",
+      "sourceLabel": "Referentie ({{language}})",
+      "sourceEmpty": "Er is nog niets geschreven in het {{language}}.",
+      "filled": "Ingevuld",
+      "empty": "Leeg",
+      "fields": {
+        "hc": "HC (handconfiguratie)",
+        "pl": "PL (plaats)",
+        "or": "OR (oriëntatie)",
+        "bw": "BW (beweging)",
+        "cNote": "C (verwante betekenissen), privénotitie",
+        "note": "Vrije notitie",
+        "summary": "Korte samenvatting voor cursisten"
+      },
+      "keywords": "Publieke trefwoorden (C)",
+      "keywordsNone": "Nog geen trefwoorden in deze taal.",
+      "cHint": "De trefwoorden hierboven zijn publieke zoekwoorden. Deze notitie blijft privé en staat op het blad voor lesgevers erachter.",
+      "summaryHint": "Staat op het blad voor cursisten. Zonder samenvatting wordt de handconfiguratie gebruikt.",
+      "readOnly": "Je vertaalt dit gebaar: alleen een lesgever of beheerder schrijft in het {{language}}.",
+      "save": "Lesgeversinfo opslaan",
+      "saved": "Lesgeversinfo opgeslagen.",
+      "saveFailed": "De lesgeversinfo kon niet worden opgeslagen.",
+      "stale": "Iemand anders heeft deze taal net eerder opgeslagen. Hun tekst staat hierboven: kies welke je bewaart.",
+      "loadFailed": "De lesgeversinfo kon niet worden geladen.",
+      "open": "Info voor lesgevers",
+      "backToGesture": "Terug naar het gebaar"
+    },
     "catalogTranslation": {
       "title": "Vertalingen",
       "description": "Vertaal de naam, beschrijving en trefwoorden per taal. De tekst in de standaardtaal staat ernaast.",

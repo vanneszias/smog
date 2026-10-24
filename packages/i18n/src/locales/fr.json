@@ -1490,6 +1490,36 @@
       "countWithPublished_many": "{{count}} gestes · {{published}} publiés",
       "countWithPublished_other": "{{count}} gestes · {{published}} publiés"
     },
+    "teacherInfo": {
+      "title": "Informations pour les enseignants",
+      "description": "Notes pédagogiques privées sur ce geste, un onglet par langue. Seuls les enseignants, les traducteurs et les administrateurs les voient ; elles n’apparaissent jamais sur le site public.",
+      "tabsLabel": "Langue des informations pour les enseignants",
+      "sourceLabel": "Référence ({{language}})",
+      "sourceEmpty": "Rien n’a encore été écrit en {{language}}.",
+      "filled": "Rempli",
+      "empty": "Vide",
+      "fields": {
+        "hc": "HC (configuration de la main)",
+        "pl": "PL (emplacement)",
+        "or": "OR (orientation)",
+        "bw": "BW (mouvement)",
+        "cNote": "C (sens apparentés), note privée",
+        "note": "Note libre",
+        "summary": "Court résumé pour les participants"
+      },
+      "keywords": "Mots-clés publics (C)",
+      "keywordsNone": "Pas encore de mots-clés dans cette langue.",
+      "cHint": "Les mots-clés ci-dessus sont des mots de recherche publics. Cette note reste privée et s’imprime après eux sur la feuille des enseignants.",
+      "summaryHint": "Imprimé sur la feuille des participants. Sans résumé, la configuration de la main est utilisée.",
+      "readOnly": "Vous traduisez ce geste : seul un enseignant ou un administrateur écrit en {{language}}.",
+      "save": "Enregistrer les informations",
+      "saved": "Informations enregistrées.",
+      "saveFailed": "Les informations n’ont pas pu être enregistrées.",
+      "stale": "Quelqu’un a enregistré cette langue avant vous. Son texte est proposé ci-dessus : choisissez lequel garder.",
+      "loadFailed": "Les informations n’ont pas pu être chargées.",
+      "open": "Informations pour les enseignants",
+      "backToGesture": "Retour au geste"
+    },
     "catalogTranslation": {
       "title": "Traductions",
       "description": "Traduisez le nom, la description et les mots-clés pour chaque langue. Le texte de la langue par défaut s’affiche à côté.",

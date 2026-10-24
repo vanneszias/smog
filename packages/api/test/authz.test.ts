@@ -56,7 +56,8 @@ type Level =
   | "public"
   | "session"
   | "teacher"
-  | "teacherRead"
+  /** Phase 10c: the teacher or the translator (an admin passes both). */
+  | "teaching"
   | "token"
   | "translator"
   | "verified"
@@ -214,10 +215,6 @@ const PROCEDURES: Record<string, Row> = {
   "system.health": { level: "public" },
   "system.i18n": { input: {}, level: "public" },
   "system.whoami": { level: "public" },
-  // Phase 10b task 4: the translation screens. Strings, the language list
-  // and the coverage need the translator role (an admin passes); creating
-  // or changing a language needs the admin role. Every change carries an
-  // audit kind (`TRANSLATION_PROCEDURE_KINDS`, checked below).
   // Phase 10c task 3: a gesture's drawings. A teacher (or an admin) uploads,
   // finalizes and deletes; a teacher, a translator or an admin lists them
   // (the card is read-only for a translator, plan ruling 5).
@@ -234,9 +231,34 @@ const PROCEDURES: Record<string, Row> = {
     },
     level: "teacher",
   },
+  // Phase 10b task 4: the translation screens. Strings, the language list
+  // and the coverage need the translator role (an admin passes); creating
+  // or changing a language needs the admin role. Every change carries an
+  // audit kind (`TRANSLATION_PROCEDURE_KINDS`, checked below).
+  // Phase 10c task 2: teacher information (a teacher, a translator or an
+  // admin; a translator may not write the default language, which the
+  // procedure checks: `packages/features/lessons/test/teacher-info.test.ts`).
+  "teacher.getInfo": { input: { gestureId: "g1" }, level: "teaching" },
   "teacher.listDrawings": {
     input: { gestureId: "00000000-0000-4000-8000-000000000000" },
-    level: "teacherRead",
+    level: "teaching",
+  },
+  "teacher.saveInfo": {
+    input: {
+      expectedVersion: null,
+      fields: {
+        bw: "",
+        cNote: "",
+        hc: "",
+        note: "",
+        or: "",
+        pl: "",
+        summary: "",
+      },
+      gestureId: "g1",
+      locale: "fr",
+    },
+    level: "teaching",
   },
   "teacher.uploadDrawing": {
     input: {
@@ -459,7 +481,7 @@ describe("the authorization table", () => {
       "public",
       "session",
       "teacher",
-      "teacherRead",
+      "teaching",
       "token",
       "translator",
     ];
@@ -490,23 +512,22 @@ describe("the authorization table", () => {
     ]);
   });
 
-  it("agrees with the teacher kinds: every teacher procedure has a kind, reads are the only rows a translator may call", () => {
+  it("agrees with the teacher kinds: every teacher procedure has a kind, a row at the teaching level, and each write is audited", () => {
     const teacherRows = Object.entries(PROCEDURES).filter(([path]) =>
       path.startsWith("teacher.")
     );
     expect(teacherRows.map(([path]) => path).sort()).toEqual(
       Object.keys(TEACHER_PROCEDURE_KINDS).sort()
     );
+    // Drawing writes (task 3) are the teacher's and the admin's alone: their
+    // rows say so; the translator-limited ones are the info texts.
     for (const [path, row] of teacherRows) {
-      const kind = TEACHER_PROCEDURE_KINDS[path];
-      // A procedure a translator may call writes nothing; the converse is not
-      // true (`uploadDrawing` writes nothing and is still the teacher's).
-      if (row.level === "teacherRead") {
-        expect(kind, path).toBe("read");
-      } else {
-        expect(row.level, path).toBe("teacher");
-      }
+      expect(["teaching", "teacher"], path).toContain(row.level);
     }
+    expect(TEACHER_PROCEDURE_KINDS["teacher.getInfo"]).toBe("read");
+    expect(TEACHER_PROCEDURE_KINDS["teacher.saveInfo"]).toMatchObject({
+      audit: "teacher.info_save",
+    });
   });
 
   it("agrees with the admin kinds: a row per admin procedure, writes audited", () => {
@@ -546,7 +567,7 @@ describe("anonymous calls", () => {
       row.level === "admin" ||
       row.level === "translator" ||
       row.level === "teacher" ||
-      row.level === "teacherRead"
+      row.level === "teaching"
     ) {
       it(`${path} (${row.level}) is UNAUTHORIZED`, async () => {
         expect(await outcome(path, "anonymous", undefined)).toBe(
@@ -574,16 +595,6 @@ describe("signed-in and admin calls", () => {
           false
         );
       });
-    } else if (row.level === "teacherRead") {
-      it(`${path} (teacherRead) is FORBIDDEN for a user, let through for a teacher, a translator and an admin`, async () => {
-        expect(await outcome(path, "user", row.input)).toBe("FORBIDDEN");
-        const codes = await Promise.all(
-          (["teacher", "translator", "admin"] as const).map((who) =>
-            outcome(path, who, row.input)
-          )
-        );
-        expect(codes.map(refusedByGuard)).toEqual([false, false, false]);
-      });
     } else if (row.level === "translator" || row.level === "teacher") {
       const holder = row.level;
       const other = holder === "translator" ? "teacher" : "translator";
@@ -596,6 +607,18 @@ describe("signed-in and admin calls", () => {
         expect(refusedByGuard(await outcome(path, "admin", row.input))).toBe(
           false
         );
+      });
+    } else if (row.level === "teaching") {
+      it(`${path} (teaching) is FORBIDDEN for a user, let through for a teacher, a translator and an admin`, async () => {
+        expect(await outcome(path, "user", row.input)).toBe("FORBIDDEN");
+        const outcomes = await Promise.all(
+          (["teacher", "translator", "admin"] as const).map((who) =>
+            outcome(path, who, row.input)
+          )
+        );
+        for (const code of outcomes) {
+          expect(refusedByGuard(code)).toBe(false);
+        }
       });
     } else {
       it(`${path} (${row.level}) is let through for a user and an admin`, async () => {
@@ -634,12 +657,17 @@ describe("a banned user (through the shared session interceptor)", () => {
   } as unknown as ReturnType<typeof makeRpcContext>["auth"];
 
   for (const [path, row] of rows) {
-    if (row.level === "session" || row.level === "admin") {
+    if (
+      row.level === "session" ||
+      row.level === "admin" ||
+      row.level === "teaching"
+    ) {
       it(`${path} refuses a banned user like a guest`, async () => {
         const context = makeRpcContext({
           auth: bannedAuth,
           // Valid-looking before the interceptor: it must be replaced.
-          session: makeSession(row.level === "admin" ? "admin" : "user"),
+          session:
+            row.level === "admin" ? makeSession("admin") : makeSession("user"),
         });
         let code = "ok";
         await loadSession({

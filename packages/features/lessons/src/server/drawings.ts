@@ -29,7 +29,7 @@ import {
 import { auditStatement } from "./audit";
 import { drawingUploadUrl } from "./drawing-upload";
 import { type DrawingVerdict, inspectDrawing } from "./drawing-verify";
-import { teacherReadProcedure, teacherWriteProcedure } from "./procedure";
+import { teacherWriteProcedure, teachingProcedure } from "./procedure";
 
 interface GestureRef {
   id: string;
@@ -287,7 +287,7 @@ export function drawingRoutes() {
       }
     ),
 
-    listDrawings: teacherReadProcedure.listDrawings.handler(
+    listDrawings: teachingProcedure.listDrawings.handler(
       async ({ context, input }) => {
         try {
           const rows = await context.db

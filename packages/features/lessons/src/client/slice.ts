@@ -25,7 +25,7 @@ export function useTeacherClient(): TeacherClient {
   return useRpcClient<TeacherSlice>().teacher;
 }
 
-/** Teachers edit the same gestures: refetch after 30 s. */
+/** Other teachers edit the same texts: refetch after 30 s. */
 export const TEACHER_STALE_TIME = 30_000;
 
 /** The TanStack Query utils for `teacher.*` (see `@smog/rpc/react`). */
@@ -45,7 +45,7 @@ export function useTeacherKey(): <TKey extends readonly unknown[]>(
   );
 }
 
-/** What a teaching-material write calls when it settles: refetch every `teacher.*` query. */
+/** What a write calls when it settles: refetch every `teacher.*` query. */
 export function useInvalidateTeacher(): () => Promise<void> {
   const queryClient = useQueryClient();
   const rpc = useRpcQuery<TeacherSlice>();

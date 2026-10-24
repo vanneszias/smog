@@ -34,7 +34,7 @@ beforeAll(async () => {
   admin = await signedUp("admin");
   teacher = await signedUp("teacher");
   translator = await signedUp("translator");
-  learner = await signedUp("user");
+  learner = await signedUp();
 });
 
 beforeEach(async () => {

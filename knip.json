@@ -61,6 +61,11 @@
       "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },
+    "packages/features/lessons": {
+      "entry": ["test/**/*.test.ts"],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"],
+      "ignoreDependencies": ["cloudflare"]
+    },
     "packages/pdf": {
       "entry": ["test/**/*.test.ts", "src/**/*.test.ts"],
       "project": ["src/**/*.ts", "test/**/*.ts"],

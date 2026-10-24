@@ -24,9 +24,10 @@ interface AuditEntry<A extends WritableAuditAction> {
 }
 
 /**
- * The `audit_log` insert of a teaching-material change, for the same D1 batch as
- * the change (`@smog/rpc/audit`'s guard counts it and fails a mutation
- * without one). `data` is validated against the action's schema first.
+ * The `audit_log` insert of a teaching change, for the same D1 batch as the
+ * change (`@smog/rpc/audit`'s guard counts it and fails a mutation without
+ * one). `data` is validated against the action's schema first and carries
+ * ids, languages, field names and counts, never a text.
  */
 export function auditStatement<A extends WritableAuditAction>(
   db: Db,

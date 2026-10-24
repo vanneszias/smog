@@ -108,8 +108,8 @@ export const appRouter = os.router({
   // and renewal slices.
   sponsorships: createSponsorshipsRouter(),
   system,
-  // Teachers (and, for reads, translators): drawings now, the teacher info
-  // and lessons later. Each procedure carries its role guard and the audit guard.
+  // Teacher information (phase 10c): teachers, translators and admins; each
+  // procedure carries its role guard and the audit guard.
   teacher: createTeacherRouter(),
   // Translators and admins: the strings, languages and coverage. Each
   // procedure carries its role guard and the audit guard.
