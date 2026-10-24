@@ -407,6 +407,8 @@ test("another teacher reads the lesson read-only and makes their own copy, then 
 });
 
 test("dark theme: the lessons list, the builder and the export dialog pass axe at 1280 and 390 px", async () => {
+  // Six axe runs, a dialog and two navigations, on a slow runner.
+  test.slow();
   const page = authorPage;
   await author.addCookies([{ name: "theme", url: ORIGIN, value: "dark" }]);
   await page.emulateMedia({ colorScheme: "dark" });
@@ -425,7 +427,7 @@ test("dark theme: the lessons list, the builder and the export dialog pass axe a
       ).toBeVisible();
       await expectSaved(page);
       expect(await blockingViolations(page), `builder ${width}`).toEqual([]);
-      await page.getByRole("button", { name: "Exporteer als pdf" }).click();
+      await page.getByRole("button", { name: "Pdf maken" }).click();
       const dialog = page.getByRole("dialog", { name: "Les als pdf" });
       await expect(dialog.getByTestId("export-preview")).toBeVisible({
         timeout: STEP_MS,
