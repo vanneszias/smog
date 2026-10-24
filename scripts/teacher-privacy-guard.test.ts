@@ -57,6 +57,11 @@ const ALLOWED: { because: string; prefix: string }[] = [
     prefix: "apps/site/src/components/admin/audit-data.tsx",
   },
   {
+    because:
+      "the Teacher info editor (a teacher, translator or admin; its data comes from the role-guarded teacher.* procedures)",
+    prefix: "apps/site/src/components/admin/teacher/",
+  },
+  {
     because: "the role-guarded teacher routes (drawings, PDFs)",
     prefix: "apps/site/src/routes/api/teacher/",
   },

@@ -251,12 +251,30 @@ export function railFor(isAdmin: boolean): readonly RailGroup[] {
  * user in the route context (so the server render knows it); without one
  * (a test, a screen outside the layout) the full rail shows.
  */
-function useIsAdmin(): boolean {
-  const admin = useRouteContext({
+function useAdminUser(): AuthUser | undefined {
+  return useRouteContext({
     select: (context) => (context as { admin?: AuthUser }).admin,
     strict: false,
   });
+}
+
+function useIsAdmin(): boolean {
+  const admin = useAdminUser();
   return !admin || admin.roles.includes("admin");
+}
+
+/**
+ * Whether the person has a rail at all: an admin and a translator do; a
+ * teacher without either (phase 10c: the teacher-info screen is theirs
+ * alone for now) has no section to navigate to.
+ */
+export function useHasRail(): boolean {
+  const admin = useAdminUser();
+  return (
+    !admin ||
+    admin.roles.includes("admin") ||
+    admin.roles.includes("translator")
+  );
 }
 
 function RailNav(): ReactNode {
@@ -292,6 +310,10 @@ function RailNav(): ReactNode {
 export function AdminRail(): ReactNode {
   const { t } = useTranslation();
   const { isMobile, open, openMobile, setOpenMobile } = useSidebar();
+  const hasRail = useHasRail();
+  if (!hasRail) {
+    return null;
+  }
   if (isMobile) {
     return (
       <Sheet onOpenChange={setOpenMobile} open={openMobile}>

@@ -11,6 +11,7 @@ import { AdminToolbar } from "@/components/admin/admin-toolbar";
 import {
   isAdminHome,
   TRANSLATION_HOME,
+  teacherInfoMayOpen,
   translatorMayOpen,
 } from "@/lib/admin-access";
 import { pageMeta } from "@/lib/head";
@@ -19,21 +20,32 @@ import { getAdminGate } from "@/server/admin-gate.functions";
 /**
  * `/admin/*` (spec §9, §16): the gated admin layout. The gate runs on every
  * admin navigation (ruling 10): a guest goes to sign-in, an account that is
- * neither admin nor translator gets the 404 page, an admin gets the
+ * neither admin, translator nor teacher gets the 404 page, an admin gets the
  * sidebar, the breadcrumbs and the screen, a translator the translation
- * screens only. The procedures check the role again on every call. Never
+ * screens and the teacher information, a teacher the teacher information. The procedures check the role again on every call. Never
  * indexed.
  */
 export const Route = createFileRoute("/admin")({
   beforeLoad: async ({ location }) => {
     const { user } = await getAdminGate({ data: location.href });
     // A translator (not an admin) sees the translation screens only: the
-    // dashboard leads to the strings, anything else is the 404 page.
+    // dashboard leads to the strings, anything else is the 404 page. A
+    // teacher or a translator also opens one gesture's teacher information;
+    // a teacher alone has nothing else yet, so the dashboard is a 404 for them.
     if (!user.roles.includes("admin")) {
+      const translator = user.roles.includes("translator");
       if (isAdminHome(location.pathname)) {
+        if (!translator) {
+          throw notFound();
+        }
         throw redirect({ replace: true, to: TRANSLATION_HOME });
       }
-      if (!translatorMayOpen(location.pathname)) {
+      if (
+        !(
+          teacherInfoMayOpen(location.pathname) ||
+          (translator && translatorMayOpen(location.pathname))
+        )
+      ) {
         throw notFound();
       }
     }
