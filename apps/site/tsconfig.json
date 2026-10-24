@@ -11,6 +11,7 @@
   "include": [
     "src",
     "test",
+    "build-bytes.ts",
     "build-defines.ts",
     "vite.config.ts",
     "vitest.config.ts"

@@ -16,6 +16,7 @@ import {
 } from "@smog/gestures/server";
 import { resolveLocale } from "@smog/i18n";
 import { loadCatalogue } from "@smog/i18n/server";
+import { createLessonsRouter, createTeacherRouter } from "@smog/lessons/server";
 import {
   appendItemsStmt,
   createListsRouter,
@@ -101,12 +102,17 @@ export const appRouter = os.router({
   // feature never imports another feature's server; the api wires them).
   favorites: createFavoritesRouter({ findSummaries: findGesturesByIds }),
   gestures: gesturesRouter,
+  // Lessons (phase 10c task 4): teachers and admins; author-only writes.
+  lessons: createLessonsRouter(),
   lists: createListsRouter({ findSummaries: findGesturesByIds }),
   // Public: every procedure runs its declared guards (Turnstile,
   // RL_SPONSOR). Tasks 4 and 5 fill the checkout, logo, status, re-edit
   // and renewal slices.
   sponsorships: createSponsorshipsRouter(),
   system,
+  // Teacher information (phase 10c): teachers, translators and admins; each
+  // procedure carries its role guard and the audit guard.
+  teacher: createTeacherRouter(),
   // Translators and admins: the strings, languages and coverage. Each
   // procedure carries its role guard and the audit guard.
   translation: createTranslationRouter(),

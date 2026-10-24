@@ -419,6 +419,86 @@
       }
     }
   },
+  "lessonPdf": {
+    "lesson": "Les",
+    "fallbackFootnote": "Nog niet vertaald: tekst in {{language}}."
+  },
+  "teacherLessons": {
+    "title": "Lessen",
+    "entryDescription": "Bekijk lessen en deel ze als pdf",
+    "number": "Les {{number}}",
+    "gestureCount_one": "{{count}} gebaar",
+    "gestureCount_other": "{{count}} gebaren",
+    "author": "Door {{name}}",
+    "titleIn": "Titel in {{language}}",
+    "empty": {
+      "title": "Nog geen lessen",
+      "description": "Lessen maak je op de website. Ze verschijnen hier zodra een leerkracht er een maakt."
+    },
+    "forbidden": {
+      "title": "Alleen voor leerkrachten",
+      "description": "Dit deel van de app is voor leerkrachten en beheerders."
+    },
+    "notFound": {
+      "title": "Les niet gevonden",
+      "description": "Deze les bestaat niet (meer)."
+    },
+    "notes": "Notities",
+    "ungrouped": "Gebaren",
+    "section": "Onderdeel",
+    "emptyLesson": "Deze les heeft nog geen gebaren.",
+    "unpublished": "Niet gepubliceerd",
+    "unpublishedHint": "Dit gebaar is niet gepubliceerd en kan niet geopend worden.",
+    "export": {
+      "open": "Exporteer als pdf",
+      "title": "Les als pdf",
+      "description": "Kies voor wie de pdf is en in welke taal, en deel of bewaar hem dan.",
+      "download": "Downloaden en delen",
+      "downloading": "Pdf maken…",
+      "shareTitle": "Deel de lespdf",
+      "errors": {
+        "unauthorized": "Meld je opnieuw aan om de pdf te maken.",
+        "forbidden": "Alleen leerkrachten kunnen deze pdf maken.",
+        "notFound": "Deze les bestaat niet meer.",
+        "offline": "Geen verbinding. Maak verbinding met het internet en probeer opnieuw.",
+        "sharingUnavailable": "Dit toestel kan geen bestanden delen."
+      }
+    }
+  },
+  "drawings": {
+    "title": "Tekeningen",
+    "description": "Lijntekeningen voor het blad van de cursisten: één afbeelding per stap, een tweede stap is optioneel. PNG of JPEG, hoogstens 512 kB en 1200 pixels per zijde. Alleen leerkrachten, vertalers en beheerders zien ze.",
+    "step": "Stap {{step}}",
+    "stepOptional": "Stap {{step}} (optioneel)",
+    "none": "Nog geen tekening",
+    "needFirst": "Voeg eerst stap 1 toe.",
+    "removeStep2First": "Verwijder eerst stap 2.",
+    "choose": "Tekening kiezen",
+    "replace": "Tekening vervangen",
+    "remove": "Tekening verwijderen",
+    "creditLabel": "Bronvermelding",
+    "creditHint": "Staat onder de tekening. Wil je ze wijzigen, upload de tekening dan opnieuw.",
+    "credit": "Bron: {{credit}}",
+    "noCredit": "Geen bronvermelding",
+    "details": "{{width}} × {{height}} px, {{size}} kB",
+    "previewAlt": "Tekening van {{name}}, stap {{step}}",
+    "readOnly": "Je kunt de tekeningen bekijken. Leerkrachten en beheerders wijzigen ze.",
+    "saved": "Tekening opgeslagen",
+    "removed": "Tekening verwijderd",
+    "removeTitle": "Deze tekening verwijderen?",
+    "removeDescription": "De tekening van stap {{step}} wordt verwijderd. Lessen met dit gebaar worden zonder tekening afgedrukt.",
+    "removeConfirm": "Verwijderen",
+    "errors": {
+      "format": "Dit is geen geldige PNG- of JPEG-afbeelding (WebP kan niet in de pdf).",
+      "dimensions": "De afbeelding is groter dan 1200 pixels per zijde.",
+      "tooLarge": "Het bestand is groter dan 512 kB.",
+      "missing": "De upload is niet aangekomen. Probeer opnieuw.",
+      "key": "Deze upload hoort niet bij dit gebaar.",
+      "network": "De upload is mislukt. Controleer je verbinding en probeer opnieuw.",
+      "generic": "Opslaan is mislukt. Probeer opnieuw.",
+      "removeFailed": "Verwijderen is mislukt. Probeer opnieuw."
+    }
+  },
   "gesture": {
     "sponsored": "Gesponsord",
     "disclaimer": {
@@ -969,11 +1049,13 @@
         "content": "Inhoud",
         "community": "Gemeenschap",
         "operations": "Opvolging",
-        "translation": "Vertalen"
+        "translation": "Vertalen",
+        "teaching": "Lesgeven"
       },
       "strings": "Teksten",
       "languages": "Talen",
-      "legal": "Juridische teksten"
+      "legal": "Juridische teksten",
+      "lessons": "Lessen"
     },
     "comingSoon": {
       "title": "Komt in deze fase",
@@ -1136,6 +1218,18 @@
           "draft_save": "Juridische tekst bewaard als concept",
           "publish": "Juridische tekst gepubliceerd",
           "restore": "Juridische tekst hersteld"
+        },
+        "lesson": {
+          "create": "Les aangemaakt",
+          "update": "Les bijgewerkt",
+          "delete": "Les verwijderd",
+          "duplicate": "Les gedupliceerd",
+          "export": "Les geëxporteerd als pdf"
+        },
+        "teacher": {
+          "info_save": "Lesgeversinfo opgeslagen",
+          "drawing_upload": "Tekening geüpload",
+          "drawing_delete": "Tekening verwijderd"
         }
       },
       "targetTypes": {
@@ -1150,7 +1244,9 @@
         "dead_letter": "Dead letter",
         "language": "Taal",
         "ui_string": "Interfacetekst",
-        "legal_text": "Juridische tekst"
+        "legal_text": "Juridische tekst",
+        "gesture_teacher_info": "Lesgeversinfo",
+        "lesson": "Les"
       }
     },
     "gestures": {
@@ -1412,6 +1508,229 @@
       "hiddenName": "{{name}} (verborgen)",
       "countWithPublished_one": "{{count}} gebaar · {{published}} gepubliceerd",
       "countWithPublished_other": "{{count}} gebaren · {{published}} gepubliceerd"
+    },
+    "lessons": {
+      "title": "Lessen",
+      "description": "Lessen die lesgevers samenstellen uit gebaren. Elke lesgever kan elke les lezen en kopiëren; de auteur en beheerders bewerken ze.",
+      "untitled": "Les zonder titel",
+      "new": "Nieuwe les",
+      "search": "Lessen zoeken",
+      "searchPlaceholder": "Zoek op titel",
+      "mine": "Mijn lessen",
+      "mineBadge": "Van jou",
+      "noAuthor": "de auteur",
+      "numbered": "Les {{number}}",
+      "numberLabel": "Lesnummer",
+      "numberHint": "Optioneel. Staat gedrukt als “Les 3”.",
+      "numberInvalid": "Gebruik een geheel getal van 0 tot en met 9999.",
+      "loadMore": "Meer lessen tonen",
+      "backToList": "Alle lessen",
+      "duplicated": "Les gekopieerd. Je zit nu in je eigen kopie.",
+      "duplicateFailed": "De les kon niet worden gekopieerd. Probeer opnieuw.",
+      "columns": {
+        "title": "Titel",
+        "number": "Nummer",
+        "author": "Auteur",
+        "gestures": "Gebaren",
+        "updated": "Gewijzigd",
+        "actions": "Acties"
+      },
+      "empty": {
+        "title": "Nog geen lessen",
+        "description": "Maak de eerste les en voeg er gebaren aan toe."
+      },
+      "noResults": {
+        "title": "Geen lessen gevonden",
+        "description": "Geen enkele les past bij deze zoekopdracht. Probeer een andere titel of zet “Mijn lessen” uit."
+      },
+      "notFound": {
+        "title": "Les niet gevonden",
+        "description": "Deze les bestaat niet (meer)."
+      },
+      "actions": {
+        "label": "Acties voor {{title}}",
+        "open": "Openen",
+        "duplicate": "Kopie maken",
+        "delete": "Verwijderen"
+      },
+      "create": {
+        "title": "Nieuwe les",
+        "description": "Geef de les een titel. Op het volgende scherm voeg je de gebaren toe en kun je de titel vertalen.",
+        "titleLabel": "Titel",
+        "languageLabel": "Taal van de titel",
+        "submit": "Les maken",
+        "failed": "De les kon niet worden gemaakt. Probeer opnieuw."
+      },
+      "delete": {
+        "title": "Deze les verwijderen?",
+        "description": "“{{title}}” en de secties ervan worden voor iedereen verwijderd. De gebaren zelf blijven bestaan.",
+        "confirm": "Les verwijderen",
+        "done": "Les verwijderd.",
+        "failed": "De les kon niet worden verwijderd. Probeer opnieuw."
+      },
+      "builder": {
+        "title": "Les"
+      },
+      "readOnly": "{{author}} bewerkt deze les. Je kunt ze lezen en er een eigen kopie van maken.",
+      "details": "Gegevens van de les",
+      "tabsLabel": "Taal van de titel en de notities",
+      "tabFilled": "Ingevuld",
+      "tabEmpty": "Leeg",
+      "fields": {
+        "title": "Titel",
+        "notes": "Notities"
+      },
+      "problem": {
+        "noTitle": "Voeg een titel toe in minstens één taal om de les te bewaren.",
+        "notesWithoutTitle": "Een taal met notities heeft ook een titel nodig. Voeg er een toe of wis de notities."
+      },
+      "status": {
+        "saved": "Alle wijzigingen bewaard",
+        "saving": "Bewaren…",
+        "dirty": "Wijzigingen worden bewaard…",
+        "error": "Bewaren mislukt. Je wijzigingen blijven op deze pagina staan.",
+        "invalid": "Nog niet bewaard: zie de melding hieronder.",
+        "conflict": "Iemand anders heeft deze les gewijzigd.",
+        "retry": "Opnieuw proberen"
+      },
+      "conflict": {
+        "title": "Deze les is elders gewijzigd",
+        "body": "{{author}} of een andere bewerker heeft een nieuwere versie bewaard. Gebruik die van hen en verlies je laatste wijzigingen hier, of behoud de jouwe en vervang die van hen.",
+        "useTheirs": "Hun versie gebruiken",
+        "keepMine": "Mijn versie houden"
+      },
+      "structure": "Gebaren",
+      "count_one": "{{count}} gebaar",
+      "count_other": "{{count}} gebaren",
+      "add": "Gebaren toevoegen",
+      "readiness": {
+        "label": "Lesgeversinfo in {{language}}",
+        "summary": "{{own}} van {{total}} gebaren hebben lesgeversinfo in {{language}}.",
+        "fallback_one": "{{count}} valt terug op de standaardtaal.",
+        "fallback_other": "{{count}} vallen terug op de standaardtaal.",
+        "none_one": "{{count}} heeft helemaal geen lesgeversinfo.",
+        "none_other": "{{count}} hebben helemaal geen lesgeversinfo.",
+        "empty": "Voeg gepubliceerde gebaren toe om te zien hoe klaar deze les is."
+      },
+      "section": {
+        "add": "Sectie toevoegen",
+        "untitled": "Sectie {{number}}",
+        "ungrouped": "Vóór de eerste sectie",
+        "empty": "Hier staan nog geen gebaren.",
+        "titleLabel": "Titel van sectie {{number}}",
+        "actions": "Acties voor {{name}}",
+        "moveUp": "Sectie omhoog",
+        "moveDown": "Sectie omlaag",
+        "removeTitle": "{{name}} verwijderen?",
+        "removeDescription": "De gebaren van dit onderdeel gaan naar het onderdeel ervoor. Er worden geen gebaren verwijderd.",
+        "removeConfirm": "Onderdeel verwijderen",
+        "remove": "Sectie verwijderen"
+      },
+      "item": {
+        "actions": "Acties voor {{name}}",
+        "moveUp": "Omhoog",
+        "moveDown": "Omlaag",
+        "moveTo": "Verplaatsen naar {{section}}",
+        "moveToStart": "Verplaatsen vóór de eerste sectie",
+        "remove": "Uit de les halen",
+        "unpublished": "Niet gepubliceerd",
+        "drawing": "Tekening",
+        "readiness": {
+          "own": "Lesgeversinfo",
+          "fallback": "Standaardtaal",
+          "none": "Geen lesgeversinfo"
+        }
+      },
+      "picker": {
+        "title": "Gebaren toevoegen",
+        "description": "Zoek in de catalogus en kies gebaren. Elk gebaar komt meteen in de les; een gebaar staat er maar één keer in.",
+        "placeholder": "Gebaren zoeken",
+        "categories": "Filter op categorie",
+        "destination": "Toevoegen aan",
+        "done": "Klaar",
+        "held": "In deze les",
+        "full": "Een les bevat hoogstens {{max}} gebaren.",
+        "error": "Zoeken is mislukt. Probeer opnieuw."
+      },
+      "export": {
+        "open": "Pdf maken",
+        "title": "Les als pdf",
+        "description": "Kies voor wie de pdf is en in welke taal. Je ziet eerst wat erin komt.",
+        "templateLabel": "Blad",
+        "teachers": "Voor lesgevers",
+        "teachersHint": "Het woord met handconfiguratie, plaats, oriëntatie, beweging en verwante begrippen.",
+        "participants": "Voor cursisten",
+        "participantsHint": "Het woord met de tekening en een korte samenvatting.",
+        "languageLabel": "Taal van de pdf",
+        "loading": "Nagaan wat er in de pdf komt…",
+        "failed": "Het overzicht kon niet worden geladen. Probeer opnieuw.",
+        "summary_one": "{{count}} gebaar komt in de pdf.",
+        "summary_other": "{{count}} gebaren komen in de pdf.",
+        "clean": "Alle gebaren zijn volledig ingevuld in {{language}}.",
+        "overLimit": "Deze les heeft {{count}} gebaren, maar deze pdf neemt er hoogstens {{limit}}. Splits de les in twee lessen.",
+        "skippedTitle_one": "{{count}} gebaar is niet gepubliceerd en komt niet in de pdf",
+        "skippedTitle_other": "{{count}} gebaren zijn niet gepubliceerd en komen niet in de pdf",
+        "unsupportedLessonText": "De titel, de notities of een onderdeel van deze les bevat tekens die het lettertype van de pdf niet heeft (een ander schrift of een emoji). Ze komen als vraagtekens in de pdf.",
+        "issuesTitle": "Let op bij deze gebaren",
+        "issue": {
+          "fallback": "Tekst in de standaardtaal",
+          "missing": "Geen lesgeversinfo",
+          "noDrawing": "Geen tekening",
+          "unsupportedText": "Bevat tekens die de pdf niet kan tonen: ze komen als vraagtekens",
+          "unsupportedDrawing": "Tekening is een WebP en blijft weg: upload ze opnieuw als PNG of JPEG"
+        },
+        "download": "Pdf downloaden",
+        "downloading": "Pdf maken…",
+        "truncated": "Let op, de tekst van een of meer gebaren is ingekort omdat hij niet op één pagina past.",
+        "done": "Pdf gedownload.",
+        "errors": {
+          "tooMany": "Deze les heeft te veel gebaren voor deze pdf. Splits de les in twee lessen.",
+          "tooLarge": "De pdf is te groot. Splits de les of gebruik kleinere tekeningen.",
+          "timeout": "Het maken van de pdf duurde te lang. Splits de les in twee en probeer opnieuw.",
+          "rateLimited": "Je hebt net veel pdf’s gemaakt. Wacht even en probeer opnieuw.",
+          "signIn": "Je sessie is verlopen. Meld je opnieuw aan en probeer opnieuw.",
+          "forbidden": "Je account mag deze pdf niet meer maken. Vraag het na bij een beheerder.",
+          "generic": "De pdf kon niet worden gemaakt. Probeer opnieuw."
+        }
+      },
+      "reorder": {
+        "instructions": "Druk op spatie of Enter om een onderdeel op te pakken. Verplaats het met de pijltjestoetsen en druk opnieuw op spatie of Enter om het neer te zetten. Escape annuleert.",
+        "picked": "{{name}} opgepakt, positie {{position}} van {{total}}.",
+        "moved": "{{name}} verplaatst naar positie {{position}} van {{total}}.",
+        "dropped": "{{name}} neergezet op positie {{position}} van {{total}}.",
+        "cancelled": "Verplaatsen geannuleerd. {{name}} staat terug op positie {{position}}.",
+        "failed": "De nieuwe volgorde kon niet worden toegepast."
+      }
+    },
+    "teacherInfo": {
+      "title": "Info voor lesgevers",
+      "description": "Privé lesnotities bij dit gebaar, een tabblad per taal. Alleen lesgevers, vertalers en beheerders zien ze; ze komen nooit op de publieke site.",
+      "tabsLabel": "Taal van de lesgeversinfo",
+      "sourceLabel": "Referentie ({{language}})",
+      "sourceEmpty": "Er is nog niets geschreven in het {{language}}.",
+      "filled": "Ingevuld",
+      "empty": "Leeg",
+      "fields": {
+        "hc": "HC (handconfiguratie)",
+        "pl": "PL (plaats)",
+        "or": "OR (oriëntatie)",
+        "bw": "BW (beweging)",
+        "cNote": "C (verwante betekenissen), privénotitie",
+        "note": "Vrije notitie",
+        "summary": "Korte samenvatting voor cursisten"
+      },
+      "keywords": "Publieke trefwoorden (C)",
+      "keywordsNone": "Nog geen trefwoorden in deze taal.",
+      "cHint": "De trefwoorden hierboven zijn publieke zoekwoorden. Deze notitie blijft privé en staat op het blad voor lesgevers erachter.",
+      "summaryHint": "Staat op het blad voor cursisten. Zonder samenvatting wordt de handconfiguratie gebruikt.",
+      "readOnly": "Je vertaalt dit gebaar: alleen een lesgever of beheerder schrijft in het {{language}}.",
+      "save": "Lesgeversinfo opslaan",
+      "saved": "Lesgeversinfo opgeslagen.",
+      "saveFailed": "De lesgeversinfo kon niet worden opgeslagen.",
+      "stale": "Iemand anders heeft deze taal net eerder opgeslagen. Hun tekst staat hierboven: kies welke je bewaart.",
+      "loadFailed": "De lesgeversinfo kon niet worden geladen.",
+      "open": "Info voor lesgevers",
+      "backToGesture": "Terug naar het gebaar"
     },
     "catalogTranslation": {
       "title": "Vertalingen",

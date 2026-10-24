@@ -20,6 +20,13 @@ export {
   listItem,
   listShare,
 } from "./learning";
+export {
+  lesson,
+  lessonItem,
+  lessonSection,
+  lessonSectionTranslation,
+  lessonTranslation,
+} from "./lessons";
 export * from "./relations";
 export { userRole } from "./roles";
 export {
@@ -32,3 +39,4 @@ export {
   sponsorshipEvent,
   sponsorshipToken,
 } from "./sponsorships";
+export { gestureDrawing, gestureTeacherInfo } from "./teacher";

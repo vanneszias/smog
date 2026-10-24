@@ -48,6 +48,8 @@ import {
 } from "@/components/admin/video/video-field";
 import { LazyGestureQrDialog } from "@/components/lazy-gesture-qr-dialog";
 import { gestureHref } from "@/components/learning/links";
+import { GestureDrawingCard } from "../drawings/gesture-drawings";
+import { TeacherInfoPanel } from "../teacher/teacher-info-card";
 import { CategoryPicker, pickerCategories } from "./category-picker";
 import { ConflictDialog, type EditorConflict } from "./editor-conflict";
 import { conflictReason } from "./errors";
@@ -658,7 +660,11 @@ export function GestureEditor({ gesture }: GestureEditorProps): ReactNode {
         </div>
       </form>
       {saved ? <GestureTranslations gestureId={saved.id} /> : null}
+      {saved ? <TeacherInfoPanel gestureId={saved.id} /> : null}
       {saved ? <GestureAudio gestureId={saved.id} /> : null}
+      {saved ? (
+        <GestureDrawingCard gestureId={saved.id} name={saved.name} />
+      ) : null}
       <ConflictDialog
         categories={categories.data ?? []}
         conflict={conflict}

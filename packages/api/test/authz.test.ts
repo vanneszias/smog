@@ -1,6 +1,10 @@
 import { isContractProcedure, oc } from "@orpc/contract";
 import { call } from "@orpc/server";
 import { ADMIN_PROCEDURE_KINDS } from "@smog/admin/contract";
+import {
+  LESSON_PROCEDURE_KINDS,
+  TEACHER_PROCEDURE_KINDS,
+} from "@smog/lessons/contract";
 import { loadSession, teacherProcedure, translatorProcedure } from "@smog/rpc";
 import { makeRpcContext, makeSession } from "@smog/rpc/testing";
 import { TRANSLATION_PROCEDURE_KINDS } from "@smog/translation/contract";
@@ -55,6 +59,8 @@ type Level =
   | "public"
   | "session"
   | "teacher"
+  /** Phase 10c: the teacher or the translator (an admin passes both). */
+  | "teaching"
   | "token"
   | "translator"
   | "verified"
@@ -176,6 +182,35 @@ const PROCEDURES: Record<string, Row> = {
   "gestures.related": { level: "public" },
   "gestures.search": { level: "public" },
   "gestures.sitemap": { level: "public" },
+  // Phase 10c task 4: the lessons. A teacher or an admin reads every lesson
+  // and writes their own (an admin any); a translator has no lesson access
+  // (plan ruling 5). The author-only rule is the procedure's own check:
+  // `packages/features/lessons/test/lessons.test.ts`.
+  "lessons.create": {
+    input: { locale: "nl", title: "Les 1" },
+    level: "teacher",
+  },
+  "lessons.delete": { input: { id: "l" }, level: "teacher" },
+  "lessons.duplicate": { input: { id: "l" }, level: "teacher" },
+  "lessons.exportPreview": {
+    input: { id: "l", locale: "nl", template: "teachers" },
+    level: "teacher",
+  },
+  "lessons.gestureMarkers": { input: { gestureIds: [] }, level: "teacher" },
+  "lessons.get": { input: { id: "l" }, level: "teacher" },
+  "lessons.list": { input: {}, level: "teacher" },
+  "lessons.readiness": { input: { id: "l", locale: "nl" }, level: "teacher" },
+  "lessons.update": {
+    input: {
+      expectedVersion: 1,
+      id: "l",
+      number: null,
+      sections: [],
+      translations: { nl: { notes: "", title: "Les 1" } },
+      ungrouped: [],
+    },
+    level: "teacher",
+  },
   "lists.addItem": { input: { gestureId: "g", id: "l" }, level: "session" },
   "lists.containing": { input: { gestureId: "g" }, level: "session" },
   "lists.create": { input: { name: "Dieren" }, level: "session" },
@@ -212,10 +247,60 @@ const PROCEDURES: Record<string, Row> = {
   "system.health": { level: "public" },
   "system.i18n": { input: {}, level: "public" },
   "system.whoami": { level: "public" },
+  // Phase 10c task 3: a gesture's drawings. A teacher (or an admin) uploads,
+  // finalizes and deletes; a teacher, a translator or an admin lists them
+  // (the card is read-only for a translator, plan ruling 5).
+  "teacher.deleteDrawing": {
+    input: { gestureId: "00000000-0000-4000-8000-000000000000", step: 1 },
+    level: "teacher",
+  },
+  "teacher.finalizeDrawing": {
+    input: {
+      credit: "",
+      gestureId: "00000000-0000-4000-8000-000000000000",
+      key: "teacher/drawings/00000000-0000-4000-8000-000000000000/1/00000000-0000-4000-8000-000000000001",
+      step: 1,
+    },
+    level: "teacher",
+  },
   // Phase 10b task 4: the translation screens. Strings, the language list
   // and the coverage need the translator role (an admin passes); creating
   // or changing a language needs the admin role. Every change carries an
   // audit kind (`TRANSLATION_PROCEDURE_KINDS`, checked below).
+  // Phase 10c task 2: teacher information (a teacher, a translator or an
+  // admin; a translator may not write the default language, which the
+  // procedure checks: `packages/features/lessons/test/teacher-info.test.ts`).
+  "teacher.getInfo": { input: { gestureId: "g1" }, level: "teaching" },
+  "teacher.listDrawings": {
+    input: { gestureId: "00000000-0000-4000-8000-000000000000" },
+    level: "teaching",
+  },
+  "teacher.saveInfo": {
+    input: {
+      expectedVersion: null,
+      fields: {
+        bw: "",
+        cNote: "",
+        hc: "",
+        note: "",
+        or: "",
+        pl: "",
+        summary: "",
+      },
+      gestureId: "g1",
+      locale: "fr",
+    },
+    level: "teaching",
+  },
+  "teacher.uploadDrawing": {
+    input: {
+      contentType: "image/png",
+      gestureId: "00000000-0000-4000-8000-000000000000",
+      size: 1000,
+      step: 1,
+    },
+    level: "teacher",
+  },
   "translation.coverage": { level: "translator" },
   // Task 6: a gesture's spoken name. A translator or an admin uploads,
   // checks and removes it; the file itself never passes through a procedure.
@@ -428,6 +513,7 @@ describe("the authorization table", () => {
       "public",
       "session",
       "teacher",
+      "teaching",
       "token",
       "translator",
     ];
@@ -456,6 +542,50 @@ describe("the authorization table", () => {
       "translation.languages.update",
       "translation.legal.restore",
     ]);
+  });
+
+  it("agrees with the teacher kinds: every teacher procedure has a kind, a row at the teaching level, and each write is audited", () => {
+    const teacherRows = Object.entries(PROCEDURES).filter(([path]) =>
+      path.startsWith("teacher.")
+    );
+    expect(teacherRows.map(([path]) => path).sort()).toEqual(
+      Object.keys(TEACHER_PROCEDURE_KINDS).sort()
+    );
+    // Drawing writes (task 3) are the teacher's and the admin's alone: their
+    // rows say so; the translator-limited ones are the info texts.
+    for (const [path, row] of teacherRows) {
+      expect(["teaching", "teacher"], path).toContain(row.level);
+    }
+    expect(TEACHER_PROCEDURE_KINDS["teacher.getInfo"]).toBe("read");
+    expect(TEACHER_PROCEDURE_KINDS["teacher.saveInfo"]).toMatchObject({
+      audit: "teacher.info_save",
+    });
+  });
+
+  it("agrees with the lesson kinds: every lesson procedure has a kind and a row at the teacher level, and each write is audited", () => {
+    const lessonRows = Object.entries(PROCEDURES).filter(([path]) =>
+      path.startsWith("lessons.")
+    );
+    expect(lessonRows.map(([path]) => path).sort()).toEqual(
+      Object.keys(LESSON_PROCEDURE_KINDS).sort()
+    );
+    for (const [path, row] of lessonRows) {
+      expect(row.level, path).toBe("teacher");
+    }
+    for (const path of ["create", "delete", "duplicate", "update"]) {
+      expect(LESSON_PROCEDURE_KINDS[`lessons.${path}`], path).toMatchObject({
+        audit: `lesson.${path}`,
+      });
+    }
+    for (const path of [
+      "exportPreview",
+      "gestureMarkers",
+      "get",
+      "list",
+      "readiness",
+    ]) {
+      expect(LESSON_PROCEDURE_KINDS[`lessons.${path}`], path).toBe("read");
+    }
   });
 
   it("agrees with the admin kinds: a row per admin procedure, writes audited", () => {
@@ -494,7 +624,8 @@ describe("anonymous calls", () => {
     } else if (
       row.level === "admin" ||
       row.level === "translator" ||
-      row.level === "teacher"
+      row.level === "teacher" ||
+      row.level === "teaching"
     ) {
       it(`${path} (${row.level}) is UNAUTHORIZED`, async () => {
         expect(await outcome(path, "anonymous", undefined)).toBe(
@@ -535,6 +666,18 @@ describe("signed-in and admin calls", () => {
           false
         );
       });
+    } else if (row.level === "teaching") {
+      it(`${path} (teaching) is FORBIDDEN for a user, let through for a teacher, a translator and an admin`, async () => {
+        expect(await outcome(path, "user", row.input)).toBe("FORBIDDEN");
+        const outcomes = await Promise.all(
+          (["teacher", "translator", "admin"] as const).map((who) =>
+            outcome(path, who, row.input)
+          )
+        );
+        for (const code of outcomes) {
+          expect(refusedByGuard(code)).toBe(false);
+        }
+      });
     } else {
       it(`${path} (${row.level}) is let through for a user and an admin`, async () => {
         expect(refusedByGuard(await outcome(path, "user", row.input))).toBe(
@@ -572,12 +715,17 @@ describe("a banned user (through the shared session interceptor)", () => {
   } as unknown as ReturnType<typeof makeRpcContext>["auth"];
 
   for (const [path, row] of rows) {
-    if (row.level === "session" || row.level === "admin") {
+    if (
+      row.level === "session" ||
+      row.level === "admin" ||
+      row.level === "teaching"
+    ) {
       it(`${path} refuses a banned user like a guest`, async () => {
         const context = makeRpcContext({
           auth: bannedAuth,
           // Valid-looking before the interceptor: it must be replaced.
-          session: makeSession(row.level === "admin" ? "admin" : "user"),
+          session:
+            row.level === "admin" ? makeSession("admin") : makeSession("user"),
         });
         let code = "ok";
         await loadSession({

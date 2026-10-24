@@ -59,6 +59,8 @@ type Entry = Limit | Unlimited;
 const RPC_HANDLER = "packages/rpc/src/handler.ts";
 const LOGO = "apps/site/src/server/logo-upload.ts";
 const AUDIO = "apps/site/src/server/audio.ts";
+const DRAWINGS = "apps/site/src/server/teacher-drawings.ts";
+const LESSON_PDF = "apps/site/src/server/lesson-pdf.ts";
 
 /**
  * Every non-page route file (`routes/**.ts`, relative to `routes/`). Page
@@ -97,6 +99,13 @@ export const ROUTE_LIMITS: Readonly<Record<string, Entry>> = {
   "api/rpc/$.ts": { limiter: "RL_API", source: RPC_HANDLER },
   "api/sponsor-logos/$key.ts": { limiter: "RL_API", source: LOGO },
   "api/sponsor/reedit-logo.ts": { limiter: "RL_API", source: LOGO },
+  "api/teacher/drawings/$.ts": { limiter: "RL_API", source: DRAWINGS },
+  "api/teacher/drawings/upload/$.ts": { limiter: "RL_API", source: DRAWINGS },
+  // RL_API per IP on every request, RL_SPONSOR (the strictest binding) per user on a render only.
+  "api/teacher/lessons/$lessonId/pdf.ts": {
+    limiter: "RL_SPONSOR",
+    source: LESSON_PDF,
+  },
   "api/webhooks/mollie.ts": {
     limiter: "RL_API",
     source: "apps/site/src/server/mollie-webhook.ts",

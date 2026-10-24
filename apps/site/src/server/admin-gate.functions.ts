@@ -27,10 +27,12 @@ export interface AdminGate {
  * navigation. The session is read from D1 for this request, so a demotion
  * applies on the next navigation:
  * - a guest is redirected to `/sign-in?redirect=<the admin path>`;
- * - a signed-in account with neither the admin nor the translator role gets
- *   the 404 page (the admin surface is not disclosed);
- * - an admin or a translator gets `{ user }`; the layout then narrows a
- *   translator to the translation screens (`lib/admin-access.ts`).
+ * - a signed-in account with none of the admin, translator and teacher roles
+ *   gets the 404 page (the admin surface is not disclosed);
+ * - an admin, a translator or a teacher gets `{ user }`; the layout then
+ *   narrows a translator to the translation screens and the teacher
+ *   information and a teacher to the lessons and the teacher information
+ *   (`lib/admin-access.ts`).
  * The procedures check the role again (`requireAdmin`, `requireRole`); this
  * only decides what the page shows.
  */
@@ -39,8 +41,8 @@ export const getAdminGate = createServerFn()
   .handler(async ({ data: returnPath }): Promise<AdminGate> => {
     const session = await requestSession(getRequest());
     try {
-      // `admin` implies every other role: this is the translator or the admin.
-      requireRoleUser(session, "translator");
+      // `admin` implies every other role: a translator, a teacher or an admin.
+      requireRoleUser(session, "translator", "teacher");
     } catch (error) {
       if (error instanceof AuthError && error.code === "UNAUTHORIZED") {
         throw redirect({ search: { redirect: returnPath }, to: "/sign-in" });

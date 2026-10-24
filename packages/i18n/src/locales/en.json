@@ -419,6 +419,86 @@
       }
     }
   },
+  "lessonPdf": {
+    "lesson": "Lesson",
+    "fallbackFootnote": "Not yet translated: text in {{language}}."
+  },
+  "teacherLessons": {
+    "title": "Lessons",
+    "entryDescription": "Look up lessons and share them as a PDF",
+    "number": "Lesson {{number}}",
+    "gestureCount_one": "{{count}} gesture",
+    "gestureCount_other": "{{count}} gestures",
+    "author": "By {{name}}",
+    "titleIn": "Title in {{language}}",
+    "empty": {
+      "title": "No lessons yet",
+      "description": "Lessons are made on the website. They show up here as soon as a teacher creates one."
+    },
+    "forbidden": {
+      "title": "Only for teachers",
+      "description": "This part of the app is for teachers and admins."
+    },
+    "notFound": {
+      "title": "Lesson not found",
+      "description": "This lesson doesn't exist (anymore)."
+    },
+    "notes": "Notes",
+    "ungrouped": "Gestures",
+    "section": "Section",
+    "emptyLesson": "This lesson has no gestures yet.",
+    "unpublished": "Not published",
+    "unpublishedHint": "This gesture is not published and can't be opened.",
+    "export": {
+      "open": "Export as PDF",
+      "title": "Lesson as a PDF",
+      "description": "Choose who the PDF is for and in which language, then share or save it.",
+      "download": "Download and share",
+      "downloading": "Making the PDF…",
+      "shareTitle": "Share the lesson PDF",
+      "errors": {
+        "unauthorized": "Sign in again to make the PDF.",
+        "forbidden": "Only teachers can make this PDF.",
+        "notFound": "This lesson no longer exists.",
+        "offline": "No connection. Connect to the internet and try again.",
+        "sharingUnavailable": "This device can't share files."
+      }
+    }
+  },
+  "drawings": {
+    "title": "Drawings",
+    "description": "Line drawings for the participants' sheet: one image per step, a second step is optional. PNG or JPEG, at most 512 kB and 1200 pixels on a side. Only teachers, translators and admins can see them.",
+    "step": "Step {{step}}",
+    "stepOptional": "Step {{step}} (optional)",
+    "none": "No drawing yet",
+    "needFirst": "Add step 1 first.",
+    "removeStep2First": "Remove step 2 first.",
+    "choose": "Choose drawing",
+    "replace": "Replace drawing",
+    "remove": "Remove drawing",
+    "creditLabel": "Credit",
+    "creditHint": "Printed under the drawing. To change it, upload the drawing again.",
+    "credit": "Credit: {{credit}}",
+    "noCredit": "No credit",
+    "details": "{{width}} × {{height}} px, {{size}} kB",
+    "previewAlt": "Drawing of {{name}}, step {{step}}",
+    "readOnly": "You can see the drawings. Teachers and admins change them.",
+    "saved": "Drawing saved",
+    "removed": "Drawing removed",
+    "removeTitle": "Remove this drawing?",
+    "removeDescription": "The drawing of step {{step}} is deleted. Lessons that use this gesture print it without the drawing.",
+    "removeConfirm": "Remove",
+    "errors": {
+      "format": "This is not a valid PNG or JPEG image (a WebP cannot go into the PDF).",
+      "dimensions": "The image is larger than 1200 pixels on a side.",
+      "tooLarge": "The file is larger than 512 kB.",
+      "missing": "The upload did not arrive. Try again.",
+      "key": "This upload does not belong to this gesture.",
+      "network": "The upload failed. Check your connection and try again.",
+      "generic": "Saving failed. Try again.",
+      "removeFailed": "Removing failed. Try again."
+    }
+  },
   "gesture": {
     "sponsored": "Sponsored",
     "disclaimer": {
@@ -969,11 +1049,13 @@
         "content": "Content",
         "community": "Community",
         "operations": "Operations",
-        "translation": "Translation"
+        "translation": "Translation",
+        "teaching": "Teaching"
       },
       "strings": "Strings",
       "languages": "Languages",
-      "legal": "Legal texts"
+      "legal": "Legal texts",
+      "lessons": "Lessons"
     },
     "comingSoon": {
       "title": "Coming in this phase",
@@ -1136,6 +1218,18 @@
           "draft_save": "Legal text draft saved",
           "publish": "Legal text published",
           "restore": "Legal text restored"
+        },
+        "lesson": {
+          "create": "Lesson created",
+          "update": "Lesson updated",
+          "delete": "Lesson deleted",
+          "duplicate": "Lesson duplicated",
+          "export": "Lesson exported as PDF"
+        },
+        "teacher": {
+          "info_save": "Teacher info saved",
+          "drawing_upload": "Drawing uploaded",
+          "drawing_delete": "Drawing deleted"
         }
       },
       "targetTypes": {
@@ -1150,7 +1244,9 @@
         "dead_letter": "Dead letter",
         "language": "Language",
         "ui_string": "Interface string",
-        "legal_text": "Legal text"
+        "legal_text": "Legal text",
+        "gesture_teacher_info": "Teacher info",
+        "lesson": "Lesson"
       }
     },
     "gestures": {
@@ -1412,6 +1508,229 @@
       "hiddenName": "{{name}} (hidden)",
       "countWithPublished_one": "{{count}} gesture · {{published}} published",
       "countWithPublished_other": "{{count}} gestures · {{published}} published"
+    },
+    "lessons": {
+      "title": "Lessons",
+      "description": "Lessons that teachers build from gestures. Every teacher can read every lesson and copy it; the author and admins edit it.",
+      "untitled": "Untitled lesson",
+      "new": "New lesson",
+      "search": "Search lessons",
+      "searchPlaceholder": "Search by title",
+      "mine": "My lessons",
+      "mineBadge": "Yours",
+      "noAuthor": "its author",
+      "numbered": "Lesson {{number}}",
+      "numberLabel": "Lesson number",
+      "numberHint": "Optional. Printed as “Lesson 3”.",
+      "numberInvalid": "Use a whole number from 0 to 9999.",
+      "loadMore": "Show more lessons",
+      "backToList": "All lessons",
+      "duplicated": "Lesson copied. You are now in your own copy.",
+      "duplicateFailed": "The lesson couldn't be copied. Try again.",
+      "columns": {
+        "title": "Title",
+        "number": "Number",
+        "author": "Author",
+        "gestures": "Gestures",
+        "updated": "Changed",
+        "actions": "Actions"
+      },
+      "empty": {
+        "title": "No lessons yet",
+        "description": "Create the first lesson and add gestures to it."
+      },
+      "noResults": {
+        "title": "No lessons found",
+        "description": "No lesson matches this search. Try another title or switch off “My lessons”."
+      },
+      "notFound": {
+        "title": "Lesson not found",
+        "description": "This lesson doesn't exist (any more)."
+      },
+      "actions": {
+        "label": "Actions for {{title}}",
+        "open": "Open",
+        "duplicate": "Make a copy",
+        "delete": "Delete"
+      },
+      "create": {
+        "title": "New lesson",
+        "description": "Give the lesson a title. You add the gestures on the next screen and can translate the title there.",
+        "titleLabel": "Title",
+        "languageLabel": "Language of the title",
+        "submit": "Create lesson",
+        "failed": "The lesson couldn't be created. Try again."
+      },
+      "delete": {
+        "title": "Delete this lesson?",
+        "description": "“{{title}}” and its sections are deleted for everyone. The gestures themselves stay.",
+        "confirm": "Delete lesson",
+        "done": "Lesson deleted.",
+        "failed": "The lesson couldn't be deleted. Try again."
+      },
+      "builder": {
+        "title": "Lesson"
+      },
+      "readOnly": "{{author}} edits this lesson. You can read it and make your own copy.",
+      "details": "Lesson details",
+      "tabsLabel": "Language of the title and notes",
+      "tabFilled": "Filled in",
+      "tabEmpty": "Empty",
+      "fields": {
+        "title": "Title",
+        "notes": "Notes"
+      },
+      "problem": {
+        "noTitle": "Add a title in at least one language to save the lesson.",
+        "notesWithoutTitle": "A language with notes needs a title too. Add one or clear the notes."
+      },
+      "status": {
+        "saved": "All changes saved",
+        "saving": "Saving…",
+        "dirty": "Changes are being saved…",
+        "error": "Saving failed. Your changes are kept on this page.",
+        "invalid": "Not saved yet: see the message below.",
+        "conflict": "Someone else changed this lesson.",
+        "retry": "Try again"
+      },
+      "conflict": {
+        "title": "This lesson was changed elsewhere",
+        "body": "{{author}} or another editor saved a newer version. Use theirs and lose your latest changes here, or keep yours and replace theirs.",
+        "useTheirs": "Use their version",
+        "keepMine": "Keep mine"
+      },
+      "structure": "Gestures",
+      "count_one": "{{count}} gesture",
+      "count_other": "{{count}} gestures",
+      "add": "Add gestures",
+      "readiness": {
+        "label": "Teacher info in {{language}}",
+        "summary": "{{own}} of {{total}} gestures have teacher info in {{language}}.",
+        "fallback_one": "{{count}} falls back to the default language.",
+        "fallback_other": "{{count}} fall back to the default language.",
+        "none_one": "{{count}} has no teacher info at all.",
+        "none_other": "{{count}} have no teacher info at all.",
+        "empty": "Add published gestures to see how ready this lesson is."
+      },
+      "section": {
+        "add": "Add section",
+        "untitled": "Section {{number}}",
+        "ungrouped": "Before the first section",
+        "empty": "No gestures here yet.",
+        "titleLabel": "Title of section {{number}}",
+        "actions": "Actions for {{name}}",
+        "moveUp": "Move section up",
+        "moveDown": "Move section down",
+        "removeTitle": "Remove {{name}}?",
+        "removeDescription": "The gestures of this part move to the part before it. No gesture is deleted.",
+        "removeConfirm": "Remove part",
+        "remove": "Remove section"
+      },
+      "item": {
+        "actions": "Actions for {{name}}",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "moveTo": "Move to {{section}}",
+        "moveToStart": "Move before the first section",
+        "remove": "Remove from lesson",
+        "unpublished": "Unpublished",
+        "drawing": "Drawing",
+        "readiness": {
+          "own": "Teacher info",
+          "fallback": "Default language",
+          "none": "No teacher info"
+        }
+      },
+      "picker": {
+        "title": "Add gestures",
+        "description": "Search the catalogue and pick gestures. Each one goes straight into the lesson; a gesture appears once.",
+        "placeholder": "Search gestures",
+        "categories": "Filter by category",
+        "destination": "Add to",
+        "done": "Done",
+        "held": "In this lesson",
+        "full": "A lesson holds at most {{max}} gestures.",
+        "error": "The search failed. Try again."
+      },
+      "export": {
+        "open": "Make PDF",
+        "title": "Lesson as a PDF",
+        "description": "Choose who the PDF is for and in which language. You see what it will contain first.",
+        "templateLabel": "Sheet",
+        "teachers": "For teachers",
+        "teachersHint": "The word with hand configuration, place, orientation, movement and related meanings.",
+        "participants": "For participants",
+        "participantsHint": "The word with its drawing and a short summary.",
+        "languageLabel": "Language of the PDF",
+        "loading": "Checking what the PDF will contain…",
+        "failed": "The overview could not be loaded. Try again.",
+        "summary_one": "{{count}} gesture goes into the PDF.",
+        "summary_other": "{{count}} gestures go into the PDF.",
+        "clean": "Every gesture is complete in {{language}}.",
+        "overLimit": "This lesson has {{count}} gestures, but this PDF takes at most {{limit}}. Split the lesson in two.",
+        "skippedTitle_one": "{{count}} gesture is not published and stays out of the PDF",
+        "skippedTitle_other": "{{count}} gestures are not published and stay out of the PDF",
+        "unsupportedLessonText": "The title, the notes or a part of this lesson has characters the PDF font does not have (another script or an emoji). They print as question marks.",
+        "issuesTitle": "Check these gestures",
+        "issue": {
+          "fallback": "Text in the default language",
+          "missing": "No teacher info",
+          "noDrawing": "No drawing",
+          "unsupportedText": "Has characters the PDF cannot show: they print as question marks",
+          "unsupportedDrawing": "The drawing is a WebP and is left out: upload it again as PNG or JPEG"
+        },
+        "download": "Download PDF",
+        "downloading": "Making the PDF…",
+        "truncated": "Note that the text of one or more gestures was shortened because it does not fit on one page.",
+        "done": "PDF downloaded.",
+        "errors": {
+          "tooMany": "This lesson has too many gestures for this PDF. Split the lesson in two.",
+          "tooLarge": "The PDF is too large. Split the lesson or use smaller drawings.",
+          "timeout": "Making the PDF took too long. Split the lesson in two and try again.",
+          "rateLimited": "You just made a lot of PDFs. Wait a moment and try again.",
+          "signIn": "Your session has expired. Sign in again and try again.",
+          "forbidden": "Your account may no longer make this PDF. Ask an administrator.",
+          "generic": "The PDF could not be made. Try again."
+        }
+      },
+      "reorder": {
+        "instructions": "Press space or Enter to pick up an item. Move it with the arrow keys and press space or Enter again to drop it. Escape cancels.",
+        "picked": "Picked up {{name}}, position {{position}} of {{total}}.",
+        "moved": "Moved {{name}} to position {{position}} of {{total}}.",
+        "dropped": "Dropped {{name}} at position {{position}} of {{total}}.",
+        "cancelled": "Move cancelled. {{name}} is back at position {{position}}.",
+        "failed": "The new order couldn't be applied."
+      }
+    },
+    "teacherInfo": {
+      "title": "Teacher information",
+      "description": "Private teaching notes for this gesture, one tab per language. Only teachers, translators and admins can see them; they never appear on the public site.",
+      "tabsLabel": "Language of the teacher information",
+      "sourceLabel": "Reference ({{language}})",
+      "sourceEmpty": "Nothing has been written in {{language}} yet.",
+      "filled": "Filled in",
+      "empty": "Empty",
+      "fields": {
+        "hc": "HC (handshape)",
+        "pl": "PL (place)",
+        "or": "OR (orientation)",
+        "bw": "BW (movement)",
+        "cNote": "C (related meanings), private note",
+        "note": "Free note",
+        "summary": "Short summary for participants"
+      },
+      "keywords": "Public keywords (C)",
+      "keywordsNone": "No keywords in this language yet.",
+      "cHint": "The keywords above are public search words. This note stays private and is printed after them on the teachers’ sheet.",
+      "summaryHint": "Printed on the participants’ sheet. Without one, the handshape is used.",
+      "readOnly": "You translate this gesture: only a teacher or an admin writes in {{language}}.",
+      "save": "Save teacher information",
+      "saved": "Teacher information saved.",
+      "saveFailed": "The teacher information could not be saved.",
+      "stale": "Someone else saved this language first. Their text is offered above: choose which to keep.",
+      "loadFailed": "The teacher information could not be loaded.",
+      "open": "Teacher information",
+      "backToGesture": "Back to the gesture"
     },
     "catalogTranslation": {
       "title": "Translations",

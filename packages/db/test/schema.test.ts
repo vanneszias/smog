@@ -59,6 +59,13 @@ const TABLES = [
   "gesture_audio",
   "legal_text",
   "user_role",
+  "gesture_teacher_info",
+  "gesture_drawing",
+  "lesson",
+  "lesson_translation",
+  "lesson_section",
+  "lesson_section_translation",
+  "lesson_item",
 ];
 
 const DUPLICATE_FAVORITE =

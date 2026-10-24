@@ -7,6 +7,7 @@ import { ENVIRONMENTS } from "@smog/config/env/worker";
 import { localeCodeSchema } from "@smog/config/locale";
 import { favoritesContract } from "@smog/favorites/contract";
 import { gesturesContract } from "@smog/gestures/contract";
+import { lessonsContract, teacherSlice } from "@smog/lessons/contract";
 import { listsContract } from "@smog/lists/contract";
 import { baseContract, roleSchema, userRolesSchema } from "@smog/rpc/contract";
 import { sponsorshipsContract } from "@smog/sponsorships/contract";
@@ -79,9 +80,11 @@ export const appContract = {
   catalogTranslation: catalogTranslationContract,
   favorites: favoritesContract,
   gestures: gesturesContract,
+  lessons: lessonsContract,
   lists: listsContract,
   sponsorships: sponsorshipsContract,
   system: systemContract,
+  teacher: teacherSlice,
   translation: translationSlice,
 };
 

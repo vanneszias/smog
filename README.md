@@ -13,8 +13,8 @@ SMOG & Co's sign language learning platform: a library of gesture videos that pe
 |---|---|
 | `apps/site` | the Worker: routes, screens, the API, queue consumers and crons |
 | `apps/mobile` | the Expo app |
-| `packages/*` | `config`, `db`, `auth`, `rpc`, `api`, `payments`, `video`, `email`, `jobs`, `analytics`, `i18n`, `styles`, `brand`, `ui-web`, `ui-native`, `local-store`, `utils`, `migrate-convex` |
-| `packages/features/*` | `gestures`, `favorites`, `lists`, `account`, `sponsorships`, `admin` (each with `./schema`, `./contract`, `./server`, `./client`) |
+| `packages/*` | `config`, `db`, `auth`, `rpc`, `api`, `payments`, `video`, `email`, `jobs`, `analytics`, `i18n`, `styles`, `brand`, `ui-web`, `ui-native`, `local-store`, `utils`, `migrate-convex`, `pdf` |
+| `packages/features/*` | `gestures`, `favorites`, `lists`, `account`, `sponsorships`, `admin`, `translation`, `lessons` (each with `./schema`, `./contract`, `./server`, `./client`) |
 | `scripts/*` | release, deploy and boundary checks, provisioning, `admin:grant`, `maintenance`, `retention`, `cron`, the e2e runner |
 | `docs/*` | the documents listed below |
 

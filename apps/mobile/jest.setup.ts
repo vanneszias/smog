@@ -37,8 +37,13 @@ jest.mock("expo-file-system", () => {
     delete(): void {
       mockFiles.delete(this.uri);
     }
-    write(text: string): void {
-      mockFiles.set(this.uri, text);
+    write(content: string | Uint8Array): void {
+      mockFiles.set(
+        this.uri,
+        typeof content === "string"
+          ? content
+          : new TextDecoder().decode(content)
+      );
     }
   }
   return {
@@ -53,6 +58,7 @@ jest.mock("expo-file-system", () => {
   };
 });
 jest.mock("expo-sharing", () => ({
+  isAvailableAsync: jest.fn(() => Promise.resolve(true)),
   shareAsync: jest.fn(() => Promise.resolve()),
 }));
 

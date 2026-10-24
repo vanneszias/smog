@@ -49,6 +49,12 @@ describe("seed/dev.sql", () => {
         "SELECT count(*) AS n FROM gesture_fts WHERE gesture_fts MATCH 'hond*'"
       )
     ).toBeGreaterThan(0);
+    // The invented teacher information (phase 10c), once each, not twice.
+    expect(
+      await count(
+        "SELECT count(*) AS n FROM gesture_teacher_info WHERE gesture_id LIKE '5eed0002-%' AND locale = 'nl'"
+      )
+    ).toBe(3);
   });
 
   it("promotes an existing admin@smog.test account instead of failing", async () => {

@@ -12,6 +12,14 @@ export default function SettingsLayout(): ReactElement {
     <Stack screenOptions={header}>
       <Stack.Screen name="index" options={{ title: t("settings.title") }} />
       <Stack.Screen name="account" options={{ title: t("account.title") }} />
+      <Stack.Screen
+        name="lessons/index"
+        options={{ title: t("teacherLessons.title") }}
+      />
+      <Stack.Screen
+        name="lessons/[id]"
+        options={{ title: t("teacherLessons.title") }}
+      />
       <Stack.Protected guard={devToolsAvailable()}>
         <Stack.Screen
           name="developer-tools/index"

@@ -18,6 +18,13 @@
  * - a gesture's audio clip, `/api/audio/<gestureId>/<locale>/<uuid>`, when
  *   it is served (200 or 206): a year, immutable (a new key on every
  *   replace);
+ * - a teacher drawing, `/api/teacher/drawings/<gestureId>/<step>`, when it
+ *   is served (200 or 304): `private, no-cache` (the browser keeps its copy but asks the route, with the ETag, before every use, so a sign-out or a demotion applies at once; fix wave A-m1), for the signed-in
+ *   teacher, translator or admin only (never a shared cache; the route sets
+ *   the same value itself and adds `Vary: Cookie`);
+ * - a lesson PDF, `/api/teacher/lessons/<id>/pdf` (phase 10c): `private,
+ *   no-store`, set by the route itself (the `/api/*` rule below says the
+ *   same for an error answer);
  * - a running sponsorship's logo, `/api/sponsor-logos/<uuid>`, when it is
  *   served (200): an hour (the route sets it itself);
  * - `/api/*`, `/_serverFn/*` (TanStack server functions, session-dependent),
@@ -40,6 +47,10 @@ export const NO_CACHE = "private, no-cache";
  */
 const AUDIO_PREFIX = "/api/audio/";
 const AUDIO_UPLOAD_PREFIX = "/api/audio/upload/";
+
+/** Private teaching material (phase 10c): the drawings, but not the signed upload under them. */
+const TEACHER_DRAWING_PREFIX = "/api/teacher/drawings/";
+const TEACHER_DRAWING_UPLOAD_PREFIX = "/api/teacher/drawings/upload/";
 
 /** The logo of a running sponsorship (phase 10b): `server/logo-upload.ts` sets the same hour. */
 const SPONSOR_LOGO_PREFIX = "/api/sponsor-logos/";
@@ -91,6 +102,13 @@ export function cacheControlFor({
     (status === 200 || status === 206)
   ) {
     return IMMUTABLE;
+  }
+  if (
+    pathname.startsWith(TEACHER_DRAWING_PREFIX) &&
+    !pathname.startsWith(TEACHER_DRAWING_UPLOAD_PREFIX) &&
+    (status === 200 || status === 304)
+  ) {
+    return NO_CACHE;
   }
   if (pathname.startsWith(SPONSOR_LOGO_PREFIX) && status === 200) {
     return ONE_HOUR;

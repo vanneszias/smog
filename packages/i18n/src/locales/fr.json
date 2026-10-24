@@ -423,6 +423,87 @@
       }
     }
   },
+  "lessonPdf": {
+    "lesson": "Leçon",
+    "fallbackFootnote": "Pas encore traduit : texte en {{language}}."
+  },
+  "teacherLessons": {
+    "title": "Leçons",
+    "entryDescription": "Consultez les leçons et partagez-les en PDF",
+    "number": "Leçon {{number}}",
+    "gestureCount_one": "{{count}} geste",
+    "gestureCount_many": "{{count}} gestes",
+    "gestureCount_other": "{{count}} gestes",
+    "author": "Par {{name}}",
+    "titleIn": "Titre en {{language}}",
+    "empty": {
+      "title": "Aucune leçon pour l'instant",
+      "description": "Les leçons se créent sur le site web. Elles apparaissent ici dès qu'un enseignant en crée une."
+    },
+    "forbidden": {
+      "title": "Réservé aux enseignants",
+      "description": "Cette partie de l'application est réservée aux enseignants et aux administrateurs."
+    },
+    "notFound": {
+      "title": "Leçon introuvable",
+      "description": "Cette leçon n'existe pas (ou plus)."
+    },
+    "notes": "Notes",
+    "ungrouped": "Gestes",
+    "section": "Section",
+    "emptyLesson": "Cette leçon ne contient pas encore de gestes.",
+    "unpublished": "Non publié",
+    "unpublishedHint": "Ce geste n'est pas publié et ne peut pas être ouvert.",
+    "export": {
+      "open": "Exporter en PDF",
+      "title": "Leçon en PDF",
+      "description": "Choisissez à qui s'adresse le PDF et dans quelle langue, puis partagez-le ou enregistrez-le.",
+      "download": "Télécharger et partager",
+      "downloading": "Création du PDF…",
+      "shareTitle": "Partager le PDF de la leçon",
+      "errors": {
+        "unauthorized": "Reconnectez-vous pour créer le PDF.",
+        "forbidden": "Seuls les enseignants peuvent créer ce PDF.",
+        "notFound": "Cette leçon n'existe plus.",
+        "offline": "Pas de connexion. Connectez-vous à Internet et réessayez.",
+        "sharingUnavailable": "Cet appareil ne peut pas partager de fichiers."
+      }
+    }
+  },
+  "drawings": {
+    "title": "Dessins",
+    "description": "Dessins au trait pour la feuille des participants. Une image par étape, la deuxième étape est facultative. PNG ou JPEG, 512 ko et 1200 pixels de côté au maximum. Seuls les enseignants, les traducteurs et les administrateurs les voient.",
+    "step": "Étape {{step}}",
+    "stepOptional": "Étape {{step}} (facultative)",
+    "none": "Pas encore de dessin",
+    "needFirst": "Ajoutez d'abord l'étape 1.",
+    "removeStep2First": "Supprimez d'abord l'étape 2.",
+    "choose": "Choisir un dessin",
+    "replace": "Remplacer le dessin",
+    "remove": "Supprimer le dessin",
+    "creditLabel": "Crédit",
+    "creditHint": "Imprimé sous le dessin. Pour le modifier, envoyez à nouveau le dessin.",
+    "credit": "Crédit\u00a0: {{credit}}",
+    "noCredit": "Aucun crédit",
+    "details": "{{width}} × {{height}} px, {{size}} ko",
+    "previewAlt": "Dessin de {{name}}, étape {{step}}",
+    "readOnly": "Vous pouvez voir les dessins. Les enseignants et les administrateurs les modifient.",
+    "saved": "Dessin enregistré",
+    "removed": "Dessin supprimé",
+    "removeTitle": "Supprimer ce dessin\u202f?",
+    "removeDescription": "Le dessin de l'étape {{step}} est supprimé. Les leçons qui utilisent ce geste sont imprimées sans dessin.",
+    "removeConfirm": "Supprimer",
+    "errors": {
+      "format": "Ce fichier n'est pas une image PNG ou JPEG valide (un WebP ne peut pas aller dans le PDF).",
+      "dimensions": "L'image dépasse 1200 pixels de côté.",
+      "tooLarge": "Le fichier dépasse 512 ko.",
+      "missing": "L'envoi n'est pas arrivé. Réessayez.",
+      "key": "Cet envoi n'appartient pas à ce geste.",
+      "network": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
+      "generic": "L'enregistrement a échoué. Réessayez.",
+      "removeFailed": "La suppression a échoué. Réessayez."
+    }
+  },
   "gesture": {
     "sponsored": "Sponsorisé",
     "disclaimer": {
@@ -977,11 +1058,13 @@
         "content": "Contenu",
         "community": "Communauté",
         "operations": "Exploitation",
-        "translation": "Traduction"
+        "translation": "Traduction",
+        "teaching": "Enseignement"
       },
       "strings": "Textes",
       "languages": "Langues",
-      "legal": "Textes juridiques"
+      "legal": "Textes juridiques",
+      "lessons": "Leçons"
     },
     "comingSoon": {
       "title": "Prévu dans cette phase",
@@ -1156,6 +1239,18 @@
           "draft_save": "Brouillon de texte juridique enregistré",
           "publish": "Texte juridique publié",
           "restore": "Texte juridique restauré"
+        },
+        "lesson": {
+          "create": "Leçon créée",
+          "update": "Leçon mise à jour",
+          "delete": "Leçon supprimée",
+          "duplicate": "Leçon dupliquée",
+          "export": "Leçon exportée en PDF"
+        },
+        "teacher": {
+          "info_save": "Infos enseignant enregistrées",
+          "drawing_upload": "Dessin téléversé",
+          "drawing_delete": "Dessin supprimé"
         }
       },
       "targetTypes": {
@@ -1170,7 +1265,9 @@
         "dead_letter": "Dead letter",
         "language": "Langue",
         "ui_string": "Texte d’interface",
-        "legal_text": "Texte juridique"
+        "legal_text": "Texte juridique",
+        "gesture_teacher_info": "Infos enseignant",
+        "lesson": "Leçon"
       }
     },
     "gestures": {
@@ -1442,6 +1539,234 @@
       "countWithPublished_one": "{{count}} geste · {{published}} publiés",
       "countWithPublished_many": "{{count}} gestes · {{published}} publiés",
       "countWithPublished_other": "{{count}} gestes · {{published}} publiés"
+    },
+    "lessons": {
+      "title": "Leçons",
+      "description": "Des leçons que les enseignants composent à partir de gestes. Chaque enseignant peut lire et copier chaque leçon\u00a0; l’auteur et les administrateurs la modifient.",
+      "untitled": "Leçon sans titre",
+      "new": "Nouvelle leçon",
+      "search": "Rechercher des leçons",
+      "searchPlaceholder": "Rechercher par titre",
+      "mine": "Mes leçons",
+      "mineBadge": "La vôtre",
+      "noAuthor": "son auteur",
+      "numbered": "Leçon {{number}}",
+      "numberLabel": "Numéro de la leçon",
+      "numberHint": "Facultatif. Imprimé comme «\u00a0Leçon 3\u00a0».",
+      "numberInvalid": "Utilisez un nombre entier de 0 à 9999.",
+      "loadMore": "Afficher plus de leçons",
+      "backToList": "Toutes les leçons",
+      "duplicated": "Leçon copiée. Vous êtes maintenant dans votre propre copie.",
+      "duplicateFailed": "La leçon n’a pas pu être copiée. Réessayez.",
+      "columns": {
+        "title": "Titre",
+        "number": "Numéro",
+        "author": "Auteur",
+        "gestures": "Gestes",
+        "updated": "Modifiée",
+        "actions": "Actions"
+      },
+      "empty": {
+        "title": "Pas encore de leçons",
+        "description": "Créez la première leçon et ajoutez-y des gestes."
+      },
+      "noResults": {
+        "title": "Aucune leçon trouvée",
+        "description": "Aucune leçon ne correspond à cette recherche. Essayez un autre titre ou désactivez «\u00a0Mes leçons\u00a0»."
+      },
+      "notFound": {
+        "title": "Leçon introuvable",
+        "description": "Cette leçon n’existe pas (ou plus)."
+      },
+      "actions": {
+        "label": "Actions pour {{title}}",
+        "open": "Ouvrir",
+        "duplicate": "Faire une copie",
+        "delete": "Supprimer"
+      },
+      "create": {
+        "title": "Nouvelle leçon",
+        "description": "Donnez un titre à la leçon. Vous ajouterez les gestes sur l’écran suivant et pourrez y traduire le titre.",
+        "titleLabel": "Titre",
+        "languageLabel": "Langue du titre",
+        "submit": "Créer la leçon",
+        "failed": "La leçon n’a pas pu être créée. Réessayez."
+      },
+      "delete": {
+        "title": "Supprimer cette leçon\u202f?",
+        "description": "«\u00a0{{title}}\u00a0» et ses sections sont supprimées pour tout le monde. Les gestes eux-mêmes restent.",
+        "confirm": "Supprimer la leçon",
+        "done": "Leçon supprimée.",
+        "failed": "La leçon n’a pas pu être supprimée. Réessayez."
+      },
+      "builder": {
+        "title": "Leçon"
+      },
+      "readOnly": "{{author}} modifie cette leçon. Vous pouvez la lire et en faire votre propre copie.",
+      "details": "Détails de la leçon",
+      "tabsLabel": "Langue du titre et des notes",
+      "tabFilled": "Rempli",
+      "tabEmpty": "Vide",
+      "fields": {
+        "title": "Titre",
+        "notes": "Notes"
+      },
+      "problem": {
+        "noTitle": "Ajoutez un titre dans au moins une langue pour enregistrer la leçon.",
+        "notesWithoutTitle": "Une langue avec des notes a aussi besoin d’un titre. Ajoutez-en un ou effacez les notes."
+      },
+      "status": {
+        "saved": "Toutes les modifications sont enregistrées",
+        "saving": "Enregistrement…",
+        "dirty": "Les modifications sont en cours d’enregistrement…",
+        "error": "L’enregistrement a échoué. Vos modifications restent sur cette page.",
+        "invalid": "Pas encore enregistré\u00a0: voir le message ci-dessous.",
+        "conflict": "Quelqu’un d’autre a modifié cette leçon.",
+        "retry": "Réessayer"
+      },
+      "conflict": {
+        "title": "Cette leçon a été modifiée ailleurs",
+        "body": "{{author}} ou un autre éditeur a enregistré une version plus récente. Utilisez la leur et perdez vos dernières modifications ici, ou gardez la vôtre et remplacez la leur.",
+        "useTheirs": "Utiliser leur version",
+        "keepMine": "Garder la mienne"
+      },
+      "structure": "Gestes",
+      "count_one": "{{count}} geste",
+      "count_many": "{{count}} gestes",
+      "count_other": "{{count}} gestes",
+      "add": "Ajouter des gestes",
+      "readiness": {
+        "label": "Informations pour les enseignants en {{language}}",
+        "summary": "{{own}} gestes sur {{total}} ont des informations pour les enseignants en {{language}}.",
+        "fallback_one": "{{count}} se rabat sur la langue par défaut.",
+        "fallback_many": "{{count}} se rabattent sur la langue par défaut.",
+        "fallback_other": "{{count}} se rabattent sur la langue par défaut.",
+        "none_one": "{{count}} n’a aucune information pour les enseignants.",
+        "none_many": "{{count}} n’ont aucune information pour les enseignants.",
+        "none_other": "{{count}} n’ont aucune information pour les enseignants.",
+        "empty": "Ajoutez des gestes publiés pour voir où en est cette leçon."
+      },
+      "section": {
+        "add": "Ajouter une section",
+        "untitled": "Section {{number}}",
+        "ungrouped": "Avant la première section",
+        "empty": "Pas encore de gestes ici.",
+        "titleLabel": "Titre de la section {{number}}",
+        "actions": "Actions pour {{name}}",
+        "moveUp": "Monter la section",
+        "moveDown": "Descendre la section",
+        "removeTitle": "Supprimer {{name}} ?",
+        "removeDescription": "Les gestes de cette partie passent à la partie précédente. Aucun geste n’est supprimé.",
+        "removeConfirm": "Supprimer la partie",
+        "remove": "Supprimer la section"
+      },
+      "item": {
+        "actions": "Actions pour {{name}}",
+        "moveUp": "Monter",
+        "moveDown": "Descendre",
+        "moveTo": "Déplacer vers {{section}}",
+        "moveToStart": "Déplacer avant la première section",
+        "remove": "Retirer de la leçon",
+        "unpublished": "Non publié",
+        "drawing": "Dessin",
+        "readiness": {
+          "own": "Infos enseignants",
+          "fallback": "Langue par défaut",
+          "none": "Aucune info"
+        }
+      },
+      "picker": {
+        "title": "Ajouter des gestes",
+        "description": "Cherchez dans le catalogue et choisissez des gestes. Chacun va directement dans la leçon\u00a0; un geste n’y figure qu’une fois.",
+        "placeholder": "Rechercher des gestes",
+        "categories": "Filtrer par catégorie",
+        "destination": "Ajouter à",
+        "done": "Terminé",
+        "held": "Dans cette leçon",
+        "full": "Une leçon contient au plus {{max}} gestes.",
+        "error": "La recherche a échoué. Réessayez."
+      },
+      "export": {
+        "open": "Créer le PDF",
+        "title": "La leçon en PDF",
+        "description": "Choisissez à qui s’adresse le PDF et dans quelle langue. Vous voyez d’abord ce qu’il contiendra.",
+        "templateLabel": "Feuille",
+        "teachers": "Pour les enseignants",
+        "teachersHint": "Le mot avec la configuration de la main, le lieu, l’orientation, le mouvement et les sens voisins.",
+        "participants": "Pour les participants",
+        "participantsHint": "Le mot avec son dessin et un court résumé.",
+        "languageLabel": "Langue du PDF",
+        "loading": "Vérification du contenu du PDF…",
+        "failed": "L’aperçu n’a pas pu être chargé. Réessayez.",
+        "summary_one": "{{count}} geste figure dans le PDF.",
+        "summary_many": "{{count}} gestes figurent dans le PDF.",
+        "summary_other": "{{count}} gestes figurent dans le PDF.",
+        "clean": "Tous les gestes sont complets en {{language}}.",
+        "overLimit": "Cette leçon compte {{count}} gestes, mais ce PDF en accepte {{limit}} au maximum. Scindez la leçon en deux.",
+        "skippedTitle_one": "{{count}} geste n’est pas publié et reste hors du PDF",
+        "skippedTitle_many": "{{count}} gestes ne sont pas publiés et restent hors du PDF",
+        "skippedTitle_other": "{{count}} gestes ne sont pas publiés et restent hors du PDF",
+        "unsupportedLessonText": "Le titre, les notes ou une partie de cette leçon contiennent des caractères absents de la police du PDF (une autre écriture ou un émoji). Ils s’impriment comme des points d’interrogation.",
+        "issuesTitle": "À vérifier pour ces gestes",
+        "issue": {
+          "fallback": "Texte dans la langue par défaut",
+          "missing": "Aucune info pour les enseignants",
+          "noDrawing": "Pas de dessin",
+          "unsupportedText": "Contient des caractères que le PDF ne peut pas afficher, ils s’impriment comme des points d’interrogation",
+          "unsupportedDrawing": "Le dessin est un WebP et reste absent : envoyez-le à nouveau en PNG ou JPEG"
+        },
+        "download": "Télécharger le PDF",
+        "downloading": "Création du PDF…",
+        "truncated": "Attention, le texte d’un ou de plusieurs gestes a été raccourci car il ne tient pas sur une page.",
+        "done": "PDF téléchargé.",
+        "errors": {
+          "tooMany": "Cette leçon compte trop de gestes pour ce PDF. Scindez la leçon en deux.",
+          "tooLarge": "Le PDF est trop volumineux. Scindez la leçon ou utilisez des dessins plus petits.",
+          "timeout": "La création du PDF a pris trop de temps. Scindez la leçon en deux et réessayez.",
+          "rateLimited": "Vous venez de créer beaucoup de PDF. Patientez un instant et réessayez.",
+          "signIn": "Votre session a expiré. Reconnectez-vous et réessayez.",
+          "forbidden": "Votre compte ne peut plus créer ce PDF. Adressez-vous à un administrateur.",
+          "generic": "Le PDF n’a pas pu être créé. Réessayez."
+        }
+      },
+      "reorder": {
+        "instructions": "Appuyez sur espace ou Entrée pour saisir un élément. Déplacez-le avec les flèches et appuyez de nouveau sur espace ou Entrée pour le déposer. Échap annule.",
+        "picked": "{{name}} saisi, position {{position}} sur {{total}}.",
+        "moved": "{{name}} déplacé en position {{position}} sur {{total}}.",
+        "dropped": "{{name}} déposé en position {{position}} sur {{total}}.",
+        "cancelled": "Déplacement annulé. {{name}} est revenu en position {{position}}.",
+        "failed": "Le nouvel ordre n’a pas pu être appliqué."
+      }
+    },
+    "teacherInfo": {
+      "title": "Informations pour les enseignants",
+      "description": "Notes pédagogiques privées sur ce geste, un onglet par langue. Seuls les enseignants, les traducteurs et les administrateurs les voient ; elles n’apparaissent jamais sur le site public.",
+      "tabsLabel": "Langue des informations pour les enseignants",
+      "sourceLabel": "Référence ({{language}})",
+      "sourceEmpty": "Rien n’a encore été écrit en {{language}}.",
+      "filled": "Rempli",
+      "empty": "Vide",
+      "fields": {
+        "hc": "HC (configuration de la main)",
+        "pl": "PL (emplacement)",
+        "or": "OR (orientation)",
+        "bw": "BW (mouvement)",
+        "cNote": "C (sens apparentés), note privée",
+        "note": "Note libre",
+        "summary": "Court résumé pour les participants"
+      },
+      "keywords": "Mots-clés publics (C)",
+      "keywordsNone": "Pas encore de mots-clés dans cette langue.",
+      "cHint": "Les mots-clés ci-dessus sont des mots de recherche publics. Cette note reste privée et s’imprime après eux sur la feuille des enseignants.",
+      "summaryHint": "Imprimé sur la feuille des participants. Sans résumé, la configuration de la main est utilisée.",
+      "readOnly": "Vous traduisez ce geste : seul un enseignant ou un administrateur écrit en {{language}}.",
+      "save": "Enregistrer les informations",
+      "saved": "Informations enregistrées.",
+      "saveFailed": "Les informations n’ont pas pu être enregistrées.",
+      "stale": "Quelqu’un a enregistré cette langue avant vous. Son texte est proposé ci-dessus : choisissez lequel garder.",
+      "loadFailed": "Les informations n’ont pas pu être chargées.",
+      "open": "Informations pour les enseignants",
+      "backToGesture": "Retour au geste"
     },
     "catalogTranslation": {
       "title": "Traductions",

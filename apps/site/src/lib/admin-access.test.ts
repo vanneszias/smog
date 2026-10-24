@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   isAdminHome,
+  lessonsMayOpen,
+  TEACHER_HOME,
   TRANSLATION_HOME,
+  teacherInfoMayOpen,
   translatorMayOpen,
 } from "./admin-access";
 
@@ -33,5 +36,49 @@ describe("what a translator may open", () => {
     expect(isAdminHome("/admin")).toBe(true);
     expect(isAdminHome("/admin/")).toBe(true);
     expect(isAdminHome("/admin/users")).toBe(false);
+  });
+});
+
+describe("what a teacher or a translator may open besides", () => {
+  test("one gesture's teacher information", () => {
+    expect(teacherInfoMayOpen("/admin/teacher-info/abc")).toBe(true);
+    expect(teacherInfoMayOpen("/admin/teacher-info/abc/")).toBe(true);
+  });
+
+  test("not the index, a deeper path, a look-alike or the gesture editor", () => {
+    for (const path of [
+      "/admin/teacher-info",
+      "/admin/teacher-info/",
+      "/admin/teacher-info/abc/extra",
+      "/admin/teacher-infox/abc",
+      "/admin/gestures/abc",
+      "/admin",
+    ]) {
+      expect(teacherInfoMayOpen(path), path).toBe(false);
+    }
+  });
+});
+
+describe("what a teacher may open besides", () => {
+  test("the lesson list and one lesson", () => {
+    expect(TEACHER_HOME).toBe("/admin/lessons");
+    expect(lessonsMayOpen("/admin/lessons")).toBe(true);
+    expect(lessonsMayOpen("/admin/lessons/")).toBe(true);
+    expect(lessonsMayOpen("/admin/lessons/abc")).toBe(true);
+    expect(lessonsMayOpen("/admin/lessons/abc/")).toBe(true);
+  });
+
+  test("not a deeper path, a look-alike or any other admin screen", () => {
+    for (const path of [
+      "/admin",
+      "/admin/lessons/abc/extra",
+      "/admin/lessonsx",
+      "/admin/lessonsx/abc",
+      "/admin/gestures/abc",
+      "/admin/users",
+      "/admin/translation/strings",
+    ]) {
+      expect(lessonsMayOpen(path), path).toBe(false);
+    }
   });
 });

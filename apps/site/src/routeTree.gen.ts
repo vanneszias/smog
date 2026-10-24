@@ -51,8 +51,11 @@ import { Route as WebhooksMollieRouteImport } from './routes/webhooks/mollie'
 import { Route as AdminGesturesIndexRouteImport } from './routes/admin/gestures/index'
 import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id'
 import { Route as AdminGesturesNewRouteImport } from './routes/admin/gestures/new'
+import { Route as AdminLessonsIndexRouteImport } from './routes/admin/lessons/index'
+import { Route as AdminLessonsIdRouteImport } from './routes/admin/lessons/$id'
 import { Route as AdminSponsorshipsIndexRouteImport } from './routes/admin/sponsorships/index'
 import { Route as AdminSponsorshipsIdRouteImport } from './routes/admin/sponsorships/$id'
+import { Route as AdminTeacherInfoIdRouteImport } from './routes/admin/teacher-info/$id'
 import { Route as AdminTranslationIndexRouteImport } from './routes/admin/translation/index'
 import { Route as AdminTranslationLanguagesRouteImport } from './routes/admin/translation/languages'
 import { Route as AdminTranslationLegalRouteImport } from './routes/admin/translation/legal'
@@ -68,6 +71,9 @@ import { Route as ApiWebhooksMollieRouteImport } from './routes/api/webhooks/mol
 import { Route as ApiWebhooksMuxRouteImport } from './routes/api/webhooks/mux'
 import { Route as ApiAudioUploadSplatRouteImport } from './routes/api/audio/upload/$'
 import { Route as ApiLogosUploadKeyRouteImport } from './routes/api/logos/upload.$key'
+import { Route as ApiTeacherDrawingsSplatRouteImport } from './routes/api/teacher/drawings/$'
+import { Route as ApiTeacherDrawingsUploadSplatRouteImport } from './routes/api/teacher/drawings/upload/$'
+import { Route as ApiTeacherLessonsLessonIdPdfRouteImport } from './routes/api/teacher/lessons/$lessonId/pdf'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -279,6 +285,16 @@ const AdminGesturesNewRoute = AdminGesturesNewRouteImport.update({
   path: '/gestures/new',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLessonsIndexRoute = AdminLessonsIndexRouteImport.update({
+  id: '/lessons/',
+  path: '/lessons/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLessonsIdRoute = AdminLessonsIdRouteImport.update({
+  id: '/lessons/$id',
+  path: '/lessons/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSponsorshipsIndexRoute = AdminSponsorshipsIndexRouteImport.update({
   id: '/sponsorships/',
   path: '/sponsorships/',
@@ -287,6 +303,11 @@ const AdminSponsorshipsIndexRoute = AdminSponsorshipsIndexRouteImport.update({
 const AdminSponsorshipsIdRoute = AdminSponsorshipsIdRouteImport.update({
   id: '/sponsorships/$id',
   path: '/sponsorships/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTeacherInfoIdRoute = AdminTeacherInfoIdRouteImport.update({
+  id: '/teacher-info/$id',
+  path: '/teacher-info/$id',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminTranslationIndexRoute = AdminTranslationIndexRouteImport.update({
@@ -365,6 +386,23 @@ const ApiLogosUploadKeyRoute = ApiLogosUploadKeyRouteImport.update({
   path: '/api/logos/upload/$key',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTeacherDrawingsSplatRoute = ApiTeacherDrawingsSplatRouteImport.update({
+  id: '/api/teacher/drawings/$',
+  path: '/api/teacher/drawings/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTeacherDrawingsUploadSplatRoute =
+  ApiTeacherDrawingsUploadSplatRouteImport.update({
+    id: '/api/teacher/drawings/upload/$',
+    path: '/api/teacher/drawings/upload/$',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiTeacherLessonsLessonIdPdfRoute =
+  ApiTeacherLessonsLessonIdPdfRouteImport.update({
+    id: '/api/teacher/lessons/$lessonId/pdf',
+    path: '/api/teacher/lessons/$lessonId/pdf',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -408,7 +446,9 @@ export interface FileRoutesByFullPath {
   '/sponsor/': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/lessons/$id': typeof AdminLessonsIdRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
+  '/admin/teacher-info/$id': typeof AdminTeacherInfoIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
   '/admin/translation/legal': typeof AdminTranslationLegalRoute
   '/admin/translation/strings': typeof AdminTranslationStringsRoute
@@ -422,10 +462,14 @@ export interface FileRoutesByFullPath {
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
+  '/admin/lessons/': typeof AdminLessonsIndexRoute
   '/admin/sponsorships/': typeof AdminSponsorshipsIndexRoute
   '/admin/translation/': typeof AdminTranslationIndexRoute
   '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
+  '/api/teacher/drawings/$': typeof ApiTeacherDrawingsSplatRoute
+  '/api/teacher/drawings/upload/$': typeof ApiTeacherDrawingsUploadSplatRoute
+  '/api/teacher/lessons/$lessonId/pdf': typeof ApiTeacherLessonsLessonIdPdfRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -468,7 +512,9 @@ export interface FileRoutesByTo {
   '/sponsor': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/lessons/$id': typeof AdminLessonsIdRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
+  '/admin/teacher-info/$id': typeof AdminTeacherInfoIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
   '/admin/translation/legal': typeof AdminTranslationLegalRoute
   '/admin/translation/strings': typeof AdminTranslationStringsRoute
@@ -482,10 +528,14 @@ export interface FileRoutesByTo {
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures': typeof AdminGesturesIndexRoute
+  '/admin/lessons': typeof AdminLessonsIndexRoute
   '/admin/sponsorships': typeof AdminSponsorshipsIndexRoute
   '/admin/translation': typeof AdminTranslationIndexRoute
   '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
+  '/api/teacher/drawings/$': typeof ApiTeacherDrawingsSplatRoute
+  '/api/teacher/drawings/upload/$': typeof ApiTeacherDrawingsUploadSplatRoute
+  '/api/teacher/lessons/$lessonId/pdf': typeof ApiTeacherLessonsLessonIdPdfRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -530,7 +580,9 @@ export interface FileRoutesById {
   '/sponsor/': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/lessons/$id': typeof AdminLessonsIdRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
+  '/admin/teacher-info/$id': typeof AdminTeacherInfoIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
   '/admin/translation/legal': typeof AdminTranslationLegalRoute
   '/admin/translation/strings': typeof AdminTranslationStringsRoute
@@ -544,10 +596,14 @@ export interface FileRoutesById {
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
+  '/admin/lessons/': typeof AdminLessonsIndexRoute
   '/admin/sponsorships/': typeof AdminSponsorshipsIndexRoute
   '/admin/translation/': typeof AdminTranslationIndexRoute
   '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
+  '/api/teacher/drawings/$': typeof ApiTeacherDrawingsSplatRoute
+  '/api/teacher/drawings/upload/$': typeof ApiTeacherDrawingsUploadSplatRoute
+  '/api/teacher/lessons/$lessonId/pdf': typeof ApiTeacherLessonsLessonIdPdfRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -593,7 +649,9 @@ export interface FileRouteTypes {
     | '/sponsor/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/lessons/$id'
     | '/admin/sponsorships/$id'
+    | '/admin/teacher-info/$id'
     | '/admin/translation/languages'
     | '/admin/translation/legal'
     | '/admin/translation/strings'
@@ -607,10 +665,14 @@ export interface FileRouteTypes {
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
+    | '/admin/lessons/'
     | '/admin/sponsorships/'
     | '/admin/translation/'
     | '/api/audio/upload/$'
     | '/api/logos/upload/$key'
+    | '/api/teacher/drawings/$'
+    | '/api/teacher/drawings/upload/$'
+    | '/api/teacher/lessons/$lessonId/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -653,7 +715,9 @@ export interface FileRouteTypes {
     | '/sponsor'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/lessons/$id'
     | '/admin/sponsorships/$id'
+    | '/admin/teacher-info/$id'
     | '/admin/translation/languages'
     | '/admin/translation/legal'
     | '/admin/translation/strings'
@@ -667,10 +731,14 @@ export interface FileRouteTypes {
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures'
+    | '/admin/lessons'
     | '/admin/sponsorships'
     | '/admin/translation'
     | '/api/audio/upload/$'
     | '/api/logos/upload/$key'
+    | '/api/teacher/drawings/$'
+    | '/api/teacher/drawings/upload/$'
+    | '/api/teacher/lessons/$lessonId/pdf'
   id:
     | '__root__'
     | '/'
@@ -714,7 +782,9 @@ export interface FileRouteTypes {
     | '/sponsor/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/lessons/$id'
     | '/admin/sponsorships/$id'
+    | '/admin/teacher-info/$id'
     | '/admin/translation/languages'
     | '/admin/translation/legal'
     | '/admin/translation/strings'
@@ -728,10 +798,14 @@ export interface FileRouteTypes {
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
+    | '/admin/lessons/'
     | '/admin/sponsorships/'
     | '/admin/translation/'
     | '/api/audio/upload/$'
     | '/api/logos/upload/$key'
+    | '/api/teacher/drawings/$'
+    | '/api/teacher/drawings/upload/$'
+    | '/api/teacher/lessons/$lessonId/pdf'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -778,6 +852,9 @@ export interface RootRouteChildren {
   ApiWebhooksMuxRoute: typeof ApiWebhooksMuxRoute
   ApiAudioUploadSplatRoute: typeof ApiAudioUploadSplatRoute
   ApiLogosUploadKeyRoute: typeof ApiLogosUploadKeyRoute
+  ApiTeacherDrawingsSplatRoute: typeof ApiTeacherDrawingsSplatRoute
+  ApiTeacherDrawingsUploadSplatRoute: typeof ApiTeacherDrawingsUploadSplatRoute
+  ApiTeacherLessonsLessonIdPdfRoute: typeof ApiTeacherLessonsLessonIdPdfRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1076,6 +1153,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGesturesNewRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/lessons/': {
+      id: '/admin/lessons/'
+      path: '/lessons'
+      fullPath: '/admin/lessons/'
+      preLoaderRoute: typeof AdminLessonsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/lessons/$id': {
+      id: '/admin/lessons/$id'
+      path: '/lessons/$id'
+      fullPath: '/admin/lessons/$id'
+      preLoaderRoute: typeof AdminLessonsIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/sponsorships/': {
       id: '/admin/sponsorships/'
       path: '/sponsorships'
@@ -1088,6 +1179,13 @@ declare module '@tanstack/react-router' {
       path: '/sponsorships/$id'
       fullPath: '/admin/sponsorships/$id'
       preLoaderRoute: typeof AdminSponsorshipsIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/teacher-info/$id': {
+      id: '/admin/teacher-info/$id'
+      path: '/teacher-info/$id'
+      fullPath: '/admin/teacher-info/$id'
+      preLoaderRoute: typeof AdminTeacherInfoIdRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/translation/': {
@@ -1195,6 +1293,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLogosUploadKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/teacher/drawings/$': {
+      id: '/api/teacher/drawings/$'
+      path: '/api/teacher/drawings/$'
+      fullPath: '/api/teacher/drawings/$'
+      preLoaderRoute: typeof ApiTeacherDrawingsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/teacher/drawings/upload/$': {
+      id: '/api/teacher/drawings/upload/$'
+      path: '/api/teacher/drawings/upload/$'
+      fullPath: '/api/teacher/drawings/upload/$'
+      preLoaderRoute: typeof ApiTeacherDrawingsUploadSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/teacher/lessons/$lessonId/pdf': {
+      id: '/api/teacher/lessons/$lessonId/pdf'
+      path: '/api/teacher/lessons/$lessonId/pdf'
+      fullPath: '/api/teacher/lessons/$lessonId/pdf'
+      preLoaderRoute: typeof ApiTeacherLessonsLessonIdPdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1208,11 +1327,14 @@ interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminGesturesIdRoute: typeof AdminGesturesIdRoute
   AdminGesturesNewRoute: typeof AdminGesturesNewRoute
+  AdminLessonsIdRoute: typeof AdminLessonsIdRoute
   AdminSponsorshipsIdRoute: typeof AdminSponsorshipsIdRoute
+  AdminTeacherInfoIdRoute: typeof AdminTeacherInfoIdRoute
   AdminTranslationLanguagesRoute: typeof AdminTranslationLanguagesRoute
   AdminTranslationLegalRoute: typeof AdminTranslationLegalRoute
   AdminTranslationStringsRoute: typeof AdminTranslationStringsRoute
   AdminGesturesIndexRoute: typeof AdminGesturesIndexRoute
+  AdminLessonsIndexRoute: typeof AdminLessonsIndexRoute
   AdminSponsorshipsIndexRoute: typeof AdminSponsorshipsIndexRoute
   AdminTranslationIndexRoute: typeof AdminTranslationIndexRoute
 }
@@ -1227,11 +1349,14 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminGesturesIdRoute: AdminGesturesIdRoute,
   AdminGesturesNewRoute: AdminGesturesNewRoute,
+  AdminLessonsIdRoute: AdminLessonsIdRoute,
   AdminSponsorshipsIdRoute: AdminSponsorshipsIdRoute,
+  AdminTeacherInfoIdRoute: AdminTeacherInfoIdRoute,
   AdminTranslationLanguagesRoute: AdminTranslationLanguagesRoute,
   AdminTranslationLegalRoute: AdminTranslationLegalRoute,
   AdminTranslationStringsRoute: AdminTranslationStringsRoute,
   AdminGesturesIndexRoute: AdminGesturesIndexRoute,
+  AdminLessonsIndexRoute: AdminLessonsIndexRoute,
   AdminSponsorshipsIndexRoute: AdminSponsorshipsIndexRoute,
   AdminTranslationIndexRoute: AdminTranslationIndexRoute,
 }
@@ -1282,6 +1407,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWebhooksMuxRoute: ApiWebhooksMuxRoute,
   ApiAudioUploadSplatRoute: ApiAudioUploadSplatRoute,
   ApiLogosUploadKeyRoute: ApiLogosUploadKeyRoute,
+  ApiTeacherDrawingsSplatRoute: ApiTeacherDrawingsSplatRoute,
+  ApiTeacherDrawingsUploadSplatRoute: ApiTeacherDrawingsUploadSplatRoute,
+  ApiTeacherLessonsLessonIdPdfRoute: ApiTeacherLessonsLessonIdPdfRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

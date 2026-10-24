@@ -4,6 +4,7 @@ import { Avatar, Heading, ListItem, useColor, useToast } from "@smog/ui-native";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import ChevronRight from "lucide-react-native/icons/chevron-right";
+import GraduationCap from "lucide-react-native/icons/graduation-cap";
 import Info from "lucide-react-native/icons/info";
 import LogIn from "lucide-react-native/icons/log-in";
 import ShieldCheck from "lucide-react-native/icons/shield-check";
@@ -12,6 +13,7 @@ import { type ReactElement, useCallback } from "react";
 import { ScrollView, View } from "react-native";
 import { AnalyticsSwitch, openPrivacy } from "@/components/consent-sheet";
 import { PreferencesFields } from "@/components/preferences-fields";
+import { useLessonAccess } from "@/lessons/lesson-gate";
 import { useDevToolsUnlock } from "@/lib/dev-tools";
 
 /**
@@ -25,8 +27,13 @@ export default function SettingsScreen(): ReactElement {
   const { toast } = useToast();
   const muted = useColor("mutedForeground");
   const devTools = useDevToolsUnlock();
+  const teacher = useLessonAccess() === "allowed";
   const openAccount = useCallback(
     () => router.push("/settings/account"),
+    [router]
+  );
+  const openLessons = useCallback(
+    () => router.push("/settings/lessons"),
     [router]
   );
   const openSignIn = useCallback(() => router.push("/sign-in"), [router]);
@@ -84,6 +91,20 @@ export default function SettingsScreen(): ReactElement {
           />
         )}
       </View>
+
+      {teacher ? (
+        <View className="gap-2">
+          <Heading level={2}>{t("teacherLessons.title")}</Heading>
+          <ListItem
+            description={t("teacherLessons.entryDescription")}
+            leading={<GraduationCap color={muted} />}
+            onPress={openLessons}
+            testID="settings-lessons"
+            title={t("teacherLessons.title")}
+            trailing={<ChevronRight color={muted} />}
+          />
+        </View>
+      ) : null}
 
       <View className="gap-2">
         <Heading level={2}>{t("settings.about")}</Heading>

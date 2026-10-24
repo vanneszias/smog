@@ -9,7 +9,7 @@ const FIRST_RENDER_TIMEOUT = 120_000;
 
 /** A verified account with `role`, signed in in-process: its cookie header. */
 async function signedIn(
-  role: "admin" | "translator" | "user"
+  role: "admin" | "teacher" | "translator" | "user"
 ): Promise<{ cookie: string; email: string }> {
   const auth = getAuth();
   const email = `${crypto.randomUUID()}@smog.test`;
@@ -20,12 +20,12 @@ async function signedIn(
     .db.prepare("UPDATE user SET email_verified = 1, role = ? WHERE email = ?")
     .bind(role === "admin" ? "admin" : "user", email)
     .run();
-  if (role === "translator") {
+  if (role === "translator" || role === "teacher") {
     await siteEnv()
       .db.prepare(
-        "INSERT INTO user_role (user_id, role, granted_at) SELECT id, 'translator', ? FROM user WHERE email = ?"
+        "INSERT INTO user_role (user_id, role, granted_at) SELECT id, ?, ? FROM user WHERE email = ?"
       )
-      .bind(Date.now(), email)
+      .bind(role, Date.now(), email)
       .run();
   }
   const { headers } = await auth.api.signInEmail({
@@ -108,6 +108,53 @@ describe("the admin gate (ruling 10)", () => {
     expect(statuses.map(([, status]) => status)).toEqual([
       404, 404, 404, 404, 404,
     ]);
+  });
+
+  it("sends a teacher from the dashboard to the lessons, with the teaching group only in the rail", async () => {
+    const { cookie } = await signedIn("teacher");
+    const home = await open("/admin", cookie);
+    expect([302, 307]).toContain(home.status);
+    expect(new URL(home.headers.get("location") ?? "", ORIGIN).pathname).toBe(
+      "/admin/lessons"
+    );
+    for (const path of ["/admin/lessons", "/admin/lessons/some-lesson"]) {
+      // biome-ignore lint/performance/noAwaitInLoops: two requests, in order.
+      expect((await open(path, cookie)).status, path).toBe(200);
+    }
+    const html = await (await open("/admin/lessons", cookie)).text();
+    expect(html).toContain("Lesgeven");
+    expect(html).not.toContain("Logboek");
+    expect(html).not.toContain("Gebruikers");
+    expect(html).not.toContain("/admin/translation/strings");
+  });
+
+  it("lets a teacher open one gesture's teacher information and nothing else besides the lessons", async () => {
+    const { cookie } = await signedIn("teacher");
+    const info = await open("/admin/teacher-info/some-gesture", cookie);
+    expect(info.status).toBe(200);
+    const statuses = await Promise.all(
+      [
+        "/admin/users",
+        "/admin/gestures",
+        "/admin/gestures/some-gesture",
+        "/admin/translation/strings",
+        "/admin/teacher-info",
+      ].map(async (path) => (await open(path, cookie)).status)
+    );
+    expect(statuses).toEqual([404, 404, 404, 404, 404]);
+  });
+
+  it("lets a translator open the teacher information too, and a plain user not", async () => {
+    const translator = await signedIn("translator");
+    expect(
+      (await open("/admin/teacher-info/some-gesture", translator.cookie)).status
+    ).toBe(200);
+    // Lessons are the teacher's: a translator has none.
+    expect((await open("/admin/lessons", translator.cookie)).status).toBe(404);
+    const learner = await signedIn("user");
+    expect(
+      (await open("/admin/teacher-info/some-gesture", learner.cookie)).status
+    ).toBe(404);
   });
 
   it("shows an admin the language list", async () => {
