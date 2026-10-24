@@ -423,6 +423,39 @@
       }
     }
   },
+  "drawings": {
+    "title": "Dessins",
+    "description": "Dessins au trait pour la feuille des participants. Une image par étape, la deuxième étape est facultative. PNG, JPEG ou WebP, 1 Mo et 2000 pixels de côté au maximum. Seuls les enseignants, les traducteurs et les administrateurs les voient.",
+    "step": "Étape {{step}}",
+    "stepOptional": "Étape {{step}} (facultative)",
+    "none": "Pas encore de dessin",
+    "needFirst": "Ajoutez d'abord l'étape 1.",
+    "choose": "Choisir un dessin",
+    "replace": "Remplacer le dessin",
+    "remove": "Supprimer le dessin",
+    "creditLabel": "Crédit",
+    "creditHint": "Imprimé sous le dessin. Pour le modifier, envoyez à nouveau le dessin.",
+    "credit": "Crédit\u00a0: {{credit}}",
+    "noCredit": "Aucun crédit",
+    "details": "{{width}} × {{height}} px, {{size}} ko",
+    "previewAlt": "Dessin de {{name}}, étape {{step}}",
+    "readOnly": "Vous pouvez voir les dessins. Les enseignants et les administrateurs les modifient.",
+    "saved": "Dessin enregistré",
+    "removed": "Dessin supprimé",
+    "removeTitle": "Supprimer ce dessin\u202f?",
+    "removeDescription": "Le dessin de l'étape {{step}} est supprimé. Les leçons qui utilisent ce geste sont imprimées sans dessin.",
+    "removeConfirm": "Supprimer",
+    "errors": {
+      "format": "Ce fichier n'est pas une image PNG, JPEG ou WebP valide.",
+      "dimensions": "L'image dépasse 2000 pixels de côté.",
+      "tooLarge": "Le fichier dépasse 1 Mo.",
+      "missing": "L'envoi n'est pas arrivé. Réessayez.",
+      "key": "Cet envoi n'appartient pas à ce geste.",
+      "network": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
+      "generic": "L'enregistrement a échoué. Réessayez.",
+      "removeFailed": "La suppression a échoué. Réessayez."
+    }
+  },
   "gesture": {
     "sponsored": "Sponsorisé",
     "disclaimer": {

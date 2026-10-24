@@ -9,6 +9,7 @@ import {
   NO_STORE,
   ONE_DAY,
   ONE_HOUR,
+  PRIVATE_FIVE_MINUTES,
 } from "../src/worker/cache";
 import { withSecurityHeaders } from "../src/worker/headers";
 
@@ -40,6 +41,19 @@ describe("cacheControlFor (P-18), path by path", () => {
     expect(policy(clip, { status: 404 })).toBe(NO_STORE);
     expect(policy(clip, { status: 416 })).toBe(NO_STORE);
     expect(policy("/api/audio/upload/g/fr/u")).toBe(NO_STORE);
+  });
+
+  it("keeps a served teacher drawing private for 5 minutes, and nothing else under /api/teacher", () => {
+    const drawing =
+      "/api/teacher/drawings/0a1b2c3d-0000-4000-8000-000000000001/1";
+    expect(policy(drawing)).toBe(PRIVATE_FIVE_MINUTES);
+    expect(policy(drawing, { status: 304 })).toBe(PRIVATE_FIVE_MINUTES);
+    expect(PRIVATE_FIVE_MINUTES).toBe("private, max-age=300");
+    for (const status of [401, 403, 404, 429]) {
+      expect(policy(drawing, { status }), String(status)).toBe(NO_STORE);
+    }
+    expect(policy("/api/teacher/drawings/upload/g/1/u")).toBe(NO_STORE);
+    expect(policy("/api/teacher/lessons/x/pdf")).toBe(NO_STORE);
   });
 
   it("caches a served sponsor logo for an hour, and nothing else under /api/sponsor-logos", () => {

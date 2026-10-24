@@ -113,6 +113,7 @@
         "@smog/gestures": "workspace:*",
         "@smog/i18n": "workspace:*",
         "@smog/jobs": "workspace:*",
+        "@smog/lessons": "workspace:*",
         "@smog/lists": "workspace:*",
         "@smog/local-store": "workspace:*",
         "@smog/payments": "workspace:*",

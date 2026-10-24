@@ -236,6 +236,35 @@ describe("the scheduled dispatch (ruling 9)", () => {
     expect(counts(first).audit_log).toBeGreaterThanOrEqual(1);
   });
 
+  it(`retention (${CRON.retention}) removes an old drawing object nothing references and keeps a recorded one`, async () => {
+    const owner = await makeGesture(db);
+    const recorded = `teacher/drawings/${owner.id}/1/${newId()}`;
+    const orphan = `teacher/drawings/${owner.id}/2/${newId()}`;
+    await media.put(recorded, new Uint8Array([1, 2, 3]));
+    await media.put(orphan, new Uint8Array([1, 2, 3]));
+    await d1
+      .prepare(
+        "INSERT INTO gesture_drawing (gesture_id, step, r2_key, content_type, size, width, height, credit, updated_at) VALUES (?, 1, ?, 'image/png', 3, 8, 8, '', 1)"
+      )
+      .bind(owner.id, recorded)
+      .run();
+    // Uploaded now: a run a day and a minute later sweeps the orphan only.
+    const later = new Date(Date.now() + DAY_MS + 60_000);
+
+    const first = await runCron("retention", later);
+    const second = await runCron("retention", later);
+
+    expect(await media.head(orphan)).toBeNull();
+    expect(await media.head(recorded)).not.toBeNull();
+    expect(counts(first).drawingsDeleted).toBeGreaterThanOrEqual(1);
+    expect(counts(second).drawingsDeleted).toBe(0);
+    await d1
+      .prepare("DELETE FROM gesture_drawing WHERE gesture_id = ?")
+      .bind(owner.id)
+      .run();
+    await media.delete(recorded);
+  });
+
   it(`retention (${CRON.retention}) purges dead letters older than 14 days and keeps the rest`, async () => {
     const later = new Date(Date.now() + DAY_MS + 60_000);
     const row = (id: string, receivedAt: Date) => ({

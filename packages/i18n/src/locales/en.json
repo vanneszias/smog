@@ -419,6 +419,39 @@
       }
     }
   },
+  "drawings": {
+    "title": "Drawings",
+    "description": "Line drawings for the participants' sheet: one image per step, a second step is optional. PNG, JPEG or WebP, at most 1 MB and 2000 pixels on a side. Only teachers, translators and admins can see them.",
+    "step": "Step {{step}}",
+    "stepOptional": "Step {{step}} (optional)",
+    "none": "No drawing yet",
+    "needFirst": "Add step 1 first.",
+    "choose": "Choose drawing",
+    "replace": "Replace drawing",
+    "remove": "Remove drawing",
+    "creditLabel": "Credit",
+    "creditHint": "Printed under the drawing. To change it, upload the drawing again.",
+    "credit": "Credit: {{credit}}",
+    "noCredit": "No credit",
+    "details": "{{width}} × {{height}} px, {{size}} kB",
+    "previewAlt": "Drawing of {{name}}, step {{step}}",
+    "readOnly": "You can see the drawings. Teachers and admins change them.",
+    "saved": "Drawing saved",
+    "removed": "Drawing removed",
+    "removeTitle": "Remove this drawing?",
+    "removeDescription": "The drawing of step {{step}} is deleted. Lessons that use this gesture print it without the drawing.",
+    "removeConfirm": "Remove",
+    "errors": {
+      "format": "This is not a valid PNG, JPEG or WebP image.",
+      "dimensions": "The image is larger than 2000 pixels on a side.",
+      "tooLarge": "The file is larger than 1 MB.",
+      "missing": "The upload did not arrive. Try again.",
+      "key": "This upload does not belong to this gesture.",
+      "network": "The upload failed. Check your connection and try again.",
+      "generic": "Saving failed. Try again.",
+      "removeFailed": "Removing failed. Try again."
+    }
+  },
   "gesture": {
     "sponsored": "Sponsored",
     "disclaimer": {

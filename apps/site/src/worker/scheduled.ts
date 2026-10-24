@@ -8,6 +8,7 @@ import {
   QueueEmailOutbox,
   type QueueProducer,
 } from "@smog/jobs";
+import { sweepOrphanDrawings } from "@smog/lessons/server";
 import { createMollie } from "@smog/payments";
 import {
   adminRecipients,
@@ -49,7 +50,8 @@ function cronQueues(): JobQueues {
 }
 
 /**
- * The daily retention cron: the purge, then the dead-letter digest (phase 9
+ * The daily retention cron: the purge, the orphan teaching drawings (phase
+ * 10c: `sweepOrphanDrawings`, a day old and unreferenced), then the dead-letter digest (phase 9
  * task 4: one `admin_dead_letter` email per admin when dead letters wait,
  * messages were lost, at most once a day). Each part runs even when the other fails; the first failure
  * is rethrown after both, so the run shows as failed and the next day
@@ -73,6 +75,18 @@ async function runRetention(now: Date): Promise<Record<string, number>> {
   } catch (error) {
     failure = error;
   }
+  let drawings = { drawingsDeleted: 0 };
+  try {
+    // Private teaching drawings nothing references (phase 10c task 3).
+    drawings = {
+      drawingsDeleted: await sweepOrphanDrawings(db, bindings.MEDIA, now, {
+        kv,
+      }),
+    };
+  } catch (error) {
+    console.error("[cron] Failed to sweep the orphan drawings:", error);
+    failure ??= error;
+  }
   let digest = { digestSent: 0 };
   try {
     digest = await runDeadLetterDigest({
@@ -92,7 +106,7 @@ async function runRetention(now: Date): Promise<Record<string, number>> {
   if (failure !== undefined) {
     throw failure;
   }
-  return { ...purged, ...digest };
+  return { ...purged, ...drawings, ...digest };
 }
 
 const HANDLERS: Record<CronName, CronHandler> = {

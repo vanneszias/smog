@@ -16,9 +16,13 @@ import { join, relative } from "node:path";
 
 const ROOT = join(import.meta.dir, "..");
 
-/** What only the teaching code may name: tables, camel-case tables, the C note column, R2 prefixes. */
+/**
+ * What only the teaching code may name: tables, camel-case tables, the C note
+ * column, R2 prefixes. The private route `/api/teacher/drawings/...` is a URL,
+ * not a key prefix (`(?<!api/)`): the cache table and the drawing card name it.
+ */
 const TEACHING_NAMES =
-  /gesture_teacher_info|gestureTeacherInfo|gesture_drawing|gestureDrawing|\bc_note\b|\bcNote\b|teacher\/drawings|teacher\/pdf/;
+  /gesture_teacher_info|gestureTeacherInfo|gesture_drawing|gestureDrawing|\bc_note\b|\bcNote\b|(?<!api\/)teacher\/drawings|teacher\/pdf/;
 
 /** Path prefixes (relative to the root) that may name them, each with its reason. */
 const ALLOWED: { because: string; prefix: string }[] = [
@@ -59,6 +63,11 @@ const ALLOWED: { because: string; prefix: string }[] = [
   {
     because: "the role-guarded teacher routes (drawings, PDFs)",
     prefix: "apps/site/src/routes/api/teacher/",
+  },
+  {
+    because:
+      "the drawing read and upload handlers (teacher, translator or admin session; signed PUT)",
+    prefix: "apps/site/src/server/teacher-drawings.ts",
   },
 ];
 
@@ -127,12 +136,17 @@ describe("teaching data stays out of public code", () => {
     ]);
   });
 
+  test("the private drawing URL is not an R2 key prefix, a bare key prefix is", () => {
+    expect(
+      findViolations({
+        "apps/site/src/a.ts": "fetch('/api/teacher/drawings/g1/1')",
+        "apps/site/src/b.ts": "bucket.get('teacher/drawings/g1/1/u1')",
+      })
+    ).toEqual(["apps/site/src/b.ts"]);
+  });
+
   test("every allowed prefix exists (no stale row)", () => {
     for (const { prefix } of ALLOWED) {
-      // `apps/site/src/routes/api/teacher/` arrives with the drawings task.
-      if (prefix === "apps/site/src/routes/api/teacher/") {
-        continue;
-      }
       expect(existsSync(join(ROOT, prefix)), prefix).toBe(true);
     }
   });
