@@ -38,7 +38,7 @@ const PRINTED: Record<LessonTemplate, readonly (keyof TeacherInfoFields)[]> = {
   teachers: ["hc", "pl", "or", "bw", "cNote", "note"],
 };
 
-export interface PlannedDrawing {
+interface PlannedDrawing {
   contentType: string;
   credit: string;
   key: string;
@@ -46,7 +46,7 @@ export interface PlannedDrawing {
   updatedAt: number;
 }
 
-export interface PlannedRow {
+interface PlannedRow {
   drawings: PlannedDrawing[];
   /** Printed text came (partly) from the default language. */
   fallback: boolean;
@@ -60,7 +60,7 @@ export interface PlannedRow {
   word: string;
 }
 
-export interface PlannedSection {
+interface PlannedSection {
   rows: PlannedRow[];
   title: string | null;
 }

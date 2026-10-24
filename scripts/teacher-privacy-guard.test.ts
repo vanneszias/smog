@@ -76,6 +76,11 @@ const ALLOWED: { because: string; prefix: string }[] = [
     prefix: "apps/site/e2e/admin-teacher-info.spec.ts",
   },
   {
+    because:
+      "the lesson export e2e saves one teacher-info row through the role-guarded procedure",
+    prefix: "apps/site/e2e/admin-lesson-export.spec.ts",
+  },
+  {
     because: "the role-guarded teacher routes (drawings, PDFs)",
     prefix: "apps/site/src/routes/api/teacher/",
   },

@@ -61,7 +61,7 @@ export async function sweepStalePdfs(
       if (!listed.truncated) {
         break;
       }
-      cursor = listed.cursor;
+      ({ cursor } = listed);
     }
   } catch (error) {
     console.error("[lessons] Failed to sweep the PDF cache:", error);

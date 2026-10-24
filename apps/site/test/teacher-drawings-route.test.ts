@@ -175,6 +175,14 @@ describe("PUT /api/teacher/drawings/upload/<key> (the signed fallback)", () => {
           "content-type": "image/webp",
         })
       ).status
+    ).toBe(415);
+    // A type that is allowed but not the signed one.
+    expect(
+      (
+        await put(upload.uploadUrl, jpegBytes(), {
+          "content-type": "image/jpeg",
+        })
+      ).status
     ).toBe(403);
     expect(
       (

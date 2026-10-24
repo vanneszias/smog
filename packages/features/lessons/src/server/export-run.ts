@@ -95,7 +95,7 @@ async function sha256Hex(text: string): Promise<string> {
 }
 
 /** The short hash of what the print depends on (see the file comment). */
-export async function exportFingerprint(
+async function exportFingerprint(
   plan: ExportPlan,
   labels: ExportLabels
 ): Promise<string> {
@@ -113,7 +113,7 @@ export async function exportFingerprint(
 }
 
 /** `teacher/pdf/<lessonId>/<fingerprint>-<template>-<locale>.pdf` */
-export function lessonPdfKey(
+function lessonPdfKey(
   lessonId: string,
   fingerprint: string,
   template: LessonTemplate,
@@ -131,7 +131,7 @@ export function lessonPdfFilename(
 }
 
 /** The engine's input: the plan, the labels and the drawings that were read. */
-export function toPdfDocument(
+function toPdfDocument(
   plan: ExportPlan,
   input: ExportInput,
   drawings: ReadonlyMap<string, Uint8Array>

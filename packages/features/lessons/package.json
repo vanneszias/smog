@@ -20,7 +20,6 @@
     "@smog/auth": "workspace:*",
     "@smog/config": "workspace:*",
     "@smog/db": "workspace:*",
-    "@smog/i18n": "workspace:*",
     "@smog/pdf": "workspace:*",
     "@smog/rpc": "workspace:*",
     "@smog/utils": "workspace:*",
