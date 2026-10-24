@@ -3,7 +3,7 @@ import { activeHref, RAIL_GROUPS, railFor } from "./admin-rail";
 import { crumbsFor } from "./admin-toolbar";
 
 describe("the admin rail", () => {
-  it("groups the sections as Content, Translation, Community and Operations", () => {
+  it("groups the sections as Content, Translation, Teaching, Community and Operations", () => {
     expect(
       RAIL_GROUPS.map((group) => [
         group.id,
@@ -19,6 +19,7 @@ describe("the admin rail", () => {
           "/admin/translation/languages",
         ],
       ],
+      ["teaching", ["/admin/lessons"]],
       ["community", ["/admin/users", "/admin/sponsorships"]],
       [
         "operations",
@@ -34,7 +35,7 @@ describe("the admin rail", () => {
 
   it("shows a translator the translation group only (strings, legal texts), without the language list", () => {
     expect(
-      railFor(false).map((group) => [
+      railFor(["translator"]).map((group) => [
         group.id,
         group.items.map((item) => item.href),
       ])
@@ -44,7 +45,25 @@ describe("the admin rail", () => {
         ["/admin/translation/strings", "/admin/translation/legal"],
       ],
     ]);
-    expect(railFor(true)).toBe(RAIL_GROUPS);
+    expect(railFor(["admin"])).toBe(RAIL_GROUPS);
+  });
+
+  it("shows a teacher the teaching group (the lessons) only, and someone with both roles both", () => {
+    expect(
+      railFor(["teacher"]).map((group) => [
+        group.id,
+        group.items.map((item) => item.href),
+      ])
+    ).toEqual([["teaching", ["/admin/lessons"]]]);
+    expect(railFor(["teacher", "translator"]).map((group) => group.id)).toEqual(
+      ["translation", "teaching"]
+    );
+    expect(railFor([])).toEqual([]);
+  });
+
+  it("marks the lessons screens", () => {
+    expect(activeHref("/admin/lessons")).toBe("/admin/lessons");
+    expect(activeHref("/admin/lessons/abc")).toBe("/admin/lessons");
   });
 
   it("marks the translation screens", () => {

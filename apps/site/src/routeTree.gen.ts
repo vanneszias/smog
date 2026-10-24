@@ -51,6 +51,8 @@ import { Route as WebhooksMollieRouteImport } from './routes/webhooks/mollie'
 import { Route as AdminGesturesIndexRouteImport } from './routes/admin/gestures/index'
 import { Route as AdminGesturesIdRouteImport } from './routes/admin/gestures/$id'
 import { Route as AdminGesturesNewRouteImport } from './routes/admin/gestures/new'
+import { Route as AdminLessonsIndexRouteImport } from './routes/admin/lessons/index'
+import { Route as AdminLessonsIdRouteImport } from './routes/admin/lessons/$id'
 import { Route as AdminSponsorshipsIndexRouteImport } from './routes/admin/sponsorships/index'
 import { Route as AdminSponsorshipsIdRouteImport } from './routes/admin/sponsorships/$id'
 import { Route as AdminTeacherInfoIdRouteImport } from './routes/admin/teacher-info/$id'
@@ -282,6 +284,16 @@ const AdminGesturesNewRoute = AdminGesturesNewRouteImport.update({
   path: '/gestures/new',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLessonsIndexRoute = AdminLessonsIndexRouteImport.update({
+  id: '/lessons/',
+  path: '/lessons/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLessonsIdRoute = AdminLessonsIdRouteImport.update({
+  id: '/lessons/$id',
+  path: '/lessons/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSponsorshipsIndexRoute = AdminSponsorshipsIndexRouteImport.update({
   id: '/sponsorships/',
   path: '/sponsorships/',
@@ -427,6 +439,7 @@ export interface FileRoutesByFullPath {
   '/sponsor/': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/lessons/$id': typeof AdminLessonsIdRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/admin/teacher-info/$id': typeof AdminTeacherInfoIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
@@ -442,6 +455,7 @@ export interface FileRoutesByFullPath {
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
+  '/admin/lessons/': typeof AdminLessonsIndexRoute
   '/admin/sponsorships/': typeof AdminSponsorshipsIndexRoute
   '/admin/translation/': typeof AdminTranslationIndexRoute
   '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
@@ -490,6 +504,7 @@ export interface FileRoutesByTo {
   '/sponsor': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/lessons/$id': typeof AdminLessonsIdRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/admin/teacher-info/$id': typeof AdminTeacherInfoIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
@@ -505,6 +520,7 @@ export interface FileRoutesByTo {
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures': typeof AdminGesturesIndexRoute
+  '/admin/lessons': typeof AdminLessonsIndexRoute
   '/admin/sponsorships': typeof AdminSponsorshipsIndexRoute
   '/admin/translation': typeof AdminTranslationIndexRoute
   '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
@@ -555,6 +571,7 @@ export interface FileRoutesById {
   '/sponsor/': typeof SponsorIndexRoute
   '/admin/gestures/$id': typeof AdminGesturesIdRoute
   '/admin/gestures/new': typeof AdminGesturesNewRoute
+  '/admin/lessons/$id': typeof AdminLessonsIdRoute
   '/admin/sponsorships/$id': typeof AdminSponsorshipsIdRoute
   '/admin/teacher-info/$id': typeof AdminTeacherInfoIdRoute
   '/admin/translation/languages': typeof AdminTranslationLanguagesRoute
@@ -570,6 +587,7 @@ export interface FileRoutesById {
   '/api/webhooks/mollie': typeof ApiWebhooksMollieRoute
   '/api/webhooks/mux': typeof ApiWebhooksMuxRoute
   '/admin/gestures/': typeof AdminGesturesIndexRoute
+  '/admin/lessons/': typeof AdminLessonsIndexRoute
   '/admin/sponsorships/': typeof AdminSponsorshipsIndexRoute
   '/admin/translation/': typeof AdminTranslationIndexRoute
   '/api/audio/upload/$': typeof ApiAudioUploadSplatRoute
@@ -621,6 +639,7 @@ export interface FileRouteTypes {
     | '/sponsor/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/lessons/$id'
     | '/admin/sponsorships/$id'
     | '/admin/teacher-info/$id'
     | '/admin/translation/languages'
@@ -636,6 +655,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
+    | '/admin/lessons/'
     | '/admin/sponsorships/'
     | '/admin/translation/'
     | '/api/audio/upload/$'
@@ -684,6 +704,7 @@ export interface FileRouteTypes {
     | '/sponsor'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/lessons/$id'
     | '/admin/sponsorships/$id'
     | '/admin/teacher-info/$id'
     | '/admin/translation/languages'
@@ -699,6 +720,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures'
+    | '/admin/lessons'
     | '/admin/sponsorships'
     | '/admin/translation'
     | '/api/audio/upload/$'
@@ -748,6 +770,7 @@ export interface FileRouteTypes {
     | '/sponsor/'
     | '/admin/gestures/$id'
     | '/admin/gestures/new'
+    | '/admin/lessons/$id'
     | '/admin/sponsorships/$id'
     | '/admin/teacher-info/$id'
     | '/admin/translation/languages'
@@ -763,6 +786,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/mollie'
     | '/api/webhooks/mux'
     | '/admin/gestures/'
+    | '/admin/lessons/'
     | '/admin/sponsorships/'
     | '/admin/translation/'
     | '/api/audio/upload/$'
@@ -1115,6 +1139,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGesturesNewRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/lessons/': {
+      id: '/admin/lessons/'
+      path: '/lessons'
+      fullPath: '/admin/lessons/'
+      preLoaderRoute: typeof AdminLessonsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/lessons/$id': {
+      id: '/admin/lessons/$id'
+      path: '/lessons/$id'
+      fullPath: '/admin/lessons/$id'
+      preLoaderRoute: typeof AdminLessonsIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/sponsorships/': {
       id: '/admin/sponsorships/'
       path: '/sponsorships'
@@ -1268,12 +1306,14 @@ interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminGesturesIdRoute: typeof AdminGesturesIdRoute
   AdminGesturesNewRoute: typeof AdminGesturesNewRoute
+  AdminLessonsIdRoute: typeof AdminLessonsIdRoute
   AdminSponsorshipsIdRoute: typeof AdminSponsorshipsIdRoute
   AdminTeacherInfoIdRoute: typeof AdminTeacherInfoIdRoute
   AdminTranslationLanguagesRoute: typeof AdminTranslationLanguagesRoute
   AdminTranslationLegalRoute: typeof AdminTranslationLegalRoute
   AdminTranslationStringsRoute: typeof AdminTranslationStringsRoute
   AdminGesturesIndexRoute: typeof AdminGesturesIndexRoute
+  AdminLessonsIndexRoute: typeof AdminLessonsIndexRoute
   AdminSponsorshipsIndexRoute: typeof AdminSponsorshipsIndexRoute
   AdminTranslationIndexRoute: typeof AdminTranslationIndexRoute
 }
@@ -1288,12 +1328,14 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminGesturesIdRoute: AdminGesturesIdRoute,
   AdminGesturesNewRoute: AdminGesturesNewRoute,
+  AdminLessonsIdRoute: AdminLessonsIdRoute,
   AdminSponsorshipsIdRoute: AdminSponsorshipsIdRoute,
   AdminTeacherInfoIdRoute: AdminTeacherInfoIdRoute,
   AdminTranslationLanguagesRoute: AdminTranslationLanguagesRoute,
   AdminTranslationLegalRoute: AdminTranslationLegalRoute,
   AdminTranslationStringsRoute: AdminTranslationStringsRoute,
   AdminGesturesIndexRoute: AdminGesturesIndexRoute,
+  AdminLessonsIndexRoute: AdminLessonsIndexRoute,
   AdminSponsorshipsIndexRoute: AdminSponsorshipsIndexRoute,
   AdminTranslationIndexRoute: AdminTranslationIndexRoute,
 }

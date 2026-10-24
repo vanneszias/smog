@@ -1010,11 +1010,13 @@
         "content": "Contenu",
         "community": "Communauté",
         "operations": "Exploitation",
-        "translation": "Traduction"
+        "translation": "Traduction",
+        "teaching": "Enseignement"
       },
       "strings": "Textes",
       "languages": "Langues",
-      "legal": "Textes juridiques"
+      "legal": "Textes juridiques",
+      "lessons": "Leçons"
     },
     "comingSoon": {
       "title": "Prévu dans cette phase",
@@ -1489,6 +1491,157 @@
       "countWithPublished_one": "{{count}} geste · {{published}} publiés",
       "countWithPublished_many": "{{count}} gestes · {{published}} publiés",
       "countWithPublished_other": "{{count}} gestes · {{published}} publiés"
+    },
+    "lessons": {
+      "title": "Leçons",
+      "description": "Des leçons que les enseignants composent à partir de gestes. Chaque enseignant peut lire et copier chaque leçon\u00a0; l’auteur et les administrateurs la modifient.",
+      "untitled": "Leçon sans titre",
+      "new": "Nouvelle leçon",
+      "search": "Rechercher des leçons",
+      "searchPlaceholder": "Rechercher par titre",
+      "mine": "Mes leçons",
+      "mineBadge": "La vôtre",
+      "noAuthor": "son auteur",
+      "numbered": "Leçon {{number}}",
+      "numberLabel": "Numéro de la leçon",
+      "numberHint": "Facultatif. Imprimé comme «\u00a0Leçon 3\u00a0».",
+      "loadMore": "Afficher plus de leçons",
+      "backToList": "Toutes les leçons",
+      "duplicated": "Leçon copiée. Vous êtes maintenant dans votre propre copie.",
+      "duplicateFailed": "La leçon n’a pas pu être copiée. Réessayez.",
+      "columns": {
+        "title": "Titre",
+        "number": "Numéro",
+        "author": "Auteur",
+        "gestures": "Gestes",
+        "updated": "Modifiée",
+        "actions": "Actions"
+      },
+      "empty": {
+        "title": "Pas encore de leçons",
+        "description": "Créez la première leçon et ajoutez-y des gestes."
+      },
+      "noResults": {
+        "title": "Aucune leçon trouvée",
+        "description": "Aucune leçon ne correspond à cette recherche. Essayez un autre titre ou désactivez «\u00a0Mes leçons\u00a0»."
+      },
+      "notFound": {
+        "title": "Leçon introuvable",
+        "description": "Cette leçon n’existe pas (ou plus)."
+      },
+      "actions": {
+        "label": "Actions pour {{title}}",
+        "open": "Ouvrir",
+        "duplicate": "Faire une copie",
+        "delete": "Supprimer"
+      },
+      "create": {
+        "title": "Nouvelle leçon",
+        "description": "Donnez un titre à la leçon. Vous ajouterez les gestes sur l’écran suivant et pourrez y traduire le titre.",
+        "titleLabel": "Titre",
+        "languageLabel": "Langue du titre",
+        "submit": "Créer la leçon",
+        "failed": "La leçon n’a pas pu être créée. Réessayez."
+      },
+      "delete": {
+        "title": "Supprimer cette leçon\u202f?",
+        "description": "«\u00a0{{title}}\u00a0» et ses sections sont supprimées pour tout le monde. Les gestes eux-mêmes restent.",
+        "confirm": "Supprimer la leçon",
+        "done": "Leçon supprimée.",
+        "failed": "La leçon n’a pas pu être supprimée. Réessayez."
+      },
+      "builder": {
+        "title": "Leçon"
+      },
+      "readOnly": "{{author}} modifie cette leçon. Vous pouvez la lire et en faire votre propre copie.",
+      "details": "Détails de la leçon",
+      "tabsLabel": "Langue du titre et des notes",
+      "tabFilled": "Rempli",
+      "tabEmpty": "Vide",
+      "fields": {
+        "title": "Titre",
+        "notes": "Notes"
+      },
+      "problem": {
+        "noTitle": "Ajoutez un titre dans au moins une langue pour enregistrer la leçon.",
+        "notesWithoutTitle": "Une langue avec des notes a aussi besoin d’un titre. Ajoutez-en un ou effacez les notes."
+      },
+      "status": {
+        "saved": "Toutes les modifications sont enregistrées",
+        "saving": "Enregistrement…",
+        "dirty": "Les modifications sont en cours d’enregistrement…",
+        "error": "L’enregistrement a échoué. Vos modifications restent sur cette page.",
+        "invalid": "Pas encore enregistré\u00a0: voir le message ci-dessous.",
+        "conflict": "Quelqu’un d’autre a modifié cette leçon.",
+        "retry": "Réessayer"
+      },
+      "conflict": {
+        "title": "Cette leçon a été modifiée ailleurs",
+        "body": "{{author}} ou un autre éditeur a enregistré une version plus récente. Utilisez la leur et perdez vos dernières modifications ici, ou gardez la vôtre et remplacez la leur.",
+        "useTheirs": "Utiliser leur version",
+        "keepMine": "Garder la mienne"
+      },
+      "structure": "Gestes",
+      "count_one": "{{count}} geste",
+      "count_many": "{{count}} gestes",
+      "count_other": "{{count}} gestes",
+      "add": "Ajouter des gestes",
+      "readiness": {
+        "label": "Informations pour les enseignants en {{language}}",
+        "summary": "{{own}} gestes sur {{total}} ont des informations pour les enseignants en {{language}}.",
+        "fallback_one": "{{count}} se rabat sur la langue par défaut.",
+        "fallback_many": "{{count}} se rabattent sur la langue par défaut.",
+        "fallback_other": "{{count}} se rabattent sur la langue par défaut.",
+        "none_one": "{{count}} n’a aucune information pour les enseignants.",
+        "none_many": "{{count}} n’ont aucune information pour les enseignants.",
+        "none_other": "{{count}} n’ont aucune information pour les enseignants.",
+        "empty": "Ajoutez des gestes publiés pour voir où en est cette leçon."
+      },
+      "section": {
+        "add": "Ajouter une section",
+        "untitled": "Section {{number}}",
+        "ungrouped": "Avant la première section",
+        "empty": "Pas encore de gestes ici.",
+        "titleLabel": "Titre de la section {{number}}",
+        "actions": "Actions pour {{name}}",
+        "moveUp": "Monter la section",
+        "moveDown": "Descendre la section",
+        "remove": "Supprimer la section"
+      },
+      "item": {
+        "actions": "Actions pour {{name}}",
+        "moveUp": "Monter",
+        "moveDown": "Descendre",
+        "moveTo": "Déplacer vers {{section}}",
+        "moveToStart": "Déplacer avant la première section",
+        "remove": "Retirer de la leçon",
+        "unpublished": "Non publié",
+        "drawing": "Dessin",
+        "readiness": {
+          "own": "Infos enseignants",
+          "fallback": "Langue par défaut",
+          "none": "Aucune info"
+        }
+      },
+      "picker": {
+        "title": "Ajouter des gestes",
+        "description": "Cherchez dans le catalogue et choisissez des gestes. Chacun va directement dans la leçon\u00a0; un geste n’y figure qu’une fois.",
+        "placeholder": "Rechercher des gestes",
+        "categories": "Filtrer par catégorie",
+        "destination": "Ajouter à",
+        "done": "Terminé",
+        "held": "Dans cette leçon",
+        "full": "Une leçon contient au plus {{max}} gestes.",
+        "error": "La recherche a échoué. Réessayez."
+      },
+      "reorder": {
+        "instructions": "Appuyez sur espace ou Entrée pour saisir un élément. Déplacez-le avec les flèches et appuyez de nouveau sur espace ou Entrée pour le déposer. Échap annule.",
+        "picked": "{{name}} saisi, position {{position}} sur {{total}}.",
+        "moved": "{{name}} déplacé en position {{position}} sur {{total}}.",
+        "dropped": "{{name}} déposé en position {{position}} sur {{total}}.",
+        "cancelled": "Déplacement annulé. {{name}} est revenu en position {{position}}.",
+        "failed": "Le nouvel ordre n’a pas pu être appliqué."
+      }
     },
     "teacherInfo": {
       "title": "Informations pour les enseignants",

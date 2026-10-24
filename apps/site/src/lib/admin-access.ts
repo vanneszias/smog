@@ -27,9 +27,24 @@ export function isAdminHome(pathname: string): boolean {
 /**
  * One gesture's teacher information (phase 10c task 2): a teacher and a
  * translator (neither of them an admin) may open it. A teacher's other
- * screens (the lessons) join in task 4.
+ * screens are the lessons (`lessonsMayOpen`).
  */
 const TEACHER_INFO_PATH = /^\/admin\/teacher-info\/[^/]+$/;
+
+/**
+ * The lesson list and one lesson (phase 10c task 4): a teacher may open them.
+ * A translator may not (the lesson procedures are the teacher's and the
+ * admin's).
+ */
+const LESSONS_PATH = /^\/admin\/lessons(\/[^/]+)?$/;
+
+/** Where a teacher (who is not an admin or a translator) lands from `/admin`. */
+export const TEACHER_HOME = "/admin/lessons";
+
+/** Whether a teacher (who is not an admin) may open `pathname`. */
+export function lessonsMayOpen(pathname: string): boolean {
+  return LESSONS_PATH.test(trimmed(pathname));
+}
 
 /** Whether a teacher or a translator (who is not an admin) may open `pathname`. */
 export function teacherInfoMayOpen(pathname: string): boolean {

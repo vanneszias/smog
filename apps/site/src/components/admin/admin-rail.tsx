@@ -19,6 +19,7 @@ import {
 } from "@smog/ui-web";
 import { Link, useLocation, useRouteContext } from "@tanstack/react-router";
 import {
+  BookOpen,
   ChevronDown,
   FolderTree,
   Hand,
@@ -44,7 +45,12 @@ interface RailItem {
 }
 
 interface RailGroup {
-  /** Shown to admins only; a translator sees the translation group only. */
+  /**
+   * Shown to a person who holds this role (an admin sees every group): the
+   * translation group is a translator's, the teaching group a teacher's.
+   */
+  access?: "teacher" | "translator";
+  /** Shown to admins only. */
   adminOnly?: true;
   id: string;
   items: readonly RailItem[];
@@ -80,6 +86,7 @@ export const RAIL_GROUPS: readonly RailGroup[] = [
     label: "admin.rail.groups.content",
   },
   {
+    access: "translator",
     id: "translation",
     items: [
       {
@@ -100,6 +107,18 @@ export const RAIL_GROUPS: readonly RailGroup[] = [
       },
     ],
     label: "admin.rail.groups.translation",
+  },
+  {
+    access: "teacher",
+    id: "teaching",
+    items: [
+      {
+        href: "/admin/lessons",
+        icon: <BookOpen />,
+        label: "admin.rail.lessons",
+      },
+    ],
+    label: "admin.rail.groups.teaching",
   },
   {
     adminOnly: true,
@@ -234,13 +253,19 @@ function RailGroupSection({
 
 /**
  * The groups a person sees: an admin every group, a translator the
- * translation group without the admin-only items (the language list).
+ * translation group without the admin-only items (the language list), a
+ * teacher the teaching group (the lessons); someone with both roles both.
  */
-export function railFor(isAdmin: boolean): readonly RailGroup[] {
-  if (isAdmin) {
+export function railFor(roles: readonly string[]): readonly RailGroup[] {
+  if (roles.includes("admin")) {
     return RAIL_GROUPS;
   }
-  return RAIL_GROUPS.filter((group) => !group.adminOnly).map((group) => ({
+  return RAIL_GROUPS.filter(
+    (group) =>
+      !group.adminOnly &&
+      group.access !== undefined &&
+      roles.includes(group.access)
+  ).map((group) => ({
     ...group,
     items: group.items.filter((item) => !item.adminOnly),
   }));
@@ -258,28 +283,29 @@ function useAdminUser(): AuthUser | undefined {
   });
 }
 
-function useIsAdmin(): boolean {
+/** The roles the rail is for: the signed-in user's, or an admin's when the layout gave none (a test). */
+function useRailRoles(): readonly string[] {
   const admin = useAdminUser();
-  return !admin || admin.roles.includes("admin");
+  return admin ? admin.roles : ["admin"];
+}
+
+function useIsAdmin(): boolean {
+  return useRailRoles().includes("admin");
 }
 
 /**
- * Whether the person has a rail at all: an admin and a translator do; a
- * teacher without either (phase 10c: the teacher-info screen is theirs
- * alone for now) has no section to navigate to.
+ * Whether the person has a rail at all: an admin, a translator and a teacher
+ * do (the teacher's is the lessons); the teacher-info screen is reachable
+ * from the gesture page for every one of them.
  */
 export function useHasRail(): boolean {
-  const admin = useAdminUser();
-  return (
-    !admin ||
-    admin.roles.includes("admin") ||
-    admin.roles.includes("translator")
-  );
+  return railFor(useRailRoles()).length > 0;
 }
 
 function RailNav(): ReactNode {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const roles = useRailRoles();
   const isAdmin = useIsAdmin();
   const active = activeHref(pathname);
   return (
@@ -294,7 +320,7 @@ function RailNav(): ReactNode {
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
-        {railFor(isAdmin).map((group) => (
+        {railFor(roles).map((group) => (
           <RailGroupSection active={active} group={group} key={group.id} />
         ))}
       </SidebarContent>
