@@ -1655,7 +1655,7 @@
         "actions": "Actions pour {{name}}",
         "moveUp": "Monter la section",
         "moveDown": "Descendre la section",
-        "removeTitle": "Supprimer {{name}} ?",
+        "removeTitle": "Supprimer {{name}} ?",
         "removeDescription": "Les gestes de cette partie passent à la partie précédente. Aucun geste n’est supprimé.",
         "removeConfirm": "Supprimer la partie",
         "remove": "Supprimer la section"
