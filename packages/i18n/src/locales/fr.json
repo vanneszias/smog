@@ -432,6 +432,7 @@
     "entryDescription": "Consultez les leçons et partagez-les en PDF",
     "number": "Leçon {{number}}",
     "gestureCount_one": "{{count}} geste",
+    "gestureCount_many": "{{count}} gestes",
     "gestureCount_other": "{{count}} gestes",
     "author": "Par {{name}}",
     "titleIn": "Titre en {{language}}",
