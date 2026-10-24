@@ -5,6 +5,7 @@ import { WORKERS_POOL_TEST_OPTIONS } from "@smog/config/testing/vitest";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vitest/config";
 import { unstable_readConfig } from "wrangler";
+import { bytesModules } from "./build-bytes";
 import { THEME_SCRIPT_HASH_DEFINE } from "./build-defines";
 import { MUX_WEBHOOK_TEST_SECRET } from "./test/mux-secret";
 
@@ -43,6 +44,7 @@ export default defineConfig(async () => ({
     __SMOG_THEME_SCRIPT_HASH__: THEME_SCRIPT_HASH_DEFINE,
   },
   plugins: [
+    bytesModules(),
     cloudflareTest({
       miniflare: {
         bindings: {

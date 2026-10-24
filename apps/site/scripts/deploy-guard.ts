@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   checkNoSourceMaps,
@@ -211,6 +211,77 @@ export function checkNoRenderStack(files: readonly BuiltFile[]): void {
   }
 }
 
+/**
+ * The PDF engine (phase 10c task 5b, plan ruling 4): `pdf-lib` and fontkit
+ * belong to one dynamically imported chunk of the Worker, made only when a
+ * lesson PDF is. Strings that survive minification: pdf-lib's parse error
+ * and fontkit's format error. `unpdf` (PDF.js, a test-only text extractor)
+ * must ship nowhere.
+ */
+export const PDF_ENGINE_MARKERS = [
+  { marker: "Failed to parse PDF document", name: "pdf-lib" },
+  { marker: "Unknown font format", name: "@pdf-lib/fontkit" },
+] as const;
+export const UNPDF_MARKERS = [
+  { marker: "GlobalWorkerOptions", name: "unpdf (PDF.js)" },
+  { marker: "Invalid PDF structure", name: "unpdf (PDF.js)" },
+] as const;
+
+const PATH_SEPARATOR = /[\\/]/;
+const REGEX_SPECIALS = /[.*+?^${}()|[\]\\]/g;
+
+/** No browser file may contain `pdf-lib` or fontkit, and no file at all `unpdf`. */
+export function checkPdfEngineStaysOnTheServer(
+  files: readonly BuiltFile[],
+  clientDir: string
+): void {
+  const inClient = (file: BuiltFile) =>
+    file.path.startsWith(`${clientDir}${sep}`);
+  const errors = files.flatMap((file) => [
+    ...(inClient(file)
+      ? PDF_ENGINE_MARKERS.filter(({ marker }) =>
+          file.content.includes(marker)
+        ).map(
+          ({ name }) =>
+            `${name} is in the browser build (${file.path}): the PDF engine runs in the Worker only`
+        )
+      : []),
+    ...UNPDF_MARKERS.filter(({ marker }) => file.content.includes(marker)).map(
+      ({ name }) =>
+        `${name} is in the build (${file.path}): it is a test-only devDependency of @smog/pdf`
+    ),
+  ]);
+  if (errors.length > 0) {
+    throw new Error(`[deploy-guard] ${[...new Set(errors)].join("; ")}.`);
+  }
+}
+
+/**
+ * The chunk that holds `pdf-lib` must be reached by a dynamic `import()`
+ * only: a static import from any other file would load the engine (and its
+ * fonts) at every cold start of the Worker.
+ */
+export function checkPdfEngineIsLazy(files: readonly BuiltFile[]): void {
+  const engine = files.filter((file) =>
+    PDF_ENGINE_MARKERS.some(({ marker }) => file.content.includes(marker))
+  );
+  const offenders = engine.flatMap((chunk) => {
+    const name = chunk.path.split(PATH_SEPARATOR).pop() ?? chunk.path;
+    // `from "./x.js"` or a bare `import "./x.js"`; `import("./x.js")` has a parenthesis.
+    const staticImport = new RegExp(
+      `(?:\\bfrom\\s*|\\bimport\\s*)["'][^"']*${name.replace(REGEX_SPECIALS, "\\$&")}["']`
+    );
+    return files
+      .filter((file) => file !== chunk && staticImport.test(file.content))
+      .map((file) => `${file.path} imports ${chunk.path}`);
+  });
+  if (offenders.length > 0) {
+    throw new Error(
+      `[deploy-guard] the PDF engine is imported statically (${offenders.join("; ")}). It must stay behind a dynamic import() in the export route's chunk so the Worker's startup does not pay for it.`
+    );
+  }
+}
+
 const CLIENT_MANIFEST = join(".vite", "manifest.json");
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -347,6 +418,8 @@ if (import.meta.main && process.argv.includes("--bundle")) {
     checkServerHasNoVideoPlayer(files);
     checkNoRenderStack(files);
     checkClientHasNoSecrets(files);
+    checkPdfEngineStaysOnTheServer(files, join(dist, "client"));
+    checkPdfEngineIsLazy(files);
     checkPerformance(dist, files);
     console.log("deploy-guard: bundle ok");
   } catch (error) {
@@ -365,6 +438,8 @@ if (import.meta.main && process.argv.includes("--bundle")) {
     checkServerHasNoVideoPlayer(files);
     checkNoRenderStack(files);
     checkClientHasNoSecrets(files);
+    checkPdfEngineStaysOnTheServer(files, join(dist, "client"));
+    checkPdfEngineIsLazy(files);
     checkPerformance(dist, files);
     console.log(`deploy-guard: ok (${env})`);
   } catch (error) {

@@ -22,6 +22,9 @@
  *   is served (200 or 304): `private, max-age=300`, for the signed-in
  *   teacher, translator or admin only (never a shared cache; the route sets
  *   the same value itself and adds `Vary: Cookie`);
+ * - a lesson PDF, `/api/teacher/lessons/<id>/pdf` (phase 10c): `private,
+ *   no-store`, set by the route itself (the `/api/*` rule below says the
+ *   same for an error answer);
  * - a running sponsorship's logo, `/api/sponsor-logos/<uuid>`, when it is
  *   served (200): an hour (the route sets it itself);
  * - `/api/*`, `/_serverFn/*` (TanStack server functions, session-dependent),

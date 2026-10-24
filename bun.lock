@@ -117,6 +117,7 @@
         "@smog/lists": "workspace:*",
         "@smog/local-store": "workspace:*",
         "@smog/payments": "workspace:*",
+        "@smog/pdf": "workspace:*",
         "@smog/rpc": "workspace:*",
         "@smog/sponsorships": "workspace:*",
         "@smog/styles": "workspace:*",

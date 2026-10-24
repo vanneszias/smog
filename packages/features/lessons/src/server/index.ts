@@ -23,6 +23,7 @@ export {
   type DrawingCursorStore,
   sweepOrphanDrawings,
 } from "./orphan-drawings";
+export { type PdfCacheBucket, sweepStalePdfs } from "./pdf-cache-sweep";
 export {
   createLessonsRouter,
   createTeacherRouter,

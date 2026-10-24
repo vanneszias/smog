@@ -15,6 +15,7 @@ import { useCallback } from "react";
 import {
   type LessonConflictData,
   type LessonCursor,
+  type LessonTemplate,
   lessonConflictDataSchema,
 } from "../schema";
 import { useInvalidateLessons, useLessonsRpc } from "./slice";
@@ -119,6 +120,28 @@ export function useLessonReadiness(
     ...options,
     queryKey: scoped([...options.queryKey, { version }] as const),
     staleTime: LESSON_STALE_TIME,
+  });
+}
+
+/**
+ * What the PDF in a template and language would contain (the export
+ * dialog), asked fresh every time the dialog opens or a choice changes:
+ * `version` is the lesson's saved version, so a save refreshes it.
+ */
+export function useLessonExportPreview(
+  input: { id: string; locale: string; template: LessonTemplate },
+  version: number,
+  enabled: boolean
+) {
+  const rpc = useLessonsRpc();
+  const scoped = useScopedKey();
+  const options = rpc.exportPreview.queryOptions({ input });
+  return useQuery({
+    ...options,
+    enabled,
+    queryKey: scoped([...options.queryKey, { version }] as const),
+    refetchOnWindowFocus: false,
+    staleTime: 0,
   });
 }
 

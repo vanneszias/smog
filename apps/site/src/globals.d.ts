@@ -9,3 +9,12 @@ declare const __SMOG_THEME_SCRIPT_HASH__: string;
  * endpoint `/dev/e2e-seed` is compiled out of staging and production.
  */
 declare const __SMOG_E2E_SEED__: boolean;
+
+/**
+ * `import bytes from "<file>?bytes"`: a file's bytes, embedded by the
+ * `smog:bytes-modules` plugin (build-bytes.ts; the PDF fonts and logo).
+ */
+declare module "*?bytes" {
+  const bytes: Uint8Array<ArrayBuffer>;
+  export default bytes;
+}

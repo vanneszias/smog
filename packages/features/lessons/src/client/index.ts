@@ -24,6 +24,7 @@ export {
   useGestureMarkers,
   useLesson,
   useLessonActions,
+  useLessonExportPreview,
   useLessonList,
   useLessonReadiness,
 } from "./lessons";

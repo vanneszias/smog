@@ -73,6 +73,7 @@ import { Route as ApiAudioUploadSplatRouteImport } from './routes/api/audio/uplo
 import { Route as ApiLogosUploadKeyRouteImport } from './routes/api/logos/upload.$key'
 import { Route as ApiTeacherDrawingsSplatRouteImport } from './routes/api/teacher/drawings/$'
 import { Route as ApiTeacherDrawingsUploadSplatRouteImport } from './routes/api/teacher/drawings/upload/$'
+import { Route as ApiTeacherLessonsLessonIdPdfRouteImport } from './routes/api/teacher/lessons/$lessonId/pdf'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -396,6 +397,12 @@ const ApiTeacherDrawingsUploadSplatRoute =
     path: '/api/teacher/drawings/upload/$',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiTeacherLessonsLessonIdPdfRoute =
+  ApiTeacherLessonsLessonIdPdfRouteImport.update({
+    id: '/api/teacher/lessons/$lessonId/pdf',
+    path: '/api/teacher/lessons/$lessonId/pdf',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -462,6 +469,7 @@ export interface FileRoutesByFullPath {
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
   '/api/teacher/drawings/$': typeof ApiTeacherDrawingsSplatRoute
   '/api/teacher/drawings/upload/$': typeof ApiTeacherDrawingsUploadSplatRoute
+  '/api/teacher/lessons/$lessonId/pdf': typeof ApiTeacherLessonsLessonIdPdfRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -527,6 +535,7 @@ export interface FileRoutesByTo {
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
   '/api/teacher/drawings/$': typeof ApiTeacherDrawingsSplatRoute
   '/api/teacher/drawings/upload/$': typeof ApiTeacherDrawingsUploadSplatRoute
+  '/api/teacher/lessons/$lessonId/pdf': typeof ApiTeacherLessonsLessonIdPdfRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -594,6 +603,7 @@ export interface FileRoutesById {
   '/api/logos/upload/$key': typeof ApiLogosUploadKeyRoute
   '/api/teacher/drawings/$': typeof ApiTeacherDrawingsSplatRoute
   '/api/teacher/drawings/upload/$': typeof ApiTeacherDrawingsUploadSplatRoute
+  '/api/teacher/lessons/$lessonId/pdf': typeof ApiTeacherLessonsLessonIdPdfRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -662,6 +672,7 @@ export interface FileRouteTypes {
     | '/api/logos/upload/$key'
     | '/api/teacher/drawings/$'
     | '/api/teacher/drawings/upload/$'
+    | '/api/teacher/lessons/$lessonId/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -727,6 +738,7 @@ export interface FileRouteTypes {
     | '/api/logos/upload/$key'
     | '/api/teacher/drawings/$'
     | '/api/teacher/drawings/upload/$'
+    | '/api/teacher/lessons/$lessonId/pdf'
   id:
     | '__root__'
     | '/'
@@ -793,6 +805,7 @@ export interface FileRouteTypes {
     | '/api/logos/upload/$key'
     | '/api/teacher/drawings/$'
     | '/api/teacher/drawings/upload/$'
+    | '/api/teacher/lessons/$lessonId/pdf'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -841,6 +854,7 @@ export interface RootRouteChildren {
   ApiLogosUploadKeyRoute: typeof ApiLogosUploadKeyRoute
   ApiTeacherDrawingsSplatRoute: typeof ApiTeacherDrawingsSplatRoute
   ApiTeacherDrawingsUploadSplatRoute: typeof ApiTeacherDrawingsUploadSplatRoute
+  ApiTeacherLessonsLessonIdPdfRoute: typeof ApiTeacherLessonsLessonIdPdfRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1293,6 +1307,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTeacherDrawingsUploadSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/teacher/lessons/$lessonId/pdf': {
+      id: '/api/teacher/lessons/$lessonId/pdf'
+      path: '/api/teacher/lessons/$lessonId/pdf'
+      fullPath: '/api/teacher/lessons/$lessonId/pdf'
+      preLoaderRoute: typeof ApiTeacherLessonsLessonIdPdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1388,6 +1409,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLogosUploadKeyRoute: ApiLogosUploadKeyRoute,
   ApiTeacherDrawingsSplatRoute: ApiTeacherDrawingsSplatRoute,
   ApiTeacherDrawingsUploadSplatRoute: ApiTeacherDrawingsUploadSplatRoute,
+  ApiTeacherLessonsLessonIdPdfRoute: ApiTeacherLessonsLessonIdPdfRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
