@@ -73,6 +73,7 @@ export function SheetPanel({
   testID,
 }: SheetPanelProps): ReactElement {
   const ref = useRef<BottomSheetModal>(null);
+  const presented = useRef(false);
   const [mounted, setMounted] = useState(open);
   const reducedMotion = useReducedMotion();
   const themeVars = useThemeVars();
@@ -83,13 +84,18 @@ export function SheetPanel({
   useEffect(() => {
     if (open) {
       setMounted(true);
+      presented.current = true;
       ref.current?.present();
-    } else {
+    } else if (presented.current) {
+      // Dismissing an unpresented modal leaves Gorhom in DISMISSING, so
+      // its portal refuses the first present (Select, Menu and closed sheets).
+      presented.current = false;
       ref.current?.dismiss();
     }
   }, [open]);
 
   const handleDismiss = useCallback((): void => {
+    presented.current = false;
     setMounted(false);
     if (open) {
       onClose();
