@@ -1,0 +1,24 @@
+appId: ${APP_ID}
+---
+- openLink: "smog-dev://sign-in"
+- tapOn: "Email address"
+- inputText: ${QA_EMAIL}
+- hideKeyboard
+- tapOn: "Continue"
+- tapOn: "With my password"
+- tapOn: "Password"
+- inputText: "maestro-test-password"
+- hideKeyboard
+- tapOn: "Sign in"
+- assertVisible:
+    id: home-screen
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element: "Maestro QA, ${QA_EMAIL}"
+    centerElement: true
+- tapOn: "Maestro QA, ${QA_EMAIL}"
+- scrollUntilVisible:
+    element: "Delete my account"
+    centerElement: true
+- tapOn: "Delete my account"
+- takeScreenshot: qa-delete-form

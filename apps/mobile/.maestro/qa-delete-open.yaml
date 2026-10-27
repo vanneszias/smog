@@ -1,0 +1,16 @@
+appId: ${APP_ID}
+---
+- scrollUntilVisible:
+    element: "Settings"
+    direction: UP
+- tapOn: "Settings"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element: "Maestro QA, ${QA_EMAIL}"
+    centerElement: true
+- tapOn: "Maestro QA, ${QA_EMAIL}"
+- scrollUntilVisible:
+    element: "Delete my account"
+    centerElement: true
+- tapOn: "Delete my account"
+- takeScreenshot: qa-delete-form

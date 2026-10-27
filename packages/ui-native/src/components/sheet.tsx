@@ -40,7 +40,8 @@ export function SheetContent({
   title,
 }: SheetContentProps): ReactElement {
   const { t } = useTranslation();
-  const { close, open } = overlay.useOverlay();
+  const state = overlay.useOverlay();
+  const { close, open } = state;
   return (
     <SheetPanel
       className={className}
@@ -48,21 +49,23 @@ export function SheetContent({
       open={open}
       testID={testID}
     >
-      <View className="flex-row items-start gap-2">
-        <View className="flex-1 flex-col gap-1">
-          <Heading size="title-2">{title}</Heading>
-          {description ? <Text tone="muted">{description}</Text> : null}
+      <overlay.Provider value={state}>
+        <View className="flex-row items-start gap-2">
+          <View className="flex-1 flex-col gap-1">
+            <Heading size="title-2">{title}</Heading>
+            {description ? <Text tone="muted">{description}</Text> : null}
+          </View>
+          {hideClose ? null : (
+            <IconButton
+              className="-mt-2 -mr-2"
+              icon={<X />}
+              label={t("a11y.close")}
+              onPress={close}
+            />
+          )}
         </View>
-        {hideClose ? null : (
-          <IconButton
-            className="-mt-2 -mr-2"
-            icon={<X />}
-            label={t("a11y.close")}
-            onPress={close}
-          />
-        )}
-      </View>
-      {children}
+        {children}
+      </overlay.Provider>
     </SheetPanel>
   );
 }

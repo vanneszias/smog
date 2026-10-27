@@ -1,0 +1,13 @@
+appId: ${APP_ID}
+---
+- scrollUntilVisible:
+    element: "Sign in"
+    centerElement: true
+- tapOn: "Sign in"
+- tapOn: "Email address"
+- inputText: "admin@smog.test"
+- hideKeyboard
+- tapOn: "Continue"
+- tapOn: "With a code by email"
+- assertVisible: "Enter your code"
+- takeScreenshot: email-code-sent

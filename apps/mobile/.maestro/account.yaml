@@ -1,0 +1,17 @@
+appId: ${APP_ID}
+---
+- tapOn: "Close"
+- tapOn: "Home"
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element: "SMOG Admin, admin@smog.test"
+- tapOn: "SMOG Admin, admin@smog.test"
+- assertVisible:
+    id: account-screen
+- takeScreenshot: account-top
+- swipe:
+    direction: UP
+- takeScreenshot: account-middle
+- swipe:
+    direction: UP
+- takeScreenshot: account-bottom

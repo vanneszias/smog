@@ -5,7 +5,7 @@ import {
   formatFindings,
   interactiveHosts,
 } from "@smog/ui-native/a11y-audit";
-import { router } from "expo-router";
+import { type Href, router } from "expo-router";
 import { act, screen } from "expo-router/testing-library";
 import { HOND, KAT, type RenderAppOptions, renderApp } from "./test/harness";
 
@@ -85,7 +85,7 @@ interface ScreenCase {
   name: string;
   options: RenderAppOptions;
   /** A route to open after the first render (a deep link to it would go to `/`). */
-  push?: string;
+  push?: Href;
   /** Text that is on the screen once its data has loaded. */
   ready: string | RegExp;
   /** Or a test id, for a screen that has no text of its own to wait for. */
@@ -313,13 +313,13 @@ describe("every screen, audited", () => {
     ]) {
       expect(routes.has(url)).toBe(true);
     }
-    const pushed = new Set(SCREENS.map((row) => row.push));
+    const pushed = new Set<Href | undefined>(SCREENS.map((row) => row.push));
     for (const url of [
       "/lists/loc_les-1",
       "/settings/account",
       "/settings/lessons",
       "/settings/lessons/l1",
-    ]) {
+    ] as const) {
       expect(pushed.has(url)).toBe(true);
     }
   });

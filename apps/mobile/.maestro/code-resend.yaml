@@ -1,0 +1,6 @@
+appId: ${APP_ID}
+---
+- swipe:
+    direction: UP
+- tapOn: "Send a new code"
+- takeScreenshot: code-resent

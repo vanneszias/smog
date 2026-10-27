@@ -1,0 +1,7 @@
+appId: ${APP_ID}
+---
+- tapOn: "Add gestures"
+- tapOn: "Search for a gesture"
+- inputText: "kat"
+- hideKeyboard
+- takeScreenshot: shared-search

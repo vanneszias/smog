@@ -1,0 +1,9 @@
+appId: ${APP_ID}
+---
+- tapOn: "Add Kat"
+- tapOn: "Close"
+- assertVisible: "Kat"
+- takeScreenshot: shared-updated
+- back
+- tapOn: "Actions for Kat"
+- takeScreenshot: reorder-actions

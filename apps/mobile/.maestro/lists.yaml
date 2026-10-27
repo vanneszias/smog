@@ -1,0 +1,23 @@
+appId: ${APP_ID}
+---
+# Resume from Home with the locally seeded admin signed in.
+- tapOn: "Home"
+- tapOn: "Hond"
+- tapOn: "Save to list"
+- tapOn: "Name of the list"
+- inputText: "Animal practice"
+- hideKeyboard
+- tapOn: "Create"
+- takeScreenshot: list-created
+- tapOn: "Close"
+- back
+- tapOn: "Favorites"
+- assertVisible: "Hond"
+- takeScreenshot: favorites-populated
+- tapOn: "Lists"
+- assertVisible: "Animal practice"
+- tapOn: "Animal practice"
+- assertVisible: "Hond"
+- takeScreenshot: populated-list
+- tapOn: "Share list"
+- takeScreenshot: list-sharing

@@ -1,0 +1,12 @@
+appId: ${APP_ID}
+---
+- tapOn: "Search for a gesture"
+- inputText: "kat"
+- pressKey: Enter
+- assertVisible: "Kat"
+- takeScreenshot: search-kat
+- tapOn: "Clear search"
+- inputText: "zzzzzzzz"
+- hideKeyboard
+- takeScreenshot: no-results
+- assertVisible: "No gestures found"

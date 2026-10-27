@@ -40,7 +40,7 @@ jest.mock("@gorhom/bottom-sheet", () => {
       this.props.onDismiss?.();
     }
   }
-  return { ...mock, BottomSheetModal };
+  return { ...mock, BottomSheetModal, useBottomSheetInternal: () => null };
 });
 
 jest.mock("expo-haptics", () => ({

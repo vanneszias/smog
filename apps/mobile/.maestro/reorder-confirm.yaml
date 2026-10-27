@@ -1,0 +1,12 @@
+appId: ${APP_ID}
+---
+- tapOn: "Move up"
+- assertVisible:
+    text: "Kat"
+    above: "Hond"
+- takeScreenshot: reordered
+- tapOn: "Actions for Kat"
+- tapOn: "Remove from list"
+- assertNotVisible: "Kat"
+- assertVisible: "Hond"
+- takeScreenshot: gesture-removed

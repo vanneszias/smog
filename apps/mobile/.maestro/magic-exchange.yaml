@@ -1,0 +1,7 @@
+appId: ${APP_ID}
+---
+# Development variants do not claim https app links. The local inbox link is
+# deliberately rewritten to the dev scheme to test the exchange, not delivery.
+- openLink: ${MAGIC_URL}
+- assertVisible: ".*signed in as admin@smog.test.*"
+- takeScreenshot: magic-exchanged

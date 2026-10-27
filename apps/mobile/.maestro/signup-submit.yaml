@@ -1,0 +1,8 @@
+appId: ${APP_ID}
+---
+- assertVisible: "Enter your name."
+- tapOn: "Name"
+- inputText: "Maestro QA"
+- hideKeyboard
+- tapOn: "Create account"
+- takeScreenshot: verification-pending

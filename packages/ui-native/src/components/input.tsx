@@ -1,5 +1,10 @@
+import {
+  BottomSheetTextInput,
+  useBottomSheetInternal,
+} from "@gorhom/bottom-sheet";
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ReactElement, ReactNode, Ref } from "react";
+import { cssInterop } from "nativewind";
+import type { ComponentType, ReactElement, ReactNode, Ref } from "react";
 import { TextInput, type TextInputProps, View } from "react-native";
 import { cn } from "../lib/cn";
 import { ICON_SIZE, renderIcon } from "../lib/icon";
@@ -26,6 +31,12 @@ export const fieldVariants = cva(
 
 const inputTextClasses =
   "min-h-touch flex-1 py-2 font-regular text-body text-foreground";
+
+// The sheet forwards the underlying native input; its declaration names the
+// gesture-handler wrapper instead of the native instance it exposes.
+const SheetTextInput = cssInterop(BottomSheetTextInput, {
+  className: "style",
+}) as ComponentType<TextInputProps & { ref?: Ref<TextInput> }>;
 
 export interface InputProps
   extends TextInputProps,
@@ -59,6 +70,8 @@ export function Input({
   const field = useFieldControl({ ...props, invalid: invalidProp, required });
   const placeholderColor = useColor("mutedForeground");
   const iconColor = useColor("mutedForeground");
+  // Gorhom only moves the sheet above the keyboard for a registered input.
+  const Control = useBottomSheetInternal(true) ? SheetTextInput : TextInput;
   return (
     <View
       className={cn(
@@ -68,7 +81,7 @@ export function Input({
       )}
     >
       {renderIcon(leading, iconColor, ICON_SIZE.md)}
-      <TextInput
+      <Control
         accessibilityHint={field.accessibilityHint}
         accessibilityLabel={field.accessibilityLabel}
         accessibilityLabelledBy={field.accessibilityLabelledBy}

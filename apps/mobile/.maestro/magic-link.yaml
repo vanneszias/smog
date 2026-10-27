@@ -1,0 +1,11 @@
+appId: ${APP_ID}
+---
+- assertVisible: "Sign in"
+- tapOn: "Sign in"
+- tapOn: "Email address"
+- inputText: "admin@smog.test"
+- hideKeyboard
+- tapOn: "Continue"
+- tapOn: "With a sign-in link by email"
+- assertVisible: "Check your inbox"
+- takeScreenshot: magic-link-sent

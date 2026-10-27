@@ -6,6 +6,7 @@ import {
   waitFor,
   within,
 } from "expo-router/testing-library";
+import { router } from "expo-router";
 import { Linking } from "react-native";
 import type { TestInstance } from "test-renderer";
 import {
@@ -65,6 +66,40 @@ async function chooseEmailCode(): Promise<void> {
     await screen.findByRole("button", { name: "With a code by email" })
   );
 }
+
+describe("leaving the nested auth stack", () => {
+  it("Close leaves auth even when a password-reset screen is underneath", async () => {
+    await renderApp({
+      authScreens: true,
+      initialUrl: "/forgot-password",
+      routes: authConfig(null),
+    });
+    await screen.findByText("Forgot your password");
+    await act(() => router.push("/sign-in"));
+    await screen.findByText("Sign in or sign up");
+    await fireEvent.press(screen.getByRole("button", { name: "Close" }));
+    expect(await screen.findByTestId("home-screen")).toBeOnTheScreen();
+  });
+
+  it("password success leaves an earlier reset screen behind", async () => {
+    const email = jest.fn(() => Promise.resolve(OK));
+    await renderApp({
+      auth: { signIn: { email } },
+      authScreens: true,
+      initialUrl: "/forgot-password",
+      routes: authConfig(null),
+    });
+    await screen.findByText("Forgot your password");
+    await act(() => router.push("/sign-in"));
+    await fireEvent.changeText(await screen.findByPlaceholderText("name@example.com"), EMAIL);
+    await fireEvent.press(screen.getByRole("button", { name: "Continue" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "With my password" }));
+    await fireEvent.changeText(screen.getByLabelText("Password"), "test-password");
+    await fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByTestId("home-screen")).toBeOnTheScreen();
+    expect(email).toHaveBeenCalledWith({ email: EMAIL, password: "test-password" });
+  });
+});
 
 describe("sign-in with Turnstile on (the WebView sheet)", () => {
   it("asks the bridge for a token and sends it with the request", async () => {

@@ -14,7 +14,7 @@ export default function AuthLayout(): ReactElement {
   const background = useColor("background");
   const green = useColor("primary");
   const onGreen = useColor("primaryForeground");
-  const close = useCallback(() => router.dismissAll(), [router]);
+  const close = useCallback(() => router.dismissTo("/"), [router]);
   const headerRight = useCallback(
     () => (
       <Surface className="bg-transparent" tone="primary">

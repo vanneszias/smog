@@ -8,7 +8,7 @@ export {
   InvalidCursorError,
 } from "./cursor";
 export { escapeHtml } from "./html";
-export { newId, newToken, sha256Hex } from "./ids";
+export { newToken, sha256Hex } from "./ids";
 export {
   type ErrorSummary,
   errorSummary,
@@ -32,5 +32,6 @@ export {
   sponsorLogoPath,
 } from "./media";
 export { formatMoney, type MoneyLocale } from "./money";
+export { newId } from "./new-id";
 export { normalizeText, slugify } from "./text";
 export { addDays, DAY_MS } from "./time";

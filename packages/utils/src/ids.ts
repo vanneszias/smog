@@ -1,8 +1,3 @@
-/** A new random id (UUID v4) for a primary key. */
-export function newId(): string {
-  return crypto.randomUUID();
-}
-
 const BASE64_PADDING = /[=]+$/;
 
 /** Unpadded base64url (RFC 4648 §5) of `bytes`. */

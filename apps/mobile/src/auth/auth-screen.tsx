@@ -421,7 +421,7 @@ function useTitle(flow: AuthFlow): string {
 function EmailEcho({ email }: { email: string }): ReactElement {
   const oneLine = useLineLimit(1);
   return (
-    <Text className="flex-1" numberOfLines={oneLine} size="body-sm">
+    <Text className="w-full" numberOfLines={oneLine} size="body-sm">
       {email}
     </Text>
   );
@@ -508,11 +508,9 @@ export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
       refetch();
       toast({ title: t("auth.signedIn"), variant: "success" });
     }
-    if (router.canDismiss()) {
-      router.dismissAll();
-    } else {
-      router.replace("/");
-    }
+    // Auth has its own nested stack. dismissAll only reaches its first screen
+    // (which may be forgot-password), rather than leaving the auth modal.
+    router.dismissTo("/");
   }, [done, refetch, router, signedIn, t, toast]);
 
   const switchMode = useCallback(
@@ -544,7 +542,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
         </Surface>
         <View className="gap-6 px-4 pt-6">
           {flow.state.step === "email" || flow.state.step === "done" ? null : (
-            <View className="flex-row items-center justify-between gap-2 rounded-md bg-surface-sunken px-3 py-2">
+            <View className="items-start gap-2 rounded-md bg-surface-sunken px-3 py-2">
               <EmailEcho email={flow.state.email} />
               <Button onPress={flow.changeEmail} size="sm" variant="ghost">
                 {t("auth.email.change")}

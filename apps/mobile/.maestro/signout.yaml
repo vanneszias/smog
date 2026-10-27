@@ -1,0 +1,17 @@
+appId: ${APP_ID}
+---
+- tapOn:
+    point: "12%,94%"
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element: "SMOG Admin, admin@smog.test"
+- tapOn: "SMOG Admin, admin@smog.test"
+- scrollUntilVisible:
+    element: "Sign out"
+    centerElement: true
+- tapOn: "Sign out"
+- assertVisible: 'Sign out\?'
+- tapOn: "SIGN OUT"
+- assertVisible:
+    id: home-screen
+- takeScreenshot: signed-out

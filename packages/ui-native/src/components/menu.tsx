@@ -43,17 +43,21 @@ export function MenuContent({
   testID,
   ...props
 }: MenuContentProps): ReactElement {
-  const { close, open } = overlay.useOverlay();
+  const state = overlay.useOverlay();
+  const { close, open } = state;
   return (
     <SheetPanel className="px-2" onClose={close} open={open}>
-      <View
-        accessibilityRole="menu"
-        className={cn("flex-col", className)}
-        testID={testID}
-        {...props}
-      >
-        {children}
-      </View>
+      {/* Gorhom's portal renders outside the Menu root's React context. */}
+      <overlay.Provider value={state}>
+        <View
+          accessibilityRole="menu"
+          className={cn("flex-col", className)}
+          testID={testID}
+          {...props}
+        >
+          {children}
+        </View>
+      </overlay.Provider>
     </SheetPanel>
   );
 }

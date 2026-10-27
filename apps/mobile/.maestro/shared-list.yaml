@@ -1,0 +1,8 @@
+appId: ${APP_ID}
+---
+- assertVisible: "Anyone with this link can edit the list after signing in."
+- copyTextFrom: 'http://localhost:5183/lists/.*'
+- tapOn: "Close"
+- openLink: ${maestro.copiedText.replace('http://localhost:5183/lists/', 'smog-dev://lists/')}
+- assertVisible: "Animal practice"
+- takeScreenshot: shared-editor

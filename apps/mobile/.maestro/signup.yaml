@@ -1,0 +1,17 @@
+appId: ${APP_ID}
+---
+- tapOn: "With my password"
+- tapOn: "New password"
+- inputText: "maestro-test-password"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Repeat your password"
+    centerElement: true
+- tapOn: "Repeat your password"
+- inputText: "maestro-test-password"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Create account"
+    centerElement: true
+- tapOn: "Create account"
+- takeScreenshot: signup-result

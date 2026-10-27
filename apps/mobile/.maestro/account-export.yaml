@@ -1,0 +1,13 @@
+appId: ${APP_ID}
+---
+- tapOn: "Download my data"
+- extendedWaitUntil:
+    visible: ".*(Sharing|Share|Nearby|Quick Share).*"
+    timeout: 30000
+- takeScreenshot: account-data-share
+- back
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- takeScreenshot: account-danger-zone

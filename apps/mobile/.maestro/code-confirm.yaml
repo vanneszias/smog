@@ -1,0 +1,9 @@
+appId: ${APP_ID}
+---
+- tapOn: "Code"
+- eraseText: 20
+- inputText: ${OTP}
+- hideKeyboard
+- tapOn: "Confirm"
+- assertVisible:
+    id: home-screen

@@ -1,0 +1,12 @@
+appId: ${APP_ID}
+---
+# Only for the disposable local QA account created by signup.yaml.
+- tapOn: "Type DELETE to confirm"
+- inputText: "DELETE"
+- hideKeyboard
+- tapOn: "Your password"
+- inputText: "maestro-test-password"
+- hideKeyboard
+- tapOn: "Delete my account"
+- assertVisible: "Sign in"
+- takeScreenshot: account-deleted

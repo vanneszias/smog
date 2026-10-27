@@ -47,6 +47,27 @@ const OPTIONS: FlowActionOptions = {
 };
 
 describe("createFlowActions", () => {
+  test("native password sign-in creates a session without requesting a browser redirect", async () => {
+    const { calls, client } = fakeClient();
+    const actions = createFlowActions(client, {
+      ...OPTIONS,
+      socialFlow: { hasSession: () => Promise.resolve(true), kind: "session" },
+    });
+    expect(await actions.signInPassword("a@smog.test", "pw")).toEqual({
+      ok: true,
+    });
+    expect(calls).toEqual([
+      [
+        "signIn.email",
+        {
+          email: "a@smog.test",
+          fetchOptions: { headers: { [CAPTCHA_HEADER]: "turnstile-token" } },
+          password: "pw",
+        },
+      ],
+    ]);
+  });
+
   test("sends the Turnstile token on the guarded calls", async () => {
     const { calls, client } = fakeClient();
     const actions = createFlowActions(client, OPTIONS);

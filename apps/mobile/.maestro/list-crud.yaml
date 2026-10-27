@@ -1,0 +1,38 @@
+appId: ${APP_ID}
+---
+- tapOn: "Lists"
+- tapOn: "New list"
+- tapOn: "Name"
+- inputText: "QA"
+- hideKeyboard
+- tapOn: "Create"
+- assertVisible: "This list is empty"
+- tapOn: "List actions"
+- tapOn: "Rename"
+- tapOn: "Name"
+- eraseText: 100
+- inputText: "Q"
+- inputText: "A"
+- inputText: "R"
+- hideKeyboard
+- tapOn: "Save"
+- assertVisible: "QAR"
+- tapOn: "Share list"
+- takeScreenshot: sharing
+- tapOn: "Create a view link"
+- assertVisible: "Anyone with this link can view the list."
+- tapOn: "Copy link"
+- tapOn: "Revoke link"
+- tapOn: "Revoke"
+- assertVisible: "Create a view link"
+- tapOn: "Close"
+- tapOn: "List actions"
+- tapOn: "Delete list"
+- assertVisible: 'Delete this list\?'
+- tapOn: "Cancel"
+- assertVisible: "QAR"
+- tapOn: "List actions"
+- tapOn: "Delete list"
+- tapOn: "Delete"
+- assertNotVisible: "QAR"
+- takeScreenshot: deleted-list

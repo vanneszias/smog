@@ -117,7 +117,7 @@ export function AddToSharedList({
         <SearchField
           accessibilityLabel={t("home.searchLabel")}
           onValueChange={setQ}
-          placeholder={t("home.searchPlaceholder")}
+          placeholder={t("search.placeholder")}
           value={q}
         />
         {open ? <Results onAdd={onAdd} present={presentIds} q={q} /> : null}

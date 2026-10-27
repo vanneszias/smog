@@ -166,6 +166,7 @@ export default function HomeScreen(): ReactElement {
     <ScrollView
       className="flex-1 bg-background"
       contentContainerClassName="gap-6 pb-10"
+      contentInsetAdjustmentBehavior="never"
       keyboardShouldPersistTaps="handled"
       testID="home-screen"
     >
@@ -191,7 +192,7 @@ export default function HomeScreen(): ReactElement {
         <SearchField
           onSubmitEditing={submit}
           onValueChange={setQuery}
-          placeholder={t("home.searchPlaceholder")}
+          placeholder={t("search.placeholder")}
           value={query}
         />
       </Surface>

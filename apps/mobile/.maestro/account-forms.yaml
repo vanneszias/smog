@@ -1,0 +1,10 @@
+appId: ${APP_ID}
+---
+- tapOn: "Delete my account"
+- takeScreenshot: delete-account-dialog
+- back
+- scrollUntilVisible:
+    element: "Change password"
+    direction: UP
+- tapOn: "Change password"
+- takeScreenshot: password-form

@@ -1,0 +1,21 @@
+appId: ${APP_ID}
+---
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element: "Version, 3.0.0"
+    centerElement: true
+- repeat:
+    times: 5
+    commands:
+      - tapOn: "Version, 3.0.0"
+- scrollUntilVisible:
+    element: "Developer tools"
+- tapOn: "Developer tools"
+- tapOn: "Component gallery"
+- takeScreenshot: gallery-top
+- swipe:
+    direction: UP
+- takeScreenshot: gallery-controls
+- swipe:
+    direction: UP
+- takeScreenshot: gallery-overlays

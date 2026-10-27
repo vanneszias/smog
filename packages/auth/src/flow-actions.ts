@@ -33,7 +33,7 @@ export interface FlowAuthClient {
   signIn: {
     email: (
       body: {
-        callbackURL: string;
+        callbackURL?: string;
         email: string;
         password: string;
       } & FetchOptions
@@ -175,7 +175,14 @@ export function createFlowActions(
     },
     signInPassword: (email, password, token) =>
       guarded(token, (captcha) =>
-        client.signIn.email({ callbackURL, email, password, ...captcha })
+        client.signIn.email({
+          // Expo interprets a redirect response as a browser auth session,
+          // even for passwords. Native navigation follows the session instead.
+          ...(options.socialFlow.kind === "redirect" ? { callbackURL } : {}),
+          email,
+          password,
+          ...captcha,
+        })
       ),
     signInSocial: async (provider) => {
       const native = options.social?.[provider];

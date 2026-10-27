@@ -73,7 +73,7 @@ export function SheetPanel({
   testID,
 }: SheetPanelProps): ReactElement {
   const ref = useRef<BottomSheetModal>(null);
-  const presented = useRef(false);
+  const presented = useRef<boolean>(false);
   const [mounted, setMounted] = useState(open);
   const reducedMotion = useReducedMotion();
   const themeVars = useThemeVars();
@@ -114,6 +114,9 @@ export function SheetPanel({
         reducedMotion ? ReduceMotion.Always : ReduceMotion.System
       }
       ref={ref}
+      // A Select can live inside another sheet. Keep that parent mounted
+      // and visible while its picker is presented above it.
+      stackBehavior="push"
       style={shadow}
     >
       {/* Rendered from the render that opens it (so the sheet can size to

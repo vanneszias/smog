@@ -3,6 +3,7 @@ import {
   cloneElement,
   createContext,
   isValidElement,
+  type Provider,
   type ReactElement,
   type ReactNode,
   useCallback,
@@ -29,6 +30,7 @@ export interface OverlayRootProps {
 
 /** One context per overlay kind, so a Menu inside a Sheet finds its own root. */
 export function createOverlay(name: string): {
+  Provider: Provider<OverlayState | null>;
   Root: (props: OverlayRootProps) => ReactElement;
   Trigger: (props: { children: ReactElement }) => ReactElement;
   Close: (props: { children: ReactElement }) => ReactElement;
@@ -78,7 +80,7 @@ export function createOverlay(name: string): {
     return withPress(children, close);
   }
 
-  return { Close, Root, Trigger, useOverlay };
+  return { Close, Provider: Context.Provider, Root, Trigger, useOverlay };
 }
 
 interface PressableElementProps {

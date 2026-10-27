@@ -107,7 +107,7 @@ describe("home", () => {
       })
     ).toBeOnTheScreen();
     expect(
-      home.getByPlaceholderText("Look up a gesture, for example dog")
+      home.getByPlaceholderText("Search for a gesture")
     ).toBeOnTheScreen();
   });
 

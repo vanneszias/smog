@@ -1,0 +1,10 @@
+appId: ${APP_ID}
+---
+- tapOn:
+    point: "62%,94%"
+- assertVisible: "Hond"
+- takeScreenshot: offline-favorites
+- tapOn:
+    point: "87%,94%"
+- assertVisible: "Animal practice"
+- takeScreenshot: offline-lists

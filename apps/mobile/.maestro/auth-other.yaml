@@ -1,0 +1,16 @@
+appId: ${APP_ID}
+---
+- openLink: "smog-dev://forgot-password"
+- assertVisible: "Forgot your password"
+- tapOn: "Email address"
+- inputText: "admin@smog.test"
+- hideKeyboard
+- tapOn: "Send me a link"
+- assertVisible: ".*receive an email shortly.*"
+- takeScreenshot: reset-sent
+- openLink: "smog-dev://sign-up"
+- tapOn: "Email address"
+- inputText: ${QA_EMAIL}
+- hideKeyboard
+- tapOn: "Continue"
+- takeScreenshot: signup-details

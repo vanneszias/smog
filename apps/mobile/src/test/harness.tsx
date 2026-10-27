@@ -224,6 +224,12 @@ function appRoutes(
     "(auth)/sign-in": authScreens
       ? require("../../app/(auth)/sign-in")
       : { default: SignInStub },
+    ...(authScreens
+      ? {
+          "(auth)/forgot-password": require("../../app/(auth)/forgot-password"),
+          "(auth)/sign-up": require("../../app/(auth)/sign-up"),
+        }
+      : {}),
     "(tabs)/_layout": require("../../app/(tabs)/_layout"),
     "(tabs)/favorites/_layout": require("../../app/(tabs)/favorites/_layout"),
     "(tabs)/favorites/index": require("../../app/(tabs)/favorites/index"),
