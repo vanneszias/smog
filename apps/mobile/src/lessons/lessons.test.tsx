@@ -304,7 +304,7 @@ describe("the export", () => {
   });
 
   it("downloads through the authenticated route and opens the share sheet", async () => {
-    const pdf = jest.fn(() =>
+    const pdf = jest.fn<typeof fetch>(() =>
       Promise.resolve(new Response(new TextEncoder().encode("%PDF-1.7")))
     );
     await openExport();

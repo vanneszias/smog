@@ -38,6 +38,10 @@ const { StatusBadge } = await import("./status-badge");
 const { SponsorshipTable } = await import("./sponsorship-table");
 
 const HOND = /Hond/;
+const SIXTY_EUROS = /€\s?60[.,]00/;
+const HUNDRED_TWENTY_EUROS = /€\s?120[.,]00/;
+const RECORD_REFUND = /Record the refund on this €\s?60[.,]00 payment\?/;
+const REFUND_RECORDED = /^Refund of €\s?60[.,]00 recorded\.$/;
 const REVIEW_TAB = /Review/;
 const REFUND_TAB = /Refund needed/;
 const ALL_TAB = /All/;
@@ -358,7 +362,7 @@ describe("ModerationQueue", () => {
     const card = screen.getByRole("link", { name: HOND });
     expect(card.getAttribute("href")).toBe("/admin/sponsorships/sp-1");
     expect(card.textContent).toContain("Bakkerij Zon");
-    expect(card.textContent).toContain("€60.00");
+    expect(card.textContent).toMatch(SIXTY_EUROS);
     expect(card.textContent).toContain("Invoice requested");
   });
 
@@ -523,7 +527,7 @@ describe("SponsorshipDetail", () => {
     fireEvent.click(button("Approve"));
     const alert = await screen.findByRole("alertdialog");
     expect(alert.textContent).toContain("Hond");
-    expect(alert.textContent).toContain("€60.00");
+    expect(alert.textContent).toMatch(SIXTY_EUROS);
     fireEvent.click(within(alert).getByRole("button", { name: "Approve" }));
     await screen.findByText("The video is not ready yet.");
   });
@@ -598,7 +602,7 @@ describe("SponsorshipDetail", () => {
     fireEvent.click(button("Reject"));
     const alert = await screen.findByRole("alertdialog");
     expect(alert.textContent).toContain("Bakkerij Zon");
-    expect(alert.textContent).toContain("€60.00");
+    expect(alert.textContent).toMatch(SIXTY_EUROS);
     const confirm = within(alert).getByRole("button", {
       name: "Reject",
     }) as HTMLButtonElement;
@@ -653,7 +657,7 @@ describe("SponsorshipDetail", () => {
     }
     fireEvent.click(button("Cancel payment"));
     let alert = await screen.findByRole("alertdialog");
-    expect(alert.textContent).toContain("€120.00");
+    expect(alert.textContent).toMatch(HUNDRED_TWENTY_EUROS);
     expect(alert.textContent).toContain("Hond and Kat");
     expect(alert.textContent).toContain("Bakkerij Zon");
     fireEvent.click(within(alert).getByRole("button", { name: "Keep it" }));
@@ -661,7 +665,7 @@ describe("SponsorshipDetail", () => {
 
     fireEvent.click(button("Mark paid"));
     alert = await screen.findByRole("alertdialog");
-    expect(alert.textContent).toContain("€120.00");
+    expect(alert.textContent).toMatch(HUNDRED_TWENTY_EUROS);
     expect(alert.textContent).toContain("Hond and Kat");
     expect(alert.textContent).toContain("Bakkerij Zon");
     expect(alert.textContent).toContain("each one goes to review");
@@ -911,16 +915,14 @@ describe("SponsorshipDetail", () => {
     );
     const alert = await screen.findByRole("alertdialog");
     // The payment's total, not a claim that all of it was refunded (M1).
-    expect(alert.textContent).toContain(
-      "Record the refund on this €60.00 payment?"
-    );
+    expect(alert.textContent).toMatch(RECORD_REFUND);
     expect(alert.textContent).toContain("Refund in the Mollie dashboard first");
     const confirm = within(alert).getByRole("button", {
       name: "Record refund",
     });
     confirm.focus();
     fireEvent.click(confirm);
-    await screen.findByText("Refund of €60.00 recorded.");
+    await screen.findByText(REFUND_RECORDED);
     expect(
       site.calls.find((call) => call.path === "admin/sponsorships/recordRefund")
         ?.input

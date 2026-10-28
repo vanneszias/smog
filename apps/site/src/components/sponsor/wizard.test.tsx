@@ -19,6 +19,12 @@ const NAME_ON_THE_INVOICE = /^Name on the invoice/;
 const ENTERPRISE_NUMBER = /^Enterprise number/;
 const LOGO = /^Logo$/;
 const PREVIEW_FOR = /Preview for/;
+const FIFTY_EUROS = /^€\s?50[.,]00$/;
+const TEN_EUROS_EXTRA = /^\+€\s?10[.,]00$/;
+const TOTAL_FIFTY_EUROS = /^Total: €\s?50[.,]00$/;
+const ADD_LOGO = /^Add a logo \(\+€\s?10[.,]00 per gesture\)$/;
+const HUNDRED_EUROS = /^€\s?100[.,]00$/;
+const HUNDRED_TWENTY_EUROS = /^€\s?120[.,]00$/;
 
 const ID = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 const GESTURES = [
@@ -176,9 +182,9 @@ describe("the sponsor wizard (S-01–S-11)", () => {
       screen.getByText("Sponsored").id
     );
     // The value cards come from the constants (bug 24).
-    expect(screen.getByText("€50.00")).toBeDefined();
+    expect(screen.getByText(FIFTY_EUROS)).toBeDefined();
     expect(screen.getByText("4 sec")).toBeDefined();
-    expect(screen.getByText("+€10.00")).toBeDefined();
+    expect(screen.getByText(TEN_EUROS_EXTRA)).toBeDefined();
     expect(
       screen.getByText("2 available gestures shown · 0 selected")
     ).toBeDefined();
@@ -187,7 +193,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     expect(screen.getByTestId("selection-count").textContent).toBe(
       "1 gesture selected"
     );
-    expect(screen.getByText("Total: €50.00")).toBeDefined();
+    expect(screen.getByText(TOTAL_FIFTY_EUROS)).toBeDefined();
   });
 
   test("preselects ?gesture= only when it is available", async () => {
@@ -247,10 +253,10 @@ describe("the sponsor wizard (S-01–S-11)", () => {
   test("the logo: unticking keeps the price honest, and a GIF is refused on the field", async () => {
     await renderSite(() => <Wizard />, { api: api() });
     await chooseBroerAndZus();
-    fireEvent.click(
-      screen.getByRole("radio", { name: "Add a logo (+€10.00 per gesture)" })
+    fireEvent.click(screen.getByRole("radio", { name: ADD_LOGO }));
+    expect(screen.getByTestId("price-total").textContent).toMatch(
+      HUNDRED_TWENTY_EUROS
     );
-    expect(screen.getByTestId("price-total").textContent).toBe("€120.00");
     const input = screen.getByLabelText(LOGO) as HTMLInputElement;
     const gif = new File(["GIF89a"], "logo.gif", { type: "image/gif" });
     fireEvent.change(input, { target: { files: [gif] } });
@@ -264,7 +270,9 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     const browse = screen.getByRole("button", { name: "Choose another logo" });
     expect(browse.getAttribute("aria-describedby")).toContain(error.id);
     fireEvent.click(screen.getByRole("radio", { name: "Without a logo" }));
-    expect(screen.getByTestId("price-total").textContent).toBe("€100.00");
+    expect(screen.getByTestId("price-total").textContent).toMatch(
+      HUNDRED_EUROS
+    );
   });
 
   test("pay: checkout, sponsorship_checkout_started, then the redirect", async () => {
@@ -278,7 +286,9 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     });
     await chooseBroerAndZus();
     await fillDetails();
-    expect(screen.getByTestId("review-total").textContent).toBe("€100.00");
+    expect(screen.getByTestId("review-total").textContent).toMatch(
+      HUNDRED_EUROS
+    );
     // One preview at a time (phase 7 ruling 8): the first gesture, and a
     // poster toggle per gesture to switch.
     expect(screen.getAllByRole("img", { name: PREVIEW_FOR })).toHaveLength(1);
@@ -541,7 +551,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
       await chooseBroerAndZus();
       fireEvent.click(
         screen.getByRole("radio", {
-          name: "Add a logo (+€10.00 per gesture)",
+          name: ADD_LOGO,
         })
       );
       const png = new File([new Uint8Array(64)], "logo.png", {

@@ -12,6 +12,7 @@ import { ReeditView } from "./reedit-view";
 import { RenewalView } from "./renewal-view";
 
 const LOGO = /^Logo/;
+const SIXTY_EUROS = /^€\s?60[.,]00$/;
 
 /** The logo the preview's end card shows (an object URL), or none. */
 function cardLogo(): string | null {
@@ -332,7 +333,7 @@ describe("the renewal page (S-20)", () => {
     ).toBeDefined();
     expect(screen.getByText("2 November 2026")).toBeDefined();
     expect(screen.getByText("2 November 2027")).toBeDefined();
-    expect(screen.getByText("€60.00")).toBeDefined();
+    expect(screen.getByText(SIXTY_EUROS)).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Renew and pay" }));
     await waitFor(() =>
       expect(redirects).toEqual(["https://mollie.test/checkout/tr_2"])

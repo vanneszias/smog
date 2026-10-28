@@ -9,8 +9,13 @@ jest.mock("react-native-worklets", () =>
 );
 // The published mock leaves out `useReducedMotion`; tests switch it on to
 // check that the kit drops its animations.
+// Reanimated 4.7's mock imports the entry, which otherwise starts native CSS.
+jest.mock("react-native-reanimated/src/initializers.native", () => ({
+  initializeReanimatedModule: jest.fn(),
+}));
 jest.mock("react-native-reanimated", () => ({
   ...jest.requireActual<Module>("react-native-reanimated/mock"),
+  ReduceMotion: { Always: "always", Never: "never", System: "system" },
   useReducedMotion: jest.fn(() => false),
 }));
 jest.requireActual("react-native-gesture-handler/jestSetup");

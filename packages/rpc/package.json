@@ -30,7 +30,7 @@
     "@cloudflare/vitest-plugin": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "19.2.7",
+    "@types/react-dom": "19.3.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "typescript": "catalog:",

@@ -266,7 +266,7 @@ beforeAll(() => {
 export interface RenderedApp {
   clients: AppClients;
   fetch: jest.Mock<(request: Request) => Promise<Response>>;
-  result: ReturnType<typeof renderRouter>;
+  result: Awaited<ReturnType<typeof renderRouter>>;
 }
 
 /** Renders the app at `initialUrl` (home by default). */
@@ -318,11 +318,11 @@ export async function renderApp({
       </AppProviders>
     );
   }
-  // RNTL 14 renders asynchronously: the router helpers (`getPathname`) are
-  // on the returned promise, which resolves once the first render is done.
-  const result = renderRouter(appRoutes(Root, authScreens, realSettings), {
-    initialUrl,
-  });
-  await result;
+  const result = await renderRouter(
+    appRoutes(Root, authScreens, realSettings),
+    {
+      initialUrl,
+    }
+  );
   return { clients, fetch, result };
 }

@@ -15,8 +15,8 @@
     "test": "bun ../../scripts/test-deadline.ts -- bun test --timeout=20000"
   },
   "dependencies": {
-    "@hookform/resolvers": "6.0.0",
-    "@mux/mux-player-react": "3.14.0",
+    "@hookform/resolvers": "6.0.2",
+    "@mux/mux-player-react": "3.14.1",
     "@smog/brand": "workspace:*",
     "@smog/i18n": "workspace:*",
     "@smog/styles": "workspace:*",
@@ -28,13 +28,13 @@
     "input-otp": "1.5.0",
     "lucide-react": "catalog:",
     "radix-ui": "1.8.1",
-    "react-hook-form": "7.90.0",
+    "react-hook-form": "7.91.0",
     "sonner": "2.0.8",
     "tailwind-merge": "3.7.0",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "21.0.3",
+    "@happy-dom/global-registrator": "21.0.4",
     "@smog/config": "workspace:*",
     "@tailwindcss/node": "4.3.3",
     "@tailwindcss/oxide": "4.3.3",
@@ -43,7 +43,7 @@
     "@testing-library/user-event": "14.6.8",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "19.2.7",
+    "@types/react-dom": "19.3.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "4.3.3",

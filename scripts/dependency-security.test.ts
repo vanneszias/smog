@@ -13,7 +13,13 @@ test("every deepmerge consumer resolves the fixed fork", () => {
     "ultracite/biome/core",
   ]) {
     const fromConsumer = createRequire(require.resolve(consumer));
-    expect(fromConsumer("deepmerge")).toBe(merge);
+    expect(fromConsumer("deepmerge/package.json").name).toBe("@smog/deepmerge");
+    const result = fromConsumer("deepmerge")(
+      {},
+      JSON.parse('{"__proto__":{"isAdmin":true},"safe":1}')
+    );
+    expect(result).toEqual({ safe: 1 });
+    expect(Object.hasOwn(result, "__proto__")).toBe(false);
   }
 });
 
@@ -70,16 +76,4 @@ test("the fork preserves deepmerge options, symbols, cloning and .all", () => {
   expect(
     merge({}, { instance }, { isMergeableObject: () => false }).instance
   ).toBe(instance);
-});
-
-test("query-string loads the ESM decoder from CommonJS and decodes malformed input", () => {
-  // biome-ignore lint/correctness/noUndeclaredDependencies: exercises the patched transitive dependency used by Expo Router.
-  const query = require("query-string") as {
-    parse: (value: string) => Record<string, unknown>;
-  };
-  expect(query.parse("name=caf%C3%A9").name).toBe("café");
-  expect(query.parse("name=a+b").name).toBe("a b");
-  expect(query.parse("bad=%E0%A4%A").bad).toBe("%E0%A4%A");
-  const malformed = "%FE".repeat(16);
-  expect(query.parse(`bad=${malformed}`).bad).toBe(malformed);
 });

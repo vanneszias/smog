@@ -77,6 +77,8 @@ export default defineConfig(async () => ({
   resolve: { alias: { "@": SRC } },
   test: {
     ...WORKERS_POOL_TEST_OPTIONS,
+    // Vitest 5's disk-cache replay closes the Cloudflare socket on this Start graph.
+    fsModuleCache: false,
     // test/warm-up.ts pays the first (slow) transform of the server entry
     // under `hookTimeout`, so a hung test still fails after 60 s.
     hookTimeout: 180_000,

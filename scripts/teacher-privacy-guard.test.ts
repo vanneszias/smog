@@ -93,7 +93,7 @@ const ALLOWED: { because: string; prefix: string }[] = [
 
 const SOURCE = /\.(ts|tsx)$/;
 const SKIPPED =
-  /(^|\/)(node_modules|dist|build|\.wrangler|\.expo|\.output|\.tanstack|\.turbo|test|testing|__fixtures__)(\/|$)|\.test\.tsx?$|\.gen\.ts$|worker-configuration\.d\.ts$/;
+  /^apps\/mobile\/(?:ios|android)(?:\/|$)|(^|\/)(node_modules|dist|build|\.wrangler|\.expo|\.output|\.tanstack|\.turbo|test|testing|__fixtures__)(\/|$)|\.test\.tsx?$|\.gen\.ts$|worker-configuration\.d\.ts$/;
 
 /** Every file of `files` outside `ALLOWED` that names the teaching material. */
 export function findViolations(files: Record<string, string>): string[] {

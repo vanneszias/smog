@@ -53,7 +53,7 @@ export async function shareJsonFile(
   const file = new File(Paths.cache, fileName);
   try {
     file.create({ overwrite: true });
-    file.write(text);
+    await file.write(text);
     await shareAsync(file.uri, {
       dialogTitle: title,
       mimeType: "application/json",

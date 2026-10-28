@@ -4,6 +4,6 @@
   "compilerOptions": {
     "lib": ["ESNext"],
     "jsx": "react-jsx",
-    "customConditions": ["react-native"]
+    "customConditions": ["react-native", "react-native-legacy-deep-imports"]
   }
 }

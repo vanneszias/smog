@@ -34,7 +34,33 @@
       "__SMOG_THEME_SCRIPT_HASH__"
     ]
   },
+  "linter": {
+    "rules": {
+      "correctness": { "noComponentHookFactories": "off" },
+      "nursery": { "useTailwindSortedClasses": "off" },
+      "performance": { "useDomNodeTextContent": "off" },
+      "style": {
+        "useDomQuerySelector": "off",
+        "useNamedCaptureGroup": "off",
+        "useThisInClassMethods": "off",
+        "useUnicodeRegex": "off"
+      },
+      "suspicious": {
+        "noLoopFunc": "off",
+        "noUnnecessaryConditions": "off"
+      }
+    }
+  },
+  "yaml": { "formatter": { "enabled": false } },
   "overrides": [
+    {
+      "includes": ["apps/mobile/**", "packages/ui-native/**"],
+      "linter": {
+        "rules": {
+          "a11y": { "noLabelWithoutControl": "off" }
+        }
+      }
+    },
     {
       "includes": ["scripts/__fixtures__/**"],
       "linter": {

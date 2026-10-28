@@ -55,6 +55,13 @@ const TEST_FILE = /\.test\.(ts|tsx)$/;
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
+    // Expo-generated native projects contain Pods symlinks, not application TS.
+    if (
+      dir === join(ROOT, "apps/mobile") &&
+      (name === "ios" || name === "android")
+    ) {
+      continue;
+    }
     if (SKIP_DIRS.has(name) || name.startsWith(".")) {
       continue;
     }

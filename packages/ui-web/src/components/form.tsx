@@ -114,6 +114,7 @@ export function FormLabel({
 }: ComponentProps<typeof Label>): ReactNode {
   const { error, formItemId } = useFormField();
   return (
+    // biome-ignore lint/a11y/noLabelWithoutControl: FormControl receives the same formItemId through context.
     <Label
       className={cn("data-[error=true]:text-danger-strong", className)}
       data-error={Boolean(error)}

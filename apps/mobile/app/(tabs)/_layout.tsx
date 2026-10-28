@@ -1,6 +1,6 @@
 import { useTranslation } from "@smog/i18n/react";
 import { useColor } from "@smog/ui-native";
-import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/native-tabs";
 import type { ReactElement } from "react";
 
 /** The native tab bar: Home · Search · Favorites · Lists (spec §10). */

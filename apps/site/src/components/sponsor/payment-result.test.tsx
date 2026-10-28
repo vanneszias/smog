@@ -7,6 +7,7 @@ import { PaymentResult } from "./payment-result";
 
 const PAYMENT = "8c3c5a52-7a0c-4d9b-9d65-1f1d7f0c2a11";
 const GESTURES_FREED = /gestures are free again/;
+const HUNDRED_TWENTY_EUROS = /^€\s?120[.,]00$/;
 
 function view(overrides: Partial<PaymentStatusView> = {}): PaymentStatusView {
   return {
@@ -47,7 +48,7 @@ describe("the payment's return page (S-14)", () => {
     ).toBeDefined();
     expect(screen.getByText("Broer, Zus")).toBeDefined();
     expect(screen.getByText("Bakkerij Jansen")).toBeDefined();
-    expect(screen.getByText("€120.00")).toBeDefined();
+    expect(screen.getByText(HUNDRED_TWENTY_EUROS)).toBeDefined();
     expect(
       screen.getByText(
         "An administrator reviews your sponsorship within five working days."

@@ -1,8 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import { StallReporter } from "./vitest";
+import { join } from "node:path";
+import { StallReporter, WORKERS_POOL_TEST_OPTIONS } from "./vitest";
 
 const ROOT = process.cwd();
 const GRACE_MS = 180_000;
+
+test("each Vitest process caches inside its own package", () => {
+  expect(WORKERS_POOL_TEST_OPTIONS.fsModuleCachePath).toBe(
+    join(ROOT, "node_modules/.cache/vitest-modules")
+  );
+});
 
 function moduleOf(name: string, state = "passed") {
   return { moduleId: `${ROOT}/test/${name}`, state: () => state };

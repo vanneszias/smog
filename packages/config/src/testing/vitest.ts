@@ -1,3 +1,5 @@
+import { join } from "node:path";
+
 /**
  * Shared Vitest settings for the Workers-pool configs
  * (`@cloudflare/vitest-plugin`): timeouts and reporters that make a stuck
@@ -224,6 +226,8 @@ const CI = Boolean(process.env.CI);
  * as it starts.
  */
 export const WORKERS_POOL_TEST_OPTIONS = {
+  // Vitest 5 otherwise shares and clears one workspace-root cache across processes.
+  fsModuleCachePath: join(process.cwd(), "node_modules/.cache/vitest-modules"),
   hookTimeout: 60_000,
   reporters: [CI ? "verbose" : "default", new StallReporter({ logStarts: CI })],
   teardownTimeout: 30_000,

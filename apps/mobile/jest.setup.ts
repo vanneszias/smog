@@ -37,7 +37,9 @@ jest.mock("expo-file-system", () => {
     delete(): void {
       mockFiles.delete(this.uri);
     }
-    write(content: string | Uint8Array): void {
+    async write(content: string | Uint8Array): Promise<void> {
+      // SDK 58 finishes writes asynchronously; sharing first must fail tests.
+      await Promise.resolve();
       mockFiles.set(
         this.uri,
         typeof content === "string"

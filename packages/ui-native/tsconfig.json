@@ -7,7 +7,7 @@
     "declaration": false,
     "declarationMap": false,
     "jsxImportSource": "nativewind",
-    "types": []
+    "types": ["node"]
   },
   "include": [
     "src",

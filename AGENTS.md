@@ -199,7 +199,7 @@ Package names are `@smog/<dir>` (`@smog/gestures`, not `@smog/features-gestures`
 ## Dependencies
 - Allowed dependency directions live in `@smog/config/boundaries` and are enforced by `bun run boundaries`; add a package there before depending on it
 - Shared versions go in the root `package.json` `workspaces.catalog` and are referenced as `"catalog:"`
-- Use the newest stable version of every dependency; a deviation needs a `docs/DECISIONS.md` entry. Held on purpose after the phase 9 sweep (`docs/DECISIONS.md`, phase 9 task 10): Bun 1.3.11 and Biome 2.5.14 (newer stable versions are on the owner's list in `docs/PROGRESS.md`, Post-launch carries), vitest 5 and postcss 8.5.31 (tried and refused), and the Expo SDK 57 pins (React 19.2.3, React Native 0.86, Jest 29, Tailwind 3)
+- Use the newest stable version of every dependency; a deviation needs a `docs/DECISIONS.md` entry. The 2026-10-28 sweep upgrades Bun to 1.4.4, Biome to 2.6.3, Vitest to 5, Expo to SDK 58 and Jest to 30. Compatibility exceptions are SDK 58's native/renderer pins (React 19.3.0, React Native 0.88.0 and the native-module versions selected by Expo), NativeWind 4's Tailwind 3/CSS Interop line, and Babel 7 for Expo's parameter transform. The native TS config temporarily uses React Native's documented `react-native-legacy-deep-imports` condition; migrate refs to instance types before RN removes it after 0.89. All exceptions and the preserved lint policy are recorded in `docs/DECISIONS.md`.
 
 ## Linting
 - Biome handles linting and formatting

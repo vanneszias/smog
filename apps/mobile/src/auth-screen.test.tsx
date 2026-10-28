@@ -82,7 +82,7 @@ describe("leaving the nested auth stack", () => {
   });
 
   it("password success leaves an earlier reset screen behind", async () => {
-    const email = jest.fn(() => Promise.resolve(OK));
+    const email = jest.fn((_input: unknown) => Promise.resolve(OK));
     await renderApp({
       auth: { signIn: { email } },
       authScreens: true,
@@ -114,7 +114,9 @@ describe("leaving the nested auth stack", () => {
 
 describe("sign-in with Turnstile on (the WebView sheet)", () => {
   it("asks the bridge for a token and sends it with the request", async () => {
-    const sendVerificationOtp = jest.fn(() => Promise.resolve(OK));
+    const sendVerificationOtp = jest.fn((_input: unknown) =>
+      Promise.resolve(OK)
+    );
     await renderApp({
       auth: { emailOtp: { sendVerificationOtp } },
       authScreens: true,
@@ -225,7 +227,9 @@ describe("sign-in with Turnstile on (the WebView sheet)", () => {
   });
 
   it("closing the sheet sends nothing and lets the user try again", async () => {
-    const sendVerificationOtp = jest.fn(() => Promise.resolve(OK));
+    const sendVerificationOtp = jest.fn((_input: unknown) =>
+      Promise.resolve(OK)
+    );
     await renderApp({
       auth: { emailOtp: { sendVerificationOtp } },
       authScreens: true,
@@ -272,7 +276,9 @@ describe("sign-in with Turnstile on (the WebView sheet)", () => {
   });
 
   it("without a site key the app asks for no captcha", async () => {
-    const sendVerificationOtp = jest.fn(() => Promise.resolve(OK));
+    const sendVerificationOtp = jest.fn((_input: unknown) =>
+      Promise.resolve(OK)
+    );
     await renderApp({
       auth: { emailOtp: { sendVerificationOtp } },
       authScreens: true,
@@ -291,7 +297,7 @@ describe("sign-in with Turnstile on (the WebView sheet)", () => {
   });
 
   it("offers the magic link in the app", async () => {
-    const magicLink = jest.fn(() => Promise.resolve(OK));
+    const magicLink = jest.fn((_input: unknown) => Promise.resolve(OK));
     await renderApp({
       auth: { signIn: { magicLink } },
       authScreens: true,
@@ -326,7 +332,7 @@ describe("the app's magic link", () => {
   const OTHER = "other@smog.test";
   const LINK = `/magic-link/app?token=${TOKEN}`;
   const verified = (email = EMAIL) =>
-    jest.fn(() =>
+    jest.fn((_input: unknown) =>
       Promise.resolve({
         data: {
           session: { id: "s" },

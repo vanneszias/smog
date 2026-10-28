@@ -84,6 +84,7 @@ export function MenuLabel({
   ...props
 }: ComponentProps<typeof DropdownMenu.Label>): ReactNode {
   return (
+    // biome-ignore lint/a11y/noLabelWithoutControl: Radix renders a menu group heading, not an HTML label.
     <DropdownMenu.Label
       className={cn(
         "px-3 py-2 font-medium text-caption text-muted-foreground",

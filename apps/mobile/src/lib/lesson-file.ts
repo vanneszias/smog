@@ -130,7 +130,7 @@ export async function shareLessonPdf(
   const file = new File(Paths.cache, fileName);
   try {
     file.create({ overwrite: true });
-    file.write(bytes);
+    await file.write(bytes);
     await shareAsync(file.uri, {
       dialogTitle: title,
       mimeType: "application/pdf",
