@@ -70,10 +70,7 @@ function RecentSearchList({
 }): ReactElement {
   const { t } = useTranslation();
   return (
-    <ScrollView
-      contentContainerClassName="gap-2 px-4 pb-6"
-      keyboardShouldPersistTaps="handled"
-    >
+    <View className="gap-2 px-4 pb-6">
       <Heading level={2} size="title-3">
         {t("search.recent")}
       </Heading>
@@ -85,7 +82,7 @@ function RecentSearchList({
       <Button className="self-start" onPress={onClear} variant="ghost">
         {t("search.clearRecent")}
       </Button>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -261,44 +258,51 @@ export default function SearchScreen(): ReactElement {
           {filter}
         </View>
       )}
-      {showRecent ? (
-        <RecentSearchList
-          items={recent.items}
-          onClear={clearRecent}
-          onPick={pickRecent}
-        />
-      ) : (
-        <>
-          {matching.length > 0 ? (
-            <View className="gap-2 pt-2" testID="search-categories">
-              <Heading className="px-4" level={2} size="title-3">
-                {t("search.categories")}
-              </Heading>
-              <CategoryChips
-                categories={matching}
-                onChange={pickMatching}
-                selected={category}
-                showAll={false}
-              />
-            </View>
-          ) : null}
-          <SearchResults
-            className="flex-1 pt-2"
-            emptyAction={
-              category.length > 0 ? (
-                <Button onPress={clearCategories} variant="secondary">
-                  {t("search.clearFilter")}
-                </Button>
-              ) : undefined
-            }
-            items={items}
-            onRetry={retry}
-            renderItem={renderCard}
-            retrying={search.isRefetching}
-            state={state}
+      <ScrollView
+        contentContainerClassName="grow"
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+      >
+        {showRecent ? (
+          <RecentSearchList
+            items={recent.items}
+            onClear={clearRecent}
+            onPick={pickRecent}
           />
-        </>
-      )}
+        ) : (
+          <>
+            {matching.length > 0 ? (
+              <View className="gap-2 pt-2" testID="search-categories">
+                <Heading className="px-4" level={2} size="title-3">
+                  {t("search.categories")}
+                </Heading>
+                <CategoryChips
+                  categories={matching}
+                  onChange={pickMatching}
+                  selected={category}
+                  showAll={false}
+                />
+              </View>
+            ) : null}
+            <SearchResults
+              className="flex-1 pt-2"
+              emptyAction={
+                category.length > 0 ? (
+                  <Button onPress={clearCategories} variant="secondary">
+                    {t("search.clearFilter")}
+                  </Button>
+                ) : undefined
+              }
+              items={items}
+              onRetry={retry}
+              renderItem={renderCard}
+              retrying={search.isRefetching}
+              scrollEnabled={false}
+              state={state}
+            />
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }

@@ -67,6 +67,7 @@ exports[`the production config matches the snapshot with no variant 1`] = `
     "icon": "./assets/smog.icon",
     "infoPlist": {
       "ITSAppUsesNonExemptEncryption": false,
+      "UIViewControllerBasedStatusBarAppearance": true,
     },
     "supportsTablet": true,
     "usesAppleSignIn": true,
@@ -102,6 +103,7 @@ exports[`the production config matches the snapshot with no variant 1`] = `
       },
     ],
     "./plugins/with-screen-capture-permissions.js",
+    "./plugins/with-ios-scenes.js",
   ],
   "runtimeVersion": {
     "policy": "fingerprint",

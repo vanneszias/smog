@@ -39,7 +39,7 @@ export function AppShell(): ReactElement {
       <KitProvider>
         <ToastProvider>
           <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(tabs)" options={{ statusBarStyle: "light" }} />
             <Stack.Screen name="(auth)" options={{ presentation: "modal" }} />
             <Stack.Screen name="settings" />
             <Stack.Screen name="gestures/[slug]" options={card} />

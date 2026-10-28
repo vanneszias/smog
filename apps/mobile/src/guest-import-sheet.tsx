@@ -79,7 +79,8 @@ export function GuestImportSheet(): ReactNode {
   const { accept, dismiss, pending, result, status } = guestImport;
   const [closed, setClosed] = useState(false);
   const showsResult = status === "done" && result !== null;
-  const open = !closed && (pending !== null || showsResult);
+  const open =
+    !closed && (pending !== null || status === "importing" || showsResult);
 
   const onOpenChange = useCallback((next: boolean) => {
     if (!next) {

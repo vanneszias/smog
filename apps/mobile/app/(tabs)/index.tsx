@@ -22,7 +22,7 @@ import { useIsFocused, useRouter } from "expo-router";
 import ArrowRight from "lucide-react-native/icons/arrow-right";
 import Settings from "lucide-react-native/icons/settings";
 import { type ReactElement, useCallback, useState } from "react";
-import { ScrollView, StatusBar, View } from "react-native";
+import { Platform, ScrollView, StatusBar, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
@@ -170,7 +170,9 @@ export default function HomeScreen(): ReactElement {
       keyboardShouldPersistTaps="handled"
       testID="home-screen"
     >
-      {focused ? <StatusBar barStyle="light-content" /> : null}
+      {focused && Platform.OS === "android" ? (
+        <StatusBar barStyle="light-content" />
+      ) : null}
       <Surface
         className="gap-4 rounded-b-3xl px-4 pb-8"
         style={{ paddingTop: insets.top + 16 }}

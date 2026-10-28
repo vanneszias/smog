@@ -141,11 +141,15 @@ describe("app.config", () => {
     }
   });
 
-  it("registers the permission-stripping plugin", () => {
+  it("registers the permission-stripping and iOS scene plugins", () => {
     const config = load();
     expect(config.plugins).toContain(
       "./plugins/with-screen-capture-permissions.js"
     );
+    expect(config.plugins).toContain("./plugins/with-ios-scenes.js");
+    expect(
+      config.ios?.infoPlist?.UIViewControllerBasedStatusBarAppearance
+    ).toBe(true);
   });
 
   it("enables Sign in with Apple on iOS", () => {

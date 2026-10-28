@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { router } from "expo-router";
 import {
   act,
   fireEvent,
@@ -6,7 +7,6 @@ import {
   waitFor,
   within,
 } from "expo-router/testing-library";
-import { router } from "expo-router";
 import { Linking } from "react-native";
 import type { TestInstance } from "test-renderer";
 import {
@@ -91,13 +91,24 @@ describe("leaving the nested auth stack", () => {
     });
     await screen.findByText("Forgot your password");
     await act(() => router.push("/sign-in"));
-    await fireEvent.changeText(await screen.findByPlaceholderText("name@example.com"), EMAIL);
+    await fireEvent.changeText(
+      await screen.findByPlaceholderText("name@example.com"),
+      EMAIL
+    );
     await fireEvent.press(screen.getByRole("button", { name: "Continue" }));
-    await fireEvent.press(await screen.findByRole("button", { name: "With my password" }));
-    await fireEvent.changeText(screen.getByLabelText("Password"), "test-password");
+    await fireEvent.press(
+      await screen.findByRole("button", { name: "With my password" })
+    );
+    await fireEvent.changeText(
+      screen.getByLabelText("Password"),
+      "test-password"
+    );
     await fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByTestId("home-screen")).toBeOnTheScreen();
-    expect(email).toHaveBeenCalledWith({ email: EMAIL, password: "test-password" });
+    expect(email).toHaveBeenCalledWith({
+      email: EMAIL,
+      password: "test-password",
+    });
   });
 });
 

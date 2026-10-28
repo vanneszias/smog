@@ -1,0 +1,33 @@
+appId: ${APP_ID}
+---
+# An installed development build, English device language, seeded local backend.
+# Keeps device data: an existing signed-in session is acceptable for this smoke.
+- launchApp
+- tapOn:
+    text: "Allow"
+    optional: true
+- tapOn:
+    text: "Only necessary"
+    optional: true
+- assertVisible:
+    id: home-screen
+- takeScreenshot: ios-home
+- tapOn: "Search for a gesture"
+- inputText: "kat"
+- pressKey: Enter
+- assertVisible: "Kat"
+- takeScreenshot: ios-search
+- tapOn: "Search for a gesture"
+- tapOn: "Clear text"
+- inputText: "zzzzzzzz"
+- pressKey: Enter
+- assertVisible: "No gestures found"
+- takeScreenshot: ios-no-results
+- tapOn: "Favorites"
+- takeScreenshot: ios-favorites
+- tapOn: "Lists"
+- takeScreenshot: ios-lists
+- tapOn: "Home"
+- tapOn: "Settings"
+- assertVisible: "Preferences"
+- takeScreenshot: ios-settings

@@ -1,0 +1,27 @@
+appId: ${APP_ID}
+---
+# Signed in as the disposable iOS QA account, with QA_PASSWORD; changes its password.
+- runFlow:
+    when:
+      visible: "Home"
+    commands:
+      - tapOn: "Home"
+      - tapOn: "Settings"
+- scrollUntilVisible:
+    element: ".*${QA_EMAIL}.*"
+- tapOn: ".*${QA_EMAIL}.*"
+- assertVisible:
+    id: account-screen
+- tapOn:
+    text: "Name"
+    index: 1
+- eraseText: 100
+- inputText: "iOS QA edited"
+- tapOn: "Save"
+- assertVisible: "Your profile has been saved."
+- takeScreenshot: ios-profile-saved
+- scrollUntilVisible:
+    element: "Change password"
+    centerElement: true
+- tapOn: "Change password"
+- runFlow: ios-password-update.yaml

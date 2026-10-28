@@ -106,9 +106,7 @@ describe("home", () => {
         name: "Gestures that support your speech",
       })
     ).toBeOnTheScreen();
-    expect(
-      home.getByPlaceholderText("Search for a gesture")
-    ).toBeOnTheScreen();
+    expect(home.getByPlaceholderText("Search for a gesture")).toBeOnTheScreen();
   });
 
   it("continues where this device left off", async () => {

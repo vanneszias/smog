@@ -1,0 +1,18 @@
+appId: ${APP_ID}
+---
+# Starts on Settings; returns to signed-out Home.
+- runFlow:
+    when:
+      notVisible: 'Sign out\?'
+    commands:
+      - scrollUntilVisible:
+          element: ".*${QA_EMAIL}.*"
+      - tapOn: ".*${QA_EMAIL}.*"
+      - scrollUntilVisible:
+          element: "Sign out"
+          centerElement: true
+      - tapOn: "Sign out"
+- tapOn:
+    point: "68%,56%"
+- tapOn: "Settings"
+- openLink: "smog-dev:///"

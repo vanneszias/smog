@@ -1,0 +1,33 @@
+appId: ${APP_ID}
+---
+# Signed-out Home with guest data, verified QA_EMAIL and QA_PASSWORD.
+- runFlow:
+    when:
+      visible: "Settings"
+    commands:
+      - tapOn: "Settings"
+      - scrollUntilVisible:
+          element: "Sign in"
+      - tapOn: "Sign in"
+- runFlow:
+    when:
+      visible: "name@example.com"
+    commands:
+      - tapOn: "name@example.com"
+      - eraseText: 100
+      - inputText: ${QA_EMAIL}
+      - tapOn: "Continue"
+      - tapOn: "With my password"
+- tapOn:
+    text: "Password"
+    index: 1
+- inputText: ${QA_PASSWORD}
+- tapOn: "Sign in"
+- assertVisible: 'Bring your data along\?'
+- takeScreenshot: ios-import-prompt
+- tapOn: "Import"
+- assertVisible: "Your favorites and lists are now in your account."
+- tapOn: "Done"
+- tapOn: "Lists"
+- assertVisible: ".*iOS import practice.*"
+- takeScreenshot: ios-imported-list

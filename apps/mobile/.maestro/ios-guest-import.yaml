@@ -1,0 +1,17 @@
+appId: ${APP_ID}
+---
+# Signed-out Home; QA_EMAIL is a verified disposable account with QA_PASSWORD.
+- launchApp
+- tapOn:
+    text: "Only necessary"
+    optional: true
+- tapOn: "Lists"
+- tapOn: "New list"
+- tapOn: "Name"
+- inputText: "iOS import practice"
+- tapOn: "Create"
+- assertVisible: "This list is empty"
+- takeScreenshot: ios-guest-list-created
+- tapOn: "Lists"
+- tapOn: "Home"
+- runFlow: ios-import-signin.yaml

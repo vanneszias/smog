@@ -1,0 +1,30 @@
+appId: ${APP_ID}
+---
+# Signed out; VIEW_URL and EDIT_URL are development-scheme links to one fixture.
+- openLink: ${VIEW_URL}
+- tapOn:
+    text: "Open"
+    optional: true
+- tapOn:
+    text: "Open"
+    optional: true
+- assertVisible: "iOS shared access QA"
+- assertVisible: "Hond"
+- assertNotVisible: "Add gestures"
+- assertNotVisible: "Sign in to add or remove gestures."
+- takeScreenshot: ios-guest-view-only
+- openLink: ${EDIT_URL}
+- tapOn:
+    text: "Open"
+    optional: true
+- assertVisible: "Sign in to add or remove gestures."
+- assertVisible: "Hond"
+- assertNotVisible: "Add gestures"
+- takeScreenshot: ios-guest-edit-prompt
+- openLink: "smog-dev://lists/maestro-unknown-share-token"
+- tapOn:
+    text: "Open"
+    optional: true
+- assertVisible: "List not found"
+- takeScreenshot: ios-shared-not-found
+- tapOn: "Go to the home page"

@@ -157,6 +157,7 @@ export default function createConfig({ config }: ConfigContext): ExpoConfig {
       icon: "./assets/smog.icon",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        UIViewControllerBasedStatusBarAppearance: true,
       },
       supportsTablet: true,
       usesAppleSignIn: true,
@@ -184,6 +185,7 @@ export default function createConfig({ config }: ConfigContext): ExpoConfig {
         },
       ],
       "./plugins/with-screen-capture-permissions.js",
+      "./plugins/with-ios-scenes.js",
     ],
     runtimeVersion: { policy: "fingerprint" },
     scheme: identity.scheme,

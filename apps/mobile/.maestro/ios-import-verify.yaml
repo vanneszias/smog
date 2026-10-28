@@ -1,0 +1,10 @@
+appId: ${APP_ID}
+---
+# Signed-in Home after an import, including after a development reload.
+- tapOn: "Lists"
+- assertVisible: ".*iOS import practice.*"
+- tapOn: ".*iOS import practice.*"
+- assertVisible: "This list is empty"
+- takeScreenshot: ios-import-persisted
+- tapOn: "Lists"
+- tapOn: "Home"

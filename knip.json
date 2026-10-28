@@ -14,6 +14,10 @@
       "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts", "generated/*.{css,cjs}"]
     },
+    "packages/utils": {
+      "entry": ["src/**/*.test.ts", "src/**/*.native.ts"],
+      "project": ["src/**/*.ts"]
+    },
     "packages/ui-web": {
       "entry": ["src/**/*.test.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx,css}"],
@@ -104,6 +108,7 @@
       "ignoreDependencies": ["cloudflare"]
     },
     "apps/mobile": {
+      "ignoreDependencies": ["expo-crypto", "expo-network"],
       "entry": [
         "app/**/*.{ts,tsx}",
         "plugins/*.js",
