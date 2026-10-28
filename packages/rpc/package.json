@@ -7,12 +7,11 @@
     ".": "./src/index.ts",
     "./audit": "./src/audit-guard.ts",
     "./contract": "./src/contract.ts",
-    "./react": "./src/react.tsx",
-    "./testing": "./src/testing.ts"
+    "./react": "./src/react.tsx"
   },
   "scripts": {
-    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",
-    "test": "bun ../../scripts/test-deadline.ts -- vitest run"
+    "check-types": "wrangler types --config ../testing/config/workers/rpc.wrangler.jsonc && tsc -b",
+    "test": "bun ../testing/runner.ts --package rpc"
   },
   "dependencies": {
     "@orpc/client": "catalog:",
@@ -27,14 +26,10 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "19.3.0",
     "react": "catalog:",
-    "react-dom": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "wrangler": "catalog:"
   },
   "peerDependencies": {

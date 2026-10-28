@@ -65,9 +65,10 @@
     "release:check:mobile": "bun run mobile:release-check",
     "release:check:tests": "bun run test",
     "retention": "bun scripts/retention.ts",
-    "test": "turbo run test test:scripts --log-order=stream",
-    "test:e2e": "bun scripts/e2e.ts",
-    "test:scripts": "bun scripts/test-deadline.ts -- bun test ./scripts"
+    "test": "bun packages/testing/runner.ts",
+    "test:e2e": "bun packages/testing/e2e.ts",
+    "test:feature": "bun packages/testing/runner.ts --feature",
+    "test:scripts": "bun packages/testing/runner.ts --package tooling"
   },
   "overrides": {
     "deepmerge": "file:vendor/deepmerge",
@@ -84,7 +85,6 @@
     "@smog/config": "workspace:*",
     "@smog/jobs": "workspace:*",
     "@types/bun": "catalog:",
-    "deepmerge": "file:vendor/deepmerge",
     "knip": "6.43.0",
     "turbo": "2.11.10",
     "typescript": "catalog:",

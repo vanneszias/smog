@@ -34,6 +34,30 @@ export const FEATURE_PACKAGES = [
 ] as const;
 
 export const BOUNDARIES: Record<string, readonly string[]> = {
+  // Only the private test workspace may exercise every production package.
+  // No production package may depend on it (including devDependencies).
+  "@smog/testing": [
+    "@smog/config",
+    "@smog/api",
+    "@smog/auth",
+    "@smog/rpc",
+    "@smog/db",
+    "@smog/jobs",
+    "@smog/analytics",
+    "@smog/email",
+    "@smog/payments",
+    "@smog/video",
+    "@smog/pdf",
+    "@smog/local-store",
+    "@smog/i18n",
+    "@smog/styles",
+    "@smog/brand",
+    "@smog/ui-web",
+    "@smog/ui-native",
+    "@smog/utils",
+    "@smog/migrate-convex",
+    FEATURE_PATTERN,
+  ],
   // Scripts read the env schemas and the client-safe feature schemas
   // (`admin:grant`, `maintenance`) and the cron table (`bun run cron`,
   // release-config-check); they never import feature servers.
@@ -98,7 +122,7 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
     "@smog/email",
     "@smog/jobs",
     // The PDF layout engine (phase 10c): only `@smog/lessons` and the site use
-    // it, which `scripts/check-boundaries.test.ts` asserts on the real graph.
+    // it, which `packages/testing/bun/shared/tooling/check-boundaries.test.ts` asserts on the real graph.
     "@smog/pdf",
     "@smog/analytics/server",
     // Client hooks track through `useAnalytics()` (a no-op without a provider).
@@ -140,7 +164,7 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
   // tests only, which drive the real services: the feature servers,
   // `@smog/auth`, `@smog/rpc`, and the Mollie fake the
   // sponsorship services take. `src/core` is held tighter by its own test
-  // (`packages/migrate-convex/test/core-rules.test.ts`).
+  // (`packages/testing/bun/shared/migrate-convex/service/core-rules.test.ts`).
   "@smog/migrate-convex": [
     "@smog/config",
     "@smog/utils",

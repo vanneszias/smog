@@ -1,0 +1,26 @@
+{
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["bun", "vite/client"],
+    "paths": {
+      "@/*": ["../../../../apps/site/src/*"]
+    },
+    "rootDir": "../../../.."
+  },
+  "include": [
+    "../../bun/shared/site-scripts",
+    "../../bun/admin/site",
+    "../../bun/gestures/site",
+    "../../bun/lessons/site",
+    "../../bun/shared/site",
+    "../../bun/sponsorships/site",
+    "../../bun/translation/site"
+  ],
+  "files": [
+    "../../../../apps/site/worker-configuration.d.ts",
+    "../../../../apps/site/src/globals.d.ts"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "extends": "../../../../apps/mobile/tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["node", "expo/types"],
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "paths": {
+      "@/*": ["../../../../apps/mobile/src/*"]
+    },
+    "rootDir": "../../../.."
+  },
+  "include": [
+    "../../native/account/mobile",
+    "../../native/auth/mobile",
+    "../../native/gestures/mobile",
+    "../../native/lessons/mobile",
+    "../../native/shared/mobile",
+    "../../native/sponsorships/mobile",
+    "../native/mobile",
+    "../../support/ui-native/jest-matchers.d.ts",
+    "../../../../apps/mobile/nativewind-env.d.ts"
+  ]
+}

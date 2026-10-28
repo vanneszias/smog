@@ -42,7 +42,7 @@ jobs:
 
   # Playwright e2e (phase 9 ruling 1): always on, beside the release lanes
   # (no `needs`), so a failure in either blocks Deploy, which calls this
-  # workflow. One shard per Playwright project (apps/site/playwright.config.ts),
+  # workflow. One shard per Playwright project (packages/testing/config/playwright.ts),
   # each on its own runner with its own dev server and D1; `serial` runs the
   # two specs that change what every visitor sees. Mollie, Mux and Turnstile
   # are the repository's fakes; nothing here needs a secret.
@@ -90,7 +90,7 @@ jobs:
           SMOG_TEST_DEADLINE_MINUTES: "35"
       # A pass on the retry is a bug to fix: warning annotations and the job summary.
       - if: always()
-        run: bun scripts/e2e-flaky-report.ts apps/site/playwright-report/results.json
+        run: bun packages/testing/e2e-flaky-report.ts packages/testing/playwright-report/results.json
       # Always: a pass on the retry keeps its trace too (ruling 2), and a
       # failed or timed-out shard keeps its evidence.
       - if: always()
@@ -98,7 +98,7 @@ jobs:
         with:
           name: e2e-${{ matrix.shard }}
           path: |
-            apps/site/test-results/
-            apps/site/playwright-report/
+            packages/testing/test-results/
+            packages/testing/playwright-report/
           if-no-files-found: warn
           retention-days: 7

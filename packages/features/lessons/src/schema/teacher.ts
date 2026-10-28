@@ -2,7 +2,7 @@
  * Teacher information and drawings (phase 10c, spec 4.1 to 4.3): the shapes
  * and caps shared by the contract, the server, the editor and the PDFs.
  * Client-safe. **Private material:** nothing here may be reachable from a
- * public output schema (`packages/api/test/teacher-privacy.test.ts`).
+ * public output schema (`packages/testing/workers/shared/api/service/teacher-privacy.test.ts`).
  */
 import { localeCodeSchema } from "@smog/config/locale";
 import {

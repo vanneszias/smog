@@ -13,7 +13,7 @@ The dependency-free CommonJS build also runs in Metro; the unused UMD build is o
 The root dependency and override replace every transitive `deepmerge` with this explicitly named
 `@smog/deepmerge` fork. It is not an advisory exclusion or an upstream version bump.
 The fork is excluded from Biome to preserve the upstream code for review.
-Regression and compatibility checks are in `scripts/dependency-security.test.ts`.
+Regression and compatibility checks are in `packages/testing/bun/shared/tooling/dependency-security.test.ts`.
 
 Remove this directory and its override when upstream publishes a fixed compatible
 release. Do not downgrade to 4.1.2: it also writes untrusted keys unsafely.

@@ -1,0 +1,332 @@
+import { beforeAll, jest } from "@jest/globals";
+import { createApiClient } from "@smog/api/client";
+import type { ExpoAuthClient } from "@smog/auth/expo";
+import type { SessionHookResult } from "@smog/auth/react";
+import {
+  createLocalStore,
+  createMemoryAdapter,
+  type GuestData,
+} from "@smog/local-store";
+import { QueryClient } from "@tanstack/react-query";
+import { renderRouter } from "expo-router/testing-library";
+import type { ReactElement } from "react";
+import { Text } from "react-native";
+import { AppShell } from "../../../../apps/mobile/src/app-shell";
+import type { PersistStorage } from "../../../../apps/mobile/src/lib/query-persist";
+import {
+  type AppClients,
+  AppProviders,
+  sessionHook,
+} from "../../../../apps/mobile/src/providers";
+
+/*
+ * The app's real routes and providers over a fake API: `renderApp` mounts
+ * the root stack, the tabs and the learning screens with an oRPC client
+ * whose fetch answers from `routes`, a memory local store and a guest or
+ * signed-in session. No network, no SecureStore.
+ */
+
+export const HOND = {
+  categories: [{ name: "Dieren", slug: "dieren" }],
+  fallbackUsed: false,
+  id: "g-hond",
+  name: "Hond",
+  playbackId: "playback-hond",
+  slug: "hond",
+};
+export const KAT = {
+  categories: [{ name: "Dieren", slug: "dieren" }],
+  fallbackUsed: false,
+  id: "g-kat",
+  name: "Kat",
+  playbackId: "playback-kat",
+  slug: "kat",
+};
+
+/** An error as the site's RPC handler sends it (a typed, defined error). */
+export function rpcError(code: string, status: number): Response {
+  return Response.json(
+    { json: { code, defined: true, message: code, status } },
+    { status }
+  );
+}
+
+/** One procedure's answer: its output, or a Response (an error). */
+type RouteAnswer =
+  | unknown
+  | ((input: unknown) => unknown)
+  | { response: Response };
+
+type Routes = Record<string, RouteAnswer>;
+
+/** The catalogue every screen can read. */
+const CATALOG_ROUTES: Routes = {
+  "gestures/byIds": (input: unknown) => {
+    const { ids } = input as { ids: string[] };
+    return [HOND, KAT].filter((gesture) => ids.includes(gesture.id));
+  },
+  "gestures/bySlug": (input: unknown) => {
+    const { slug } = input as { slug: string };
+    const gesture = [HOND, KAT].find(
+      (item) => item.slug === slug || item.id === slug
+    );
+    if (!gesture) {
+      return { response: rpcError("NOT_FOUND", 404) };
+    }
+    return {
+      ...gesture,
+      audioPath: null,
+      canonicalSlug: gesture.slug,
+      description: `Het gebaar voor ${gesture.name.toLowerCase()}.`,
+      keywords: ["huisdier"],
+      // Like every video that existed before the textless ones: the name is in the picture.
+      needsRecut: true,
+      publishedAt: 0,
+      sponsor: null,
+      updatedAt: 0,
+    };
+  },
+  "gestures/categories": [{ gestureCount: 2, name: "Dieren", slug: "dieren" }],
+  "gestures/list": { items: [HOND, KAT], nextCursor: null },
+  "gestures/related": (input: unknown) => {
+    const { slug } = input as { slug: string };
+    return [HOND, KAT].filter((gesture) => gesture.slug !== slug);
+  },
+  "gestures/search": (input: unknown) => {
+    const { q } = input as { q: string };
+    const items = [HOND, KAT]
+      .filter((gesture) => gesture.name.toLowerCase().includes(q.toLowerCase()))
+      .map((gesture) => ({
+        ...gesture,
+        matchedField: q ? "name" : null,
+        matchType: q ? "startsWith" : null,
+        score: q ? 1 : 0,
+      }));
+    return { items, total: items.length };
+  },
+};
+
+function answer(route: RouteAnswer, input: unknown): Response {
+  const value = typeof route === "function" ? route(input) : route;
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "response" in value &&
+    value.response instanceof Response
+  ) {
+    return value.response;
+  }
+  return Response.json({ json: value ?? null, meta: [] });
+}
+
+/** A fetch that answers `/api/rpc/<path>` from `routes` (404 otherwise). */
+function fakeFetch(
+  routes: Routes
+): jest.Mock<(request: Request) => Promise<Response>> {
+  return jest.fn(async (request: Request) => {
+    const path = new URL(request.url).pathname.replace("/api/rpc/", "");
+    const route = routes[path];
+    if (route === undefined) {
+      return rpcError("NOT_FOUND", 404);
+    }
+    let input: unknown;
+    if (request.method === "GET") {
+      const data = new URL(request.url).searchParams.get("data");
+      input = data ? (JSON.parse(data) as { json?: unknown }).json : undefined;
+    } else {
+      const text = await request.text();
+      input = text ? (JSON.parse(text) as { json?: unknown }).json : undefined;
+    }
+    return answer(route, input);
+  });
+}
+
+const USER = {
+  email: "an@smog.test",
+  id: "u-an",
+  image: null,
+  name: "An",
+  role: "user",
+};
+
+function guestData(partial: Partial<GuestData> = {}): GuestData {
+  return {
+    // Decided, so the consent sheet stays closed unless a test opens it.
+    consent: { analytics: false, decidedAt: 1 },
+    favorites: [],
+    lists: [],
+    preferences: {
+      importDismissedFor: [USER.id],
+      locale: "en",
+      theme: "light",
+    },
+    recentSearches: [],
+    version: 2,
+    ...partial,
+  };
+}
+
+/** AsyncStorage's API over a Map. */
+export function memoryStorage(): PersistStorage & { map: Map<string, string> } {
+  const map = new Map<string, string>();
+  return {
+    getItem: (key) => Promise.resolve(map.get(key) ?? null),
+    map,
+    removeItem: (key) => {
+      map.delete(key);
+      return Promise.resolve();
+    },
+    setItem: (key, value) => {
+      map.set(key, value);
+      return Promise.resolve();
+    },
+  };
+}
+
+export interface RenderAppOptions {
+  /** Better Auth client calls the screens make (signOut, linkSocial, …). */
+  auth?: Record<string, unknown>;
+  /** The real sign-in screen instead of the stub (auth screen tests). */
+  authScreens?: boolean;
+  cacheStorage?: PersistStorage;
+  /** Replaces the fake API fetch (e.g. one that always fails, offline). */
+  fetch?: (request: Request) => Promise<Response>;
+  guest?: Partial<GuestData>;
+  initialUrl?: string;
+  queryClient?: QueryClient;
+  /** The real settings screen instead of the stub (the lessons entry). */
+  realSettings?: boolean;
+  /** The signed-in user's roles (`session.user.roles`); none by default. */
+  roles?: readonly string[];
+  routes?: Routes;
+  signedIn?: boolean;
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: route modules as expo-router's test renderer takes them
+type RouteModule = any;
+
+/** Sign-in has its own tests; here it only has to be reached. */
+function SignInStub(): ReactElement {
+  return <Text testID="sign-in-screen">sign in</Text>;
+}
+
+function SettingsStub(): ReactElement {
+  return <Text testID="settings-screen">settings</Text>;
+}
+
+/** The app's routes, as files (`require` keeps the real module objects). */
+function appRoutes(
+  root: () => ReactElement,
+  authScreens: boolean,
+  realSettings = false
+): Record<string, RouteModule> {
+  const layout = require("../../../../apps/mobile/app/_layout");
+  return {
+    _layout: { default: root, unstable_settings: layout.unstable_settings },
+    "(auth)/_layout": require("../../../../apps/mobile/app/(auth)/_layout"),
+    "(auth)/magic-link": require("../../../../apps/mobile/app/(auth)/magic-link"),
+    "(auth)/sign-in": authScreens
+      ? require("../../../../apps/mobile/app/(auth)/sign-in")
+      : { default: SignInStub },
+    ...(authScreens
+      ? {
+          "(auth)/forgot-password": require("../../../../apps/mobile/app/(auth)/forgot-password"),
+          "(auth)/sign-up": require("../../../../apps/mobile/app/(auth)/sign-up"),
+        }
+      : {}),
+    "(tabs)/_layout": require("../../../../apps/mobile/app/(tabs)/_layout"),
+    "(tabs)/favorites/_layout": require("../../../../apps/mobile/app/(tabs)/favorites/_layout"),
+    "(tabs)/favorites/index": require("../../../../apps/mobile/app/(tabs)/favorites/index"),
+    "(tabs)/index": require("../../../../apps/mobile/app/(tabs)/index"),
+    "(tabs)/lists/_layout": require("../../../../apps/mobile/app/(tabs)/lists/_layout"),
+    "(tabs)/lists/[id]": require("../../../../apps/mobile/app/(tabs)/lists/[id]"),
+    "(tabs)/lists/index": require("../../../../apps/mobile/app/(tabs)/lists/index"),
+    "(tabs)/search/_layout": require("../../../../apps/mobile/app/(tabs)/search/_layout"),
+    "(tabs)/search/index": require("../../../../apps/mobile/app/(tabs)/search/index"),
+    "+native-intent": require("../../../../apps/mobile/app/+native-intent"),
+    "gestures/[slug]": require("../../../../apps/mobile/app/gestures/[slug]"),
+    "settings/_layout": require("../../../../apps/mobile/app/settings/_layout"),
+    "settings/account": require("../../../../apps/mobile/app/settings/account"),
+    "settings/index": realSettings
+      ? require("../../../../apps/mobile/app/settings/index")
+      : { default: SettingsStub },
+    "settings/lessons/[id]": require("../../../../apps/mobile/app/settings/lessons/[id]"),
+    "settings/lessons/index": require("../../../../apps/mobile/app/settings/lessons/index"),
+    "shared/[token]": require("../../../../apps/mobile/app/shared/[token]"),
+  };
+}
+
+/*
+ * The first test of a route-rendering suite used to pay the cold require of
+ * expo-router and every route module inside its own 10 s timeout, which a
+ * loaded machine (the whole turbo test run on 4 cores) passed. Every suite
+ * that imports this harness requires the routes once here, under a hook
+ * timeout of its own, so no test is charged for the cold load.
+ */
+beforeAll(() => {
+  appRoutes(SignInStub, true);
+}, 120_000);
+
+export interface RenderedApp {
+  clients: AppClients;
+  fetch: jest.Mock<(request: Request) => Promise<Response>>;
+  result: Awaited<ReturnType<typeof renderRouter>>;
+}
+
+/** Renders the app at `initialUrl` (home by default). */
+export async function renderApp({
+  auth: authCalls = {},
+  authScreens = false,
+  cacheStorage = memoryStorage(),
+  fetch: customFetch,
+  guest,
+  initialUrl = "/",
+  queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { gcTime: Number.POSITIVE_INFINITY, retry: false },
+    },
+  }),
+  realSettings = false,
+  roles = [],
+  routes = {},
+  signedIn = false,
+}: RenderAppOptions = {}): Promise<RenderedApp> {
+  const fetch = customFetch
+    ? jest.fn(customFetch)
+    : fakeFetch({ ...CATALOG_ROUTES, ...routes });
+  const session: SessionHookResult = {
+    data: signedIn ? { user: { ...USER, roles } } : null,
+    error: null,
+    isPending: false,
+  };
+  const auth = {
+    signOut: () => Promise.resolve({ data: { success: true }, error: null }),
+    ...authCalls,
+    getCookie: () => (signedIn ? "smog.session_token=t" : ""),
+    useSession: () => session,
+  } as unknown as ExpoAuthClient;
+  const clients: AppClients = {
+    api: createApiClient({ baseUrl: "https://smog.test", fetch }),
+    auth,
+    cacheStorage,
+    queryClient,
+    store: createLocalStore(
+      createMemoryAdapter({ "smog:guest:v1": JSON.stringify(guestData(guest)) })
+    ),
+    useSession: sessionHook(auth),
+  };
+  function Root(): ReactElement {
+    return (
+      <AppProviders clients={clients}>
+        <AppShell />
+      </AppProviders>
+    );
+  }
+  const result = await renderRouter(
+    appRoutes(Root, authScreens, realSettings),
+    {
+      initialUrl,
+    }
+  );
+  return { clients, fetch, result };
+}

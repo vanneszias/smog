@@ -2,7 +2,7 @@
   "extends": "@smog/config/tsconfig/worker.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "types": ["@cloudflare/vitest-plugin/types"]
+    "types": []
   },
-  "include": ["src", "test", "vitest.config.ts"]
+  "include": ["src"]
 }

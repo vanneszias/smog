@@ -1,0 +1,20 @@
+{
+  "extends": "../../../ui-native/tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["node", "expo/types"],
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "rootDir": "../../../.."
+  },
+  "include": [
+    "../../native/shared/ui-native",
+    "../native/ui-native",
+    "../../support/ui-native/jest-matchers.d.ts",
+    "../../../ui-native/nativewind-env.d.ts"
+  ]
+}

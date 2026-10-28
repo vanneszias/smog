@@ -1,0 +1,27 @@
+{
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["@cloudflare/vitest-plugin/types", "vite/client"],
+    "paths": {
+      "@/*": ["../../../../apps/site/src/*"]
+    },
+    "rootDir": "../../../.."
+  },
+  "include": [
+    "../../workers/admin/site",
+    "../../workers/auth/site",
+    "../../workers/gestures/site",
+    "../../workers/lessons/site",
+    "../../workers/shared/site",
+    "../../workers/sponsorships/site",
+    "../../workers/translation/site",
+    "../workers/site.ts"
+  ],
+  "files": [
+    "../../../../apps/site/worker-configuration.d.ts",
+    "../../../../apps/site/src/globals.d.ts"
+  ]
+}

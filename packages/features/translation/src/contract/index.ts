@@ -2,7 +2,7 @@
  * `@smog/translation/contract` (phase 10b task 4): the translation screens'
  * procedures, mounted as `translation` in `@smog/api`'s `appContract`.
  *
- * Who may call what (`packages/api/test/authz.test.ts` lists each):
+ * Who may call what (`packages/testing/workers/shared/api/service/authz.test.ts` lists each):
  * - the strings, the language list and the coverage need the `translator`
  *   role (an `admin` passes: `UNAUTHORIZED` for guests, `FORBIDDEN` for
  *   everybody else, the roles read from D1 on every request);

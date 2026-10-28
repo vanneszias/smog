@@ -5,14 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./package.json": "./package.json",
-    "./jest-setup": "./jest.setup-env.ts",
-    "./jest-matchers": "./src/test/jest-matchers.d.ts",
-    "./a11y-audit": "./src/test/a11y-audit.ts"
+    "./package.json": "./package.json"
   },
   "scripts": {
     "check-types": "tsc --noEmit",
-    "test": "bun ../../scripts/test-deadline.ts -- jest"
+    "test": "bun ../testing/runner.ts --package ui-native"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "5.2.14",
@@ -26,31 +23,21 @@
     "tailwind-merge": "3.7.0"
   },
   "devDependencies": {
-    "@jest/globals": "~30.5.2",
     "@smog/config": "workspace:*",
-    "@tailwindcss/oxide": "4.3.3",
-    "@testing-library/react-native": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
-    "babel-jest": "~30.5.2",
-    "babel-preset-expo": "~58.0.21",
     "expo-audio": "~58.0.10",
     "expo-haptics": "~58.0.7",
     "expo-video": "~58.0.12",
-    "jest": "~30.5.2",
-    "jest-expo": "~58.0.12",
     "nativewind": "catalog:",
-    "postcss": "8.5.32",
     "react": "catalog:",
     "react-native": "0.88.0",
-    "react-native-css-interop": "0.2.7",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "~5.10.1",
     "react-native-svg": "15.16.0",
     "react-native-worklets": "0.13.0",
     "tailwindcss": "3.4.19",
-    "test-renderer": "catalog:",
     "typescript": "catalog:"
   },
   "peerDependencies": {

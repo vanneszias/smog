@@ -1,0 +1,15 @@
+{
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["@cloudflare/vitest-plugin/types", "vite/client"],
+    "rootDir": "../../../.."
+  },
+  "include": [
+    "../../workers/sponsorships/service",
+    "../workers/sponsorships.ts"
+  ],
+  "files": ["../../../features/sponsorships/worker-configuration.d.ts"]
+}

@@ -1,11 +1,8 @@
 {
-  // The engine is pure: no Workers types, no Node types, no DOM. It runs in
-  // the Worker, in the tests and, if risk R1 ever forces it, in a browser.
   "extends": "@smog/config/tsconfig/library.json",
   "compilerOptions": {
     "lib": ["ESNext"],
     "types": []
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts"]
+  "include": ["src"]
 }

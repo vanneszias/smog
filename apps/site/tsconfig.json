@@ -6,14 +6,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["vite/client", "@cloudflare/vitest-plugin/types"]
+    "types": ["vite/client"]
   },
-  "include": [
-    "src",
-    "test",
-    "build-bytes.ts",
-    "build-defines.ts",
-    "vite.config.ts",
-    "vitest.config.ts"
-  ]
+  "include": ["src", "build-bytes.ts", "build-defines.ts", "vite.config.ts"]
 }

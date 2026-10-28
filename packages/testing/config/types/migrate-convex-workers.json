@@ -1,0 +1,15 @@
+{
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["@cloudflare/vitest-plugin/types", "vite/client"],
+    "rootDir": "../../../.."
+  },
+  "include": [
+    "../../workers/shared/migrate-convex",
+    "../workers/migrate-convex.ts"
+  ],
+  "files": ["../../../migrate-convex/worker-configuration.d.ts"]
+}

@@ -10,8 +10,8 @@
     "./client": "./src/client/index.ts"
   },
   "scripts": {
-    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json && tsc -p tsconfig.test.json",
-    "test": "bun ../../../scripts/test-deadline.ts -- vitest run && bun ../../../scripts/test-deadline.ts -- bun test --timeout=20000 --preload @smog/config/testing/happy-dom src"
+    "check-types": "wrangler types --config ../../testing/config/workers/account.wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json",
+    "test": "bun ../../testing/runner.ts --package account"
   },
   "dependencies": {
     "@orpc/client": "catalog:",
@@ -29,20 +29,11 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "catalog:",
-    "@orpc/server": "catalog:",
-    "@orpc/tanstack-query": "catalog:",
-    "@smog/email": "workspace:*",
     "@tanstack/react-query": "catalog:",
-    "@testing-library/dom": "10.4.2",
-    "@testing-library/react": "16.3.3",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "19.3.0",
     "react": "catalog:",
-    "react-dom": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "wrangler": "catalog:"
   },
   "peerDependencies": {

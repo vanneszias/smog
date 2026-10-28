@@ -1,0 +1,21 @@
+/**
+ * The real deps, as `@smog/api` wires them, so these tests run the exact
+ * code production composes. A feature may not depend on another feature's
+ * `./server`, and `@smog/api` (the composition root) has no D1 in its
+ * tests, so this test-only file reaches it by relative path (the account
+ * tests do the same; docs/DECISIONS.md, Account).
+ */
+import { adminSponsorshipServices } from "../../../../api/src/admin-deps";
+import type { AdminDeps } from "../../../../features/admin/src/server/index";
+import { bumpCatalogVersion } from "../../../../features/gestures/src/server/catalog-cache";
+import { mollieWithFaults, muxWithDeletes } from "./sponsorship-fakes";
+
+export const adminDeps: AdminDeps = {
+  bumpCatalogVersion,
+  // Production leaves the fetches unset (the Worker's fetch, to
+  // MOLLIE_API_URL and MUX_API_URL); the queues are the rpc env's
+  // (`test/helpers.ts` gives it recording ones).
+  mollieFetch: mollieWithFaults,
+  muxFetch: muxWithDeletes,
+  sponsorships: adminSponsorshipServices,
+};

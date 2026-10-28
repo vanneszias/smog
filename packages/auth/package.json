@@ -13,8 +13,8 @@
     "./react": "./src/react.tsx"
   },
   "scripts": {
-    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json && tsc -p tsconfig.bun.json",
-    "test": "bun ../../scripts/test-deadline.ts -- vitest run && bun ../../scripts/test-deadline.ts -- bun test guard src"
+    "check-types": "wrangler types --config ../testing/config/workers/auth.wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json",
+    "test": "bun ../testing/runner.ts --package auth"
   },
   "dependencies": {
     "@better-auth/core": "1.7.14",
@@ -23,13 +23,11 @@
     "@smog/config": "workspace:*",
     "@smog/db": "workspace:*",
     "@smog/email": "workspace:*",
-    "@smog/utils": "workspace:*",
     "better-auth": "1.7.14",
     "drizzle-orm": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "catalog:",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "19.3.0",
@@ -37,7 +35,6 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "wrangler": "catalog:"
   },
   "peerDependencies": {

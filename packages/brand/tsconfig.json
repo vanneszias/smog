@@ -4,5 +4,9 @@
     "types": ["bun"]
   },
   "include": ["src", "scripts"],
-  "references": [{ "path": "../styles" }]
+  "references": [
+    {
+      "path": "../styles"
+    }
+  ]
 }

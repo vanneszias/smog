@@ -1,127 +1,125 @@
 {
   "$schema": "./node_modules/knip/schema.json",
-  "ignore": ["scripts/__fixtures__/**"],
+  "ignore": ["packages/testing/support/tooling/__fixtures__/**"],
   "workspaces": {
     ".": {
       "entry": ["scripts/*.ts"],
       "project": ["scripts/**/*.ts"],
-      "ignoreDependencies": ["query-string"]
+      "ignoreDependencies": []
     },
     "packages/*": {
-      "entry": ["src/**/*.test.{ts,tsx}"],
+      "entry": [],
       "project": ["src/**/*.{ts,tsx}"]
     },
     "packages/styles": {
-      "entry": ["src/**/*.test.ts"],
+      "entry": [],
       "project": ["src/**/*.ts", "scripts/**/*.ts", "generated/*.{css,cjs}"]
     },
     "packages/utils": {
-      "entry": ["src/**/*.test.ts", "src/**/*.native.ts"],
+      "entry": ["src/**/*.native.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/ui-web": {
-      "entry": ["src/**/*.test.{ts,tsx}"],
+      "entry": [],
       "project": ["src/**/*.{ts,tsx,css}"],
       "ignoreDependencies": ["tailwindcss"]
     },
     "packages/db": {
-      "entry": ["test/**/*.test.ts", "scripts/*.ts"],
-      "project": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"],
-      "ignoreDependencies": ["cloudflare"]
+      "entry": ["scripts/*.ts"],
+      "project": ["src/**/*.ts", "scripts/**/*.ts"],
+      "ignoreDependencies": []
     },
     "packages/email": {
-      "entry": ["test/**/*.test.{ts,tsx}"],
-      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["cloudflare"]
+      "entry": [],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": []
     },
     "packages/jobs": {
-      "entry": ["test/**/*.test.ts"],
-      "project": ["src/**/*.ts", "test/**/*.ts"],
-      "ignoreDependencies": ["cloudflare", "@types/react"]
+      "entry": [],
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["@types/react"]
     },
     "packages/auth": {
-      "entry": [
-        "test/**/*.test.{ts,tsx}",
-        "src/**/*.test.{ts,tsx}",
-        "guard/*.ts"
-      ],
-      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}", "guard/**/*.ts"],
-      "ignoreDependencies": ["cloudflare"]
+      "entry": [],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": []
     },
     "packages/analytics": {
-      "entry": ["src/**/*.test.{ts,tsx}"],
+      "entry": [],
       "project": ["src/**/*.{ts,tsx}"]
     },
     "packages/rpc": {
-      "entry": ["test/**/*.test.{ts,tsx}"],
-      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"]
+      "entry": [],
+      "project": ["src/**/*.{ts,tsx}"]
     },
     "packages/features/*": {
-      "entry": ["test/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
-      "project": ["src/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["cloudflare"]
+      "entry": [],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": []
     },
     "packages/features/admin": {
-      "entry": ["test/**/*.test.ts"],
-      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"],
-      "ignoreDependencies": ["cloudflare"]
+      "entry": [],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": []
     },
     "packages/features/lessons": {
-      "entry": ["test/**/*.test.ts"],
-      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"],
-      "ignoreDependencies": ["cloudflare"]
+      "entry": [],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": []
     },
     "packages/pdf": {
-      "entry": ["test/**/*.test.ts", "src/**/*.test.ts"],
-      "project": ["src/**/*.ts", "test/**/*.ts"],
-      "ignoreDependencies": ["cloudflare"]
+      "entry": [],
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": []
     },
     "packages/migrate-convex": {
-      "entry": ["test/**/*.test.ts"],
-      "project": ["src/**/*.ts", "test/**/*.ts"],
-      "ignoreDependencies": ["cloudflare"]
+      "entry": [],
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": []
     },
     "packages/api": {
-      "entry": ["test/**/*.test.ts"],
-      "project": ["src/**/*.ts", "test/**/*.ts"]
+      "entry": [],
+      "project": ["src/**/*.ts"]
     },
     "packages/ui-native": {
       "babel": {
         "config": ["babel.config.cjs"]
       },
-      "entry": ["src/**/*.test.{ts,tsx}", "jest.setup*.ts"],
+      "entry": [],
       "project": ["src/**/*.{ts,tsx}", "*.{ts,cts,cjs}"]
     },
     "apps/site": {
-      "entry": [
-        "src/routes/**/*.{ts,tsx}",
-        "test/**/*.test.ts",
-        "src/**/*.test.{ts,tsx}",
-        "scripts/*.ts",
-        "e2e/**/*.spec.ts"
-      ],
-      "project": [
-        "src/**/*.{ts,tsx,css}",
-        "test/**/*.ts",
-        "scripts/**/*.ts",
-        "e2e/**/*.ts"
-      ],
+      "entry": ["src/routes/**/*.{ts,tsx}", "scripts/*.ts"],
+      "project": ["src/**/*.{ts,tsx,css}", "scripts/**/*.ts"],
       "ignoreDependencies": ["cloudflare"]
     },
     "apps/mobile": {
       "ignoreDependencies": ["expo-crypto", "expo-network"],
-      "entry": [
-        "app/**/*.{ts,tsx}",
-        "plugins/*.js",
-        "src/**/*.test.{ts,tsx}",
-        "src/dev/*.tsx"
-      ],
+      "entry": ["app/**/*.{ts,tsx}", "plugins/*.js", "src/dev/*.tsx"],
       "project": [
         "app/**/*.{ts,tsx}",
         "src/**/*.{ts,tsx}",
         "plugins/**/*.js",
         "*.{js,ts,css}"
       ]
+    },
+    "packages/testing": {
+      "entry": [
+        "deadline.ts",
+        "{bun,workers,native,e2e}/**/*.{test,spec}.{ts,tsx}",
+        "config/**/*.{ts,cjs}",
+        "samples/*.ts",
+        "support/config/happy-dom.ts",
+        "bun/auth/guard/client-types.ts"
+      ],
+      "project": ["**/*.{ts,tsx,cjs,css}"],
+      "ignoreDependencies": ["cloudflare", "@smog/migrate-convex"],
+      "jest": {
+        "config": ["config/native/*/jest.config.cjs"]
+      },
+      "playwright": {
+        "config": ["config/playwright.ts"]
+      }
     }
   }
 }

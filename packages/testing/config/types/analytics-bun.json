@@ -1,0 +1,11 @@
+{
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["bun"],
+    "rootDir": "../../../.."
+  },
+  "include": ["../../bun/shared/analytics", "../../bun/shared/analytics-server"]
+}

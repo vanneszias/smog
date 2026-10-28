@@ -9,7 +9,7 @@
   "scripts": {
     "check-types": "tsc -b",
     "generate": "bun scripts/generate.ts",
-    "test": "bun ../../scripts/test-deadline.ts -- bun test"
+    "test": "bun ../testing/runner.ts --package brand"
   },
   "devDependencies": {
     "@smog/config": "workspace:*",

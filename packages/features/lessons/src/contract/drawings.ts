@@ -2,7 +2,7 @@
  * The drawing procedures (phase 10c task 3), mounted as `teacher` in
  * `@smog/api`'s `appContract` beside the teacher-info ones.
  *
- * Who may call what (`packages/api/test/authz.test.ts` lists each):
+ * Who may call what (`packages/testing/workers/shared/api/service/authz.test.ts` lists each):
  * - `uploadDrawing`, `finalizeDrawing`, `deleteDrawing`: the `teacher` role
  *   (an `admin` passes). A translator may not: the drawing card is read-only
  *   for them (plan ruling 5);

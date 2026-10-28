@@ -1,7 +1,7 @@
 /**
  * The SQL of `bun run admin:grant` (spec §6, phase 8 ruling 18): one
  * definition, so the script (`scripts/admin-grant.ts`) and the site's
- * Workers-pool proof (`apps/site/test/maintenance-admin-signin.test.ts`)
+ * Workers-pool proof (`packages/testing/workers/admin/site/maintenance-admin-signin.test.ts`)
  * run the same statements. Pure strings, no I/O; client-safe.
  *
  * - The grant: `UPDATE user SET role = 'admin'` and lifts any ban, by the

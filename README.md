@@ -34,12 +34,15 @@ The seeded admin is `admin@smog.test` (dev-only password in `AGENTS.md`); emails
 ```bash
 bun run check            # Biome, with fixes
 bun run check-types
-bun run test             # every package's tests, the script tests and the documents' accuracy check
+bun run test             # all non-browser tests in @smog/testing, including repository guards
+bun run test:feature lessons # one feature across web, services and native
 bun run test:e2e         # Playwright, seven projects, on a fresh D1 (how CI runs it: AGENTS.md)
-bun run release:check    # what CI's four release-check lanes run (SMOG_OFFLINE=1 without internet access)
+bun run release:check    # CI's three release-check lanes (SMOG_OFFLINE=1 without internet access)
 ```
 
 `release:check` is **not** the whole of CI: the `e2e` job runs separately, and offline the audit and expo-doctor's online checks are not equivalent. CI (`.github/workflows/ci.yml`) is the authority.
+
+Tests are grouped by runtime, then feature, in [`packages/testing`](packages/testing/README.md). Existing package test commands still work; add `--include-e2e` to a feature run to include its browser coverage.
 
 ## Environments and deploys
 

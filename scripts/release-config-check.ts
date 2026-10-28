@@ -183,7 +183,7 @@ export function checkCiWorkflow(source: string): string[] {
   return errors;
 }
 
-/** The e2e job's matrix names, the Playwright projects (`apps/site/playwright.config.ts`). */
+/** The e2e job's matrix names, the Playwright projects (`packages/testing/config/playwright.ts`). */
 const E2E_JOB = "e2e";
 export const E2E_PROJECT_NAME = /^\s{6}name: "([^"]+)",$/gm;
 const E2E_MAX_MINUTES = 45;
@@ -270,7 +270,10 @@ function checkE2eSupport(
 ): string[] {
   const file = "ci.yml";
   const errors: string[] = [];
-  const flakyStep = findStepIndex(steps, "scripts/e2e-flaky-report.ts");
+  const flakyStep = findStepIndex(
+    steps,
+    "packages/testing/e2e-flaky-report.ts"
+  );
   if (flakyStep === -1) {
     errors.push(`${file}: the ${E2E_JOB} job has no flaky-report step`);
   }
@@ -308,10 +311,10 @@ function checkE2eSupport(
   const siteScript = parseJsonRecord(input.sitePackage, "scripts")["test:e2e"];
   if (
     typeof siteScript !== "string" ||
-    !siteScript.includes("scripts/test-deadline.ts")
+    !siteScript.includes("testing/runner.ts --runtime e2e")
   ) {
     errors.push(
-      "apps/site/package.json: test:e2e must run through scripts/test-deadline.ts"
+      "apps/site/package.json: test:e2e must forward to the centralized bounded runner"
     );
   }
   return errors;
@@ -1578,7 +1581,7 @@ export function checkReleaseConfig(
     ...checkCiWorkflow(read(".github/workflows/ci.yml")),
     ...checkE2eJob({
       ci: read(".github/workflows/ci.yml"),
-      playwrightConfig: read("apps/site/playwright.config.ts"),
+      playwrightConfig: read("packages/testing/config/playwright.ts"),
       rootPackage: read("package.json"),
       sitePackage: read("apps/site/package.json"),
     }),
@@ -1603,7 +1606,7 @@ export function checkReleaseConfig(
 }
 
 if (import.meta.main) {
-  const root = process.argv[2] ?? join(import.meta.dir, "..");
+  const root = process.argv[2] ?? new URL("..", import.meta.url).pathname;
   let errors: string[];
   const warnings: string[] = [];
   try {

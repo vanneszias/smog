@@ -50,7 +50,7 @@ The **`we-moved` command** (`docs/cutover-runbook.md`) runs on the owner's machi
 
 `SMOG_RENDER_PIPELINE` is gone: the build no longer reads it. **Owner: delete the variable** from the `staging` and `production` GitHub environments if you set it (it does nothing now, and `RENDER_MODE` is no longer a var either). Details: `docs/DECISIONS.md`, "Retire the render pipeline (phase 10b task 9)".
 
-**Branch protection (owner, GitHub → Settings → Branches, for `develop` and `master`).** Require the status checks `Release check (core)`, `Release check (tests)`, `Release check (mobile)` and the seven `Playwright e2e (<shard>)` checks (`public`, `a11y`, `a11y-signed-in`, `a11y-reflow`, `admin`, `admin-a11y`, `serial`). Deploy's reusable call of `ci.yml` already waits for them, but a branch rule is what stops a red e2e shard from being merged on a pull request. The names are the job names in `.github/workflows/ci.yml` (`scripts/docs-check.test.ts` keeps the shard list in step).
+**Branch protection (owner, GitHub → Settings → Branches, for `develop` and `master`).** Require the status checks `Release check (core)`, `Release check (tests)`, `Release check (mobile)` and the seven `Playwright e2e (<shard>)` checks (`public`, `a11y`, `a11y-signed-in`, `a11y-reflow`, `admin`, `admin-a11y`, `serial`). Deploy's reusable call of `ci.yml` already waits for them, but a branch rule is what stops a red e2e shard from being merged on a pull request. The names are the job names in `.github/workflows/ci.yml` (`packages/testing/bun/shared/tooling/docs-check.test.ts` keeps the shard list in step).
 
 ## 4. D1 and KV (production)
 

@@ -1,0 +1,23 @@
+import { describe, expect, test } from "bun:test";
+import { screen } from "@testing-library/react";
+import { Badge } from "../../../../../ui-web/src/components/badge";
+import { classesOf, renderKit } from "../../../../support/ui-web/render";
+
+describe("Badge", () => {
+  test("variants use strong text on the subtle tint", () => {
+    renderKit(
+      <>
+        <Badge>Neutral</Badge>
+        <Badge variant="success">Paid</Badge>
+        <Badge variant="accent">New</Badge>
+      </>
+    );
+    expect(classesOf(screen.getByText("Neutral"))).toContain("bg-secondary");
+    const success = classesOf(screen.getByText("Paid"));
+    expect(success).toContain("bg-success-subtle");
+    expect(success).toContain("text-success-strong");
+    const accent = classesOf(screen.getByText("New"));
+    expect(accent).toContain("bg-highlight");
+    expect(accent).toContain("text-highlight-foreground");
+  });
+});

@@ -5,17 +5,14 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema.ts",
-    "./testing": "./src/testing/index.ts",
-    "./testing/server": "./src/testing/fake-server.ts"
+    "./schema": "./src/schema.ts"
   },
   "scripts": {
     "check-types": "tsc -b",
-    "test": "bun ../../scripts/test-deadline.ts -- bun test"
+    "test": "bun ../testing/runner.ts --package payments"
   },
   "dependencies": {
     "@smog/config": "workspace:*",
-    "@smog/utils": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

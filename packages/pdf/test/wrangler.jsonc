@@ -1,8 +1,0 @@
-{
-  // Test-only Worker config: no bindings. The engine is pure, so the tests
-  // only prove that it runs in workerd.
-  "$schema": "../../../node_modules/wrangler/config-schema.json",
-  "name": "smog-pdf-test",
-  "compatibility_date": "2026-09-29",
-  "compatibility_flags": ["nodejs_compat"]
-}

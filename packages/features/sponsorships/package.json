@@ -10,8 +10,8 @@
     "./client": "./src/client/index.ts"
   },
   "scripts": {
-    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json && tsc -p tsconfig.test.json",
-    "test": "bun ../../../scripts/test-deadline.ts -- vitest run && bun ../../../scripts/test-deadline.ts -- bun test --timeout=20000 src"
+    "check-types": "wrangler types --config ../../testing/config/workers/sponsorships.wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json",
+    "test": "bun ../../testing/runner.ts --package sponsorships"
   },
   "dependencies": {
     "@orpc/client": "catalog:",
@@ -32,13 +32,11 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",
     "react": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "wrangler": "catalog:"
   },
   "peerDependencies": {

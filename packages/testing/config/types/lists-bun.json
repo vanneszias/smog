@@ -1,0 +1,12 @@
+{
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["bun"],
+    "rootDir": "../../../.."
+  },
+  "include": ["../../bun/lists"],
+  "exclude": ["../../bun/*/site/**", "../../bun/*/site-scripts/**"]
+}

@@ -40,7 +40,7 @@ export async function newSponsorshipToken(): Promise<{
  * The link a sponsor opens (ruling 7 of phase 9): the raw token rides in
  * the URL **fragment**, which no server, CDN, log or `Referer` ever sees.
  * The only builder of these links; a `?token=` query is never produced
- * (`apps/site/scripts/token-links.test.ts` guards it). Old `?token=` links
+ * (`packages/testing/bun/shared/site-scripts/token-links.test.ts` guards it). Old `?token=` links
  * still open: the pages move it into the fragment.
  */
 export function sponsorshipLinkUrl(

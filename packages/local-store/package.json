@@ -11,7 +11,7 @@
   },
   "scripts": {
     "check-types": "tsc -b",
-    "test": "bun ../../scripts/test-deadline.ts -- bun test"
+    "test": "bun ../testing/runner.ts --package local-store"
   },
   "dependencies": {
     "@smog/config": "workspace:*",
@@ -22,9 +22,7 @@
     "@react-native-async-storage/async-storage": "catalog:",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "19.3.0",
     "react": "catalog:",
-    "react-dom": "catalog:",
     "typescript": "catalog:"
   },
   "peerDependencies": {

@@ -7,15 +7,13 @@
     "./schema": "./src/schema/index.ts",
     "./contract": "./src/contract/index.ts",
     "./server": "./src/server/index.ts",
-    "./client": "./src/client/index.ts",
-    "./testing": "./src/testing.ts"
+    "./client": "./src/client/index.ts"
   },
   "scripts": {
-    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json && tsc -p tsconfig.test.json",
-    "test": "bun ../../../scripts/test-deadline.ts -- vitest run"
+    "check-types": "wrangler types --config ../../testing/config/workers/translation.wrangler.jsonc && tsc -b && tsc -p tsconfig.client.json",
+    "test": "bun ../../testing/runner.ts --package translation"
   },
   "dependencies": {
-    "@orpc/server": "catalog:",
     "@smog/admin": "workspace:*",
     "@smog/auth": "workspace:*",
     "@smog/config": "workspace:*",
@@ -28,13 +26,10 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "catalog:",
-    "@smog/email": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@types/react": "catalog:",
     "react": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "wrangler": "catalog:"
   },
   "peerDependencies": {

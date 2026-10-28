@@ -1,0 +1,842 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { emailMessageSchema } from "@smog/jobs";
+import { main } from "../../../../../migrate-convex/src/cli/main";
+import type { Timer } from "../../../../../migrate-convex/src/cli/remote";
+import {
+  batchMessages,
+  buildMessages,
+  CLOUDFLARE_API,
+  maskEmail,
+  QUEUES_BATCH_MAX_BYTES,
+  QUEUES_BATCH_MAX_MESSAGES,
+  RECIPIENTS_SQL,
+  type Recipient,
+  readSiteConfig,
+  runWeMoved,
+  SITE_WRANGLER_CONFIG,
+  WE_MOVED_FAILED,
+  WE_MOVED_LEDGER,
+  type WeMovedContext,
+  type WeMovedMessage,
+} from "../../../../../migrate-convex/src/cli/we-moved";
+import { createWrangler } from "../../../../../migrate-convex/src/cli/wrangler";
+import { createFakeWrangler } from "../../../../support/migrate-convex/fake-wrangler";
+
+const TOKEN = "fake-cloudflare-token-value";
+const ACCOUNT = "fake-account-id";
+const QUEUE_ID = "queue-email-production-id";
+const SITE = "https://smog-site-production.example";
+/**
+ * An invented, non-reserved domain: `we-moved` refuses the reserved ones
+ * (`.test`, `.example`, …) as a sign of a staging or fixture import.
+ */
+const MAIL_DOMAIN = "smog-fixture-mail.be";
+const ALL_PROVIDER_SECRETS = [
+  "APPLE_CLIENT_ID",
+  "APPLE_CLIENT_SECRET",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+  "TURNSTILE_SECRET_KEY",
+];
+
+function fakeTimer(): { sleeps: number[]; timer: Timer } {
+  let now = Date.parse("2026-10-04T12:00:00.000Z");
+  const sleeps: number[] = [];
+  return {
+    sleeps,
+    timer: {
+      now: () => now,
+      sleep: (ms) => {
+        sleeps.push(ms);
+        now += ms;
+        return Promise.resolve();
+      },
+    },
+  };
+}
+
+function capture() {
+  const lines: { error: string[]; log: string[] } = { error: [], log: [] };
+  return {
+    all: () => [...lines.log, ...lines.error].join("\n"),
+    lines,
+    out: {
+      error: (text: string) => lines.error.push(text),
+      log: (text: string) => lines.log.push(text),
+    },
+  };
+}
+
+interface FakeQueuesOptions {
+  /** Answer the n-th batch POST (from 1) with this status instead. */
+  failBatch?: { headers?: Record<string, string>; nth: number; status: number };
+  /** The queue list's pages. */
+  pages?: { queue_id: string; queue_name: string }[][];
+}
+
+/**
+ * The Cloudflare Queues HTTP API as `we-moved` calls it: the queue list
+ * (paged) and the batch push, with the token checked. It keeps every
+ * batch it accepted.
+ */
+function fakeQueuesApi(options: FakeQueuesOptions = {}) {
+  const pages = options.pages ?? [
+    [
+      { queue_id: "other", queue_name: "smog-production-sponsorship-events" },
+      { queue_id: QUEUE_ID, queue_name: "smog-production-email" },
+    ],
+  ];
+  const batches: { content_type: string; body: WeMovedMessage }[][] = [];
+  const requests: { method: string; path: string; signal: boolean }[] = [];
+  let posts = 0;
+  const fetchImpl: WeMovedContext["fetch"] = (input, init) =>
+    Promise.resolve(answer(input, init));
+  const answer = (input: RequestInfo | URL, init?: RequestInit): Response => {
+    const url = new URL(String(input));
+    const method = init?.method ?? "GET";
+    const path = url.pathname.replace(new URL(CLOUDFLARE_API).pathname, "");
+    requests.push({
+      method,
+      path: `${path}${url.search}`,
+      signal: init?.signal instanceof AbortSignal,
+    });
+    const headers = new Headers(init?.headers);
+    if (headers.get("authorization") !== `Bearer ${TOKEN}`) {
+      return Response.json(
+        {
+          errors: [{ code: 10_000, message: "Authentication error" }],
+          success: false,
+        },
+        { status: 403 }
+      );
+    }
+    if (method === "GET" && path === `/accounts/${ACCOUNT}/queues`) {
+      const page = Number(url.searchParams.get("page") ?? "1");
+      return Response.json({
+        errors: [],
+        result: pages[page - 1] ?? [],
+        result_info: { page, total_pages: pages.length },
+        success: true,
+      });
+    }
+    if (
+      method === "POST" &&
+      path === `/accounts/${ACCOUNT}/queues/${QUEUE_ID}/messages/batch`
+    ) {
+      posts += 1;
+      const failure = options.failBatch;
+      if (failure && failure.nth === posts) {
+        return Response.json(
+          { errors: [{ code: 1, message: "Fake failure" }], success: false },
+          { headers: failure.headers ?? {}, status: failure.status }
+        );
+      }
+      const body = JSON.parse(String(init?.body)) as {
+        messages: { body: WeMovedMessage; content_type: string }[];
+      };
+      batches.push(body.messages);
+      return Response.json({ errors: [], result: {}, success: true });
+    }
+    return Response.json(
+      { errors: [{ code: 7003, message: "No route" }], success: false },
+      { status: 404 }
+    );
+  };
+  return { batches, fetch: fetchImpl, requests };
+}
+
+/** A missing locale (nl), French, English, in turn. */
+const LOCALE_CYCLE = [null, "fr", "en"] as const;
+
+function recipients(count: number): Recipient[] {
+  return Array.from({ length: count }, (_, index) => {
+    const n = String(index).padStart(4, "0");
+    return {
+      email: `person.${n}@${MAIL_DOMAIN}`,
+      id: `user-${n}`,
+      locale: LOCALE_CYCLE[index % LOCALE_CYCLE.length] ?? null,
+    };
+  });
+}
+
+let dir: string;
+let wranglerConfig: string;
+
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), "smog-we-moved-"));
+  writeFileSync(
+    join(dir, "manifest.json"),
+    JSON.stringify({ target: "production", version: 1 })
+  );
+  wranglerConfig = join(dir, "wrangler.jsonc");
+  writeFileSync(
+    wranglerConfig,
+    `{
+  // A comment, as in the real file.
+  "env": {
+    "production": {
+      "vars": { "SITE_URL": "${SITE}" },
+      "queues": {
+        "producers": [
+          { "binding": "EMAIL_QUEUE", "queue": "smog-production-email" },
+        ],
+      },
+    },
+  },
+}
+`
+  );
+});
+
+afterEach(() => {
+  rmSync(dir, { force: true, recursive: true });
+});
+
+function setup(
+  rows: Recipient[],
+  queues: ReturnType<typeof fakeQueuesApi> = fakeQueuesApi(),
+  env: WeMovedContext["env"] = {
+    CLOUDFLARE_ACCOUNT_ID: ACCOUNT,
+    CLOUDFLARE_API_TOKEN: TOKEN,
+  },
+  secrets: readonly string[] = ALL_PROVIDER_SECRETS,
+  kv: Readonly<Record<string, string>> = {}
+) {
+  const wrangler = createFakeWrangler({
+    d1: (query) => {
+      expect(query).toMatchObject({
+        command: RECIPIENTS_SQL,
+        env: "production",
+        remote: true,
+      });
+      return [rows];
+    },
+    kv,
+    secrets,
+  });
+  const { sleeps, timer } = fakeTimer();
+  const context: WeMovedContext = {
+    env,
+    fetch: queues.fetch,
+    timer,
+    wrangler: createWrangler("production", wrangler.run),
+    wranglerConfigPath: wranglerConfig,
+  };
+  return { context, queues, sleeps, wrangler };
+}
+
+const RUN = { apply: false, env: "production", outDir: "" };
+
+describe("we-moved refusals", () => {
+  test("runs on production only", async () => {
+    for (const env of ["staging", "dev"]) {
+      const { context, wrangler } = setup(recipients(1));
+      // biome-ignore lint/performance/noAwaitInLoops: one env after the other.
+      await expect(
+        runWeMoved({ ...RUN, env, outDir: dir }, context, capture().out)
+      ).rejects.toThrow("we-moved runs on production only");
+      expect(wrangler.calls).toEqual([]);
+    }
+  });
+
+  test("refuses a plan made for staging, and a folder without a plan", async () => {
+    const { context, wrangler } = setup(recipients(1));
+    writeFileSync(
+      join(dir, "manifest.json"),
+      JSON.stringify({ target: "staging", version: 1 })
+    );
+    await expect(
+      runWeMoved({ ...RUN, outDir: dir }, context, capture().out)
+    ).rejects.toThrow("was made for staging, not production");
+    rmSync(join(dir, "manifest.json"));
+    await expect(
+      runWeMoved({ ...RUN, outDir: dir }, context, capture().out)
+    ).rejects.toThrow("manifest.json does not exist");
+    expect(wrangler.calls).toEqual([]);
+  });
+
+  test("names the missing Cloudflare env vars", async () => {
+    const { context, wrangler } = setup(recipients(1), fakeQueuesApi(), {});
+    await expect(
+      runWeMoved({ ...RUN, outDir: dir }, context, capture().out)
+    ).rejects.toThrow(
+      "CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID must be set in the environment"
+    );
+    expect(wrangler.calls).toEqual([]);
+  });
+});
+
+describe("we-moved recipients (task 9 review)", () => {
+  test("refuses the whole run when any address is a placeholder, naming only the count", async () => {
+    for (const email of [
+      "0b6c6d4e-6c43-4e1c-9a59-8a1b4c0d9e01@staging.invalid",
+      "ada.fixture@example.test",
+      "x@smog.example",
+      "x@example.com",
+      "x@mail.example.org",
+      "x@localhost",
+    ]) {
+      const rows = [
+        ...recipients(2),
+        { email, id: "user-placeholder", locale: null },
+      ];
+      const { context, queues } = setup(rows);
+      const { all, out } = capture();
+      // biome-ignore lint/performance/noAwaitInLoops: one address after the other.
+      await expect(
+        runWeMoved({ ...RUN, apply: true, outDir: dir }, context, out)
+      ).rejects.toThrow("1 of 3 recipient(s) have a placeholder address");
+      expect(queues.requests).toEqual([]);
+      expect(all()).not.toContain(email);
+    }
+  });
+
+  test("reads only users that are not banned", () => {
+    expect(RECIPIENTS_SQL).toBe(
+      "SELECT id, email, locale FROM user WHERE legacy_id IS NOT NULL AND (banned IS NULL OR banned = 0) ORDER BY id"
+    );
+  });
+
+  test("names only the providers production has, and warns about a half-configured one", async () => {
+    const { context, queues } = setup(
+      recipients(1),
+      fakeQueuesApi(),
+      undefined,
+      ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "APPLE_CLIENT_ID"]
+    );
+    const { lines, out } = capture();
+    await runWeMoved({ ...RUN, apply: true, outDir: dir }, context, out);
+    expect(queues.batches.flat()[0]?.body.props).toEqual({
+      providers: ["google"],
+      url: SITE,
+    });
+    expect(lines.log.join("\n")).toContain(
+      "Sign-in providers named in the email: google"
+    );
+    expect(lines.error).toContain(
+      "[migrate-convex] warning: apple has only part of its secrets in production; the email does not name it."
+    );
+  });
+
+  test("names no provider when production has none", async () => {
+    const { context, queues } = setup(
+      recipients(1),
+      fakeQueuesApi(),
+      undefined,
+      []
+    );
+    const { lines, out } = capture();
+    await runWeMoved({ ...RUN, apply: true, outDir: dir }, context, out);
+    expect(queues.batches.flat()[0]?.body.props).toEqual({
+      providers: [],
+      url: SITE,
+    });
+    expect(lines.log.join("\n")).toContain(
+      "Sign-in providers named in the email: none"
+    );
+  });
+});
+
+describe("we-moved dry run", () => {
+  test("reads the recipients and the queue id, prints counts and one masked sample, queues nothing", async () => {
+    const rows = recipients(3);
+    const { context, queues } = setup(rows);
+    const { all, lines, out } = capture();
+
+    expect(await runWeMoved({ ...RUN, outDir: dir }, context, out)).toBe(0);
+
+    expect(queues.requests).toEqual([
+      {
+        method: "GET",
+        path: `/accounts/${ACCOUNT}/queues?page=1`,
+        signal: true,
+      },
+    ]);
+    expect(queues.batches).toEqual([]);
+    expect(existsSync(join(dir, WE_MOVED_LEDGER))).toBe(false);
+    const log = lines.log.join("\n");
+    expect(log).toContain(
+      `3 migrated account(s); 0 already queued (ledger); 3 to queue in 1 batch(es) to smog-production-email (${QUEUE_ID})`
+    );
+    expect(log).toContain('the "new address" sentence is shown');
+    expect(log).toContain("nl subject: SMOG is verhuisd");
+    expect(log).toContain('"to":"p***@s***.be"');
+    expect(log).toContain(
+      "Sign-in providers named in the email: google, apple"
+    );
+    expect(log).toContain('"idempotencyKey":"we_moved:user-0000"');
+    expect(log).toContain("Run again with --apply");
+    for (const row of rows) {
+      expect(all()).not.toContain(row.email);
+    }
+    expect(all()).not.toContain(TOKEN);
+  });
+
+  test("finds the queue on a later page", async () => {
+    const queues = fakeQueuesApi({
+      pages: [
+        [{ queue_id: "a", queue_name: "smog-staging-email" }],
+        [{ queue_id: QUEUE_ID, queue_name: "smog-production-email" }],
+      ],
+    });
+    const { context } = setup(recipients(1), queues);
+    expect(
+      await runWeMoved({ ...RUN, outDir: dir }, context, capture().out)
+    ).toBe(0);
+    expect(queues.requests.map((request) => request.path)).toEqual([
+      `/accounts/${ACCOUNT}/queues?page=1`,
+      `/accounts/${ACCOUNT}/queues?page=2`,
+    ]);
+  });
+
+  test("says which permission a refused token needs", async () => {
+    const { context } = setup(recipients(1), fakeQueuesApi(), {
+      CLOUDFLARE_ACCOUNT_ID: ACCOUNT,
+      CLOUDFLARE_API_TOKEN: "wrong",
+    });
+    await expect(
+      runWeMoved({ ...RUN, outDir: dir }, context, capture().out)
+    ).rejects.toThrow("The token needs Queues: Edit");
+  });
+});
+
+describe("we-moved --apply", () => {
+  test("queues every migrated user in batches of at most 100, each body a valid email message", async () => {
+    const rows = recipients(250);
+    const { context, queues } = setup(rows);
+    const { lines, out } = capture();
+
+    expect(
+      await runWeMoved({ ...RUN, apply: true, outDir: dir }, context, out)
+    ).toBe(0);
+
+    expect(queues.batches.map((batch) => batch.length)).toEqual([100, 100, 50]);
+    const sent = queues.batches.flat();
+    expect(sent.map((entry) => entry.body.to)).toEqual(
+      rows.map((row) => row.email)
+    );
+    for (const [index, entry] of sent.entries()) {
+      expect(entry.content_type).toBe("json");
+      expect(emailMessageSchema.parse(entry.body)).toEqual(entry.body);
+      expect(entry.body).toMatchObject({
+        idempotencyKey: `we_moved:${rows[index]?.id}`,
+        locale: rows[index]?.locale ?? "nl",
+        props: { providers: ["google", "apple"], url: SITE },
+        template: "transactional/we-moved",
+      });
+    }
+    // Every request carries a timeout.
+    expect(queues.requests.every((request) => request.signal)).toBe(true);
+    const ledger = JSON.parse(readFileSync(join(dir, WE_MOVED_LEDGER), "utf8"));
+    expect(Object.keys(ledger.entries)).toHaveLength(250);
+    expect(ledger.entries["user-0000"].messageId).toBe(sent[0]?.body.id);
+    expect(lines.log.at(-1)).toContain(
+      "Queued 250 we_moved email(s) in 3 batch(es)"
+    );
+  });
+
+  test("a re-run queues only who the ledger does not hold", async () => {
+    const queues = fakeQueuesApi({ failBatch: { nth: 2, status: 500 } });
+    const first = setup(recipients(150), queues);
+    const { lines, out } = capture();
+    await expect(
+      runWeMoved({ ...RUN, apply: true, outDir: dir }, first.context, out)
+    ).rejects.toThrow("The Queues API answered 500 to batch 2");
+    expect(lines.error.join("\n")).toContain(
+      "100 email(s) were queued and are in the ledger"
+    );
+    expect(queues.batches.map((batch) => batch.length)).toEqual([100]);
+
+    const again = setup(recipients(150), queues);
+    expect(
+      await runWeMoved(
+        { ...RUN, apply: true, outDir: dir },
+        again.context,
+        capture().out
+      )
+    ).toBe(0);
+    expect(queues.batches.map((batch) => batch.length)).toEqual([100, 50]);
+    const ids = queues.batches.flat().map((entry) => entry.body.idempotencyKey);
+    expect(new Set(ids).size).toBe(150);
+
+    const third = setup(recipients(150), queues);
+    await runWeMoved(
+      { ...RUN, apply: true, outDir: dir },
+      third.context,
+      capture().out
+    );
+    expect(queues.batches).toHaveLength(2);
+  });
+
+  test("waits out a 429's Retry-After and then queues the batch", async () => {
+    const queues = fakeQueuesApi({
+      failBatch: { headers: { "retry-after": "5" }, nth: 1, status: 429 },
+    });
+    const { context, sleeps } = setup(recipients(2), queues);
+    expect(
+      await runWeMoved(
+        { ...RUN, apply: true, outDir: dir },
+        context,
+        capture().out
+      )
+    ).toBe(0);
+    expect(sleeps).toContain(5000);
+    expect(queues.batches.map((batch) => batch.length)).toEqual([2]);
+  });
+
+  test("skips an unusable address by id and never prints it", async () => {
+    const rows = [
+      ...recipients(1),
+      { email: "not an address", id: "user-bad", locale: "nl" },
+    ];
+    const { context, queues } = setup(rows);
+    const { all, lines, out } = capture();
+    await runWeMoved({ ...RUN, apply: true, outDir: dir }, context, out);
+    expect(queues.batches.flat()).toHaveLength(1);
+    expect(lines.error).toContain(
+      "[migrate-convex] warning: no usable address for user(s) user-bad; they get no email."
+    );
+    expect(all()).not.toContain("not an address");
+  });
+});
+
+describe("batches", () => {
+  test("hold at most 256 KB of request body", () => {
+    const messages = Array.from({ length: 40 }, (_, index) => ({
+      message: {
+        id: crypto.randomUUID(),
+        idempotencyKey: `we_moved:u${index}`,
+        locale: "nl" as const,
+        props: { pad: "x".repeat(20_000), url: SITE },
+        template: "transactional/we-moved" as const,
+        to: `p${index}@example.test`,
+      },
+      userId: `u${index}`,
+    }));
+    const batches = batchMessages(messages);
+    expect(batches.length).toBeGreaterThan(1);
+    for (const batch of batches) {
+      expect(
+        new TextEncoder().encode(batch.body).byteLength
+      ).toBeLessThanOrEqual(QUEUES_BATCH_MAX_BYTES);
+      expect(batch.userIds.length).toBeLessThanOrEqual(
+        QUEUES_BATCH_MAX_MESSAGES
+      );
+      expect(JSON.parse(batch.body).messages[0].content_type).toBe("json");
+    }
+    expect(batches.flatMap((batch) => batch.userIds)).toEqual(
+      messages.map((entry) => entry.userId)
+    );
+  });
+
+  test("buildMessages maps a missing locale to nl", () => {
+    const { messages } = buildMessages(
+      [{ email: " a@example.test ", id: "u1", locale: null }],
+      { providers: ["google"], url: SITE },
+      () => "00000000-0000-4000-8000-000000000001"
+    );
+    expect(messages[0]?.message).toEqual({
+      id: "00000000-0000-4000-8000-000000000001",
+      idempotencyKey: "we_moved:u1",
+      locale: "nl",
+      props: { providers: ["google"], url: SITE },
+      template: "transactional/we-moved",
+      to: "a@example.test",
+    });
+  });
+
+  test("maskEmail keeps only the first letters and the top-level domain", () => {
+    expect(maskEmail("bea.fixture@example.test")).toBe("b***@e***.test");
+  });
+});
+
+describe("the site config", () => {
+  test("reads production's SITE_URL and email queue from apps/site/wrangler.jsonc", () => {
+    const config = readSiteConfig(readFileSync(SITE_WRANGLER_CONFIG, "utf8"));
+    expect(config.queueName).toBe("smog-production-email");
+    expect(new URL(config.siteUrl).protocol).toBe("https:");
+  });
+});
+
+describe("we-moved --resend (phase 9 ruling 11)", () => {
+  const MARKER = (id: string) => `email:sent:we_moved:${id}`;
+
+  function ledgerOf(): Record<
+    string,
+    { messageId: string; queuedAt: string } | undefined
+  > {
+    return JSON.parse(readFileSync(join(dir, WE_MOVED_LEDGER), "utf8")).entries;
+  }
+
+  function failedOf(): Record<
+    string,
+    { at: string; reason: string } | undefined
+  > {
+    return JSON.parse(readFileSync(join(dir, WE_MOVED_FAILED), "utf8")).keys;
+  }
+
+  test("a partial failure records what failed and was never made; --resend --failed sends exactly those, once", async () => {
+    const queues = fakeQueuesApi({ failBatch: { nth: 2, status: 500 } });
+    const first = setup(recipients(250), queues);
+    const firstOut = capture();
+    await expect(
+      runWeMoved(
+        { ...RUN, apply: true, outDir: dir },
+        first.context,
+        firstOut.out
+      )
+    ).rejects.toThrow("The Queues API answered 500 to batch 2");
+    expect(Object.keys(ledgerOf())).toHaveLength(100);
+    const failed = failedOf();
+    expect(Object.keys(failed)).toHaveLength(150);
+    expect(failed["user-0100"]?.reason).toBe("failed");
+    expect(failed["user-0199"]?.reason).toBe("failed");
+    expect(failed["user-0200"]?.reason).toBe("not-sent");
+    expect(Object.keys(failed).includes("user-0000")).toBe(false);
+
+    // Dry: reads, prints, changes nothing.
+    const ledgerBefore = readFileSync(join(dir, WE_MOVED_LEDGER), "utf8");
+    const failedBefore = readFileSync(join(dir, WE_MOVED_FAILED), "utf8");
+    const dry = setup(recipients(250), queues);
+    const dryOut = capture();
+    expect(
+      await runWeMoved(
+        { ...RUN, outDir: dir, resend: { failed: true } },
+        dry.context,
+        dryOut.out
+      )
+    ).toBe(0);
+    expect(dryOut.lines.log.join("\n")).toContain(
+      "we-moved --resend (dry run): 250 migrated account(s); 150 selected; 150 to queue in 2 batch(es)"
+    );
+    expect(dryOut.lines.log.join("\n")).toContain(
+      "Nothing was queued and no ledger entry was changed"
+    );
+    expect(readFileSync(join(dir, WE_MOVED_LEDGER), "utf8")).toBe(ledgerBefore);
+    expect(readFileSync(join(dir, WE_MOVED_FAILED), "utf8")).toBe(failedBefore);
+    expect(queues.batches).toHaveLength(1);
+
+    // Apply: the 150 go out, once each; the ledger holds all 250.
+    const again = setup(recipients(250), queues);
+    const againOut = capture();
+    expect(
+      await runWeMoved(
+        { ...RUN, apply: true, outDir: dir, resend: { failed: true } },
+        again.context,
+        againOut.out
+      )
+    ).toBe(0);
+    expect(queues.batches.map((batch) => batch.length)).toEqual([100, 100, 50]);
+    const keys = queues.batches
+      .flat()
+      .map((entry) => entry.body.idempotencyKey);
+    expect(new Set(keys).size).toBe(250);
+    expect(Object.keys(ledgerOf())).toHaveLength(250);
+    expect(Object.keys(failedOf())).toEqual([]);
+
+    // Nothing left to resend.
+    const none = setup(recipients(250), queues);
+    await runWeMoved(
+      { ...RUN, apply: true, outDir: dir, resend: { failed: true } },
+      none.context,
+      capture().out
+    );
+    expect(queues.batches).toHaveLength(3);
+
+    for (const text of [firstOut.all(), dryOut.all(), againOut.all()]) {
+      expect(text).not.toContain(`@${MAIL_DOMAIN}`);
+    }
+  });
+
+  test("a resend by key skips what the consumer's marker says was delivered, replaces the ledger entry of the rest and reports unknown keys", async () => {
+    const queues = fakeQueuesApi();
+    const first = setup(recipients(5), queues);
+    await runWeMoved(
+      { ...RUN, apply: true, outDir: dir },
+      first.context,
+      capture().out
+    );
+    const before = ledgerOf();
+    expect(queues.batches).toHaveLength(1);
+
+    const kv = { [MARKER("user-0001")]: "1" };
+    const dry = setup(recipients(5), queues, undefined, undefined, kv);
+    const dryOut = capture();
+    await runWeMoved(
+      {
+        ...RUN,
+        outDir: dir,
+        resend: {
+          keys: ["user-0001", "user-0002", "user-0002", "user-9999"],
+        },
+      },
+      dry.context,
+      dryOut.out
+    );
+    const dryText = dryOut.all();
+    expect(dryText).toContain("3 selected; 1 to queue in 1 batch(es)");
+    expect(dryText).toContain(
+      "Resend: 1 skipped (the consumer's email:sent marker exists: delivered), 1 not a current recipient, 1 of the 1 to send have a ledger entry"
+    );
+    expect(dryText).toContain("Skipped (delivered): user-0001.");
+    expect(dryText).toContain("not a current recipient");
+    expect(dryText).toContain("user-9999");
+    expect(ledgerOf()).toEqual(before);
+    expect(queues.batches).toHaveLength(1);
+
+    const apply = setup(recipients(5), queues, undefined, undefined, kv);
+    const applyOut = capture();
+    expect(
+      await runWeMoved(
+        {
+          ...RUN,
+          apply: true,
+          outDir: dir,
+          resend: {
+            keys: ["user-0001", "user-0002", "user-0002", "user-9999"],
+          },
+        },
+        apply.context,
+        applyOut.out
+      )
+    ).toBe(0);
+    expect(queues.batches).toHaveLength(2);
+    const resent = queues.batches[1] ?? [];
+    expect(resent.map((entry) => entry.body.idempotencyKey)).toEqual([
+      "we_moved:user-0002",
+    ]);
+    const after = ledgerOf();
+    expect(after["user-0002"]?.messageId).toBe(resent[0]?.body.id);
+    expect(after["user-0002"]?.messageId).not.toBe(
+      before["user-0002"]?.messageId
+    );
+    for (const key of ["user-0000", "user-0001", "user-0003", "user-0004"]) {
+      expect(after[key]).toEqual(before[key]);
+    }
+    expect(`${dryText}${applyOut.all()}`).not.toContain(`@${MAIL_DOMAIN}`);
+  });
+
+  test("a resend that fails keeps the old ledger entries and records the keys for --failed", async () => {
+    const queues = fakeQueuesApi();
+    const first = setup(recipients(3), queues);
+    await runWeMoved(
+      { ...RUN, apply: true, outDir: dir },
+      first.context,
+      capture().out
+    );
+    const before = ledgerOf();
+    const broken = fakeQueuesApi({ failBatch: { nth: 1, status: 503 } });
+    const second = setup(recipients(3), broken);
+    await expect(
+      runWeMoved(
+        {
+          ...RUN,
+          apply: true,
+          outDir: dir,
+          resend: { keys: ["user-0000", "user-0001"] },
+        },
+        second.context,
+        capture().out
+      )
+    ).rejects.toThrow("The Queues API answered 503 to batch 1");
+    expect(ledgerOf()).toEqual(before);
+    expect(Object.keys(failedOf())).toEqual(["user-0000", "user-0001"]);
+  });
+
+  test("warns when a key was queued before the marker's 7-day window, and refuses more than 200 keys", async () => {
+    const queues = fakeQueuesApi();
+    const first = setup(recipients(3), queues);
+    await runWeMoved(
+      { ...RUN, apply: true, outDir: dir },
+      first.context,
+      capture().out
+    );
+    // The fake clock is 2026-10-04: make user-0001's ledger entry 40 days old.
+    const path = join(dir, WE_MOVED_LEDGER);
+    const ledger = JSON.parse(readFileSync(path, "utf8"));
+    ledger.entries["user-0001"].queuedAt = "2026-08-25T12:00:00.000Z";
+    writeFileSync(path, JSON.stringify(ledger));
+    const again = setup(recipients(3), queues);
+    const { all, lines, out } = capture();
+    await runWeMoved(
+      {
+        ...RUN,
+        outDir: dir,
+        resend: { keys: ["user-0000", "user-0001"] },
+      },
+      again.context,
+      out
+    );
+    expect(lines.error.join("\n")).toContain(
+      "1 key(s) were queued more than 7 days ago, past the consumer marker's window"
+    );
+    expect(lines.error.join("\n")).toContain("user-0001");
+    expect(lines.error.join("\n")).not.toContain("user-0000)");
+    expect(all()).not.toContain(`@${MAIL_DOMAIN}`);
+
+    const many = Array.from({ length: 201 }, (_, index) => `user-${index}`);
+    await expect(
+      runWeMoved(
+        { ...RUN, outDir: dir, resend: { keys: many } },
+        setup(recipients(3), queues).context,
+        capture().out
+      )
+    ).rejects.toThrow("at most 200 per run");
+  });
+
+  test("production only, and a plan folder for production", async () => {
+    const { context, wrangler } = setup(recipients(1));
+    await expect(
+      runWeMoved(
+        {
+          ...RUN,
+          env: "staging",
+          outDir: dir,
+          resend: { keys: ["user-0000"] },
+        },
+        context,
+        capture().out
+      )
+    ).rejects.toThrow("we-moved runs on production only");
+    expect(wrangler.calls).toEqual([]);
+  });
+});
+
+describe("we-moved --resend on the command line", () => {
+  async function usage(argv: readonly string[]): Promise<number> {
+    return await main(["we-moved", ...argv], capture().out);
+  }
+
+  test("--resend takes an absolute ids file or --failed, not both, and --failed needs --resend", async () => {
+    const ids = join(dir, "ids.txt");
+    writeFileSync(ids, "user-0001\n");
+    const base = ["--env", "production", "--out", dir];
+    expect(await usage([...base, "--resend"])).toBe(2);
+    expect(await usage([...base, "--resend", "--apply"])).toBe(2);
+    expect(await usage([...base, "--failed"])).toBe(2);
+    expect(await usage([...base, "--resend", ids, "--failed"])).toBe(2);
+    expect(await usage([...base, "--resend", "ids.txt"])).toBe(2);
+  });
+
+  test("an ids file holds keys, never an address, and the error does not echo the line", async () => {
+    const ids = join(dir, "ids.txt");
+    writeFileSync(ids, `# resend\nuser-0001\n\nperson.0001@${MAIL_DOMAIN}\n`);
+    const { all, out } = capture();
+    const code = await main(
+      ["we-moved", "--env", "production", "--out", dir, "--resend", ids],
+      out
+    );
+    expect(code).toBe(2);
+    expect(all()).toContain("Line 4 of the ids file is not a ledger key");
+    expect(all()).not.toContain(MAIL_DOMAIN);
+  });
+});

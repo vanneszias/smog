@@ -1,0 +1,459 @@
+import { LOCALES, type ShippedLocale as Locale } from "@smog/i18n";
+import { describe, expect, it } from "vitest";
+import {
+  EmailRenderError,
+  type EmailTemplateProps,
+  renderEmail,
+} from "../../../../../email/src/index";
+import { EMAIL_SAMPLES } from "../../../../../email/src/samples";
+
+const SITE = "https://smog.example";
+const SCRIPT = "<script>alert(1)</script>";
+const IMG_TAG = /<img[^>]*>/;
+
+/** Any run of spaces (also no-break and narrow no-break) as one space. */
+function plain(text: string): string {
+  return text.replace(/[\s  ]+/g, " ");
+}
+
+const MONEY: Record<Locale, string> = {
+  en: "€60.00",
+  fr: "60,00 €",
+  nl: "€ 60,00",
+};
+
+/** 23:30 UTC on 1 October is already 2 October in Brussels. */
+const LATE_EVENING = "2027-10-01T23:30:00.000Z";
+const BRUSSELS_DATE: Record<Locale, string> = {
+  en: "2 October 2027",
+  fr: "2 octobre 2027",
+  nl: "2 oktober 2027",
+};
+
+const YOUR_GESTURE: Record<Locale, string> = {
+  en: "your gesture",
+  fr: "votre geste",
+  nl: "je gebaar",
+};
+
+describe("the layout", () => {
+  it("shows the logo from the site, the copyright and the tagline", async () => {
+    const email = await renderEmail(
+      "transactional/welcome",
+      EMAIL_SAMPLES["transactional/welcome"],
+      "nl",
+      { siteUrl: "https://smog-site-staging.example" }
+    );
+    expect(email.html).toContain(
+      'src="https://smog-site-staging.example/brand/email-logo.png"'
+    );
+    expect(email.html).toContain('alt="SMOG &amp; Co"');
+    const year = new Date().getUTCFullYear();
+    expect(email.text).toContain(`© ${year} SMOG & CO vzw · België`);
+    expect(email.text).toContain(
+      "SMOG — Spreken Met Ondersteuning van Gebaren"
+    );
+  });
+
+  it("styles the logo's alt text white, for clients that block images", async () => {
+    const email = await renderEmail(
+      "auth/otp",
+      EMAIL_SAMPLES["auth/otp"],
+      "nl",
+      { siteUrl: SITE }
+    );
+    const img = email.html.match(IMG_TAG)?.[0] ?? "";
+    expect(img.toLowerCase()).toContain("color:#ffffff");
+  });
+
+  it("lists the gestures as blocks, not <br> lines", async () => {
+    const email = await renderEmail(
+      "transactional/admin-new-sponsorship",
+      EMAIL_SAMPLES["transactional/admin-new-sponsorship"],
+      "nl"
+    );
+    expect(email.html).not.toContain("<br");
+    expect(email.html).toContain('display:block">Kat');
+  });
+
+  it("names the sponsor without an elision problem in French", async () => {
+    const email = await renderEmail(
+      "transactional/admin-new-sponsorship",
+      EMAIL_SAMPLES["transactional/admin-new-sponsorship"],
+      "fr"
+    );
+    expect(email.subject).toBe("Nouveau parrainage : Acme BV");
+    const reminder = await renderEmail(
+      "transactional/renewal-reminder",
+      EMAIL_SAMPLES["transactional/renewal-reminder"],
+      "fr"
+    );
+    expect(plain(reminder.text)).toContain("pour le geste « Hond »");
+    expect(plain(reminder.text)).not.toContain("de le geste");
+  });
+
+  it("falls back to the wordmark without a site URL", async () => {
+    const email = await renderEmail(
+      "auth/otp",
+      EMAIL_SAMPLES["auth/otp"],
+      "en"
+    );
+    expect(email.html).not.toContain("email-logo.png");
+    expect(email.html).toContain("SMOG &amp; Co");
+  });
+
+  it("wraps a failed render in EmailRenderError", async () => {
+    await expect(
+      renderEmail(
+        "transactional/payment-confirmed",
+        {} as EmailTemplateProps["transactional/payment-confirmed"],
+        "nl"
+      )
+    ).rejects.toBeInstanceOf(EmailRenderError);
+  });
+});
+
+describe("escaping", () => {
+  it.each([
+    "transactional/sponsorship-received",
+    "transactional/sponsorship-live",
+    "transactional/admin-new-sponsorship",
+  ] as const)("escapes a <script> display name in %s", async (template) => {
+    const props = { ...EMAIL_SAMPLES[template], displayName: SCRIPT };
+    const email = await renderEmail(template, props as never, "en");
+    expect(email.html).not.toContain("<script");
+    expect(email.html).toContain("&lt;script&gt;");
+  });
+
+  it("escapes the names the admin emails show", async () => {
+    const email = await renderEmail(
+      "transactional/admin-new-sponsorship",
+      {
+        ...EMAIL_SAMPLES["transactional/admin-new-sponsorship"],
+        contact: { company: SCRIPT, email: "a@smog.example", name: SCRIPT },
+        gestures: [{ amountCents: 5000, name: SCRIPT }],
+      },
+      "nl"
+    );
+    expect(email.html).not.toContain("<script");
+  });
+});
+
+describe("money and dates per locale", () => {
+  it.each(LOCALES)(
+    "payment_confirmed shows the gesture's amount in %s",
+    async (locale) => {
+      const email = await renderEmail(
+        "transactional/payment-confirmed",
+        {
+          amountCents: 6000,
+          endsAt: null,
+          gestureName: "Hond",
+          kind: "initial",
+          name: "Alex",
+        },
+        locale
+      );
+      expect(plain(email.text)).toContain(MONEY[locale]);
+      expect(email.text).toContain("Hond");
+    }
+  );
+
+  it.each(LOCALES)(
+    "a renewal's payment_confirmed shows the new end date in Brussels (%s)",
+    async (locale) => {
+      const email = await renderEmail(
+        "transactional/payment-confirmed",
+        {
+          amountCents: 6000,
+          endsAt: LATE_EVENING,
+          gestureName: "Hond",
+          kind: "renewal",
+          name: "Alex",
+        },
+        locale
+      );
+      expect(plain(email.text)).toContain(BRUSSELS_DATE[locale]);
+    }
+  );
+
+  it.each(LOCALES)(
+    "sponsorship_live shows both stored dates (%s)",
+    async (locale) => {
+      const email = await renderEmail(
+        "transactional/sponsorship-live",
+        {
+          ...EMAIL_SAMPLES["transactional/sponsorship-live"],
+          endsAt: LATE_EVENING,
+          startsAt: "2026-10-02T08:00:00.000Z",
+        },
+        locale
+      );
+      const text = plain(email.text);
+      expect(text).toContain(BRUSSELS_DATE[locale]);
+      expect(text).toContain(BRUSSELS_DATE[locale].replace("2027", "2026"));
+    }
+  );
+
+  it("renewal_reminder says 30 days and links to the renewal page", async () => {
+    const url = `${SITE}/sponsor/renew#token=abc`;
+    const email = await renderEmail(
+      "transactional/renewal-reminder",
+      { endsAt: LATE_EVENING, gestureName: "Hond", name: "Alex", url },
+      "nl"
+    );
+    expect(plain(email.text)).toContain("30 dagen");
+    expect(plain(email.text)).toContain(BRUSSELS_DATE.nl);
+    expect(email.text).toContain(url);
+  });
+
+  it.each([
+    ["nl", "tegen de dan getoonde prijs", "hetzelfde bedrag"],
+    ["en", "at the price then shown", "same amount"],
+    ["fr", "au prix alors indiqué", "même montant"],
+  ] as const)(
+    "renewal_reminder promises the price then shown, as the terms do, never last year's amount (%s; fix wave, jobs M-5)",
+    async (locale, promise, old) => {
+      const email = await renderEmail(
+        "transactional/renewal-reminder",
+        EMAIL_SAMPLES["transactional/renewal-reminder"],
+        locale
+      );
+      const text = plain(email.text);
+      expect(text).toContain(promise);
+      expect(text).not.toContain(old);
+    }
+  );
+});
+
+describe("the missing-gesture fallback (bug 28)", () => {
+  for (const locale of LOCALES) {
+    it.each([
+      "transactional/sponsorship-received",
+      "transactional/payment-confirmed",
+      "transactional/sponsorship-live",
+      "transactional/renewal-reminder",
+    ] as const)(
+      `%s says "${YOUR_GESTURE[locale]}" in ${locale}`,
+      async (template) => {
+        const props = { ...EMAIL_SAMPLES[template], gestureName: null };
+        const email = await renderEmail(template, props as never, locale);
+        expect(email.text.toLowerCase()).toContain(YOUR_GESTURE[locale]);
+        expect(email.text).not.toContain("null");
+        expect(email.text).not.toContain("Hond");
+      }
+    );
+  }
+});
+
+describe("the admin emails", () => {
+  const sample = EMAIL_SAMPLES["transactional/admin-new-sponsorship"];
+
+  it("admin_new_sponsorship lists the gestures, the contact and the invoice box", async () => {
+    const email = await renderEmail(
+      "transactional/admin-new-sponsorship",
+      {
+        ...sample,
+        gestures: [
+          { amountCents: 6000, name: "Hond" },
+          { amountCents: 5000, name: null },
+        ],
+        totalCents: 11_000,
+      },
+      "nl"
+    );
+    const text = plain(email.text);
+    expect(email.subject).toBe("Nieuwe sponsoring van Acme BV");
+    for (const expected of [
+      "Hond",
+      "€ 60,00",
+      "€ 50,00",
+      "€ 110,00",
+      "Alex (Acme BV)",
+      "alex@smog.example",
+      "1 jaar",
+      "BE 0123.456.749",
+      "facturen@smog.example",
+      "Ja",
+    ]) {
+      expect(text).toContain(expected);
+    }
+    expect(email.text).toContain(sample.url);
+  });
+
+  it("uses the sponsor's email when the invoice has none, and says no invoice", async () => {
+    const withoutEmail = await renderEmail(
+      "transactional/admin-new-sponsorship",
+      {
+        ...sample,
+        invoice: { email: "", name: "Acme BV", vatNumber: "0123456749" },
+      },
+      "en"
+    );
+    expect(plain(withoutEmail.text)).toContain(
+      "Invoice email: alex@smog.example"
+    );
+    const none = await renderEmail(
+      "transactional/admin-new-sponsorship",
+      {
+        ...sample,
+        contact: { ...sample.contact, company: null },
+        invoice: null,
+      },
+      "en"
+    );
+    const text = plain(none.text);
+    expect(text).toContain("Invoice requested: No");
+    expect(text).not.toContain("VAT number");
+    expect(text).not.toContain("Alex (");
+  });
+
+  it("names a renewal in the subject", async () => {
+    const email = await renderEmail(
+      "transactional/admin-new-sponsorship",
+      { ...sample, kind: "renewal" },
+      "en"
+    );
+    expect(email.subject).toBe("Sponsorship renewed by Acme BV");
+  });
+
+  it.each([
+    ["late", "Te laat betaald"],
+    ["mismatch", "klopt niet"],
+    ["double", "Dubbel betaald"],
+    ["chargeback", "Teruggeboekt"],
+  ] as const)("admin_refund_needed explains %s", async (reason, phrase) => {
+    const sampleRefund = EMAIL_SAMPLES["transactional/admin-refund-needed"];
+    const email = await renderEmail(
+      "transactional/admin-refund-needed",
+      { ...sampleRefund, reason },
+      "nl"
+    );
+    expect(email.subject).toBe(
+      `Terugbetaling nodig voor betaling ${sampleRefund.paymentId}`
+    );
+    const text = plain(email.text);
+    expect(text).toContain(phrase);
+    expect(text).toContain("€ 60,00");
+    expect(email.text).toContain(sampleRefund.url);
+  });
+});
+
+describe("we_moved (E-13, phase 8 ruling 15)", () => {
+  const NEW_ORIGIN = "https://smog-site-production.zias.workers.dev";
+
+  const SUBJECT: Record<Locale, string> = {
+    en: "SMOG has moved",
+    fr: "SMOG a déménagé",
+    nl: "SMOG is verhuisd",
+  };
+  const NEW_ADDRESS: Record<Locale, string> = {
+    en: "SMOG & Co has a new address:",
+    fr: "SMOG & Co a une nouvelle adresse :",
+    nl: "SMOG & Co heeft een nieuw adres:",
+  };
+  /** One phrase per required part: the old password, each way in, the data, the app. */
+  const PARTS: Record<Locale, readonly string[]> = {
+    en: [
+      "Your old password no longer works",
+      "a code we email you",
+      "a sign-in link by email",
+      "Forgot your password",
+      "favourite gestures and your lists",
+      "update the app",
+    ],
+    fr: [
+      "Votre ancien mot de passe ne fonctionne plus",
+      "un code que nous vous envoyons",
+      "un lien de connexion par e-mail",
+      "Mot de passe oublié",
+      "gestes favoris et vos listes",
+      "mettez l'application à jour",
+    ],
+    nl: [
+      "Je oude wachtwoord werkt niet meer",
+      "een code die we je mailen",
+      "een aanmeldlink per e-mail",
+      "Wachtwoord vergeten",
+      "favoriete gebaren en je lijsten",
+      "Werk de app dan bij",
+    ],
+  };
+
+  it.each(LOCALES)(
+    "says where SMOG now lives when the origin is new (%s)",
+    async (locale) => {
+      const email = await renderEmail(
+        "transactional/we-moved",
+        { providers: ["google", "apple"], url: NEW_ORIGIN },
+        locale
+      );
+      expect(email.subject).toBe(SUBJECT[locale]);
+      const text = plain(email.text);
+      expect(text).toContain(NEW_ADDRESS[locale]);
+      expect(text).toContain("smog-site-production.zias.workers.dev");
+      for (const part of PARTS[locale]) {
+        expect(text).toContain(part);
+      }
+      expect(email.html).toContain(`href="${NEW_ORIGIN}/sign-in"`);
+    }
+  );
+
+  it.each(LOCALES)(
+    "leaves the new-address sentence out on the old origin (%s)",
+    async (locale) => {
+      for (const url of [
+        "https://app.smog.vlaanderen",
+        "https://app.smog.vlaanderen/",
+      ]) {
+        // biome-ignore lint/performance/noAwaitInLoops: two renders, one after the other.
+        const email = await renderEmail(
+          "transactional/we-moved",
+          { providers: [], url },
+          locale
+        );
+        const text = plain(email.text);
+        expect(text).not.toContain(NEW_ADDRESS[locale]);
+        for (const part of PARTS[locale]) {
+          expect(text).toContain(part);
+        }
+        expect(email.html).toContain(
+          'href="https://app.smog.vlaanderen/sign-in"'
+        );
+      }
+    }
+  );
+
+  it.each([
+    [["google", "apple"], "Google of Apple, als", []],
+    [["google"], "Google, als", ["Apple"]],
+    [["apple"], "Apple, als", ["Google"]],
+    [[], null, ["Google", "Apple"]],
+  ] as const)(
+    "names only the configured providers (%j)",
+    async (providers, line, absent) => {
+      const email = await renderEmail(
+        "transactional/we-moved",
+        { providers, url: NEW_ORIGIN },
+        "nl"
+      );
+      const text = plain(email.text);
+      if (line) {
+        expect(text).toContain(line);
+      }
+      for (const name of absent) {
+        expect(text).not.toContain(name);
+      }
+    }
+  );
+
+  it("refuses a url that is not http(s)", async () => {
+    await expect(
+      renderEmail(
+        "transactional/we-moved",
+        { providers: [], url: "javascript:x" },
+        "nl"
+      )
+    ).rejects.toBeInstanceOf(EmailRenderError);
+  });
+});

@@ -1,0 +1,15 @@
+{
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["bun"],
+    "rootDir": "../../../.."
+  },
+  "include": [
+    "../../bun/shared/migrate-convex",
+    "../../bun/shared/migrate-convex/service/d1-ambient.d.ts",
+    "../../bun/shared/migrate-convex/service/email-ambient.d.ts"
+  ]
+}

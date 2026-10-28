@@ -8,8 +8,8 @@
     "./cron": "./src/cron.ts"
   },
   "scripts": {
-    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",
-    "test": "bun ../../scripts/test-deadline.ts -- vitest run"
+    "check-types": "wrangler types --config ../testing/config/workers/jobs.wrangler.jsonc && tsc -b",
+    "test": "bun ../testing/runner.ts --package jobs"
   },
   "dependencies": {
     "@smog/config": "workspace:*",
@@ -18,10 +18,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "catalog:",
     "@types/react": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "wrangler": "catalog:"
   }
 }

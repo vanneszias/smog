@@ -1,0 +1,576 @@
+import { env } from "cloudflare:workers";
+import { scrypt } from "node:crypto";
+import { account, session, verification } from "@smog/db";
+import { eq } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
+import {
+  APP_MAGIC_LINK_PATH,
+  MAGIC_LINK_TTL_SECONDS,
+} from "../../../../auth/src/fields";
+import { appMagicLinkURL } from "../../../../auth/src/server";
+import { getSession, requireAdminUser } from "../../../../auth/src/session";
+import { makeUser } from "../../../support/db/index";
+import {
+  codeIn,
+  cookieHeader,
+  findUser,
+  linkIn,
+  PASSWORD,
+  SITE_URL,
+  sessionCookie,
+  setup,
+  uniqueEmail,
+} from "./helpers";
+
+const SECURE = /;\s*Secure/i;
+const OTP_SUBJECT = /^\d{6} is je code/;
+const SECURE_SESSION_COOKIE = /^__Secure-smog\.session_token=/;
+const SESSION_COOKIE = /^smog\.session_token=/;
+
+async function signUp(
+  ctx: ReturnType<typeof setup>,
+  email: string,
+  extra: Record<string, unknown> = {}
+): Promise<Response> {
+  return await ctx.call("/sign-up/email", {
+    body: { email, name: "Ada", password: PASSWORD, ...extra },
+  });
+}
+
+/** Signs in with an email code and returns the session cookie header. */
+async function signInWithOtp(
+  ctx: ReturnType<typeof setup>,
+  email: string
+): Promise<Response> {
+  const sent = await ctx.call("/email-otp/send-verification-otp", {
+    body: { email, type: "sign-in" },
+  });
+  expect(sent.status).toBe(200);
+  const otp = codeIn(ctx.email.sent.at(-1)?.text);
+  return await ctx.call("/sign-in/email-otp", { body: { email, otp } });
+}
+
+describe("email + password", () => {
+  it("(a) sign-up sends one verification email and does not sign in", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+
+    const response = await signUp(ctx, email);
+
+    expect(response.status).toBe(200);
+    expect(sessionCookie(response)).toBeUndefined();
+    expect(ctx.email.sent).toHaveLength(1);
+    const [message] = ctx.email.sent;
+    expect(message?.to).toBe(email);
+    expect(message?.from).toBe("SMOG & Co <noreply@smog.vlaanderen>");
+    expect(message?.replyTo).toBe("info@smog.vlaanderen");
+    expect(message?.subject).toBe("Bevestig je e-mailadres");
+    expect(linkIn(message?.text)).toContain("/api/auth/verify-email?token=");
+
+    const signIn = await ctx.call("/sign-in/email", {
+      body: { email, password: PASSWORD },
+    });
+    expect(signIn.status).toBe(403);
+  });
+
+  it("sign-up gives the user role 'user'", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+
+    await signUp(ctx, email);
+
+    expect((await findUser(ctx.db, email))?.role).toBe("user");
+  });
+
+  it("(b) the verification link verifies the address and signs in", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await signUp(ctx, email);
+
+    const verify = await ctx.call(linkIn(ctx.email.sent[0]?.text));
+
+    expect(verify.status).toBe(302);
+    expect(sessionCookie(verify)).toBeDefined();
+    const current = await getSession(
+      ctx.auth,
+      new Headers({ cookie: cookieHeader(verify) })
+    );
+    expect(current?.user.email).toBe(email);
+    expect(current?.user.emailVerified).toBe(true);
+  });
+
+  it("(e) a migrated user without a credential sets a password by reset", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    const migrated = await makeUser(ctx.db, { email, emailVerified: true });
+
+    const request = await ctx.call("/request-password-reset", {
+      body: { email, redirectTo: `${SITE_URL}/reset-password` },
+    });
+    expect(request.status).toBe(200);
+    const [message] = ctx.email.sent;
+    expect(message?.subject).toBe("Kies een nieuw wachtwoord");
+    const token = new URL(linkIn(message?.text)).pathname.split("/").at(-1);
+
+    const reset = await ctx.call("/reset-password", {
+      body: { newPassword: PASSWORD, token },
+    });
+    expect(reset.status).toBe(200);
+    const credentials = await ctx.db
+      .select()
+      .from(account)
+      .where(eq(account.userId, migrated.id));
+    expect(credentials.map((a) => a.providerId)).toEqual(["credential"]);
+
+    const signIn = await ctx.call("/sign-in/email", {
+      body: { email, password: PASSWORD },
+    });
+    expect(signIn.status).toBe(200);
+    expect(sessionCookie(signIn)).toBeDefined();
+  });
+
+  it("(h) a sign-up hashes with native scrypt (the CPU budget)", async () => {
+    const ctx = setup();
+    const started = performance.now();
+
+    const response = await signUp(ctx, uniqueEmail());
+
+    // Logged, not asserted: a whole sign-up (hash, D1, the email render) on
+    // a loaded runner has no stable wall-clock bound. The hash check below
+    // is what proves the budget holds.
+    const elapsed = performance.now() - started;
+    console.log(`[auth.test] sign-up took ${elapsed.toFixed(0)} ms`);
+    expect(response.status).toBe(200);
+
+    // The hash alone: workerd must resolve Better Auth's scrypt to native
+    // node:crypto, not the pure-JS fallback (DECISIONS, password hashing).
+    // A fixed millisecond limit fails on a busy CI runner, so the hash is
+    // judged against native scrypt with the same parameters, timed in turns
+    // with it: the fallback is many times slower, contention hits both.
+    const context = await ctx.auth.$context;
+    const nativeScrypt = (): Promise<void> =>
+      new Promise((resolve, reject) => {
+        scrypt(
+          PASSWORD.normalize("NFKC"),
+          "0123456789abcdef0123456789abcdef",
+          64,
+          { maxmem: 128 * 16_384 * 16 * 2, N: 16_384, p: 1, r: 16 },
+          (error) => (error ? reject(error) : resolve())
+        );
+      });
+    const time = async (run: () => Promise<unknown>): Promise<number> => {
+      const runStarted = performance.now();
+      await run();
+      return performance.now() - runStarted;
+    };
+    const hashTimes: number[] = [];
+    const nativeTimes: number[] = [];
+    let hash = "";
+    for (let run = 0; run < 3; run += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: timed one after another on purpose.
+      nativeTimes.push(await time(nativeScrypt));
+      hashTimes.push(
+        await time(async () => {
+          hash = await context.password.hash(PASSWORD);
+        })
+      );
+    }
+    const hashElapsed = Math.min(...hashTimes);
+    const nativeElapsed = Math.min(...nativeTimes);
+    console.log(
+      `[auth.test] scrypt hash took ${hashElapsed.toFixed(0)} ms (native ${nativeElapsed.toFixed(0)} ms)`
+    );
+    expect(await context.password.verify({ hash, password: PASSWORD })).toBe(
+      true
+    );
+    expect(hashElapsed).toBeLessThan(nativeElapsed * 3 + 50);
+  });
+});
+
+describe("dev seed", () => {
+  it("the seeded admin signs in with the dev-only password", async () => {
+    const statements = env.SEED_SQL.split("\n").filter(
+      (line) => line.trim() !== "" && !line.startsWith("--")
+    );
+    await env.DB.batch(statements.map((line) => env.DB.prepare(line)));
+    const ctx = setup();
+
+    const signIn = await ctx.call("/sign-in/email", {
+      body: { email: "admin@smog.test", password: "smog-dev-admin" },
+    });
+
+    expect(signIn.status).toBe(200);
+    const current = await getSession(
+      ctx.auth,
+      new Headers({ cookie: cookieHeader(signIn) })
+    );
+    expect(current?.user.role).toBe("admin");
+  });
+});
+
+describe("email OTP", () => {
+  it("(c) send-verification-otp (sign-in) then sign-in/email-otp returns a session", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+
+    const response = await signInWithOtp(ctx, email);
+
+    expect(response.status).toBe(200);
+    expect(sessionCookie(response)).toBeDefined();
+    const body = (await response.json()) as { user: { email: string } };
+    expect(body.user.email).toBe(email);
+    expect(ctx.email.sent.at(-1)?.subject).toMatch(OTP_SUBJECT);
+  });
+
+  it("stores the session in D1 as well as KV (admin revocation, export)", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    const member = await makeUser(ctx.db, { email, emailVerified: true });
+
+    await signInWithOtp(ctx, email);
+
+    const rows = await ctx.db
+      .select()
+      .from(session)
+      .where(eq(session.userId, member.id));
+    expect(rows).toHaveLength(1);
+  });
+});
+
+describe("magic link", () => {
+  it("(d) the magic link creates a session", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true, locale: "en" });
+
+    const sent = await ctx.call("/sign-in/magic-link", {
+      body: { callbackURL: "/", email },
+    });
+    expect(sent.status).toBe(200);
+    const [message] = ctx.email.sent;
+    expect(message?.subject).toBe("Your SMOG & Co sign-in link");
+
+    const verify = await ctx.call(linkIn(message?.text));
+
+    expect(verify.status).toBe(302);
+    const current = await getSession(
+      ctx.auth,
+      new Headers({ cookie: cookieHeader(verify) })
+    );
+    expect(current?.user.email).toBe(email);
+  });
+
+  it("an app request mails the app link, which the app exchanges itself", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+
+    // What the Expo client sends: the `smog://` callbacks, `expo-origin`.
+    const sent = await ctx.call("/sign-in/magic-link", {
+      body: {
+        callbackURL: "smog:///",
+        email,
+        errorCallbackURL: "smog:///",
+        newUserCallbackURL: "smog:///",
+      },
+      headers: { "expo-origin": "smog://", origin: "" },
+    });
+    expect(sent.status).toBe(200);
+    const link = new URL(linkIn(ctx.email.sent[0]?.text));
+
+    // The universal link: the site host, a fixed path, only the token (no
+    // address: it would land in logs and the address bar).
+    expect(`${link.origin}${link.pathname}`).toBe(
+      `${SITE_URL}${APP_MAGIC_LINK_PATH}`
+    );
+    expect([...link.searchParams.keys()]).toEqual(["token"]);
+    expect(link.toString()).not.toContain(encodeURIComponent(email));
+    expect(link.toString()).not.toContain("smog:");
+
+    // The app verifies without a callback: JSON and the cookie, no redirect.
+    const token = link.searchParams.get("token") ?? "";
+    const verify = await ctx.call(
+      `/magic-link/verify?token=${encodeURIComponent(token)}`,
+      { headers: { "expo-origin": "smog://", origin: "" } }
+    );
+    expect(verify.status).toBe(200);
+    expect(verify.headers.get("location")).toBeNull();
+    const current = await getSession(
+      ctx.auth,
+      new Headers({ cookie: cookieHeader(verify) })
+    );
+    expect(current?.user.email).toBe(email);
+
+    // Single use.
+    const again = await ctx.call(
+      `/magic-link/verify?token=${encodeURIComponent(token)}`,
+      { headers: { "expo-origin": "smog://", origin: "" } }
+    );
+    expect(sessionCookie(again)).toBeUndefined();
+  });
+
+  it("a web request keeps Better Auth's verify link", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+    await ctx.call("/sign-in/magic-link", {
+      body: { callbackURL: "/account", email },
+    });
+    const link = new URL(linkIn(ctx.email.sent[0]?.text));
+    expect(link.pathname).toBe("/api/auth/magic-link/verify");
+    expect(link.searchParams.get("callbackURL")).toBe("/account");
+  });
+
+  it("the link lives 5 minutes (MAGIC_LINK_TTL_SECONDS)", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+    const before = Date.now();
+    await ctx.call("/sign-in/magic-link", {
+      body: { callbackURL: "/", email },
+    });
+    const rows = await ctx.db.select().from(verification);
+    const row = rows.find((candidate) => candidate.value.includes(email));
+    expect(MAGIC_LINK_TTL_SECONDS).toBe(300);
+    const lifetime = (row?.expiresAt.getTime() ?? 0) - before;
+    expect(lifetime).toBeGreaterThan(299_000);
+    expect(lifetime).toBeLessThanOrEqual(301_000);
+  });
+
+  it("appMagicLinkURL only rewrites links whose callback is the app", () => {
+    const verify = `${SITE_URL}/api/auth/magic-link/verify?token=abc`;
+    expect(
+      appMagicLinkURL({
+        siteURL: SITE_URL,
+        token: "abc",
+        url: `${verify}&callbackURL=${encodeURIComponent("smog:///")}`,
+      })
+    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc`);
+    expect(
+      appMagicLinkURL({
+        siteURL: SITE_URL,
+        token: "abc",
+        url: `${verify}&callbackURL=${encodeURIComponent("exp://10.0.0.2:8081/--/")}`,
+      })
+    ).toBe(`${SITE_URL}${APP_MAGIC_LINK_PATH}?token=abc`);
+    for (const callback of ["/", "/account", `${SITE_URL}/lists`]) {
+      const url = `${verify}&callbackURL=${encodeURIComponent(callback)}`;
+      expect(
+        appMagicLinkURL({
+          siteURL: SITE_URL,
+          token: "abc",
+          url,
+        })
+      ).toBe(url);
+    }
+  });
+});
+
+describe("account deletion over HTTP", () => {
+  it("is not routed: only `account.delete` (auth.api) deletes", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    const member = await makeUser(ctx.db, { email, emailVerified: true });
+    const cookie = cookieHeader(await signInWithOtp(ctx, email));
+
+    const deleted = await ctx.call("/delete-user", { body: {}, cookie });
+    const callback = await ctx.call("/delete-user/callback?token=x", {
+      cookie,
+    });
+
+    expect([deleted.status, callback.status]).toEqual([404, 404]);
+    expect(
+      await ctx.db.query.user.findFirst({
+        where: (table, { eq: is }) => is(table.id, member.id),
+      })
+    ).toBeDefined();
+  });
+});
+
+describe("sessions and roles", () => {
+  it("(f) getSession returns role 'admin' for an admin", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true, role: "admin" });
+
+    const signedIn = await signInWithOtp(ctx, email);
+    const current = await getSession(
+      ctx.auth,
+      new Headers({ cookie: cookieHeader(signedIn) })
+    );
+
+    expect(current?.user.role).toBe("admin");
+    expect(requireAdminUser(current).email).toBe(email);
+  });
+
+  it("requireAdminUser rejects users and guests", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+    const signedIn = await signInWithOtp(ctx, email);
+    const current = await getSession(
+      ctx.auth,
+      new Headers({ cookie: cookieHeader(signedIn) })
+    );
+
+    expect(current?.user.role).toBe("user");
+    expect(() => requireAdminUser(current)).toThrow("FORBIDDEN");
+    expect(() => requireAdminUser(null)).toThrow("UNAUTHORIZED");
+    expect(await getSession(ctx.auth, new Headers())).toBeNull();
+  });
+
+  it("(g) the user's locale round-trips and picks the email language", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+
+    await signUp(ctx, email, { locale: "fr" });
+
+    expect((await findUser(ctx.db, email))?.locale).toBe("fr");
+    expect(ctx.email.sent[0]?.html).toContain('lang="fr"');
+
+    const verify = await ctx.call(linkIn(ctx.email.sent[0]?.text));
+    const current = await getSession(
+      ctx.auth,
+      new Headers({ cookie: cookieHeader(verify) })
+    );
+    expect(current?.user.locale).toBe("fr");
+  });
+
+  it("rejects a malformed locale, falls back to the default for one that is not enabled, and never lets a client set legacyId or role", async () => {
+    const ctx = setup();
+
+    const bad = await signUp(ctx, uniqueEmail(), { locale: "!!" });
+    expect(bad.status).toBe(400);
+
+    // Well formed but no enabled language: the account gets the default
+    // language, never a foreign-key error.
+    const unknownEmail = uniqueEmail();
+    const unknown = await signUp(ctx, unknownEmail, { locale: "de" });
+    expect(unknown.status).toBe(200);
+    expect((await findUser(ctx.db, unknownEmail))?.locale).toBe("nl");
+
+    const email = uniqueEmail();
+    const sneaky = await signUp(ctx, email, {
+      legacyId: "convex-id",
+      role: "admin",
+    });
+    expect(sneaky.status).toBe(400);
+    expect(await findUser(ctx.db, email)).toBeUndefined();
+  });
+});
+
+describe("cookies and origins", () => {
+  it("dev cookies are not Secure, so they work on http://localhost", async () => {
+    const ctx = setup();
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+
+    const cookie = sessionCookie(await signInWithOtp(ctx, email));
+
+    expect(cookie).toMatch(SESSION_COOKIE);
+    expect(cookie).not.toMatch(SECURE);
+  });
+
+  it("staging and production cookies are Secure", async () => {
+    const ctx = setup({
+      ENVIRONMENT: "staging",
+      SITE_URL: "https://smog-site-staging.zias.workers.dev",
+    });
+    const email = uniqueEmail();
+    await makeUser(ctx.db, { email, emailVerified: true });
+
+    const cookie = sessionCookie(await signInWithOtp(ctx, email));
+
+    expect(cookie).toMatch(SECURE_SESSION_COOKIE);
+    expect(cookie).toMatch(SECURE);
+  });
+
+  it("trusts the site, smog:// and (dev only) exp:// as origins", async () => {
+    const dev = setup();
+    const production = setup({
+      ENVIRONMENT: "production",
+      SITE_URL: "https://smog-site-production.zias.workers.dev",
+    });
+    const devContext = await dev.auth.$context;
+    const productionContext = await production.auth.$context;
+
+    expect(devContext.trustedOrigins).toEqual(
+      expect.arrayContaining([SITE_URL, "smog://", "exp://"])
+    );
+    expect(productionContext.trustedOrigins).toEqual(
+      expect.arrayContaining([
+        "https://smog-site-production.zias.workers.dev",
+        "smog://",
+      ])
+    );
+    expect(productionContext.trustedOrigins).not.toContain("exp://");
+  });
+
+  // Phase 9 ruling 9: an app variant's scheme is trusted only by its own env.
+  it.each([
+    {
+      env: "dev",
+      refused: ["smog-staging://"],
+      site: SITE_URL,
+      trusted: ["smog-dev://"],
+    },
+    {
+      env: "staging",
+      refused: ["smog-dev://"],
+      site: "https://smog-site-staging.zias.workers.dev",
+      trusted: ["smog-staging://"],
+    },
+    {
+      env: "production",
+      refused: ["smog-staging://", "smog-dev://"],
+      site: "https://smog-site-production.zias.workers.dev",
+      trusted: [],
+    },
+  ] as const)("$env trusts its own app variant only", async (row) => {
+    const ctx = setup({ ENVIRONMENT: row.env, SITE_URL: row.site });
+    const { trustedOrigins } = await ctx.auth.$context;
+    expect(trustedOrigins).toEqual(
+      expect.arrayContaining([row.site, "smog://"])
+    );
+    for (const origin of row.trusted) {
+      expect(trustedOrigins).toContain(origin);
+    }
+    for (const origin of row.refused) {
+      expect(trustedOrigins).not.toContain(origin);
+    }
+  });
+});
+
+describe("optional providers", () => {
+  it("offers Google only when its client id is set", async () => {
+    const without = setup();
+    const withGoogle = setup({
+      GOOGLE_CLIENT_ID: "google-id",
+      GOOGLE_CLIENT_SECRET: "google-secret",
+    });
+
+    const missing = await without.call("/sign-in/social", {
+      body: { callbackURL: "/", provider: "google" },
+    });
+    expect(missing.status).toBe(404);
+
+    const present = await withGoogle.call("/sign-in/social", {
+      body: { callbackURL: "/", disableRedirect: true, provider: "google" },
+    });
+    expect(present.status).toBe(200);
+    const body = (await present.json()) as { url: string };
+    expect(new URL(body.url).hostname).toBe("accounts.google.com");
+  });
+
+  it("requires a Turnstile token only when TURNSTILE_SECRET_KEY is set", async () => {
+    const guarded = setup({ TURNSTILE_SECRET_KEY: "turnstile-secret" });
+
+    const response = await guarded.call("/sign-up/email", {
+      body: { email: uniqueEmail(), name: "Ada", password: PASSWORD },
+    });
+
+    expect(response.status).toBe(400);
+    expect(guarded.email.sent).toHaveLength(0);
+  });
+});

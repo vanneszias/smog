@@ -9,10 +9,5 @@
     "jsxImportSource": "nativewind",
     "types": ["node"]
   },
-  "include": [
-    "src",
-    "nativewind-env.d.ts",
-    "jest.setup.ts",
-    "jest.setup-env.ts"
-  ]
+  "include": ["src", "nativewind-env.d.ts"]
 }

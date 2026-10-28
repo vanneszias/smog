@@ -34,6 +34,8 @@ apps/mobile/android/
 test-results/
 playwright-report/
 apps/site/e2e/__screenshots__/
+# Keep existing local device-review evidence ignored after the flow sources move.
+apps/mobile/.maestro/results/
 
 # env
 .env

@@ -1,0 +1,14 @@
+{
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["bun"],
+    "paths": {
+      "@/*": ["../../../../apps/site/src/*"]
+    },
+    "rootDir": "../../../.."
+  },
+  "include": ["../../e2e"]
+}

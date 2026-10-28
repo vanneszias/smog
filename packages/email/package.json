@@ -9,8 +9,8 @@
     "./samples": "./src/samples.ts"
   },
   "scripts": {
-    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b",
-    "test": "bun ../../scripts/test-deadline.ts -- vitest run"
+    "check-types": "wrangler types --config ../testing/config/workers/email.wrangler.jsonc && tsc -b",
+    "test": "bun ../testing/runner.ts --package email"
   },
   "dependencies": {
     "@smog/config": "workspace:*",
@@ -22,10 +22,8 @@
     "react-email": "6.11.4"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "catalog:",
     "@types/react": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "wrangler": "catalog:"
   }
 }

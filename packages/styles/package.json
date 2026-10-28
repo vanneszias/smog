@@ -14,11 +14,10 @@
   "scripts": {
     "check-types": "tsc -b",
     "generate": "bun scripts/generate.ts",
-    "test": "bun ../../scripts/test-deadline.ts -- bun test"
+    "test": "bun ../testing/runner.ts --package styles"
   },
   "devDependencies": {
     "@smog/config": "workspace:*",
-    "@tailwindcss/node": "4.3.3",
     "@types/bun": "catalog:",
     "nativewind": "catalog:",
     "tailwindcss": "4.3.3",

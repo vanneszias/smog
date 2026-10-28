@@ -6,17 +6,15 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
-    "./enums": "./src/enums.ts",
-    "./testing": "./src/testing/index.ts",
-    "./testing/apply-migrations": "./src/testing/apply-migrations.ts"
+    "./enums": "./src/enums.ts"
   },
   "scripts": {
-    "check-types": "wrangler types --config test/wrangler.jsonc && tsc -b && tsc -p scripts",
+    "check-types": "wrangler types --config ../testing/config/workers/db.wrangler.jsonc && tsc -b && tsc -p scripts",
     "db:generate": "drizzle-kit generate",
     "migrate:dev": "cd ../../apps/site && wrangler d1 migrations apply DB --env dev --local",
     "seed:build": "bun scripts/seed.ts",
     "seed:dev": "bun scripts/seed.ts && cd ../../apps/site && wrangler d1 execute DB --env dev --local --file ../../packages/db/seed/dev.sql && wrangler kv key put catalog:version seed-$(date +%s) --binding KV --env dev --local",
-    "test": "bun ../../scripts/test-deadline.ts -- vitest run && bun ../../scripts/test-deadline.ts -- bun test scripts"
+    "test": "bun ../testing/runner.ts --package db"
   },
   "dependencies": {
     "@smog/config": "workspace:*",
@@ -24,11 +22,9 @@
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "catalog:",
     "@types/bun": "catalog:",
     "drizzle-kit": "0.31.11",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "wrangler": "catalog:"
   }
 }

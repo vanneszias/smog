@@ -12,7 +12,7 @@
   },
   "scripts": {
     "check-types": "tsc -b",
-    "test": "bun ../../scripts/test-deadline.ts -- bun test --timeout=20000"
+    "test": "bun ../testing/runner.ts --package ui-web"
   },
   "dependencies": {
     "@hookform/resolvers": "6.0.2",
@@ -34,13 +34,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "21.0.4",
     "@smog/config": "workspace:*",
-    "@tailwindcss/node": "4.3.3",
-    "@tailwindcss/oxide": "4.3.3",
-    "@testing-library/dom": "10.4.2",
-    "@testing-library/react": "16.3.3",
-    "@testing-library/user-event": "14.6.8",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "19.3.0",

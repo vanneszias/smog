@@ -1,0 +1,12 @@
+{
+  "extends": "@smog/config/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "types": ["@cloudflare/vitest-plugin/types", "vite/client"],
+    "rootDir": "../../../.."
+  },
+  "include": ["../../workers/auth/service", "../workers/auth.ts"],
+  "files": ["../../../auth/worker-configuration.d.ts"]
+}

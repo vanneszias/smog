@@ -1,0 +1,351 @@
+[
+  {
+    "id": "mobile-native",
+    "runtime": "native",
+    "owner": "mobile",
+    "cwd": "apps/mobile",
+    "roots": [
+      "native/account/mobile",
+      "native/auth/mobile",
+      "native/gestures/mobile",
+      "native/lessons/mobile",
+      "native/shared/mobile",
+      "native/sponsorships/mobile"
+    ],
+    "config": "config/native/mobile/jest.config.cjs"
+  },
+  {
+    "id": "site-e2e",
+    "runtime": "e2e",
+    "owner": "site",
+    "cwd": "apps/site",
+    "roots": ["e2e"]
+  },
+  {
+    "id": "site-bun",
+    "runtime": "bun",
+    "owner": "site",
+    "cwd": "apps/site",
+    "roots": ["bun/shared/site-scripts"]
+  },
+  {
+    "id": "site-bun-dom",
+    "runtime": "bun",
+    "owner": "site",
+    "cwd": "apps/site",
+    "roots": [
+      "bun/admin/site",
+      "bun/gestures/site",
+      "bun/lessons/site",
+      "bun/shared/site",
+      "bun/sponsorships/site",
+      "bun/translation/site"
+    ],
+    "dom": true
+  },
+  {
+    "id": "site-workers",
+    "runtime": "workers",
+    "owner": "site",
+    "cwd": "apps/site",
+    "roots": [
+      "workers/admin/site",
+      "workers/auth/site",
+      "workers/gestures/site",
+      "workers/lessons/site",
+      "workers/shared/site",
+      "workers/sponsorships/site",
+      "workers/translation/site"
+    ],
+    "config": "config/workers/site.ts"
+  },
+  {
+    "id": "analytics-bun-dom",
+    "runtime": "bun",
+    "owner": "analytics",
+    "cwd": "packages/analytics",
+    "roots": ["bun/shared/analytics"],
+    "dom": true
+  },
+  {
+    "id": "analytics-bun",
+    "runtime": "bun",
+    "owner": "analytics",
+    "cwd": "packages/analytics",
+    "roots": ["bun/shared/analytics-server"]
+  },
+  {
+    "id": "api-workers",
+    "runtime": "workers",
+    "owner": "api",
+    "cwd": "packages/api",
+    "roots": ["workers/shared/api"],
+    "config": "config/workers/api.ts"
+  },
+  {
+    "id": "auth-bun",
+    "runtime": "bun",
+    "owner": "auth",
+    "cwd": "packages/auth",
+    "roots": ["bun/auth"]
+  },
+  {
+    "id": "auth-workers",
+    "runtime": "workers",
+    "owner": "auth",
+    "cwd": "packages/auth",
+    "roots": ["workers/auth/service"],
+    "config": "config/workers/auth.ts"
+  },
+  {
+    "id": "brand-bun",
+    "runtime": "bun",
+    "owner": "brand",
+    "cwd": "packages/brand",
+    "roots": ["bun/shared/brand"]
+  },
+  {
+    "id": "config-bun",
+    "runtime": "bun",
+    "owner": "config",
+    "cwd": "packages/config",
+    "roots": ["bun/shared/config"]
+  },
+  {
+    "id": "db-bun",
+    "runtime": "bun",
+    "owner": "db",
+    "cwd": "packages/db",
+    "roots": ["bun/shared/db"]
+  },
+  {
+    "id": "db-workers",
+    "runtime": "workers",
+    "owner": "db",
+    "cwd": "packages/db",
+    "roots": ["workers/shared/db"],
+    "config": "config/workers/db.ts"
+  },
+  {
+    "id": "email-workers",
+    "runtime": "workers",
+    "owner": "email",
+    "cwd": "packages/email",
+    "roots": ["workers/shared/email"],
+    "config": "config/workers/email.ts"
+  },
+  {
+    "id": "account-bun-dom",
+    "runtime": "bun",
+    "owner": "account",
+    "cwd": "packages/features/account",
+    "roots": ["bun/account"],
+    "dom": true
+  },
+  {
+    "id": "account-workers",
+    "runtime": "workers",
+    "owner": "account",
+    "cwd": "packages/features/account",
+    "roots": ["workers/account/service"],
+    "config": "config/workers/account.ts"
+  },
+  {
+    "id": "admin-workers",
+    "runtime": "workers",
+    "owner": "admin",
+    "cwd": "packages/features/admin",
+    "roots": ["workers/admin/service"],
+    "config": "config/workers/admin.ts"
+  },
+  {
+    "id": "favorites-bun-dom",
+    "runtime": "bun",
+    "owner": "favorites",
+    "cwd": "packages/features/favorites",
+    "roots": ["bun/favorites"],
+    "dom": true
+  },
+  {
+    "id": "favorites-workers",
+    "runtime": "workers",
+    "owner": "favorites",
+    "cwd": "packages/features/favorites",
+    "roots": ["workers/favorites/service"],
+    "config": "config/workers/favorites.ts"
+  },
+  {
+    "id": "gestures-bun-dom",
+    "runtime": "bun",
+    "owner": "gestures",
+    "cwd": "packages/features/gestures",
+    "roots": ["bun/gestures"],
+    "dom": true
+  },
+  {
+    "id": "gestures-workers",
+    "runtime": "workers",
+    "owner": "gestures",
+    "cwd": "packages/features/gestures",
+    "roots": ["workers/gestures/service"],
+    "config": "config/workers/gestures.ts"
+  },
+  {
+    "id": "lessons-workers",
+    "runtime": "workers",
+    "owner": "lessons",
+    "cwd": "packages/features/lessons",
+    "roots": ["workers/lessons/service"],
+    "config": "config/workers/lessons.ts"
+  },
+  {
+    "id": "lists-bun-dom",
+    "runtime": "bun",
+    "owner": "lists",
+    "cwd": "packages/features/lists",
+    "roots": ["bun/lists"],
+    "dom": true
+  },
+  {
+    "id": "lists-workers",
+    "runtime": "workers",
+    "owner": "lists",
+    "cwd": "packages/features/lists",
+    "roots": ["workers/lists/service"],
+    "config": "config/workers/lists.ts"
+  },
+  {
+    "id": "sponsorships-bun",
+    "runtime": "bun",
+    "owner": "sponsorships",
+    "cwd": "packages/features/sponsorships",
+    "roots": ["bun/sponsorships"]
+  },
+  {
+    "id": "sponsorships-workers",
+    "runtime": "workers",
+    "owner": "sponsorships",
+    "cwd": "packages/features/sponsorships",
+    "roots": ["workers/sponsorships/service"],
+    "config": "config/workers/sponsorships.ts"
+  },
+  {
+    "id": "translation-workers",
+    "runtime": "workers",
+    "owner": "translation",
+    "cwd": "packages/features/translation",
+    "roots": ["workers/translation/service"],
+    "config": "config/workers/translation.ts"
+  },
+  {
+    "id": "i18n-bun",
+    "runtime": "bun",
+    "owner": "i18n",
+    "cwd": "packages/i18n",
+    "roots": ["bun/shared/i18n"]
+  },
+  {
+    "id": "jobs-workers",
+    "runtime": "workers",
+    "owner": "jobs",
+    "cwd": "packages/jobs",
+    "roots": ["workers/shared/jobs"],
+    "config": "config/workers/jobs.ts"
+  },
+  {
+    "id": "local-store-bun",
+    "runtime": "bun",
+    "owner": "local-store",
+    "cwd": "packages/local-store",
+    "roots": ["bun/shared/local-store"]
+  },
+  {
+    "id": "migrate-convex-bun",
+    "runtime": "bun",
+    "owner": "migrate-convex",
+    "cwd": "packages/migrate-convex",
+    "roots": ["bun/shared/migrate-convex"]
+  },
+  {
+    "id": "migrate-convex-workers",
+    "runtime": "workers",
+    "owner": "migrate-convex",
+    "cwd": "packages/migrate-convex",
+    "roots": ["workers/shared/migrate-convex"],
+    "config": "config/workers/migrate-convex.ts"
+  },
+  {
+    "id": "payments-bun",
+    "runtime": "bun",
+    "owner": "payments",
+    "cwd": "packages/payments",
+    "roots": ["bun/shared/payments"]
+  },
+  {
+    "id": "pdf-bun",
+    "runtime": "bun",
+    "owner": "pdf",
+    "cwd": "packages/pdf",
+    "roots": ["bun/shared/pdf"]
+  },
+  {
+    "id": "pdf-workers",
+    "runtime": "workers",
+    "owner": "pdf",
+    "cwd": "packages/pdf",
+    "roots": ["workers/shared/pdf"],
+    "config": "config/workers/pdf.ts"
+  },
+  {
+    "id": "rpc-workers",
+    "runtime": "workers",
+    "owner": "rpc",
+    "cwd": "packages/rpc",
+    "roots": ["workers/shared/rpc"],
+    "config": "config/workers/rpc.ts"
+  },
+  {
+    "id": "styles-bun",
+    "runtime": "bun",
+    "owner": "styles",
+    "cwd": "packages/styles",
+    "roots": ["bun/shared/styles"]
+  },
+  {
+    "id": "ui-native-native",
+    "runtime": "native",
+    "owner": "ui-native",
+    "cwd": "packages/ui-native",
+    "roots": ["native/shared/ui-native"],
+    "config": "config/native/ui-native/jest.config.cjs"
+  },
+  {
+    "id": "ui-web-bun-dom",
+    "runtime": "bun",
+    "owner": "ui-web",
+    "cwd": "packages/ui-web",
+    "roots": ["bun/shared/ui-web"],
+    "dom": true
+  },
+  {
+    "id": "utils-bun",
+    "runtime": "bun",
+    "owner": "utils",
+    "cwd": "packages/utils",
+    "roots": ["bun/shared/utils"]
+  },
+  {
+    "id": "video-bun",
+    "runtime": "bun",
+    "owner": "video",
+    "cwd": "packages/video",
+    "roots": ["bun/shared/video"]
+  },
+  {
+    "id": "tooling-bun",
+    "runtime": "bun",
+    "owner": "tooling",
+    "cwd": ".",
+    "roots": ["bun/shared/tooling"]
+  }
+]

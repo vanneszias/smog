@@ -9,12 +9,11 @@
     "./web": "./src/web.ts",
     "./native": "./src/native.ts",
     "./server": "./src/server/relay.ts",
-    "./react": "./src/react.tsx",
-    "./testing": "./src/testing.ts"
+    "./react": "./src/react.tsx"
   },
   "scripts": {
     "check-types": "tsc -b",
-    "test": "bun ../../scripts/test-deadline.ts -- bun test ./src/server && bun ../../scripts/test-deadline.ts -- bun test --timeout=20000 --preload @smog/config/testing/happy-dom --path-ignore-patterns='src/server/**' src"
+    "test": "bun ../testing/runner.ts --package analytics"
   },
   "dependencies": {
     "@smog/config": "workspace:*",
@@ -23,13 +22,9 @@
   },
   "devDependencies": {
     "@openpanel/react-native": "catalog:",
-    "@testing-library/dom": "10.4.2",
-    "@testing-library/react": "16.3.3",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "19.3.0",
     "react": "catalog:",
-    "react-dom": "catalog:",
     "typescript": "catalog:"
   },
   "peerDependencies": {

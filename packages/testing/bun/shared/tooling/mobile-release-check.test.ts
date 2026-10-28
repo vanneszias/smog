@@ -1,0 +1,203 @@
+import { describe, expect, test } from "bun:test";
+import {
+  doctorVerdict,
+  formatBytes,
+  galleryVerdict,
+  type ResolvedIdentity,
+  variantProblems,
+} from "../../../../../scripts/mobile-release-check";
+
+const SCHEMA = "Check Expo config (app.json/ app.config.js) schema";
+
+const SCHEMA_CRASH = `Running 20 checks on your project...
+Unexpected error while running '${SCHEMA}' check:
+SyntaxError: Unexpected token 'H', "Host not i"... is not valid JSON
+1 check failed, indicating possible issues with the project.`;
+
+const REAL_FAILURE = `Running 20 checks on your project...
+19/20 checks passed. 1 checks failed. Possible issues detected:
+
+✖ Check that packages match versions required by installed Expo SDK
+The following packages should be updated for best compatibility with the installed expo version:
+  expo-router@57.0.1 - expected version: ~57.0.24
+
+1 check failed, indicating possible issues with the project.`;
+
+const SCHEMA_ISSUE = `Running 20 checks on your project...
+19/20 checks passed. 1 checks failed. Possible issues detected:
+
+✖ ${SCHEMA}
+Error: Problem validating fields in app config.
+
+1 check failed, indicating possible issues with the project.`;
+
+describe("doctorVerdict", () => {
+  test("passes when doctor exits 0", () => {
+    expect(doctorVerdict(0, "No issues detected!", false)).toEqual({
+      ok: true,
+    });
+    expect(doctorVerdict(0, "No issues detected!", true)).toEqual({ ok: true });
+  });
+
+  test("fails on a schema crash when online", () => {
+    expect(doctorVerdict(1, SCHEMA_CRASH, false).ok).toBe(false);
+  });
+
+  test("tolerates only the schema fetch crash when offline", () => {
+    expect(doctorVerdict(1, SCHEMA_CRASH, true)).toEqual({
+      ok: true,
+      skipped: [SCHEMA],
+    });
+  });
+
+  test("fails on a real doctor failure when offline", () => {
+    const verdict = doctorVerdict(1, REAL_FAILURE, true);
+    expect(verdict.ok).toBe(false);
+  });
+
+  test("fails on real schema issues when offline", () => {
+    expect(doctorVerdict(1, SCHEMA_ISSUE, true).ok).toBe(false);
+  });
+
+  test("fails when a crash hides a second failure", () => {
+    const output = SCHEMA_CRASH.replace("1 check failed", "2 checks failed");
+    expect(doctorVerdict(1, output, true).ok).toBe(false);
+  });
+
+  test("fails on output it cannot read", () => {
+    expect(doctorVerdict(1, "Segmentation fault", true).ok).toBe(false);
+  });
+});
+
+describe("formatBytes", () => {
+  test("formats megabytes", () => {
+    expect(formatBytes(3_670_016)).toBe("3.50 MB");
+  });
+});
+
+describe("galleryVerdict", () => {
+  test("passes a production bundle without the gallery", () => {
+    expect(galleryVerdict({ hasMarker: false, production: true })).toBeNull();
+  });
+
+  test("fails a production bundle that contains the gallery", () => {
+    expect(galleryVerdict({ hasMarker: true, production: true })).toContain(
+      "production"
+    );
+  });
+
+  test("passes a dev bundle with the gallery", () => {
+    expect(galleryVerdict({ hasMarker: true, production: false })).toBeNull();
+  });
+
+  test("fails a dev bundle that lost the gallery (the marker moved)", () => {
+    expect(galleryVerdict({ hasMarker: false, production: false })).toContain(
+      "marker"
+    );
+  });
+});
+
+describe("variantProblems", () => {
+  const EAS = {
+    build: {
+      development: { env: { APP_VARIANT: "development" } },
+      production: { env: {} },
+      staging: { env: { APP_VARIANT: "staging" } },
+    },
+  };
+  const IDENTITIES: Record<string, ResolvedIdentity> = {
+    development: {
+      androidPackage: "be.zias.smog.dev",
+      associatedDomains: undefined,
+      bundleIdentifier: "be.zias.smog.dev",
+      name: "SMOG Dev",
+      scheme: "smog-dev",
+      verifiedLinks: false,
+    },
+    production: {
+      androidPackage: "be.zias.smog",
+      associatedDomains: ["applinks:smog.example"],
+      bundleIdentifier: "be.zias.smog",
+      name: "SMOG & Co",
+      scheme: "smog",
+      verifiedLinks: true,
+    },
+    staging: {
+      androidPackage: "be.zias.smog.staging",
+      associatedDomains: undefined,
+      bundleIdentifier: "be.zias.smog.staging",
+      name: "SMOG Staging",
+      scheme: "smog-staging",
+      verifiedLinks: false,
+    },
+  };
+  const resolveWith =
+    (patch: Record<string, Partial<ResolvedIdentity>> = {}) =>
+    (env: Record<string, string>): ResolvedIdentity => {
+      const key = (env.APP_VARIANT as string | undefined) ?? "production";
+      return { ...(IDENTITIES[key] as ResolvedIdentity), ...patch[key] };
+    };
+
+  test("passes the three distinct identities", () => {
+    expect(variantProblems(EAS, resolveWith())).toEqual([]);
+  });
+
+  test("fails a profile that sets the wrong or no variant", () => {
+    const wrong = {
+      build: { ...EAS.build, staging: { env: { APP_VARIANT: "development" } } },
+    };
+    expect(variantProblems(wrong, resolveWith()).join()).toContain(
+      'build.staging.env.APP_VARIANT must be "staging"'
+    );
+    const unset = { build: { ...EAS.build, development: { env: {} } } };
+    expect(variantProblems(unset, resolveWith()).join()).toContain(
+      "build.development.env.APP_VARIANT"
+    );
+    const store = {
+      build: { ...EAS.build, production: { env: { APP_VARIANT: "staging" } } },
+    };
+    expect(variantProblems(store, resolveWith()).join()).toContain(
+      "build.production.env.APP_VARIANT must be unset"
+    );
+  });
+
+  test("fails a shared name, id or scheme", () => {
+    const problems = variantProblems(
+      EAS,
+      resolveWith({ staging: { scheme: "smog-dev" } })
+    );
+    expect(problems.join()).toContain("shared scheme");
+  });
+
+  test("fails a variant that claims the site's universal links", () => {
+    expect(
+      variantProblems(
+        EAS,
+        resolveWith({ staging: { associatedDomains: ["applinks:x"] } })
+      ).join()
+    ).toContain("the staging variant claims");
+    expect(
+      variantProblems(
+        EAS,
+        resolveWith({ development: { verifiedLinks: true } })
+      ).join()
+    ).toContain("the development variant claims");
+  });
+
+  test("fails a store app that lost its links or its identity", () => {
+    expect(
+      variantProblems(
+        EAS,
+        resolveWith({
+          production: { associatedDomains: undefined, verifiedLinks: false },
+        })
+      ).join()
+    ).toContain("no longer claims");
+    expect(
+      variantProblems(
+        EAS,
+        resolveWith({ production: { bundleIdentifier: "be.zias.other" } })
+      ).join()
+    ).toContain("must stay be.zias.smog / smog");
+  });
+});

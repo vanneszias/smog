@@ -54,7 +54,12 @@
   "yaml": { "formatter": { "enabled": false } },
   "overrides": [
     {
-      "includes": ["apps/mobile/**", "packages/ui-native/**"],
+      "includes": [
+        "apps/mobile/**",
+        "packages/ui-native/**",
+        "packages/testing/native/**",
+        "packages/testing/support/ui-native/**"
+      ],
       "linter": {
         "rules": {
           "a11y": { "noLabelWithoutControl": "off" }
@@ -62,7 +67,7 @@
       }
     },
     {
-      "includes": ["scripts/__fixtures__/**"],
+      "includes": ["packages/testing/support/tooling/__fixtures__/**"],
       "linter": {
         "rules": {
           "correctness": { "noUndeclaredDependencies": "off" }
@@ -72,6 +77,7 @@
     {
       "includes": [
         "scripts/**",
+        "packages/testing/**",
         "packages/migrate-convex/src/cli/**/*.ts",
         "**/*.test.ts",
         "**/*.test.tsx"
@@ -116,7 +122,11 @@
       }
     },
     {
-      "includes": ["apps/mobile/*.js", "apps/mobile/plugins/**/*.js"],
+      "includes": [
+        "apps/mobile/*.js",
+        "apps/mobile/plugins/**/*.js",
+        "packages/testing/config/native/**"
+      ],
       "linter": {
         "rules": {
           "correctness": {
