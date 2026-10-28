@@ -1,0 +1,9 @@
+{
+  "name": "@smog/deepmerge",
+  "version": "4.3.1-smog.1",
+  "private": true,
+  "description": "Vendored deepmerge 4.3.1 with the GHSA-gcqx-w48m-w2h4 prototype-poisoning fix",
+  "license": "MIT",
+  "main": "index.cjs",
+  "types": "index.d.ts"
+}

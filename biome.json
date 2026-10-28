@@ -22,6 +22,7 @@
       "!!packages/styles/generated",
       "!!packages/brand/src/art",
       "!!.agents",
+      "!!vendor/deepmerge",
       "!!docs/superpowers/analysis"
     ]
   },

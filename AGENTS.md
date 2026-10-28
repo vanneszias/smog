@@ -16,7 +16,7 @@ bun run test                 # Run all tests (turbo test, then scripts/*.test.ts
 bun run test:e2e [-- --project public|a11y|a11y-signed-in|a11y-reflow|admin|admin-a11y|serial]  # Playwright e2e (apps/site): the seven projects one after another, each wrapped by test-deadline; --project runs one (a CI shard). Fresh D1 first (see Local auth); E2E_PORT / E2E_MUX_PORT / E2E_MOLLIE_PORT move the ports
 bun run knip                 # Unused files, exports and dependencies
 bun run boundaries           # Enforce the package dependency graph
-bun run audit                # bun audit --production (ignored advisories: docs/DECISIONS.md)
+bun run audit                # bun audit: all dependencies, no advisory ignores
 bun run mobile:release-check # expo-doctor + expo export (iOS + Android) + bundle size
 bun run release:check        # Everything CI runs, in order
 SMOG_OFFLINE=1 bun run release:check  # Same, on a machine without internet access
