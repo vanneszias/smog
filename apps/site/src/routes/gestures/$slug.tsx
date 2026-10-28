@@ -11,14 +11,12 @@ import { muxStreamUrl, muxThumbnailUrl } from "@smog/utils";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import { OpenInApp } from "@/components/app-banner";
-import {
-  GestureDetailView,
-  RELATED_LIMIT,
-} from "@/components/learning/gesture-detail";
+import { GestureDetailView } from "@/components/learning/gesture-detail";
 import { GestureDetailSkeleton } from "@/components/learning/gesture-detail-skeleton";
 import { gestureHref } from "@/components/learning/links";
 import { Page, RouteError } from "@/components/learning/page";
 import { useHearts } from "@/components/learning/use-hearts";
+import { RELATED_LIMIT } from "@/lib/gesture-queries";
 import { pageMeta, seoHead, shellHead } from "@/lib/head";
 import type { RouterContext } from "@/router";
 

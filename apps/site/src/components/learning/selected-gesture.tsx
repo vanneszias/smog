@@ -3,7 +3,8 @@ import { useGesture, useRelated } from "@smog/gestures/client";
 import { useTranslation } from "@smog/i18n/react";
 import { EmptyState, ErrorState } from "@smog/ui-web";
 import { type ReactNode, useCallback, useEffect } from "react";
-import { GestureDetailView, RELATED_LIMIT } from "./gesture-detail";
+import { RELATED_LIMIT } from "@/lib/gesture-queries";
+import { GestureDetailView } from "./gesture-detail";
 import { GestureDetailSkeleton } from "./gesture-detail-skeleton";
 import { useHearts } from "./use-hearts";
 

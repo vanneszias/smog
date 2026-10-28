@@ -105,7 +105,7 @@ jest.mock("react-native-webview", () => {
   return { __esModule: true, default: WebView, WebView };
 });
 
-// The public env Expo inlines at build time.
-process.env.EXPO_PUBLIC_API_URL ??= "https://smog.test";
-process.env.EXPO_PUBLIC_ENVIRONMENT ??= "dev";
-process.env.EXPO_PUBLIC_SITE_HOST ??= "smog.test";
+// Test fixtures must not inherit a developer's .env or deployment profile.
+process.env.EXPO_PUBLIC_API_URL = "https://smog.test";
+process.env.EXPO_PUBLIC_ENVIRONMENT = "dev";
+process.env.EXPO_PUBLIC_SITE_HOST = "smog.test";

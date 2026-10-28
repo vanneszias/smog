@@ -52,14 +52,14 @@ test("the fork preserves deepmerge options, symbols, cloning and .all", () => {
     merge(
       { list: [1] },
       { list: [2] },
-      { arrayMerge: (_target, source) => source }
+      { arrayMerge: (_target, incoming) => incoming }
     )
   ).toEqual({ list: [2] });
   expect(
-    merge(
+    merge<{ nested: { a?: number; b?: number } }>(
       { nested: { a: 1 } },
       { nested: { b: 2 } },
-      { customMerge: () => (_target, source) => source }
+      { customMerge: () => (_target, incoming) => incoming }
     )
   ).toEqual({ nested: { b: 2 } });
   const symbol = Symbol("key");

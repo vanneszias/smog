@@ -16,6 +16,9 @@ import type { QueryClient } from "@tanstack/react-query";
 /** Search results per request (the contract allows 50). */
 export const SEARCH_LIMIT = 48;
 
+/** Related gestures on a detail (spec §7 `gestures.related`, max 20). */
+export const RELATED_LIMIT = 6;
+
 /**
  * Prefetches the browse page, within 3 D1 reads with the session:
  * - a query: the search, then the categories. The search loads this

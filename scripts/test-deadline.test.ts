@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,6 +10,13 @@ const GONE = /^(gone|Z)$/;
 
 function stateOf(pid: number): string {
   try {
+    if (process.platform === "darwin") {
+      return (
+        execFileSync("ps", ["-p", String(pid), "-o", "stat="], {
+          encoding: "utf8",
+        }).trim()[0] ?? "gone"
+      );
+    }
     const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
     return stat.slice(stat.lastIndexOf(")") + 2).split(" ")[0] ?? "gone";
   } catch {

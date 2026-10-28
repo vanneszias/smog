@@ -35,9 +35,6 @@ import { GestureActions } from "./gesture-actions";
 import { GestureGridSkeleton, LinkedGestureGrid } from "./gesture-cards";
 import type { Hearts } from "./use-hearts";
 
-/** Related gestures on a detail (spec §7 `gestures.related`, max 20). */
-export const RELATED_LIMIT = 6;
-
 export interface RelatedState {
   data: GestureSummary[] | undefined;
   isError: boolean;

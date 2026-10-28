@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -37,6 +37,7 @@ const MAX_ATTEMPTS = 2;
 const MAX_STACK_LINES = 40;
 const MAX_HANDLES = 40;
 const CLOCK_TICKS = 100;
+const WHITESPACE = /\s+/;
 
 export interface DeadlineArgs {
   command: string[];
@@ -70,7 +71,7 @@ export function parseDeadlineArgs(
 interface ProcessRow {
   args: string;
   comm: string;
-  /** CPU time used so far, in seconds (user + system, 100 ticks/s). */
+  /** CPU time used so far, in seconds (user + system). */
   cpu: number;
   pid: number;
   ppid: number;
@@ -80,6 +81,33 @@ interface ProcessRow {
 
 /** Every process in the group `pgid` (the command's own group). */
 function processGroup(pgid: number): ProcessRow[] {
+  if (process.platform === "darwin") {
+    return execFileSync(
+      "ps",
+      ["-axo", "pid=,ppid=,pgid=,stat=,time=,comm=,args="],
+      { encoding: "utf8" }
+    )
+      .trim()
+      .split("\n")
+      .flatMap((line): ProcessRow[] => {
+        const fields = line.trim().split(WHITESPACE);
+        if (Number(fields[2]) !== pgid) {
+          return [];
+        }
+        return [
+          {
+            args: fields.slice(6).join(" "),
+            comm: (fields[5] ?? "").split("/").at(-1) ?? "",
+            cpu: (fields[4] ?? "0")
+              .split(":")
+              .reduce((total, part) => total * 60 + Number(part), 0),
+            pid: Number(fields[0]),
+            ppid: Number(fields[1]),
+            state: fields[3]?.[0] ?? "?",
+          },
+        ];
+      });
+  }
   const rows: ProcessRow[] = [];
   for (const entry of readdirSync("/proc")) {
     const pid = Number(entry);
