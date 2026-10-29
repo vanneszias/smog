@@ -281,7 +281,18 @@
     "notFound": {
       "title": "Pagina niet gevonden",
       "description": "Deze pagina bestaat niet (meer).",
-      "action": "Naar de startpagina"
+      "action": "Naar de startpagina",
+      "browse": "Alle gebaren bekijken",
+      "eyebrow": "Fout 404",
+      "lead": "Misschien is de link verouderd of staat er een typfout in het adres. Begin opnieuw op de startpagina, of zoek het gebaar in de lijst met alle gebaren."
+    },
+    "routeError": {
+      "eyebrow": "Laadprobleem",
+      "title": "Deze pagina laadde niet",
+      "description": "Er ging iets mis bij het laden. Controleer je verbinding en probeer het opnieuw.",
+      "retrying": "Opnieuw aan het proberen…",
+      "failedTitle": "De pagina laadt nog altijd niet",
+      "failedDescription": "We hebben het opnieuw geprobeerd, maar het lukte niet. Probeer het straks nog eens, of ga verder vanaf de startpagina."
     },
     "actionFailed": "Dat lukte niet. Probeer het opnieuw."
   },

@@ -281,7 +281,18 @@
     "notFound": {
       "title": "Page not found",
       "description": "This page doesn't exist (anymore).",
-      "action": "Go to the home page"
+      "action": "Go to the home page",
+      "browse": "View all gestures",
+      "eyebrow": "Error 404",
+      "lead": "The link may be out of date, or the address has a typo. Start again from the home page, or find the gesture in the list of all gestures."
+    },
+    "routeError": {
+      "eyebrow": "Loading problem",
+      "title": "This page didn't load",
+      "description": "Something went wrong while loading it. Check your connection, then try again.",
+      "retrying": "Trying again…",
+      "failedTitle": "The page still won't load",
+      "failedDescription": "We tried again, but it didn't work. Try again in a little while, or carry on from the home page."
     },
     "actionFailed": "That didn't work. Please try again."
   },

@@ -284,7 +284,18 @@
     "notFound": {
       "title": "Page introuvable",
       "description": "Cette page n'existe pas (ou plus).",
-      "action": "Aller à l'accueil"
+      "action": "Aller à l'accueil",
+      "browse": "Voir tous les gestes",
+      "eyebrow": "Erreur 404",
+      "lead": "Le lien est peut-être ancien, ou l'adresse contient une faute de frappe. Repartez de la page d'accueil, ou cherchez le geste dans la liste de tous les gestes."
+    },
+    "routeError": {
+      "eyebrow": "Problème de chargement",
+      "title": "Cette page ne s'est pas chargée",
+      "description": "Un problème est survenu pendant le chargement. Vérifiez votre connexion, puis réessayez.",
+      "retrying": "Nouvel essai…",
+      "failedTitle": "La page ne se charge toujours pas",
+      "failedDescription": "Nous avons réessayé, sans succès. Réessayez dans un moment, ou continuez depuis la page d'accueil."
     },
     "actionFailed": "Cela n'a pas fonctionné. Réessayez."
   },
