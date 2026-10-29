@@ -2,6 +2,7 @@ import { useFavorites } from "@smog/favorites/client";
 import { useTranslation } from "@smog/i18n/react";
 import {
   Button,
+  cn,
   ErrorState,
   FavoritesEmptyState,
   GestureGrid,
@@ -10,9 +11,13 @@ import {
 import { useRouter } from "expo-router";
 import Search from "lucide-react-native/icons/search";
 import { type ReactElement, useCallback } from "react";
-import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
-import { ListScreen } from "@/components/screen";
+import {
+  LIST_CONTENT,
+  ListScreen,
+  ListState,
+  ListTop,
+} from "@/components/screen";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 
 /** The account's favorites, or a guest's gestures by id. */
@@ -46,38 +51,45 @@ export default function FavoritesScreen(): ReactElement {
     favorites.status === "loading" || favorites.itemsStatus === "loading";
   let content: ReactElement;
   if (loading && favorites.items.length === 0) {
-    content = <SearchResults items={[]} onRetry={retry} state="loading" />;
+    content = (
+      <ListState>
+        <SearchResults items={[]} onRetry={retry} state="loading" />
+      </ListState>
+    );
   } else if (
     (favorites.status === "error" || favorites.itemsStatus === "error") &&
     favorites.items.length === 0
   ) {
-    content = <ErrorState onRetry={retry} />;
+    content = (
+      <ListState>
+        <ErrorState onRetry={retry} />
+      </ListState>
+    );
   } else if (favorites.items.length === 0) {
     content = (
-      <FavoritesEmptyState
-        action={
-          <Button icon={<Search />} onPress={explore} variant="secondary">
-            {t("common.exploreGestures")}
-          </Button>
-        }
-      />
+      <ListState>
+        <FavoritesEmptyState
+          action={
+            <Button icon={<Search />} onPress={explore} variant="secondary">
+              {t("common.exploreGestures")}
+            </Button>
+          }
+        />
+      </ListState>
     );
   } else {
     content = (
       <GestureGrid
-        contentContainerClassName="px-4 pb-6"
+        contentContainerClassName={cn("px-4", LIST_CONTENT)}
         contentInsetAdjustmentBehavior="automatic"
         items={favorites.items}
+        // The grid's 12 px row gap follows the header: 4 + 12 is the 16 px.
+        ListHeaderComponent={<ListTop className="pt-1" inset={false} />}
         onEndReached={loadMore}
         renderItem={renderCard}
       />
     );
   }
 
-  return (
-    <ListScreen testID="favorites-screen">
-      <ConnectionBanner />
-      {content}
-    </ListScreen>
-  );
+  return <ListScreen testID="favorites-screen">{content}</ListScreen>;
 }

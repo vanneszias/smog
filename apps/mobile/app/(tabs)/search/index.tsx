@@ -70,7 +70,7 @@ function RecentSearchList({
 }): ReactElement {
   const { t } = useTranslation();
   return (
-    <View className="gap-2 px-4 pb-6">
+    <View className="gap-2 px-4 pt-4 pb-6">
       <Heading level={2} size="title-3">
         {t("search.recent")}
       </Heading>
@@ -242,7 +242,6 @@ export default function SearchScreen(): ReactElement {
             : {}
         }
       />
-      <ConnectionBanner className="mt-4" />
       {ios ? null : (
         <View className="flex-row items-center gap-2 px-4 py-2">
           <View className="flex-1">
@@ -263,6 +262,7 @@ export default function SearchScreen(): ReactElement {
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
       >
+        <ConnectionBanner className="mt-4" />
         {showRecent ? (
           <RecentSearchList
             items={recent.items}

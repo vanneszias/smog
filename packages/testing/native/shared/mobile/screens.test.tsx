@@ -710,6 +710,15 @@ describe("screen contract", () => {
     );
   });
 
+  it("keeps a list's empty state in a scroller that clears the large title", async () => {
+    await renderApp({ initialUrl: "/lists" });
+    const lists = await inScreen("lists");
+    const state = await lists.findByTestId("list-state");
+    // Under a large title only an inset scroller is moved below the header.
+    expect(state).toHaveProp("contentInsetAdjustmentBehavior", "automatic");
+    expect(within(state).getByText("No lists yet")).toBeOnTheScreen();
+  });
+
   it("gives settings the same page as the other screens", async () => {
     await renderApp({ initialUrl: "/settings", realSettings: true });
     const page = await screen.findByTestId("settings-screen");

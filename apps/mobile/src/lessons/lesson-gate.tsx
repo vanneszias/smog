@@ -3,6 +3,7 @@ import { useTranslation } from "@smog/i18n/react";
 import { EmptyState, Skeleton } from "@smog/ui-native";
 import type { ReactElement, ReactNode } from "react";
 import { View } from "react-native";
+import { ListState } from "@/components/screen";
 
 /** `loading` until the session is known, then whether the account may see lessons. */
 export type LessonAccess = "allowed" | "denied" | "loading";
@@ -42,18 +43,20 @@ export function LessonGate({
   }
   if (access === "loading") {
     return (
-      <View className="gap-3 px-4 pt-2" testID="lessons-gate-loading">
-        <Skeleton className="h-12" />
-        <Skeleton className="h-12" />
-      </View>
+      <ListState>
+        <View className="gap-3 px-4" testID="lessons-gate-loading">
+          <Skeleton className="h-12" />
+          <Skeleton className="h-12" />
+        </View>
+      </ListState>
     );
   }
   return (
-    <View className="flex-1 bg-background" testID="lessons-forbidden">
+    <ListState testID="lessons-forbidden">
       <EmptyState
         description={t("teacherLessons.forbidden.description")}
         title={t("teacherLessons.forbidden.title")}
       />
-    </View>
+    </ListState>
   );
 }

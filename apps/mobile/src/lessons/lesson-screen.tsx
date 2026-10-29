@@ -20,7 +20,7 @@ import { type ReactElement, useCallback, useState } from "react";
 import { View } from "react-native";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useOpenGesture } from "@/components/gesture-cards";
-import { ScreenScrollView } from "@/components/screen";
+import { ListScreen, ListState, ScreenScrollView } from "@/components/screen";
 import { useRuntimeCatalogue } from "@/lib/catalogue";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 import { ExportSheet } from "./export-sheet";
@@ -89,23 +89,31 @@ function LessonBody({ id }: { id: string }): ReactElement {
 
   if (lesson.isPending) {
     return (
-      <View className="gap-3 px-4" testID="lesson-loading">
-        <Skeleton className="h-8" />
-        <Skeleton className="h-12" />
-        <Skeleton className="h-12" />
-      </View>
+      <ListState>
+        <View className="gap-3 px-4" testID="lesson-loading">
+          <Skeleton className="h-8" />
+          <Skeleton className="h-12" />
+          <Skeleton className="h-12" />
+        </View>
+      </ListState>
     );
   }
   if (lesson.isError) {
     if (isDefinedError(lesson.error) && lesson.error.code === "NOT_FOUND") {
       return (
-        <EmptyState
-          description={t("teacherLessons.notFound.description")}
-          title={t("teacherLessons.notFound.title")}
-        />
+        <ListState>
+          <EmptyState
+            description={t("teacherLessons.notFound.description")}
+            title={t("teacherLessons.notFound.title")}
+          />
+        </ListState>
       );
     }
-    return <ErrorState onRetry={retry} />;
+    return (
+      <ListState>
+        <ErrorState onRetry={retry} />
+      </ListState>
+    );
   }
   const detail = lesson.data;
   const title =
@@ -135,6 +143,7 @@ function LessonBody({ id }: { id: string }): ReactElement {
   return (
     <>
       <ScreenScrollView contentContainerClassName="gap-6">
+        <ConnectionBanner className="mx-0" />
         <View className="gap-2">
           {detail.number === null ? null : (
             <Text size="body-sm" tone="muted">
@@ -199,11 +208,10 @@ function LessonBody({ id }: { id: string }): ReactElement {
 export function LessonScreen(): ReactElement {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
-    <View className="flex-1 bg-background" testID="lesson-screen">
-      <ConnectionBanner />
+    <ListScreen testID="lesson-screen">
       <LessonGate>
         <LessonBody id={id} />
       </LessonGate>
-    </View>
+    </ListScreen>
   );
 }

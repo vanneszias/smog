@@ -1,6 +1,7 @@
 import { cn } from "@smog/ui-native";
 import type { ReactElement, ReactNode } from "react";
 import { ScrollView, type ScrollViewProps, View } from "react-native";
+import { ConnectionBanner } from "@/components/connection-banner";
 
 /*
  * The screen contract every screen under a native stack header follows
@@ -35,10 +36,43 @@ export function ScreenScrollView({
   );
 }
 
+/*
+ * A large title (Favorites, Lists, Search) lays the screen out under the
+ * header on iOS and only a scroller with automatic insets is moved below
+ * it: anything else under the header is hidden behind it (the empty
+ * states lost their picture and title, the list touched the header). So
+ * everything under a header lives in a scroller, starting with `ListTop`.
+ */
+
+/** The bottom of a list's own content container. */
+export const LIST_CONTENT = "pb-10";
+
 /**
- * A page that holds one virtualised list (a grid or a FlatList with its own
- * automatic insets) and its loading, empty and error states, under the
- * connection banner.
+ * The start of a list's (or a state's) scrolling content: the 16 px under
+ * the header and the offline banner. `inset={false}` when the content
+ * container already has the gutter (the favorites grid).
+ */
+export function ListTop({
+  children,
+  className,
+  inset = true,
+}: {
+  children?: ReactNode;
+  className?: string;
+  inset?: boolean;
+}): ReactElement {
+  return (
+    <View className={cn("gap-2 pt-4", className)}>
+      <ConnectionBanner className={inset ? undefined : "mx-0"} />
+      {children}
+    </View>
+  );
+}
+
+/**
+ * A page that holds one virtualised list (a grid or a FlatList with
+ * automatic insets, `ListTop` as its header and `LIST_CONTENT` on its
+ * content) or, in its place, a `ListState`.
  */
 export function ListScreen({
   children,
@@ -48,8 +82,27 @@ export function ListScreen({
   testID?: string;
 }): ReactElement {
   return (
-    <View className="flex-1 gap-2 bg-background pt-4" testID={testID}>
+    <View className="flex-1 bg-background" testID={testID}>
       {children}
     </View>
+  );
+}
+
+/** A loading, empty or error state in place of the list, in a scroller of its own so it clears the header too. */
+export function ListState({
+  children,
+  testID = "list-state",
+}: {
+  children: ReactNode;
+  testID?: string;
+}): ReactElement {
+  return (
+    <ScrollView
+      contentContainerClassName="grow pb-10"
+      contentInsetAdjustmentBehavior="automatic"
+      testID={testID}
+    >
+      <ListTop className="grow">{children}</ListTop>
+    </ScrollView>
   );
 }
