@@ -897,7 +897,8 @@
     "searchPlaceholder": "Cherchez un geste, par exemple chien"
   },
   "footer": {
-    "madeBy": "Fait avec ♡ par zias.be"
+    "madeBy": "Fait avec ♡ par zias.be",
+    "love": "amour"
   },
   "account": {
     "title": "Votre compte",

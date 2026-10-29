@@ -2,9 +2,12 @@ import { CONTACT_EMAIL } from "@smog/config/constants";
 import { useTranslation } from "@smog/i18n/react";
 import { Logo, Text, TextLink } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
+import { Heart } from "lucide-react";
 import type { ReactNode } from "react";
 
 const AUTHOR_URL = "https://zias.be";
+// Keep the phrase and its word order in the existing plain-text catalogue.
+const CREDIT_TOKENS = /(♡|zias\.be)/u;
 
 /** A footer link: a text link with a 44 px target (spec §16). */
 function FooterLink({
@@ -97,8 +100,41 @@ export function Footer(): ReactNode {
           </nav>
         </div>
         <Text size="body-sm" tone="muted">
-          <TextLink href={AUTHOR_URL} tone="muted">
-            {t("footer.madeBy")}
+          <TextLink
+            className="group inline-flex min-h-touch items-center font-regular hover:no-underline"
+            href={AUTHOR_URL}
+            rel="noopener noreferrer"
+            target="_blank"
+            tone="muted"
+          >
+            <span>
+              {t("footer.madeBy")
+                .split(CREDIT_TOKENS)
+                .map((part) => {
+                  if (part === "♡") {
+                    return (
+                      <span key={part}>
+                        <Heart
+                          aria-hidden="true"
+                          className="mx-1 inline-block size-4 align-text-bottom text-primary-strong"
+                        />
+                        <span className="sr-only">{t("footer.love")}</span>
+                      </span>
+                    );
+                  }
+                  if (part === "zias.be") {
+                    return (
+                      <span
+                        className="font-semibold text-primary-strong group-hover:underline group-focus-visible:underline"
+                        key={part}
+                      >
+                        {part}
+                      </span>
+                    );
+                  }
+                  return part;
+                })}
+            </span>
           </TextLink>
         </Text>
       </div>
