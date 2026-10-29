@@ -2363,3 +2363,33 @@ Documents and measurements after the review fix wave. No feature code changed.
 - **2026-10-27 · Knip includes Metro's native entry and the app's autolink dependencies.** The utils workspace lists `src/**/*.native.ts` as entries because Metro resolves those in place of the web modules. The app's `expo-crypto` and `expo-network` declarations are excluded from unused-dependency reporting: they supply native autolinking for imports in utils and Better Auth, respectively. Removing either declaration to satisfy Knip would recreate the device failures; the native source still participates in unused-export/dependency analysis.
 - **2026-10-27 · Sheet inputs register with Gorhom, and overlay roots bridge the portal.** On the Android emulator, the new-list keyboard covered the entire sheet when its plain TextInput was not registered with Gorhom. The kit's Input selects BottomSheetTextInput inside a sheet, retaining a normal TextInput elsewhere. Menu and Sheet content re-provide their overlay state inside the portal: without it, list actions and SheetClose throw because the portal host sits outside their root. Alternative: patch every app dialog separately (duplicates a kit-level fix). The auth email summary stacks its change-address action below the address so that a 320 px display can show the address.
 - **2026-10-27 · Normalize masked-view's rewritten manifest attribute for runtime fingerprints.** EAS staging builds `4d9b7898-cb68-47b6-ab36-30d0c171bd7e` (iOS) and `855cac8a-7744-44f3-8bd6-e1199ce83ba9` (Android) both stopped in Configure expo-updates. Both fingerprint diffs named only masked-view: local hash `8cdd4a863dcde0be3d195b04b3d90937b7543482`, EAS hash `b7bc27de23ba01de8e9c8a4e566902fd2ba7716e`. Its own Gradle script removes the obsolete package attribute from its Android manifest in-place; a locally built dependency therefore differs from a fresh EAS install, even on iOS. Restoring the published manifest reproduced EAS's dependency hash, but the next Android build rewrote it again. `apps/mobile/fingerprint.config.cjs` normalizes only that attribute and the resulting opening-tag spacing, retaining all other manifest content and library sources in the hash. Tests cover pristine versus built contents, stream chunk boundaries and meaningful manifest changes. Alternative: ignore the whole package or manifest (hides real native changes), or restore after each build (easy to forget). The fingerprint runtime policy stays enabled. A new EAS build must still confirm the complete build succeeds.
+
+## Mobile base-screen insets and Home navigation (issue 9)
+
+Owner-approved on 2026-10-29 after reviewing the existing native stacks:
+
+- Reuse the existing app shell and native header helper. Home keeps a fixed,
+  compact logo/settings band, including its top safe area. The hero and gesture
+  content scroll beneath it. Disable bounce on Home on iOS only; ordinary
+  scrolling stays enabled. Native tabs resume owning Home's bottom inset.
+- Search, Favorites and Lists retain native large titles, automatic insets and
+  native bounce. The scrolling content adds 8 px above and 24 px below, beyond
+  system insets. Horizontal content gutters are 16 px; kit rows and empty states
+  already supply their own gutters. Home's full-width hero and empty states'
+  internal illustration spacing are deliberate exceptions.
+- Keep one scrolling surface across populated, loading, empty and error states
+  in Favorites and Lists. Do not wrap their virtualised lists in a ScrollView.
+  Put connection notices inside the scrolling content rather than before it.
+- Settings uses the same content spacing and a visible, labelled back arrow on
+  its landing screen. Return through existing history, or replace with Home
+  when none exists. Nested account/lesson headers keep their native back actions;
+  the root deep-link anchor and auth dismissal remain unchanged.
+
+Verification limits: mocked native tests establish configuration and route
+behavior, not UIKit bounce, large-title collapse or safe-area rendering. The
+reported device is an iPhone 12 Pro (iOS version unspecified). The implementation
+session's device tool reported Agent device access disabled, so simulator/device
+checks remain required before considering the visual acceptance criteria met.
+Check the five base screens in both themes with larger text, keyboard/search,
+notch and tab-bar clearance; exercise Settings/account/lessons, gesture/shared-list
+back gestures and auth dismissal. Android also needs a device regression pass.

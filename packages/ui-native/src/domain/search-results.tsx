@@ -91,7 +91,10 @@ export function SearchResults<T extends GestureCardData>({
       {state === "loading" ? <LoadingGrid count={skeletonCount} /> : null}
       {state === "results" ? (
         <GestureGrid
-          contentContainerClassName="px-4 pb-6"
+          // An enclosing scroller owns bottom clearance when this grid cannot scroll.
+          contentContainerClassName={
+            scrollEnabled === false ? "px-4" : "px-4 pb-6"
+          }
           items={items}
           onEndReached={onEndReached}
           renderItem={renderItem}

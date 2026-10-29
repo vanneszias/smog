@@ -10,7 +10,7 @@ export default function TabsLayout(): ReactElement {
   const muted = useColor("mutedForeground");
   return (
     <NativeTabs iconColor={muted} tintColor={primary}>
-      <NativeTabs.Trigger disableAutomaticContentInsets name="index">
+      <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>{t("nav.home")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           md="home"

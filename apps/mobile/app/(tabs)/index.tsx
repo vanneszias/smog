@@ -26,6 +26,7 @@ import { Platform, ScrollView, StatusBar, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
+import { SCREEN_SCROLL_OPTIONS } from "@/lib/screen";
 
 function FeaturedSkeleton(): ReactElement {
   return (
@@ -163,19 +164,14 @@ export default function HomeScreen(): ReactElement {
   }
 
   return (
-    <ScrollView
-      className="flex-1 bg-background"
-      contentContainerClassName="gap-6 pb-10"
-      contentInsetAdjustmentBehavior="never"
-      keyboardShouldPersistTaps="handled"
-      testID="home-screen"
-    >
+    <View className="flex-1 bg-background" testID="home-screen">
       {focused && Platform.OS === "android" ? (
         <StatusBar barStyle="light-content" />
       ) : null}
       <Surface
-        className="gap-4 rounded-b-3xl px-4 pb-8"
-        style={{ paddingTop: insets.top + 16 }}
+        className="px-4 pb-2"
+        style={{ paddingTop: insets.top + 8 }}
+        testID="home-header"
         tone="primary"
       >
         <View className="flex-row items-center justify-between gap-3">
@@ -187,47 +183,57 @@ export default function HomeScreen(): ReactElement {
             variant="ghost"
           />
         </View>
-        <Heading level={1} size="title-1">
-          {t("home.title")}
-        </Heading>
-        <Text tone="muted">{t("home.tagline")}</Text>
-        <Text tone="muted">{t("home.intro")}</Text>
-        <SearchField
-          onSubmitEditing={submit}
-          onValueChange={setQuery}
-          placeholder={t("search.placeholder")}
-          value={query}
-        />
       </Surface>
-      <ConnectionBanner />
-      {categories.data && categories.data.length > 0 ? (
-        <View className="gap-2">
-          <Heading className="px-4" level={2} size="title-3">
-            {t("landing.categoriesIntro")}
+      <ScrollView
+        {...SCREEN_SCROLL_OPTIONS}
+        bounces={Platform.OS === "ios" ? false : undefined}
+        className="flex-1"
+        contentContainerClassName="gap-6 pb-6"
+        testID="home-scroll"
+      >
+        <Surface className="gap-4 rounded-b-3xl px-4 pb-8 pt-2" tone="primary">
+          <Heading level={1} size="title-1">
+            {t("home.title")}
           </Heading>
-          <CategoryChips
-            categories={categories.data}
-            onChange={pickCategory}
-            selected={[]}
-            showAll={false}
+          <Text tone="muted">{t("home.tagline")}</Text>
+          <Text tone="muted">{t("home.intro")}</Text>
+          <SearchField
+            onSubmitEditing={submit}
+            onValueChange={setQuery}
+            placeholder={t("search.placeholder")}
+            value={query}
           />
+        </Surface>
+        <ConnectionBanner />
+        {categories.data && categories.data.length > 0 ? (
+          <View className="gap-2">
+            <Heading className="px-4" level={2} size="title-3">
+              {t("landing.categoriesIntro")}
+            </Heading>
+            <CategoryChips
+              categories={categories.data}
+              onChange={pickCategory}
+              selected={[]}
+              showAll={false}
+            />
+          </View>
+        ) : null}
+        <RecentGestures />
+        <View className="gap-3">
+          <Heading className="px-4" level={2}>
+            {t("home.featured")}
+          </Heading>
+          {featuredContent}
+          <Button
+            className="mx-4 self-start"
+            icon={<ArrowRight />}
+            onPress={browseAll}
+            variant="secondary"
+          >
+            {t("home.browseAll")}
+          </Button>
         </View>
-      ) : null}
-      <RecentGestures />
-      <View className="gap-3">
-        <Heading className="px-4" level={2}>
-          {t("home.featured")}
-        </Heading>
-        {featuredContent}
-        <Button
-          className="mx-4 self-start"
-          icon={<ArrowRight />}
-          onPress={browseAll}
-          variant="secondary"
-        >
-          {t("home.browseAll")}
-        </Button>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }

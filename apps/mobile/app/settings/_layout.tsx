@@ -1,6 +1,10 @@
 import { useTranslation } from "@smog/i18n/react";
-import { Stack } from "expo-router";
+import { IconButton } from "@smog/ui-native";
+import { Stack, useRouter } from "expo-router";
+import ChevronLeft from "lucide-react-native/icons/chevron-left";
 import type { ReactElement } from "react";
+import { useCallback } from "react";
+import { HeaderActions } from "@/components/header-actions";
 import { devToolsAvailable } from "@/lib/dev-tools";
 import { useStackHeaderOptions } from "@/lib/header";
 
@@ -8,9 +12,33 @@ import { useStackHeaderOptions } from "@/lib/header";
 export default function SettingsLayout(): ReactElement {
   const { t } = useTranslation();
   const header = useStackHeaderOptions();
+  const router = useRouter();
+  const back = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/");
+    }
+  }, [router]);
+  const headerLeft = useCallback(
+    () => (
+      <HeaderActions>
+        <IconButton
+          icon={<ChevronLeft />}
+          label={t("common.back")}
+          onPress={back}
+          variant="ghost"
+        />
+      </HeaderActions>
+    ),
+    [back, t]
+  );
   return (
     <Stack screenOptions={header}>
-      <Stack.Screen name="index" options={{ title: t("settings.title") }} />
+      <Stack.Screen
+        name="index"
+        options={{ headerLeft, title: t("settings.title") }}
+      />
       <Stack.Screen name="account" options={{ title: t("account.title") }} />
       <Stack.Screen
         name="lessons/index"

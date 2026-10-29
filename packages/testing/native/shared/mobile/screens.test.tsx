@@ -87,6 +87,24 @@ const ACCOUNT_LIST = {
   updatedAt: 3,
 };
 
+describe("base screen insets", () => {
+  it.each([
+    ["/search", "search-scroll"],
+    ["/favorites", "favorites-scroll"],
+    ["/lists", "lists-scroll"],
+    ["/settings", "settings-screen"],
+  ])(
+    "keeps system inset adjustment on %s even without populated content",
+    async (initialUrl, testID) => {
+      await renderApp({ initialUrl, realSettings: true });
+      const scroll = await screen.findByTestId(testID);
+      expect(scroll.props.contentInsetAdjustmentBehavior).toBe("automatic");
+      expect(scroll.props.bounces).not.toBe(false);
+      expect(scroll.props.keyboardShouldPersistTaps).toBe("handled");
+    }
+  );
+});
+
 describe("home", () => {
   it("shows the featured gestures and the categories", async () => {
     await renderApp();

@@ -15,6 +15,7 @@ import { AnalyticsSwitch, openPrivacy } from "@/components/consent-sheet";
 import { PreferencesFields } from "@/components/preferences-fields";
 import { useLessonAccess } from "@/lessons/lesson-gate";
 import { useDevToolsUnlock } from "@/lib/dev-tools";
+import { SCREEN_CONTENT_CLASS_NAME, SCREEN_SCROLL_OPTIONS } from "@/lib/screen";
 
 /**
  * Settings: language, theme, analytics, the account entry and the
@@ -55,7 +56,11 @@ export default function SettingsScreen(): ReactElement {
   };
 
   return (
-    <ScrollView contentContainerClassName="gap-8 px-4 py-6">
+    <ScrollView
+      {...SCREEN_SCROLL_OPTIONS}
+      contentContainerClassName={`${SCREEN_CONTENT_CLASS_NAME} gap-8 px-4`}
+      testID="settings-screen"
+    >
       <View className="gap-4">
         <Heading level={2}>{t("settings.preferences")}</Heading>
         <PreferencesFields />
@@ -65,6 +70,7 @@ export default function SettingsScreen(): ReactElement {
         <Heading level={2}>{t("account.privacy.title")}</Heading>
         <AnalyticsSwitch />
         <ListItem
+          className="px-0"
           leading={<ShieldCheck color={muted} />}
           onPress={openPrivacy}
           title={t("account.privacy.policy")}
@@ -76,6 +82,7 @@ export default function SettingsScreen(): ReactElement {
         <Heading level={2}>{t("nav.account")}</Heading>
         {auth.user ? (
           <ListItem
+            className="px-0"
             description={auth.user.email}
             leading={<Avatar name={auth.user.name} size="md" />}
             onPress={openAccount}
@@ -84,6 +91,7 @@ export default function SettingsScreen(): ReactElement {
           />
         ) : (
           <ListItem
+            className="px-0"
             leading={<LogIn color={muted} />}
             onPress={openSignIn}
             title={t("nav.signIn")}
@@ -96,6 +104,7 @@ export default function SettingsScreen(): ReactElement {
         <View className="gap-2">
           <Heading level={2}>{t("teacherLessons.title")}</Heading>
           <ListItem
+            className="px-0"
             description={t("teacherLessons.entryDescription")}
             leading={<GraduationCap color={muted} />}
             onPress={openLessons}
@@ -109,6 +118,7 @@ export default function SettingsScreen(): ReactElement {
       <View className="gap-2">
         <Heading level={2}>{t("settings.about")}</Heading>
         <ListItem
+          className="px-0"
           description={Constants.expoConfig?.version}
           leading={<Info color={muted} />}
           onPress={tapVersion}
@@ -116,6 +126,7 @@ export default function SettingsScreen(): ReactElement {
         />
         {devTools.unlocked ? (
           <ListItem
+            className="px-0"
             leading={<Wrench color={muted} />}
             onPress={openDevTools}
             title={t("devTools.title")}

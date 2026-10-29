@@ -13,7 +13,9 @@ import { type ReactElement, useCallback } from "react";
 import { View } from "react-native";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
+import { useOnline } from "@/lib/network";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
+import { SCREEN_CONTENT_CLASS_NAME, SCREEN_SCROLL_OPTIONS } from "@/lib/screen";
 
 /** The account's favorites, or a guest's gestures by id. */
 const favoriteQueries = (rpc: AppQueryUtils) => [
@@ -30,6 +32,7 @@ export default function FavoritesScreen(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const favorites = useFavorites();
+  const online = useOnline();
   const renderCard = useGestureCardRenderer("favorites");
   const explore = useCallback(() => router.navigate("/search"), [router]);
   const retry = useRetry(favoriteQueries);
@@ -44,16 +47,16 @@ export default function FavoritesScreen(): ReactElement {
 
   const loading =
     favorites.status === "loading" || favorites.itemsStatus === "loading";
-  let content: ReactElement;
+  let empty: ReactElement | null = null;
   if (loading && favorites.items.length === 0) {
-    content = <SearchResults items={[]} onRetry={retry} state="loading" />;
+    empty = <SearchResults items={[]} onRetry={retry} state="loading" />;
   } else if (
     (favorites.status === "error" || favorites.itemsStatus === "error") &&
     favorites.items.length === 0
   ) {
-    content = <ErrorState onRetry={retry} />;
+    empty = <ErrorState onRetry={retry} />;
   } else if (favorites.items.length === 0) {
-    content = (
+    empty = (
       <FavoritesEmptyState
         action={
           <Button icon={<Search />} onPress={explore} variant="secondary">
@@ -62,22 +65,24 @@ export default function FavoritesScreen(): ReactElement {
         }
       />
     );
-  } else {
-    content = (
-      <GestureGrid
-        contentContainerClassName="px-4 pb-6"
-        contentInsetAdjustmentBehavior="automatic"
-        items={favorites.items}
-        onEndReached={loadMore}
-        renderItem={renderCard}
-      />
-    );
   }
 
   return (
-    <View className="flex-1 gap-2 bg-background pt-2" testID="favorites-screen">
-      <ConnectionBanner />
-      {content}
+    <View className="flex-1 bg-background" testID="favorites-screen">
+      <GestureGrid
+        {...SCREEN_SCROLL_OPTIONS}
+        contentContainerClassName={`${SCREEN_CONTENT_CLASS_NAME} px-4`}
+        items={favorites.items}
+        ListEmptyComponent={
+          empty ? <View className="-mx-4">{empty}</View> : null
+        }
+        ListHeaderComponent={
+          online ? null : <ConnectionBanner className="mx-0" />
+        }
+        onEndReached={loadMore}
+        renderItem={renderCard}
+        testID="favorites-scroll"
+      />
     </View>
   );
 }

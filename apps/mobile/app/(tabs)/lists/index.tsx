@@ -21,6 +21,7 @@ import { ConnectionBanner } from "@/components/connection-banner";
 import { HeaderActions } from "@/components/header-actions";
 import { ListNameSheet } from "@/components/list-name-sheet";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
+import { SCREEN_CONTENT_CLASS_NAME, SCREEN_SCROLL_OPTIONS } from "@/lib/screen";
 
 const listQueries = (rpc: AppQueryUtils) => [rpc.lists.key()];
 
@@ -100,9 +101,9 @@ export default function ListsScreen(): ReactElement {
     [open]
   );
 
-  let content: ReactElement;
+  let empty: ReactElement | null = null;
   if (status === "loading") {
-    content = (
+    empty = (
       <View className="gap-3 px-4" testID="lists-loading">
         <Skeleton className="h-12" />
         <Skeleton className="h-12" />
@@ -110,9 +111,9 @@ export default function ListsScreen(): ReactElement {
       </View>
     );
   } else if (status === "error" && lists.length === 0) {
-    content = <ErrorState onRetry={retry} />;
+    empty = <ErrorState onRetry={retry} />;
   } else if (lists.length === 0) {
-    content = (
+    empty = (
       <ListsEmptyState
         action={
           <Button icon={<Plus />} onPress={startCreate} variant="secondary">
@@ -121,22 +122,21 @@ export default function ListsScreen(): ReactElement {
         }
       />
     );
-  } else {
-    content = (
-      <FlatList
-        contentInsetAdjustmentBehavior="automatic"
-        data={lists}
-        keyExtractor={keyOf}
-        renderItem={renderRow}
-      />
-    );
   }
 
   return (
-    <View className="flex-1 gap-2 bg-background pt-2" testID="lists-screen">
+    <View className="flex-1 bg-background" testID="lists-screen">
       <Stack.Screen options={{ headerRight }} />
-      <ConnectionBanner />
-      {content}
+      <FlatList
+        {...SCREEN_SCROLL_OPTIONS}
+        contentContainerClassName={SCREEN_CONTENT_CLASS_NAME}
+        data={lists}
+        keyExtractor={keyOf}
+        ListEmptyComponent={empty}
+        ListHeaderComponent={<ConnectionBanner className="mb-2" />}
+        renderItem={renderRow}
+        testID="lists-scroll"
+      />
       <ListNameSheet
         onOpenChange={setCreating}
         onSubmit={submitCreate}

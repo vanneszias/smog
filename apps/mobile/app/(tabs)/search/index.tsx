@@ -30,6 +30,7 @@ import { CategoryFilterSheet } from "@/components/category-filter-sheet";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
 import { HeaderActions } from "@/components/header-actions";
+import { SCREEN_CONTENT_CLASS_NAME, SCREEN_SCROLL_OPTIONS } from "@/lib/screen";
 
 /** Results per search (the contract's maximum). */
 const SEARCH_LIMIT = 50;
@@ -70,7 +71,7 @@ function RecentSearchList({
 }): ReactElement {
   const { t } = useTranslation();
   return (
-    <View className="gap-2 px-4 pb-6">
+    <View className="gap-2 px-4">
       <Heading level={2} size="title-3">
         {t("search.recent")}
       </Heading>
@@ -242,7 +243,6 @@ export default function SearchScreen(): ReactElement {
             : {}
         }
       />
-      <ConnectionBanner className="mt-2" />
       {ios ? null : (
         <View className="flex-row items-center gap-2 px-4 py-2">
           <View className="flex-1">
@@ -259,10 +259,11 @@ export default function SearchScreen(): ReactElement {
         </View>
       )}
       <ScrollView
-        contentContainerClassName="grow"
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
+        {...SCREEN_SCROLL_OPTIONS}
+        contentContainerClassName={`${SCREEN_CONTENT_CLASS_NAME} grow`}
+        testID="search-scroll"
       >
+        <ConnectionBanner className="mb-2" />
         {showRecent ? (
           <RecentSearchList
             items={recent.items}
@@ -272,7 +273,7 @@ export default function SearchScreen(): ReactElement {
         ) : (
           <>
             {matching.length > 0 ? (
-              <View className="gap-2 pt-2" testID="search-categories">
+              <View className="gap-2" testID="search-categories">
                 <Heading className="px-4" level={2} size="title-3">
                   {t("search.categories")}
                 </Heading>
@@ -285,7 +286,7 @@ export default function SearchScreen(): ReactElement {
               </View>
             ) : null}
             <SearchResults
-              className="flex-1 pt-2"
+              className="flex-1"
               emptyAction={
                 category.length > 0 ? (
                   <Button onPress={clearCategories} variant="secondary">
