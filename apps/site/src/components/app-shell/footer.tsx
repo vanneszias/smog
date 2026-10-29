@@ -25,12 +25,15 @@ function FooterLink({
  * The footer (phase 10a): the logo, the sections, Sponsor (which left the
  * header), the legal links, the contact address and the credit line. The
  * legal links are plain anchors: those pages are served as documents.
+ * Its bottom padding grows to the height of a fixed bar (the consent
+ * banner, `--overlay-bottom` from `useReservedSpace`), so that bar floats
+ * over the footer and every footer link can still scroll clear of it.
  */
 export function Footer(): ReactNode {
   const { t } = useTranslation();
   return (
     <footer className="border-border-subtle border-t bg-card">
-      <div className="mx-auto flex w-full max-w-content flex-col gap-8 px-4 py-10 md:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-content flex-col gap-8 px-4 pt-10 pb-[max(--spacing(10),var(--overlay-bottom,0px))] md:px-6 lg:px-8">
         <div className="grid gap-8 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
           <div className="flex flex-col gap-3">
             <Logo decorative size="md" tone="primary" />

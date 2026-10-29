@@ -1,5 +1,8 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import {
+  CONSENT_REGION,
+  expectConsentOverlay,
+  expectNoReservedSpace,
   newPublicPage,
   openPublic,
   rpc,
@@ -425,10 +428,49 @@ test.describe("keyboard: guests", () => {
       await tabTo(page, decline, 60);
       await page.keyboard.press("Enter");
       await expect(banner).toBeHidden();
+      await expectNoReservedSpace(page);
     } finally {
       await context.close();
     }
   });
+
+  for (const width of [390, 1280]) {
+    test(`with the consent banner open, every footer link takes focus in view at ${width} px`, async ({
+      browser,
+    }) => {
+      const { context, page } = await newPublicPage(browser, "light", width, {
+        consent: false,
+      });
+      try {
+        await page.goto("/gestures");
+        await waitForApp(page);
+        const banner = page.getByRole("region", { name: CONSENT_REGION });
+        await expectConsentOverlay(page, `gestures at ${width}`);
+        const links = page.locator("footer a");
+        const count = await links.count();
+        expect(count).toBeGreaterThan(0);
+        // The banner follows the footer: Shift+Tab from its first link walks
+        // the footer backwards, each link scrolled clear of the banner.
+        await banner.getByRole("link").first().focus();
+        for (let step = count - 1; step >= 0; step -= 1) {
+          // biome-ignore lint/performance/noAwaitInLoops: one key at a time.
+          await page.keyboard.press("Shift+Tab");
+          const link = links.nth(step);
+          await expect(link).toBeFocused();
+          const covered = await link.evaluate((node) => {
+            const box = node.getBoundingClientRect();
+            const x = box.left + box.width / 2;
+            const y = box.top + box.height / 2;
+            const hit = document.elementFromPoint(x, y);
+            return !(hit && (node === hit || node.contains(hit)));
+          });
+          expect(covered, `footer link ${step} under the banner`).toBe(false);
+        }
+      } finally {
+        await context.close();
+      }
+    });
+  }
 });
 
 test.describe("keyboard: sign-in", () => {
@@ -576,6 +618,72 @@ test.describe("keyboard: focus is always visible", () => {
       expect((box?.y ?? -1) + (box?.height ?? 0)).toBeLessThanOrEqual(
         viewport?.height ?? 0
       );
+    } finally {
+      await context.close();
+    }
+  });
+
+  test("the selection bar sticks above an open consent banner, and both answer", async ({
+    browser,
+  }) => {
+    test.setTimeout(120_000);
+    const { context, page } = await newPublicPage(browser, "light", 390, {
+      consent: false,
+    });
+    try {
+      await page.goto("/sponsor?gesture=blij");
+      await waitForApp(page);
+      const banner = page.getByRole("region", { name: CONSENT_REGION });
+      await expect(banner).toBeVisible();
+      const next = page.getByRole("button", { exact: true, name: "Doorgaan" });
+      await expect(next).toBeEnabled();
+      /**
+       * True when the centre of the control's first line box is the control
+       * (nothing over it; a wrapped link's whole box centres on its text).
+       */
+      const onTop = (target: Locator): Promise<boolean> =>
+        target.evaluate((node) => {
+          const box = node.getClientRects()[0] ?? node.getBoundingClientRect();
+          const hit = document.elementFromPoint(
+            box.left + box.width / 2,
+            box.top + box.height / 2
+          );
+          return hit !== null && (node === hit || node.contains(hit));
+        });
+      const decline = banner.getByRole("button", {
+        name: "Geen statistieken",
+      });
+      const allow = banner.getByRole("button", {
+        name: "Statistieken toestaan",
+      });
+      await next.focus();
+      expect(await onTop(next), "Continue under the banner").toBe(true);
+      const bar = await next.boundingBox();
+      const top = await banner.evaluate(
+        (node) => node.getBoundingClientRect().top
+      );
+      expect((bar?.y ?? 0) + (bar?.height ?? 0)).toBeLessThanOrEqual(top + 1);
+      for (const choice of [decline, allow, banner.getByRole("link")]) {
+        // biome-ignore lint/performance/noAwaitInLoops: one control at a time.
+        await choice.focus();
+        expect(await onTop(choice), "a banner control is covered").toBe(true);
+      }
+      await decline.focus();
+      await page.keyboard.press("Enter");
+      await expect(banner).toBeHidden();
+      // The bar sticks to the bottom of the viewport again; only its own
+      // scroll padding stays.
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            document.documentElement.style.getPropertyValue("--overlay-bottom")
+          )
+        )
+        .toBe("");
+      const sticky = next.locator(
+        "xpath=ancestor::div[contains(@class, 'sticky')][1]"
+      );
+      await expect(sticky).toHaveCSS("bottom", "0px");
     } finally {
       await context.close();
     }

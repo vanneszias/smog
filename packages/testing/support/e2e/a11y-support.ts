@@ -397,3 +397,77 @@ export async function overlay(
   );
   await closeWithEscape(page);
 }
+
+/** The consent banner's region name (Dutch, the default language). */
+export const CONSENT_REGION = "Help SMOG verbeteren";
+
+/**
+ * The open consent banner floats over the page (issue #8): at the end of
+ * the document nothing follows the footer (no in-flow spacer), the banner
+ * is fixed to the bottom of the viewport, nothing scrolls sideways and,
+ * unless the banner is taller than the room left (`footerReachable:
+ * false`, 400 % zoom), every footer link ends above it. `name` is the
+ * region's name in another language.
+ */
+export async function expectConsentOverlay(
+  page: Page,
+  where: string,
+  {
+    footerReachable = true,
+    name = CONSENT_REGION,
+  }: { footerReachable?: boolean; name?: string } = {}
+): Promise<void> {
+  const banner = page.getByRole("region", { name });
+  await expect(banner).toBeVisible();
+  const geometry = await banner.evaluate(async (section) => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+    const root = document.documentElement;
+    const footer = document.querySelector("footer");
+    const { bottom, top } = section.getBoundingClientRect();
+    return {
+      bannerBottom: bottom,
+      clientWidth: root.clientWidth,
+      footerEnd: (footer?.getBoundingClientRect().bottom ?? 0) + window.scrollY,
+      hidden: [...(footer?.querySelectorAll("a") ?? [])]
+        .filter((link) => link.getBoundingClientRect().bottom > top + 1)
+        .map((link) => link.textContent?.trim() ?? ""),
+      position: getComputedStyle(section).position,
+      scrollHeight: root.scrollHeight,
+      scrollWidth: root.scrollWidth,
+      viewport: root.clientHeight,
+    };
+  });
+  expect(geometry.position, `${where}: position`).toBe("fixed");
+  expect(
+    Math.abs(geometry.bannerBottom - geometry.viewport),
+    `${where}: the banner sits on the bottom of the viewport`
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(geometry.scrollHeight - geometry.footerEnd),
+    `${where}: the document ends with the footer`
+  ).toBeLessThanOrEqual(1);
+  expect(geometry.scrollWidth, `${where}: sideways`).toBeLessThanOrEqual(
+    geometry.clientWidth + 1
+  );
+  if (footerReachable) {
+    expect(geometry.hidden, `${where}: footer links under the banner`).toEqual(
+      []
+    );
+  }
+}
+
+/** After the banner closed, the room it reserved is given back. */
+export async function expectNoReservedSpace(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        overlay:
+          document.documentElement.style.getPropertyValue("--overlay-bottom"),
+        scrollPadding: document.documentElement.style.scrollPaddingBottom,
+      }))
+    )
+    .toEqual({ overlay: "", scrollPadding: "" });
+}

@@ -18,7 +18,9 @@ export interface SelectionBarProps {
  * total (`formatMoney`) and Continue. It stays in view while the grid
  * scrolls; the count is announced as it changes. Its height is reserved as
  * scroll padding, so a control that takes focus (Load more, a card) is
- * never scrolled under it (WCAG 2.4.11, phase review M-4).
+ * never scrolled under it (WCAG 2.4.11, phase review M-4). It sticks above
+ * a fixed bar (the consent banner, `--overlay-bottom`), so neither hides
+ * the other.
  */
 export function SelectionBar({
   count,
@@ -27,11 +29,11 @@ export function SelectionBar({
 }: SelectionBarProps): ReactNode {
   const { t } = useTranslation();
   const locale = usePageLocale();
-  const space = useReservedSpace();
+  const reserve = useReservedSpace();
   return (
     <div
-      className="sticky bottom-0 z-[1] -mx-4 border-border-subtle border-t bg-card px-4 py-3 shadow-2 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 dark:shadow-none"
-      ref={space.ref}
+      className="sticky bottom-[var(--overlay-bottom,0px)] z-[1] -mx-4 border-border-subtle border-t bg-card px-4 py-3 shadow-2 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 dark:shadow-none"
+      ref={reserve}
     >
       <div className="mx-auto flex max-w-content flex-wrap items-center justify-between gap-3">
         <div aria-live="polite" className="flex flex-col">
