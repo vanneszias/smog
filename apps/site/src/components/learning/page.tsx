@@ -1,7 +1,14 @@
 import { useTranslation } from "@smog/i18n/react";
-import { cn, ErrorState, Heading, Text } from "@smog/ui-web";
-import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
+import { Button, cn, Heading, Text } from "@smog/ui-web";
+import {
+  type ErrorComponentProps,
+  Link,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
+import { RotateCw } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { StatusPage } from "@/components/status-page";
 
 /** The page column: the header's width and gutters (spec §16: 16/24/32). */
 export function Page({
@@ -44,10 +51,23 @@ export function PageHeader({
   );
 }
 
-/** A loader or render failure: the kit ErrorState, retrying the route. */
+/**
+ * Retries per page that failed again. The boundary mounts a new error
+ * component for each failure (an invalidate sets the errored match back to
+ * pending), so the count cannot live in its state. Only a click writes it,
+ * so the server always renders the first failure.
+ */
+const failedRetries = new Map<string, number>();
+
+/**
+ * A loader or render failure: a full status page that retries the route.
+ * After a retry that failed again it says so and puts the home page first.
+ */
 export function RouteError({ error, reset }: ErrorComponentProps): ReactNode {
   const router = useRouter();
+  const href = useRouterState({ select: (state) => state.location.href });
   const { t } = useTranslation();
+  const [stillFailing] = useState(() => (failedRetries.get(href) ?? 0) > 0);
   const [retrying, setRetrying] = useState(false);
   // In an effect: the render body runs again for every re-render and
   // boundary retry, which logged one failure four times.
@@ -56,22 +76,63 @@ export function RouteError({ error, reset }: ErrorComponentProps): ReactNode {
   }, [error]);
   const retry = useCallback((): void => {
     setRetrying(true);
+    // Counted before the reload: the next error component can mount while
+    // it runs. A reload that leaves no match in error forgets the page.
+    failedRetries.set(href, (failedRetries.get(href) ?? 0) + 1);
     router
       .invalidate()
-      .then(reset)
+      .then(() => {
+        if (!router.state.matches.some((match) => match.status === "error")) {
+          failedRetries.delete(href);
+        }
+        reset();
+      })
       .catch((cause: unknown) => {
         console.error("[site] Failed to reload the page:", cause);
       })
       .finally(() => setRetrying(false));
-  }, [reset, router]);
+  }, [href, reset, router]);
+  const retryButton = (
+    <Button
+      className="w-full sm:w-auto"
+      icon={<RotateCw />}
+      key="retry"
+      loading={retrying}
+      onClick={retry}
+      variant={stillFailing ? "secondary" : "primary"}
+    >
+      {t("states.retry")}
+    </Button>
+  );
+  const homeButton = (
+    <Button
+      asChild
+      className="w-full sm:w-auto"
+      key="home"
+      variant={stillFailing ? "primary" : "secondary"}
+    >
+      <Link to="/">{t("states.notFound.action")}</Link>
+    </Button>
+  );
   return (
-    <Page>
-      <ErrorState
-        description={t("states.error.description")}
-        level={2}
-        onRetry={retry}
-        retrying={retrying}
-      />
-    </Page>
+    <StatusPage
+      actions={
+        stillFailing ? [homeButton, retryButton] : [retryButton, homeButton]
+      }
+      data-still-failing={stillFailing || undefined}
+      description={t(
+        stillFailing
+          ? "states.pageError.stillFailingDescription"
+          : "states.pageError.description"
+      )}
+      hand={2}
+      role="alert"
+      title={t(
+        stillFailing
+          ? "states.pageError.stillFailingTitle"
+          : "states.pageError.title"
+      )}
+      tone="quiet"
+    />
   );
 }
