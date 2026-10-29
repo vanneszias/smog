@@ -1,6 +1,6 @@
 import { Text } from "react-email";
 import { styles } from "../../theme";
-import { ActionLink, EmailLayout, Footer, Greeting } from "../layout";
+import { ActionLink, EmailLayout, Greeting } from "../layout";
 import type { EmailTemplate } from "../types";
 
 export interface VerifyEmailProps {
@@ -20,6 +20,7 @@ export const verifyEmail: EmailTemplate<VerifyEmailProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.auth.verifyEmail.footer")}
         heading={t("email.auth.verifyEmail.heading")}
         preheader={t("email.auth.verifyEmail.preheader")}
       >
@@ -33,7 +34,6 @@ export const verifyEmail: EmailTemplate<VerifyEmailProps> = {
         <Text style={styles.footer}>
           {t("email.auth.verifyEmail.expiry", { minutes })}
         </Text>
-        <Footer>{t("email.auth.verifyEmail.footer")}</Footer>
       </EmailLayout>
     );
   },

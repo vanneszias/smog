@@ -1,6 +1,6 @@
 import { Link, Text } from "react-email";
 import { styles } from "../../theme";
-import { ActionLink, EmailLayout, Footer, Greeting, StepsBox } from "../layout";
+import { ActionLink, EmailLayout, Greeting, StepsBox } from "../layout";
 import type { EmailTemplate } from "../types";
 
 export interface WelcomeProps {
@@ -20,6 +20,7 @@ export const welcome: EmailTemplate<WelcomeProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.transactional.welcome.footer")}
         heading={t("email.transactional.welcome.heading")}
         preheader={t("email.transactional.welcome.preheader")}
       >
@@ -44,7 +45,6 @@ export const welcome: EmailTemplate<WelcomeProps> = {
           t={t}
           url={url}
         />
-        <Footer>{t("email.transactional.welcome.footer")}</Footer>
       </EmailLayout>
     );
   },

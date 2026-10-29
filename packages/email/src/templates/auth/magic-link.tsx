@@ -1,6 +1,6 @@
 import { Text } from "react-email";
 import { styles } from "../../theme";
-import { ActionLink, EmailLayout, Footer } from "../layout";
+import { ActionLink, EmailLayout } from "../layout";
 import type { EmailTemplate } from "../types";
 
 export interface MagicLinkProps {
@@ -16,6 +16,7 @@ export const magicLink: EmailTemplate<MagicLinkProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.auth.magicLink.footer")}
         heading={t("email.auth.magicLink.heading")}
         preheader={t("email.auth.magicLink.preheader")}
       >
@@ -24,7 +25,6 @@ export const magicLink: EmailTemplate<MagicLinkProps> = {
         <Text style={styles.footer}>
           {t("email.auth.magicLink.expiry", { minutes })}
         </Text>
-        <Footer>{t("email.auth.magicLink.footer")}</Footer>
       </EmailLayout>
     );
   },

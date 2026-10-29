@@ -1,6 +1,6 @@
 import { Text } from "react-email";
 import { styles } from "../../theme";
-import { EmailLayout, Footer } from "../layout";
+import { EmailLayout } from "../layout";
 import type { EmailTemplate } from "../types";
 
 export interface OtpProps {
@@ -16,6 +16,7 @@ export const otp: EmailTemplate<OtpProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.auth.otp.footer")}
         heading={t("email.auth.otp.heading")}
         preheader={t("email.auth.otp.preheader", { code })}
       >
@@ -24,7 +25,6 @@ export const otp: EmailTemplate<OtpProps> = {
         <Text style={styles.footer}>
           {t("email.auth.otp.expiry", { minutes })}
         </Text>
-        <Footer>{t("email.auth.otp.footer")}</Footer>
       </EmailLayout>
     );
   },

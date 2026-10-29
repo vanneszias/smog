@@ -1,7 +1,7 @@
 import { Text } from "react-email";
 import { styles } from "../../theme";
 import { emailMoney } from "../format";
-import { ActionLink, DetailsBox, EmailLayout, Footer } from "../layout";
+import { ActionLink, DetailsBox, EmailLayout } from "../layout";
 import type { EmailTemplate } from "../types";
 
 type RefundReason = "late" | "mismatch" | "double" | "chargeback";
@@ -42,6 +42,7 @@ export const adminRefundNeeded: EmailTemplate<AdminRefundNeededProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.common.adminFooter")}
         heading={t("email.transactional.adminRefundNeeded.heading")}
         preheader={t("email.transactional.adminRefundNeeded.preheader", {
           amount,
@@ -68,7 +69,6 @@ export const adminRefundNeeded: EmailTemplate<AdminRefundNeededProps> = {
           t={t}
           url={url}
         />
-        <Footer>{t("email.common.adminFooter")}</Footer>
       </EmailLayout>
     );
   },

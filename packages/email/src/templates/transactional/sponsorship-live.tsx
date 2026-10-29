@@ -1,13 +1,7 @@
 import { Text } from "react-email";
 import { styles } from "../../theme";
 import { emailDate, gesturePhrase, gestureValue } from "../format";
-import {
-  ActionLink,
-  DetailsBox,
-  EmailLayout,
-  Footer,
-  Greeting,
-} from "../layout";
+import { ActionLink, DetailsBox, EmailLayout, Greeting } from "../layout";
 import type { EmailTemplate } from "../types";
 
 export interface SponsorshipLiveProps {
@@ -36,6 +30,7 @@ export const sponsorshipLive: EmailTemplate<SponsorshipLiveProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.transactional.sponsorshipLive.footer")}
         heading={t("email.transactional.sponsorshipLive.heading")}
         preheader={t("email.transactional.sponsorshipLive.preheader")}
       >
@@ -70,7 +65,6 @@ export const sponsorshipLive: EmailTemplate<SponsorshipLiveProps> = {
         <Text style={styles.text}>
           {t("email.transactional.sponsorshipLive.thanks")}
         </Text>
-        <Footer>{t("email.transactional.sponsorshipLive.footer")}</Footer>
       </EmailLayout>
     );
   },

@@ -21,11 +21,30 @@ import type { TemplateContext, Translate } from "./types";
 interface EmailLayoutProps {
   children: ReactNode;
   context: TemplateContext;
+  /** Why the recipient got this email, under the signature. */
+  footer: string;
   heading: string;
   preheader: string;
 }
 
-/** The header: the logo from the site, or the wordmark without a site URL. */
+/**
+ * Narrow screens get less padding. Clients without `<style>` support keep
+ * the inline desktop padding, which still fits a phone.
+ */
+const RESPONSIVE_CSS = `
+:root { color-scheme: light only; supported-color-schemes: light only; }
+@media only screen and (max-width: 480px) {
+  .smog-outer { padding: 16px 8px !important; }
+  .smog-content { padding: 24px 20px !important; }
+  .smog-header { padding: 20px !important; }
+}
+`;
+
+/**
+ * The header: the logo from the site, or the wordmark without a site URL.
+ * The logo is the only image; with images blocked its alt text shows in
+ * the header's white, and nothing else depends on it.
+ */
 function Brand({
   siteUrl,
   t,
@@ -49,38 +68,55 @@ function Brand({
 
 /**
  * The shared frame (inventory §4): the green header with the logo, the
- * heading, the body, the signature, and under the card the organisation's
- * footer ("© <year> SMOG & CO vzw · België" and the tagline).
+ * heading, the body, the signature, the reason for the email, and under
+ * the card the organisation's footer ("© <year> SMOG & CO vzw · België"
+ * and the tagline). Light only: the colours are literal (`theme.ts`), so
+ * clients that honour `color-scheme` keep them instead of inverting.
  */
 export function EmailLayout({
   children,
   context,
+  footer,
   heading,
   preheader,
 }: EmailLayoutProps): ReactNode {
   const { locale, siteUrl, t } = context;
   return (
     <Html dir="ltr" lang={locale}>
-      <Head />
+      <Head>
+        <meta content="light only" name="color-scheme" />
+        <meta content="light only" name="supported-color-schemes" />
+        <style>{RESPONSIVE_CSS}</style>
+      </Head>
       <Preview>{preheader}</Preview>
-      <Body style={styles.body}>
-        <Container style={styles.container}>
-          <Section style={styles.header}>
-            <Brand siteUrl={siteUrl} t={t} />
+      <Body dir="ltr" lang={locale} style={styles.body}>
+        <Section style={styles.outer} tdClassName="smog-outer">
+          <Container style={styles.container}>
+            <Section
+              bgcolor={styles.header.backgroundColor}
+              style={styles.header}
+              tdClassName="smog-header"
+            >
+              <Brand siteUrl={siteUrl} t={t} />
+            </Section>
+            <Section style={styles.content} tdClassName="smog-content">
+              <Heading as="h1" style={styles.heading}>
+                {heading}
+              </Heading>
+              {children}
+              <Text style={styles.signature}>{t("email.auth.signature")}</Text>
+              <Hr style={styles.hr} />
+              <Text style={styles.footer}>{footer}</Text>
+            </Section>
+          </Container>
+          <Section style={styles.legalSection}>
+            <Text style={styles.legal}>
+              {t("email.common.copyright", {
+                year: new Date().getUTCFullYear(),
+              })}
+            </Text>
+            <Text style={styles.legal}>{t("email.common.tagline")}</Text>
           </Section>
-          <Section style={styles.content}>
-            <Heading as="h1" style={styles.heading}>
-              {heading}
-            </Heading>
-            {children}
-            <Text style={styles.text}>{t("email.auth.signature")}</Text>
-          </Section>
-        </Container>
-        <Section style={styles.legalSection}>
-          <Text style={styles.legal}>
-            {t("email.common.copyright", { year: new Date().getUTCFullYear() })}
-          </Text>
-          <Text style={styles.legal}>{t("email.common.tagline")}</Text>
         </Section>
       </Body>
     </Html>
@@ -114,26 +150,17 @@ export function ActionLink({
 }): ReactNode {
   return (
     <>
-      <Section style={{ margin: "24px 0", textAlign: "center" }}>
+      <Section style={styles.action}>
         <Button href={url} style={styles.button}>
           {label}
         </Button>
       </Section>
       <Text style={styles.footer}>{t("email.auth.linkFallback")}</Text>
       <Text style={styles.footer}>
-        <Link href={url} style={styles.link}>
+        <Link href={url} style={styles.url}>
           {url}
         </Link>
       </Text>
-    </>
-  );
-}
-
-export function Footer({ children }: { children: string }): ReactNode {
-  return (
-    <>
-      <Hr style={styles.hr} />
-      <Text style={styles.footer}>{children}</Text>
     </>
   );
 }

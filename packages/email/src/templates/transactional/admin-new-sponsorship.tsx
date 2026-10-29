@@ -1,13 +1,7 @@
 import { Text } from "react-email";
 import { styles } from "../../theme";
 import { emailMoney, formatVatNumber, gestureValue } from "../format";
-import {
-  ActionLink,
-  type DetailRow,
-  DetailsBox,
-  EmailLayout,
-  Footer,
-} from "../layout";
+import { ActionLink, type DetailRow, DetailsBox, EmailLayout } from "../layout";
 import type { EmailTemplate } from "../types";
 
 export interface AdminNewSponsorshipProps {
@@ -104,6 +98,7 @@ export const adminNewSponsorship: EmailTemplate<AdminNewSponsorshipProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.common.adminFooter")}
         heading={t(keys.heading)}
         preheader={t("email.transactional.adminNewSponsorship.preheader", {
           total,
@@ -123,7 +118,6 @@ export const adminNewSponsorship: EmailTemplate<AdminNewSponsorshipProps> = {
           t={t}
           url={props.url}
         />
-        <Footer>{t("email.common.adminFooter")}</Footer>
       </EmailLayout>
     );
   },

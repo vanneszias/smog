@@ -1,12 +1,6 @@
 import { Text } from "react-email";
 import { styles } from "../../theme";
-import {
-  ActionLink,
-  DetailsBox,
-  EmailLayout,
-  Footer,
-  StepsBox,
-} from "../layout";
+import { ActionLink, DetailsBox, EmailLayout, StepsBox } from "../layout";
 import type { EmailTemplate } from "../types";
 
 export interface AdminDeadLetterProps {
@@ -37,6 +31,7 @@ export const adminDeadLetter: EmailTemplate<AdminDeadLetterProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.common.adminFooter")}
         heading={t("email.transactional.adminDeadLetter.heading")}
         preheader={t("email.transactional.adminDeadLetter.preheader")}
       >
@@ -73,7 +68,6 @@ export const adminDeadLetter: EmailTemplate<AdminDeadLetterProps> = {
           t={t}
           url={url}
         />
-        <Footer>{t("email.common.adminFooter")}</Footer>
       </EmailLayout>
     );
   },

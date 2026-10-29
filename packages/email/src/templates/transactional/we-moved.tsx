@@ -1,6 +1,6 @@
 import { Link, Text } from "react-email";
 import { styles } from "../../theme";
-import { ActionLink, EmailLayout, Footer, Greeting, StepsBox } from "../layout";
+import { ActionLink, EmailLayout, Greeting, StepsBox } from "../layout";
 import type { EmailTemplate } from "../types";
 
 /** The old system's origin (phase 8 ruling 15): no "new address" on it. */
@@ -59,6 +59,7 @@ export const weMoved: EmailTemplate<WeMovedProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.transactional.weMoved.footer")}
         heading={t("email.transactional.weMoved.heading")}
         preheader={t("email.transactional.weMoved.preheader")}
       >
@@ -88,7 +89,6 @@ export const weMoved: EmailTemplate<WeMovedProps> = {
           t={t}
           url={new URL("/sign-in", site.origin).toString()}
         />
-        <Footer>{t("email.transactional.weMoved.footer")}</Footer>
       </EmailLayout>
     );
   },

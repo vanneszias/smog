@@ -26,6 +26,8 @@ export const EMAIL_LOGO = {
 } as const;
 
 export const styles = {
+  /** Around the call-to-action button. */
+  action: { margin: `${px(spacing["6"])} 0`, textAlign: "center" },
   body: {
     backgroundColor: color.background,
     fontFamily: FONT,
@@ -43,10 +45,8 @@ export const styles = {
     color: color.primaryStrong,
     fontSize: px(fontSize["body-sm"].size),
     fontWeight: fontWeight.semibold,
-    letterSpacing: "0.04em",
     lineHeight: px(fontSize["body-sm"].lineHeight),
     margin: `0 0 ${px(spacing["2"])}`,
-    textTransform: "uppercase",
   },
   brand: {
     color: color.primaryForeground,
@@ -62,6 +62,8 @@ export const styles = {
     display: "inline-block",
     fontSize: px(fontSize.body.size),
     fontWeight: fontWeight.semibold,
+    lineHeight: px(fontSize.body.lineHeight),
+    maxWidth: "100%",
     padding: `${px(spacing["3"])} ${px(spacing["6"])}`,
     textDecoration: "none",
   },
@@ -81,7 +83,7 @@ export const styles = {
     backgroundColor: color.card,
     border: `1px solid ${color.border}`,
     borderRadius: px(radius.lg),
-    margin: `${px(spacing["8"])} auto ${px(spacing["4"])}`,
+    margin: "0 auto",
     maxWidth: px(EMAIL_WIDTH),
     overflow: "hidden",
   },
@@ -90,10 +92,12 @@ export const styles = {
     color: color.mutedForeground,
     fontSize: px(fontSize["body-sm"].size),
     lineHeight: px(fontSize["body-sm"].lineHeight),
+    margin: `${px(spacing["3"])} 0`,
   },
   header: {
     backgroundColor: color.primary,
     padding: `${px(spacing["6"])} ${px(spacing["8"])}`,
+    textAlign: "center",
   },
   heading: {
     color: color.foreground,
@@ -112,16 +116,19 @@ export const styles = {
     textAlign: "center",
   },
   legalSection: {
-    margin: `0 auto ${px(spacing["8"])}`,
+    margin: `${px(spacing["4"])} auto 0`,
     maxWidth: px(EMAIL_WIDTH),
     padding: `0 ${px(spacing["4"])}`,
   },
   /** One line of a details value that lists several (the gestures). */
   lineBlock: { display: "block" },
-  link: { color: color.primaryStrong, wordBreak: "break-all" },
-  /** The logo in the header bar, 40 px tall. */
+  /** A link in a sentence: it wraps between words, like the text. */
+  link: {
+    color: color.primaryStrong,
+    textDecoration: "underline",
+  },
   /**
-   * With images blocked (Outlook's default) the alt text shows instead: in
+   * The logo in the header bar, 40 px tall. With images blocked (Outlook's default) the alt text shows instead: in
    * the brand's white and size, not the client's dark default on green.
    */
   logo: {
@@ -130,8 +137,14 @@ export const styles = {
     display: "block",
     fontSize: px(fontSize["title-3"].size),
     fontWeight: fontWeight.semibold,
+    height: px(EMAIL_LOGO.height),
+    lineHeight: px(EMAIL_LOGO.height),
     margin: "0 auto",
+    maxWidth: "100%",
+    textAlign: "center",
   },
+  /** The page around the card: a gutter on every side, also on a phone. */
+  outer: { padding: `${px(spacing["8"])} ${px(spacing["4"])}` },
   /** The error text in the render-failed email. */
   pre: {
     backgroundColor: color.surfaceSunken,
@@ -149,9 +162,12 @@ export const styles = {
   rowLabel: {
     color: color.mutedForeground,
     fontSize: px(fontSize["body-sm"].size),
+    hyphens: "auto",
     lineHeight: px(fontSize["body-sm"].lineHeight),
-    margin: `${px(spacing["1"])} 0`,
+    overflowWrap: "anywhere",
+    paddingBottom: px(spacing["1"]),
     paddingRight: px(spacing["4"]),
+    paddingTop: px(spacing["1"]),
     verticalAlign: "top",
     width: "40%",
   },
@@ -160,9 +176,18 @@ export const styles = {
     fontSize: px(fontSize["body-sm"].size),
     fontWeight: fontWeight.semibold,
     lineHeight: px(fontSize["body-sm"].lineHeight),
-    margin: `${px(spacing["1"])} 0`,
+    overflowWrap: "anywhere",
+    paddingBottom: px(spacing["1"]),
+    paddingTop: px(spacing["1"]),
     verticalAlign: "top",
     wordBreak: "break-word",
+  },
+  /** "The SMOG & Co team", after the body. */
+  signature: {
+    color: color.foreground,
+    fontSize: px(fontSize.body.size),
+    lineHeight: px(fontSize.body.lineHeight),
+    margin: `${px(spacing["6"])} 0 0`,
   },
   /** A numbered step or a list item in a box. */
   step: {
@@ -175,5 +200,11 @@ export const styles = {
     color: color.foreground,
     fontSize: px(fontSize.body.size),
     lineHeight: px(fontSize.body.lineHeight),
+  },
+  /** A raw URL (the button's copy-paste fallback): it may break anywhere. */
+  url: {
+    color: color.primaryStrong,
+    overflowWrap: "anywhere",
+    wordBreak: "break-all",
   },
 } satisfies Record<string, CSSProperties>;

@@ -1,6 +1,6 @@
 import { Text } from "react-email";
 import { styles } from "../../theme";
-import { ActionLink, EmailLayout, Footer, Greeting } from "../layout";
+import { ActionLink, EmailLayout, Greeting } from "../layout";
 import type { EmailTemplate } from "../types";
 
 export interface ResetPasswordProps {
@@ -17,6 +17,7 @@ export const resetPassword: EmailTemplate<ResetPasswordProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.auth.resetPassword.footer")}
         heading={t("email.auth.resetPassword.heading")}
         preheader={t("email.auth.resetPassword.preheader")}
       >
@@ -30,7 +31,6 @@ export const resetPassword: EmailTemplate<ResetPasswordProps> = {
         <Text style={styles.footer}>
           {t("email.auth.resetPassword.expiry", { minutes })}
         </Text>
-        <Footer>{t("email.auth.resetPassword.footer")}</Footer>
       </EmailLayout>
     );
   },
