@@ -532,9 +532,9 @@ test.describe("keyboard: focus is always visible", () => {
     test.setTimeout(120_000);
     const { context, page } = await newPublicPage(browser, "light", 1280);
     try {
-      await openPublic(page, "/sign-in");
       for (const theme of ["light", "dark"] as const) {
         // biome-ignore lint/performance/noAwaitInLoops: one theme after the other.
+        await openPublic(page, "/");
         await page.evaluate((dark) => {
           document.documentElement.classList.toggle("dark", dark);
         }, theme === "dark");
@@ -546,7 +546,14 @@ test.describe("keyboard: focus is always visible", () => {
           // biome-ignore lint/performance/noAwaitInLoops: one control at a time.
           await expectRing(page, control, "sidebar-ring");
         }
+        // The auth shell has no green header: everything rings in `ring`.
+        await openPublic(page, "/sign-in");
+        await page.evaluate((dark) => {
+          document.documentElement.classList.toggle("dark", dark);
+        }, theme === "dark");
         for (const control of [
+          page.getByRole("link", { name: "Terug naar de website" }),
+          page.getByRole("button", { name: "Instellingen" }),
           page.getByRole("textbox", { name: "E-mailadres" }),
           page.getByRole("button", { name: "Doorgaan" }).first(),
         ]) {

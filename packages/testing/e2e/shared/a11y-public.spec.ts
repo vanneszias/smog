@@ -1,6 +1,7 @@
 import { devices, expect, type Page, test } from "@playwright/test";
 import {
   byRule,
+  expectConsentOverlay,
   type Finding,
   GUEST_ROUTES,
   newPublicPage,
@@ -165,12 +166,14 @@ test.describe("axe: guest overlays and banners", () => {
           await expect(
             page.getByRole("region", { name: CONSENT })
           ).toBeVisible();
+          await expectConsentOverlay(page, `home at ${width}`);
           found.push(...(await scanThemes(page, "consent-banner:home")));
           await page.goto("/privacy");
           await waitForApp(page);
           await expect(
             page.getByRole("region", { name: CONSENT })
           ).toBeVisible();
+          await expectConsentOverlay(page, `privacy at ${width}`);
           found.push(...(await scanThemes(page, "consent-banner:privacy")));
           expect(byRule(found)).toEqual([]);
         } finally {
@@ -345,6 +348,10 @@ test.describe("axe: sampled hover, focus and disabled states", () => {
       const primary = page.getByRole("button", { name: "Doorgaan" }).first();
       await primary.hover();
       found.push(...(await scanThemes(page, "hover:primary-button")));
+      await page.getByRole("link", { name: "Terug naar de website" }).hover();
+      found.push(...(await scanThemes(page, "hover:auth-back-link")));
+      // The site header's links (the auth shell has none).
+      await openPublic(page, "/");
       await page.getByRole("link", { name: "Mijn ruimte" }).first().hover();
       found.push(...(await scanThemes(page, "hover:nav-link")));
       await page.getByRole("link", { name: "Gebaren" }).first().focus();

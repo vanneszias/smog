@@ -2,8 +2,9 @@ import { MAGIC_LINK_TOKEN_PATTERN } from "@smog/auth/react";
 import { useTranslation } from "@smog/i18n/react";
 import { Button, Text } from "@smog/ui-web";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link2Off, Smartphone } from "lucide-react";
 import type { ReactNode } from "react";
-import { AuthCard } from "@/components/auth/auth-card";
+import { AuthPage } from "@/components/auth/auth-page";
 import { pageMeta } from "@/lib/head";
 
 export interface AppLinkSearch {
@@ -48,6 +49,7 @@ function browserSignInHref(token: string): string {
 export const Route = createFileRoute("/magic-link_/app")({
   component: AppMagicLink,
   head: ({ matches }) => pageMeta(matches, "auth.magicLink.appTitle"),
+  staticData: { authShell: true },
   validateSearch,
 });
 
@@ -56,19 +58,24 @@ function AppMagicLink(): ReactNode {
   const { token } = Route.useSearch();
   if (!token) {
     return (
-      <AuthCard title={t("auth.magicLink.appTitle")}>
+      <AuthPage
+        icon={<Link2Off />}
+        title={t("auth.magicLink.appTitle")}
+        tone="danger"
+      >
         <Text role="alert" tone="danger">
           {t("auth.errors.linkInvalid")}
         </Text>
         <Button asChild>
           <Link to="/sign-in">{t("auth.magicLink.resend")}</Link>
         </Button>
-      </AuthCard>
+      </AuthPage>
     );
   }
   return (
-    <AuthCard
+    <AuthPage
       description={t("auth.magicLink.appDescription")}
+      icon={<Smartphone />}
       title={t("auth.magicLink.appTitle")}
     >
       <Button asChild>
@@ -77,6 +84,6 @@ function AppMagicLink(): ReactNode {
           {t("auth.magicLink.continueInBrowser")}
         </a>
       </Button>
-    </AuthCard>
+    </AuthPage>
   );
 }

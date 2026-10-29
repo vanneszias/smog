@@ -293,7 +293,7 @@ function BannersSection(): ReactNode {
   );
 }
 
-/** The brand motif: the three hands, and the green side of the auth card. */
+/** The brand motif: the three hands, and the green side of the auth shell. */
 function BrandSection(): ReactNode {
   const { t } = useTranslation();
   return (
@@ -304,7 +304,8 @@ function BrandSection(): ReactNode {
         <HandIllustration className="h-20 text-danger-strong" hand={2} />
       </div>
       <AuthSidePanel
-        className="flex max-w-reading rounded-2xl"
+        className="flex min-h-96 max-w-reading rounded-2xl"
+        description={t("home.intro")}
         tagline={t("home.tagline")}
       />
     </Section>

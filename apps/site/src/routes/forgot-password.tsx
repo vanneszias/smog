@@ -7,6 +7,7 @@ import { validateAuthSearch } from "@/lib/redirect";
 export const Route = createFileRoute("/forgot-password")({
   component: ForgotPassword,
   head: ({ matches }) => pageMeta(matches, "auth.forgotPassword.title"),
+  staticData: { authShell: true },
   validateSearch: validateAuthSearch,
 });
 

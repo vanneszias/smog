@@ -2,14 +2,16 @@ import { useAuthState } from "@smog/auth/react";
 import { useTranslation } from "@smog/i18n/react";
 import { Button, Text } from "@smog/ui-web";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { CircleCheck, Link2Off } from "lucide-react";
 import { type ReactNode, useCallback } from "react";
-import { AuthCard } from "@/components/auth/auth-card";
+import { AuthPage } from "@/components/auth/auth-page";
 import { pageMeta } from "@/lib/head";
 import { validateAuthSearch } from "@/lib/redirect";
 
 export const Route = createFileRoute("/verify-email")({
   component: VerifyEmail,
   head: ({ matches }) => pageMeta(matches, "auth.verifyEmail.title"),
+  staticData: { authShell: true },
   validateSearch: validateAuthSearch,
 });
 
@@ -29,7 +31,11 @@ function VerifyEmail(): ReactNode {
 
   if (error) {
     return (
-      <AuthCard title={t("auth.verifyEmail.title")}>
+      <AuthPage
+        icon={<Link2Off />}
+        title={t("auth.verifyEmail.title")}
+        tone="danger"
+      >
         <Text role="alert" tone="danger">
           {t("auth.verifyEmail.invalid")}
         </Text>
@@ -38,11 +44,15 @@ function VerifyEmail(): ReactNode {
             {t("nav.signIn")}
           </Link>
         </Button>
-      </AuthCard>
+      </AuthPage>
     );
   }
   return (
-    <AuthCard title={t("auth.verifyEmail.title")}>
+    <AuthPage
+      icon={<CircleCheck />}
+      title={t("auth.verifyEmail.title")}
+      tone="success"
+    >
       <Text role="status">{t("auth.verifyEmail.success")}</Text>
       {auth.status === "signedIn" ? (
         <Button onClick={continueOn}>{t("common.continue")}</Button>
@@ -53,6 +63,6 @@ function VerifyEmail(): ReactNode {
           </Link>
         </Button>
       )}
-    </AuthCard>
+    </AuthPage>
   );
 }

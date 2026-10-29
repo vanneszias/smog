@@ -8,8 +8,9 @@ import {
 import { useTranslation } from "@smog/i18n/react";
 import { Button, Field, Input, Text } from "@smog/ui-web";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { CircleCheck, Link2Off } from "lucide-react";
 import { type FormEvent, type ReactNode, useCallback, useState } from "react";
-import { AuthCard } from "@/components/auth/auth-card";
+import { AuthPage } from "@/components/auth/auth-page";
 import { useAuthClient } from "@/lib/auth-client";
 import { pageMeta } from "@/lib/head";
 import { validateResetSearch } from "@/lib/redirect";
@@ -17,6 +18,7 @@ import { validateResetSearch } from "@/lib/redirect";
 export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
   head: ({ matches }) => pageMeta(matches, "auth.resetPassword.title"),
+  staticData: { authShell: true },
   validateSearch: validateResetSearch,
 });
 
@@ -80,7 +82,11 @@ function ResetPassword(): ReactNode {
 
   if (linkError || !token) {
     return (
-      <AuthCard title={t("auth.resetPassword.title")}>
+      <AuthPage
+        icon={<Link2Off />}
+        title={t("auth.resetPassword.title")}
+        tone="danger"
+      >
         <Text role="alert" tone="danger">
           {t("auth.resetPassword.invalid")}
         </Text>
@@ -89,20 +95,24 @@ function ResetPassword(): ReactNode {
             {t("auth.forgotPassword.submit")}
           </Link>
         </Button>
-      </AuthCard>
+      </AuthPage>
     );
   }
   if (done) {
     return (
-      <AuthCard title={t("auth.resetPassword.title")}>
+      <AuthPage
+        icon={<CircleCheck />}
+        title={t("auth.resetPassword.title")}
+        tone="success"
+      >
         <Text role="status">{t("auth.resetPassword.success")}</Text>
         {backToSignIn}
-      </AuthCard>
+      </AuthPage>
     );
   }
 
   return (
-    <AuthCard title={t("auth.resetPassword.title")}>
+    <AuthPage title={t("auth.resetPassword.title")}>
       <form className="flex flex-col gap-4" noValidate onSubmit={submit}>
         <Field
           hint={t("auth.password.ruleMinLength", { min: PASSWORD_MIN_LENGTH })}
@@ -126,6 +136,6 @@ function ResetPassword(): ReactNode {
         </Button>
         {backToSignIn}
       </form>
-    </AuthCard>
+    </AuthPage>
   );
 }

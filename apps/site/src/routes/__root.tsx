@@ -42,6 +42,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { Footer } from "@/components/app-shell/footer";
 import { Header } from "@/components/app-shell/header";
 import { SearchPaletteProvider } from "@/components/app-shell/search-palette-provider";
+import { AuthShell, useAuthShell } from "@/components/auth/auth-shell";
 import { SiteConsentBanner } from "@/components/consent-banner";
 import { GuestImportSheet } from "@/components/guest-import-sheet";
 import { SiteAnalytics } from "@/lib/analytics";
@@ -328,8 +329,14 @@ function SiteLocaleProvider({
   return <LocaleProvider value={value}>{children}</LocaleProvider>;
 }
 
+/**
+ * The page frame: the site header and footer, or for the auth pages the
+ * full-screen auth shell. Both keep the skip link, the guest import and
+ * the consent banner.
+ */
 function Layout({ children }: { children: ReactNode }): ReactNode {
   const { t } = useTranslation();
+  const authShell = useAuthShell();
   return (
     <SearchPaletteProvider>
       <div className="flex min-h-screen flex-col">
@@ -344,11 +351,17 @@ function Layout({ children }: { children: ReactNode }): ReactNode {
             {t("a11y.noscript")}
           </p>
         </noscript>
-        <Header />
-        <main className="flex flex-1 flex-col" id="main" tabIndex={-1}>
-          {children}
-        </main>
-        <Footer />
+        {authShell ? (
+          <AuthShell>{children}</AuthShell>
+        ) : (
+          <>
+            <Header />
+            <main className="flex flex-1 flex-col" id="main" tabIndex={-1}>
+              {children}
+            </main>
+            <Footer />
+          </>
+        )}
         <GuestImportSheet />
         <SiteConsentBanner />
       </div>

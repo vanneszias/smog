@@ -17,7 +17,9 @@ const SUBMIT = /Doorgaan|Account maken/;
  * Landmarks, titles and the language (phase 9 task 5): the page structure
  * every route shares (one `main`, a header and a footer, one `h1`, a
  * localised and unique title, `lang` follows the language), live regions
- * and form errors tied to their field.
+ * and form errors tied to their field. The auth routes have the auth
+ * shell's slim header and footer instead of the site's: still one banner
+ * and one contentinfo (issue #5).
  */
 
 const TITLED = [
