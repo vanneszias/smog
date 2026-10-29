@@ -101,7 +101,7 @@ export function Footer(): ReactNode {
         </div>
         <Text size="body-sm" tone="muted">
           <TextLink
-            className="group inline-flex min-h-touch items-center font-regular hover:no-underline"
+            className="group inline-flex min-h-touch items-center rounded-full border border-border-subtle bg-background px-3.5 font-regular hover:border-border hover:no-underline"
             href={AUTHOR_URL}
             rel="noopener noreferrer"
             target="_blank"
@@ -116,7 +116,7 @@ export function Footer(): ReactNode {
                       <span key={part}>
                         <Heart
                           aria-hidden="true"
-                          className="mx-1 inline-block size-4 align-text-bottom text-primary-strong"
+                          className="mx-1 inline-block size-4 fill-current align-text-bottom text-highlight"
                         />
                         <span className="sr-only">{t("footer.love")}</span>
                       </span>
@@ -125,7 +125,7 @@ export function Footer(): ReactNode {
                   if (part === "zias.be") {
                     return (
                       <span
-                        className="font-semibold text-primary-strong group-hover:underline group-focus-visible:underline"
+                        className="font-semibold text-foreground group-hover:underline group-focus-visible:underline"
                         key={part}
                       >
                         {part}
