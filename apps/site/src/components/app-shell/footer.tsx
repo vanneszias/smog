@@ -116,7 +116,7 @@ export function Footer(): ReactNode {
                       <span key={part}>
                         <Heart
                           aria-hidden="true"
-                          className="mx-1 inline-block size-4 fill-current align-text-bottom text-highlight"
+                          className="mx-0.5 inline-block size-4 fill-current align-text-bottom text-highlight"
                         />
                         <span className="sr-only">{t("footer.love")}</span>
                       </span>
