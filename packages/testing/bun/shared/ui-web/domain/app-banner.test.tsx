@@ -23,10 +23,12 @@ describe("AppBanner", () => {
       />
     );
     const region = screen.getByRole("region", {
-      name: "SMOG is now available on your phone!",
+      name: "Your SMOG gestures at hand",
     });
-    expect(region.textContent).toContain("New");
-    expect(region.textContent).toContain("learn gestures wherever you are");
+    expect(region.textContent).toContain("The app");
+    expect(region.textContent).toContain(
+      "find your favorites and lists on your phone"
+    );
     const appStore = screen.getByRole("link", { name: APP_STORE_NAME });
     expect(appStore.getAttribute("href")).toBe(APP_STORE);
     const play = screen.getByRole("link", { name: GOOGLE_PLAY_NAME });
@@ -63,7 +65,7 @@ describe("AppBanner", () => {
     );
     expect(
       screen.getByRole("region", {
-        name: "SMOG is nu beschikbaar op je telefoon!",
+        name: "Je SMOG-gebaren bij de hand",
       })
     ).toBeDefined();
     expect(screen.getByRole("link", { name: APP_STORE_NL })).toBeDefined();

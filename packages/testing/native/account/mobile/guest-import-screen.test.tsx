@@ -36,7 +36,9 @@ it("keeps the import result available after the guest data is cleared", async ()
     },
     signedIn: true,
   });
-  fireEvent.press(await screen.findByRole("button", { name: "Import" }));
+  fireEvent.press(
+    await screen.findByRole("button", { name: "Add to my account" })
+  );
   expect(
     await screen.findByText("Your favorites and lists are now in your account.")
   ).toBeOnTheScreen();

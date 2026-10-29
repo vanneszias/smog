@@ -20,9 +20,7 @@ describe("ConsentBanner", () => {
     expect(
       screen.getByRole("button", { name: "Allow statistics" })
     ).toBeDefined();
-    expect(
-      screen.getByRole("button", { name: "Only necessary" })
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "No statistics" })).toBeDefined();
   });
 
   test("the buttons report the choice", async () => {
@@ -32,7 +30,7 @@ describe("ConsentBanner", () => {
       <ConsentBanner onAllow={onAllow} onDecline={onDecline} privacyHref="/p" />
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Only necessary" })
+      screen.getByRole("button", { name: "No statistics" })
     );
     expect(onDecline).toHaveBeenCalledTimes(1);
     await userEvent.click(
@@ -49,7 +47,7 @@ describe("ConsentBanner", () => {
       screen.getByRole("button", { name: "Allow statistics" })
     );
     const decline = classesOf(
-      screen.getByRole("button", { name: "Only necessary" })
+      screen.getByRole("button", { name: "No statistics" })
     );
     const sizes = (list: string[]): string[] =>
       list.filter((name) => name.startsWith("h-") || name.startsWith("min-h"));
@@ -65,7 +63,7 @@ describe("ConsentBanner", () => {
         privacyHref="/p"
       />
     );
-    for (const name of ["Allow statistics", "Only necessary"]) {
+    for (const name of ["Allow statistics", "No statistics"]) {
       const button = screen.getByRole("button", { name });
       expect(button.hasAttribute("disabled")).toBe(true);
     }
@@ -97,7 +95,7 @@ describe("ConsentBanner", () => {
       screen.getByRole("region", { name: "Help SMOG verbeteren" })
     ).toBeDefined();
     expect(
-      screen.getByRole("button", { name: "Alleen noodzakelijke" })
+      screen.getByRole("button", { name: "Geen statistieken" })
     ).toBeDefined();
   });
 });

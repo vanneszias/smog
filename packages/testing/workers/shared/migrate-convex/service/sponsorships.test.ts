@@ -23,9 +23,9 @@ import overridesText from "../../../../bun/shared/migrate-convex/service/fixture
 
 /*
  * Task 8's smoke on a D1 with every migration: the sponsorship transform's
- * statements for the fixture (with its overrides and Mux map) all apply —
+ * statements for the fixture (with its overrides and Mux map) all apply;
  * every CHECK, NOT NULL, foreign key and the one-blocking-sponsorship
- * index hold — applying them twice changes no count, and the reset
+ * index hold; applying them twice changes no count, and the reset
  * deletes every row in RESTRICT order. The parents (the admin and the
  * gestures) are seeded here with their legacy ids; task 10 runs the whole
  * plan.

@@ -41,7 +41,7 @@ export const MANIFEST_ICONS: readonly ManifestIcon[] = [
 ];
 
 /**
- * `/manifest.webmanifest` (inventory P-14, R-18): the old manifest's values.
+ * `/manifest.webmanifest` (inventory P-14, R-18): the app's identity and purpose.
  * Dutch, like the old one: a manifest is fetched without cookies, so it has
  * no locale to follow.
  */
@@ -49,7 +49,8 @@ export function webManifest(): WebManifest {
   return {
     background_color: "#ebf4eb",
     categories: ["education", "reference"],
-    description: "Mensen ondersteunen hun spraak van nature met gebaren.",
+    description:
+      "Mensen gaan van nature hun spraak ondersteunen met gebaren. SMOG staat voor Spreken Met Ondersteuning van Gebaren.",
     display: "standalone",
     icons: MANIFEST_ICONS.map((icon) => ({ ...icon })),
     lang: "nl",

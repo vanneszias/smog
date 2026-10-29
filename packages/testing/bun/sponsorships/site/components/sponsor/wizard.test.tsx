@@ -122,7 +122,7 @@ async function chooseBroerAndZus(): Promise<void> {
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("heading", {
     level: 1,
-    name: "Configure your sponsorship",
+    name: "Your name and contact details",
   });
 }
 
@@ -238,9 +238,13 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     );
     const vat = screen.getByLabelText(ENTERPRISE_NUMBER);
     await waitFor(() => expect(vat.getAttribute("aria-invalid")).toBe("true"));
-    expect(screen.getByText("Invalid enterprise number.")).toBeDefined();
     expect(
-      screen.getByRole("heading", { name: "Configure your sponsorship" })
+      screen.getByText(
+        "Check the enterprise number. Enter 10 digits, optionally preceded by BE."
+      )
+    ).toBeDefined();
+    expect(
+      screen.getByRole("heading", { name: "Your name and contact details" })
     ).toBeDefined();
     // Fixed: on to the preview.
     type(ENTERPRISE_NUMBER, "BE 0123.456.749");
@@ -837,7 +841,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Continue" }));
       await screen.findByRole("heading", {
         level: 1,
-        name: "Configure your sponsorship",
+        name: "Your name and contact details",
       });
       await waitFor(() => expect(root.style.scrollPaddingBottom).toBe(""));
     } finally {

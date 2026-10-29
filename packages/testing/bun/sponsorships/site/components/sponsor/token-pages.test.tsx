@@ -204,7 +204,7 @@ describe("the re-edit page (S-19)", () => {
       },
     });
     expect(
-      await screen.findByRole("heading", { name: "Update your video" })
+      await screen.findByRole("heading", { name: "Update your name or logo" })
     ).toBeDefined();
     expect(screen.getByText("Link expires in 3 days")).toBeDefined();
     expect(screen.queryByLabelText(LOGO)).toBeNull();
@@ -239,7 +239,7 @@ describe("the re-edit page (S-19)", () => {
         },
       },
     });
-    await screen.findByRole("heading", { name: "Update your video" });
+    await screen.findByRole("heading", { name: "Update your name or logo" });
     expect(screen.getByLabelText(LOGO)).toBeDefined();
     expect(
       screen.getByText("Leave empty to keep your current logo.")

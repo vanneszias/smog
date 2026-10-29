@@ -112,7 +112,7 @@ describe("CourseBanner", () => {
     const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
     await renderKit(<CourseBanner courseUrl={COURSE_URL} messageIndex={2} />);
     expect(screen.getByText(t("gesture.disclaimer.title"))).toBeOnTheScreen();
-    const link = screen.getByRole("link", { name: "click here" });
+    const link = screen.getByRole("link", { name: "Find a course" });
     await fireEvent.press(link);
     expect(open).toHaveBeenCalledWith(COURSE_URL);
   });

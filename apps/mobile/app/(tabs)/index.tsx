@@ -191,6 +191,7 @@ export default function HomeScreen(): ReactElement {
           {t("home.title")}
         </Heading>
         <Text tone="muted">{t("home.tagline")}</Text>
+        <Text tone="muted">{t("home.intro")}</Text>
         <SearchField
           onSubmitEditing={submit}
           onValueChange={setQuery}

@@ -113,6 +113,11 @@ describe("home", () => {
       })
     ).toBeOnTheScreen();
     expect(home.getByPlaceholderText("Search for a gesture")).toBeOnTheScreen();
+    expect(
+      home.getByText(
+        "A reminder of what you learned in your SMOG course or introductory session."
+      )
+    ).toBeOnTheScreen();
   });
 
   it("continues where this device left off", async () => {

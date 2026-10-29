@@ -195,7 +195,7 @@ const TRAILING_NEWLINES = /(?<!\n)\n+$/;
 
 function markdownCell(value: DetailValue): string {
   if (value === null) {
-    return "—";
+    return "-";
   }
   return String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
 }

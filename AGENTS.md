@@ -2,6 +2,19 @@
 
 SMOG is a Bun + Turborepo monorepo: one Cloudflare Worker (`apps/site`, TanStack Start), one Expo app (`apps/mobile`), and everything else in `packages/*`. The design spec is `docs/superpowers/specs/2026-09-29-cloudflare-rewrite-design.md`; every non-trivial choice is recorded in `docs/DECISIONS.md`.
 
+## Product terminology
+
+SMOG means **Spreken Met Ondersteuning van Gebaren**: gestures support spoken communication. Keep this Dutch name in every language, with a translated explanation where helpful. Describe the content as SMOG gestures, not as learning a separate language. This applies to UI copy, metadata, email, code, comments, fixtures and documentation, including historical material. Translation overrides in D1 and cached mobile catalogues also need review when correcting deployed copy; changing the shipped catalogues alone does not replace an override.
+
+### Brand voice and copy workflow
+
+- The approved Dutch SMOG & Co tagline is **Mensen gaan van nature hun spraak ondersteunen met gebaren**. Preserve it exactly. English and French convey the same meaning; do not invent competing slogans. The expansion of SMOG explains the method and is not the tagline.
+- Never use an em dash (U+2014) in any copy, including UI, metadata, email, documents and empty-value placeholders. Use a full stop, comma, colon or parentheses as the sentence needs; use a hyphen for an empty-value placeholder.
+- Use the `copywriting` skill from `coreyhaines31/marketingskills` for all branding and copy changes. The shared installation is `~/.agents/skills/copywriting`; read its `SKILL.md` if the skill is not in the agent's catalogue. Read this section as the project's brand context before drafting. Project rules override the skill's generic defaults, including its allowance for occasional em dashes in long copy.
+- Write in a warm, direct, accessible voice. Use concrete everyday situations and familiar words about speaking, gestures and learning. Help people find a gesture or prepare a lesson. Keep useful existing wording; avoid generic slogans, inflated promises, invented evidence and pressure to convert. Ask the owner for feedback before changing the tagline or brand positioning.
+- Videos are a memory aid alongside a SMOG course or initiation, not a standalone course. Use this positioning on both home screens, in discovery copy and in video notices. Keep course links descriptive rather than "click here".
+- Promise no fixed sponsorship review deadline. Explain that the sponsorship is checked before publication and the sponsor receives an email when it is online. Names and optional logos appear over the gesture's own video; expiry removes that end card, not the gesture video.
+
 ## Commands
 
 ### Root Commands

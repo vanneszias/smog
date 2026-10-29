@@ -1,6 +1,6 @@
 # SMOG
 
-SMOG & Co's sign language learning platform: a library of gesture videos that people search, favorite and collect in lists, and that organisations can sponsor with their logo on a gesture. The rewrite of the old Convex + WorkOS system runs on Cloudflare; the old data moves over with an importer.
+SMOG & Co's platform for **Spreken Met Ondersteuning van Gebaren** (SMOG): using gestures to support spoken communication. It offers a library of SMOG gesture videos that people search, favorite and collect in lists, and that organisations can sponsor with their logo on a gesture. The rewrite of the old Convex + WorkOS system runs on Cloudflare; the old data moves over with an importer.
 
 - **Site and API:** one Cloudflare Worker (`apps/site`): TanStack Start (React 19), oRPC procedures at `/api/rpc`, Better Auth, D1 (SQLite) through Drizzle, KV, R2 and Queues.
 - **App:** one Expo app (`apps/mobile`, SDK 57, Expo Router, NativeWind) for iOS and Android.

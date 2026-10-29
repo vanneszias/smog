@@ -14,7 +14,7 @@ import { focusRing } from "../lib/variants";
 /**
  * The course messages `gesture.videoComplete.1..7` (the old app's
  * `VIDEO_COMPLETE_COUNT`, `@smog/config/constants`). The phrase that links to
- * the course ("Click here", "klik dan hier", …) is marked `<course>` in each
+ * the course ("Find a course", "Bekijk het cursusaanbod", …) is marked `<course>` in each
  * locale's copy, so every language links its own words.
  */
 export const COURSE_MESSAGE_COUNT = 7;

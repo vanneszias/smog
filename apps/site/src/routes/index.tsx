@@ -150,6 +150,7 @@ function Home(): ReactNode {
               <Text className="text-primary-foreground">
                 {t("home.tagline")}
               </Text>
+              <Text className="text-primary-foreground">{t("home.intro")}</Text>
             </div>
             <div className="w-full max-w-reading">
               <SearchBox

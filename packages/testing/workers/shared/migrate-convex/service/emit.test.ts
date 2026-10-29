@@ -11,7 +11,7 @@ import { legacyUuid } from "../../../../../migrate-convex/src/core/ids";
 
 /*
  * The emitter's SQL on a D1 with every migration (phase 8 task 5): the
- * core runs in workerd, and what it writes is valid SQLite for D1 — the
+ * core runs in workerd, and what it writes is valid SQLite for D1; the
  * repeated `ON CONFLICT` clauses, `char(10)` line breaks, the legacy id
  * subqueries, the `json_each` reset deletes and the last-admin guard.
  */

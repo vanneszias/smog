@@ -172,7 +172,7 @@ test.describe("admin sponsorships", () => {
     const response = await page.goto(url);
     expect(response?.ok()).toBe(true);
     await expect(
-      page.getByRole("heading", { level: 1, name: "Werk je video bij" })
+      page.getByRole("heading", { level: 1, name: "Pas je naam of logo aan" })
     ).toBeVisible();
     await expect(page.getByLabel(NAAM_IN_DE_VIDEO)).toHaveValue("E2E Koffie");
   });

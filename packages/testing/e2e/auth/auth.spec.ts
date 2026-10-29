@@ -94,7 +94,7 @@ test.describe("auth", () => {
     await page.getByLabel("Code").fill(wrong);
     await page.getByRole("button", { name: "Bevestigen" }).click();
     await expect(page.getByRole("alert")).toContainText(
-      "Die code klopt niet of is verlopen."
+      "Die code klopt niet of is verlopen. Controleer de code of vraag een nieuwe aan."
     );
   });
 });

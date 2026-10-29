@@ -532,7 +532,7 @@ test.describe("CSP (enforced in dev)", () => {
       await page.goto(`/sponsor?gesture=${SLUG}`);
       await waitForApp(page);
       await page
-        .getByRole("button", { name: "Alleen noodzakelijke" })
+        .getByRole("button", { name: "Geen statistieken" })
         .click({ timeout: 3000 })
         .catch(() => undefined);
       await expect(
@@ -660,7 +660,7 @@ test.describe("CSP (enforced in dev)", () => {
       // The token went in the body, never in the read's URL.
       expect(logo.url()).not.toContain(KEPT_LOGO_TOKEN);
       await expect(
-        page.getByRole("heading", { level: 1, name: "Werk je video bij" })
+        page.getByRole("heading", { level: 1, name: "Pas je naam of logo aan" })
       ).toBeVisible();
       const frame = page.getByRole("img", { name: "Voorbeeld voor Paard" });
       await expect(frame.getByText("Logo Bewaard")).toBeVisible();

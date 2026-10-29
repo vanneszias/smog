@@ -38,7 +38,7 @@ const EMAIL = /^E-mail$/;
 
 const IPHONE = devices["iPhone 15"].userAgent;
 const CONSENT = "Help SMOG verbeteren";
-const DECLINE = "Alleen noodzakelijke";
+const DECLINE = "Geen statistieken";
 /** The body of a test: the page, and where its findings go. */
 type Body = (page: Page, found: Finding[]) => Promise<void>;
 
@@ -202,7 +202,7 @@ test.describe("axe: guest overlays and banners", () => {
       await page.getByRole("button", { name: DECLINE }).click();
       await expect(
         page.getByRole("region", {
-          name: "SMOG is nu beschikbaar op je telefoon!",
+          name: "Je SMOG-gebaren bij de hand",
         })
       ).toBeVisible();
       found.push(...(await scanThemes(page, "app-banner")));
@@ -306,7 +306,7 @@ test.describe("axe: sponsor wizard steps", () => {
         await expect(
           page.getByRole("heading", {
             level: 1,
-            name: "Configureer je sponsoring",
+            name: "Je naam en contactgegevens",
           })
         ).toBeVisible();
         found.push(...(await scanThemes(page, "sponsor:2-details")));

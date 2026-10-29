@@ -29,7 +29,7 @@ export const nl: LegalTexts = {
               "**Account en aanmelding:** naam, e-mailadres en of het bevestigd is, taal, rol, eventueel een profielfoto van Google (die uw browser rechtstreeks bij Google ophaalt wanneer ze getoond wordt), sessies (met IP-adres en browser- of appgegevens) en tijdstippen. Een wachtwoord bewaren we alleen als onomkeerbare hash; van een passkey bewaren we alleen de publieke sleutel. Meldt u zich aan met Google of Apple, dan ontvangen we van hen een account-ID, uw naam en uw e-mailadres.",
               "**Gebruik zonder account:** favorieten, lijsten, recente zoekopdrachten, voorkeuren en uw analyticskeuze blijven op uw apparaat. Ze verlaten uw apparaat niet, tenzij u na het aanmelden kiest om ze in uw account te importeren, en behalve de optionele analytics hieronder (bijvoorbeeld welk gebaar u bekeek of bewaarde).",
               "**Leerfuncties:** favoriete gebaren, lijsten, lijstbeschrijvingen, deellinks en hun rechten (bekijken of bewerken). Recente zoektermen blijven lokaal op uw apparaat.",
-              "**Sponsoring:** contactnaam, sponsor- of bedrijfsnaam, e-mail, gekozen gebaren, weergavenaam, optioneel logo, voorbeeld- en eindvideo's, status, betaalreferentie en looptijd.",
+              "**Sponsoring:** contactnaam, sponsor- of bedrijfsnaam, e-mail, gekozen gebaren, weergavenaam, optioneel logo, voorbeeldweergave van naam en logo bij de gebarenvideo, status, betaalreferentie en looptijd.",
               "**Facturatie:** factuurnaam, btw- of ondernemingsnummer en factuur-e-mailadres wanneer u een factuur vraagt. Mollie verwerkt de betaalgegevens; SMOG&Co ontvangt geen volledige kaart- of bankgegevens.",
               "**Technische gegevens:** IP-adres, apparaat-, browser- en appgegevens, beveiligingslogs, foutinformatie en gegevens die nodig zijn voor video- en netwerklevering. Bij aanmelden, registreren, wachtwoordherstel en andere formulieren (zoals het aanvragen van een aanmeldcode of -link) controleert Cloudflare Turnstile of het verzoek van een mens komt.",
               "**Toestemmingsgeschiedenis:** bent u aangemeld, dan bewaren we uw analyticskeuzes (ja of nee, tijdstip en beleidsversie), zodat we kunnen aantonen welke keuze geldt.",
@@ -59,9 +59,9 @@ export const nl: LegalTexts = {
           "Alleen bevoegde medewerkers en dienstverleners die de Dienst ondersteunen krijgen toegang voor zover dat nodig is:",
           {
             list: [
-              "**Cloudflare:** hosting van de website en de API (Workers), de database (D1), bestandsopslag zoals sponsorlogo's (R2), tijdelijke gegevens (KV), wachtrijen (Queues), het renderen van sponsorvideo's met naam en logo (Workflows, Containers), het verzenden van e-mails (Email) en misbruikpreventie (Turnstile). [Privacybeleid](https://www.cloudflare.com/privacypolicy/)",
+              "**Cloudflare:** hosting van de website en de API (Workers), de database (D1), bestandsopslag zoals sponsorlogo's (R2), tijdelijke gegevens (KV), wachtrijen (Queues), het verzenden van e-mails (Email) en misbruikpreventie (Turnstile). [Privacybeleid](https://www.cloudflare.com/privacypolicy/)",
               "**Better Auth:** open-source aanmeldsoftware die wij zelf binnen onze Cloudflare-omgeving draaien. Er gaan daarvoor geen gegevens naar een aparte aanbieder.",
-              "**Mux:** opslag, verwerking en streaming van gebaren- en sponsorvideo's. [Privacybeleid](https://www.mux.com/privacy)",
+              "**Mux:** opslag, verwerking en streaming van gebarenvideo's. De speler toont de sponsornaam en eventueel het logo over het einde van die video; daarvoor wordt geen aparte sponsorvideo gemaakt. [Privacybeleid](https://www.mux.com/privacy)",
               "**Mollie:** gehoste betaalafhandeling en betaalstatus. [Privacybeleid](https://www.mollie.com/legal/privacy)",
               "**Expo:** distributie en updates van de mobiele app. [Privacybeleid](https://expo.dev/privacy)",
               "**Google en Apple:** wanneer u kiest om u met uw Google- of Apple-account aan te melden. Hebt u een profielfoto van Google, dan haalt uw browser die bij elke weergave rechtstreeks bij Google op; Google ziet dan uw IP-adres en browsergegevens. [Google](https://policies.google.com/privacy) · [Apple](https://www.apple.com/legal/privacy/)",
@@ -230,11 +230,11 @@ export const nl: LegalTexts = {
         blocks: [
           {
             list: [
-              "Een sponsoring koppelt de gekozen sponsornaam, tekst en eventueel logo gedurende de getoonde looptijd aan een of meer gebarenvideo's.",
+              "Een sponsoring toont de gekozen sponsornaam, tekst en eventueel logo over het einde van een of meer gebarenvideo's gedurende de getoonde looptijd. De gebarenvideo zelf verandert daardoor niet.",
               "De prijs, looptijd en eventuele logo-opslag worden vóór betaling getoond. De server controleert het verschuldigde bedrag. Een sponsoraanvraag is pas betaald nadat Mollie de betaling bevestigt.",
-              "SMOG&Co beoordeelt de gesponsorde video vóór publicatie en kan inhoud weigeren die onwettig, misleidend, schadelijk, ongepast of technisch onbruikbaar is. We nemen bij afwijzing contact op over aanpassing of een passende afhandeling van de betaling.",
+              "SMOG&Co beoordeelt de sponsoring vóór publicatie en kan inhoud weigeren die onwettig, misleidend, schadelijk, ongepast of technisch onbruikbaar is. We nemen bij afwijzing contact op over aanpassing of een passende afhandeling van de betaling.",
               "U garandeert dat u de nodige rechten en toestemmingen bezit voor namen, merken, logo's, tekst en andere aangeleverde inhoud. U verleent SMOG&Co voor de uitvoering van de sponsoring een niet-exclusieve licentie om die inhoud te verwerken, te renderen, te hosten en te tonen.",
-              "Voorbeeld- en eindvideo's kunnen technisch worden aangepast voor formaat, leesbaarheid en streaming. Een door SMOG&Co verstrekte herbewerkingslink is persoonlijk, 7 dagen geldig en mag niet worden gedeeld.",
+              "De voorbeeld- en videoweergave kunnen technisch worden aangepast voor formaat, leesbaarheid en streaming. De sponsornaam en eventueel het logo worden in de speler getoond; er wordt geen aparte sponsorvideo gemaakt. Een door SMOG&Co verstrekte herbewerkingslink is persoonlijk, 7 dagen geldig en mag niet worden gedeeld.",
               "Ongeveer 30 dagen voor het einde van de looptijd ontvangt u een e-mail met een link om de sponsoring te verlengen. Een verlenging is een nieuwe betaling voor een extra jaar tegen de dan getoonde prijs; een sponsoring wordt nooit automatisch verlengd.",
               "Onbetaalde aanvragen kunnen na 24 uur worden geannuleerd. Voor annulering, terugbetaling of een foutieve betaling neemt u contact op; wettelijke consumentenrechten blijven van toepassing.",
             ],

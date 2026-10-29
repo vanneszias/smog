@@ -149,7 +149,7 @@ export function PaymentCard({
               amount: money(payment.chargedBackCents),
               date:
                 payment.chargedBackAt === null
-                  ? "—"
+                  ? "-"
                   : time(payment.chargedBackAt),
             })}{" "}
             {t("admin.sponsorships.payment.chargebackHint")}
@@ -161,7 +161,7 @@ export function PaymentCard({
           {time(payment.createdAt)}
         </Fact>
         <Fact label={t("admin.sponsorships.payment.paid")}>
-          {payment.paidAt === null ? "—" : time(payment.paidAt)}
+          {payment.paidAt === null ? "-" : time(payment.paidAt)}
         </Fact>
         <Fact label={t("admin.sponsorships.payment.refund")}>
           <RefundState payment={payment} />

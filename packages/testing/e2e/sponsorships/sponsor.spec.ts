@@ -138,7 +138,7 @@ function card(page: Page, name: string) {
 
 /** The consent banner shows after hydration; decline it so it covers nothing. */
 async function declineConsent(page: Page): Promise<void> {
-  const decline = page.getByRole("button", { name: "Alleen noodzakelijke" });
+  const decline = page.getByRole("button", { name: "Geen statistieken" });
   try {
     await decline.click({ timeout: 3000 });
   } catch {
@@ -177,7 +177,7 @@ async function fillDetails(
 ): Promise<void> {
   await page.getByRole("button", { exact: true, name: "Doorgaan" }).click();
   await expect(
-    page.getByRole("heading", { level: 1, name: "Configureer je sponsoring" })
+    page.getByRole("heading", { level: 1, name: "Je naam en contactgegevens" })
   ).toBeVisible();
   await page.getByLabel(NAAM_IN_DE_VIDEO).fill("Bakkerij Jansen");
   await expect(page.getByText("15/35")).toBeVisible();
@@ -200,7 +200,11 @@ async function fillDetails(
     await page.getByLabel(NAAM_OP_DE_FACTUUR).fill("Jansen BV");
     await page.getByLabel(ONDERNEMINGSNUMMER).fill("0123456789");
     await page.getByRole("button", { name: "Doorgaan naar voorbeeld" }).click();
-    await expect(page.getByText("Ongeldig ondernemingsnummer.")).toBeVisible();
+    await expect(
+      page.getByText(
+        "Controleer het ondernemingsnummer. Vul 10 cijfers in, eventueel met BE ervoor."
+      )
+    ).toBeVisible();
     await page.getByLabel(ONDERNEMINGSNUMMER).fill("BE 0123.456.749");
   }
   await page.getByRole("button", { name: "Doorgaan naar voorbeeld" }).click();
@@ -330,7 +334,7 @@ test("keyboard only: the cards, the selection bar, the dropzone's button and the
   await page.keyboard.press("Enter");
   const details = page.getByRole("heading", {
     level: 1,
-    name: "Configureer je sponsoring",
+    name: "Je naam en contactgegevens",
   });
   await expect(details).toBeFocused();
   await expect(current).toContainText("Jouw gegevens");
@@ -482,7 +486,9 @@ test("the gesture CTA: free, being sponsored, sponsored (L-17)", async ({
     `/sponsor?gesture=${FREE}`
   );
   await page.goto(`/gestures/${PENDING}`);
-  await expect(cta).toContainText("Dit gebaar wordt momenteel gesponsord.");
+  await expect(cta).toContainText(
+    "Dit gebaar is al gekozen voor sponsoring en is nu niet beschikbaar."
+  );
   await page.goto(`/gestures/${LIVE}`);
   await expect(cta).toContainText(
     "Dit gebaar wordt gesponsord door Bakkerij Peeters."
@@ -538,7 +544,7 @@ test("the re-edit link: a new name, sent for review", async ({ page }) => {
   await page.goto(`/sponsor/edit#token=${REEDIT_TOKEN}`);
   await waitForApp(page);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Werk je video bij" })
+    page.getByRole("heading", { level: 1, name: "Pas je naam of logo aan" })
   ).toBeVisible();
   const name = page.getByLabel(NAAM_IN_DE_VIDEO);
   await expect(name).toHaveValue("Oude Naam");
@@ -700,7 +706,7 @@ async function stubbedStates(
   );
   await page.goto(`/sponsor/edit#token=${REEDIT_TOKEN}`);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Werk je video bij" })
+    page.getByRole("heading", { level: 1, name: "Pas je naam of logo aan" })
   ).toBeVisible();
   await previewReady(page);
   await expect(

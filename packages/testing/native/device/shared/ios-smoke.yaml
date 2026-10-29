@@ -7,7 +7,7 @@ appId: ${APP_ID}
     text: "Allow"
     optional: true
 - tapOn:
-    text: "Only necessary"
+    text: "No statistics"
     optional: true
 - assertVisible:
     id: home-screen

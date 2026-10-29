@@ -169,7 +169,7 @@ function Facts({ detail }: { detail: AdminSponsorshipDetail }): ReactNode {
         </Fact>
         <Fact label={t("admin.sponsorships.detail.amount")}>
           <span className="tabular-nums">
-            {cents === null ? "—" : money(cents)}
+            {cents === null ? "-" : money(cents)}
           </span>
         </Fact>
         <Fact
@@ -182,7 +182,7 @@ function Facts({ detail }: { detail: AdminSponsorshipDetail }): ReactNode {
           {sponsor.name}
         </Fact>
         <Fact label={t("admin.sponsorships.detail.company")}>
-          {sponsor.company ?? "—"}
+          {sponsor.company ?? "-"}
         </Fact>
         <Fact
           className="col-span-2"
@@ -197,10 +197,10 @@ function Facts({ detail }: { detail: AdminSponsorshipDetail }): ReactNode {
           {time(sponsorship.createdAt)}
         </Fact>
         <Fact label={t("admin.sponsorships.detail.startsAt")}>
-          {sponsorship.startsAt === null ? "—" : day(sponsorship.startsAt)}
+          {sponsorship.startsAt === null ? "-" : day(sponsorship.startsAt)}
         </Fact>
         <Fact label={t("admin.sponsorships.detail.endsAt")}>
-          {sponsorship.endsAt === null ? "—" : day(sponsorship.endsAt)}
+          {sponsorship.endsAt === null ? "-" : day(sponsorship.endsAt)}
         </Fact>
         {sponsorship.reminderSentAt === null ? null : (
           <Fact

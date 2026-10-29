@@ -25,7 +25,7 @@ Tests are vitest pure-unit tests of lib helpers only (listSharing, listValidatio
 ### gestures
 - categoryIds: Id<categories>[], concept: string[], info: string, isActive: boolean, lastUpdated: number, name: string, playbackId: string (Mux playback id)
 - Indexes: by_name[name], by_category[categoryIds] (index on an array field: useless for membership queries), by_active[isActive], by_last_updated[lastUpdated]; searchIndex search_content{searchField name, filterFields [categoryIds, isActive]}
-- Use: the sign-language gesture catalogue. playbackId is MUTATED by the sponsorship lifecycle (swapped to sponsored video, restored to original on expiry). lastUpdated is bumped on every admin edit and sponsorship swap; clients use `getLastUpdated` for cache/sync invalidation.
+- Use: the SMOG gesture catalogue (Spreken Met Ondersteuning van Gebaren: gestures that support speech). playbackId is MUTATED by the sponsorship lifecycle (swapped to sponsored video, restored to original on expiry). lastUpdated is bumped on every admin edit and sponsorship swap; clients use `getLastUpdated` for cache/sync invalidation.
 - Smells: categoryIds array of ids (no join table, no integrity); concept is a string[] (synonyms/keywords); soft-delete via isActive; category *names* used client side (native) instead of ids; original video stored on sponsorship (`originalVideoPlaybackId`) not gesture, so state is spread.
 
 ### categories

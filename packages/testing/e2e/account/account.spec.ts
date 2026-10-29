@@ -22,7 +22,7 @@ const STORE_KEY = "smog:guest:v1";
 const EXPORT_FILE = /^smog-export-\d{4}-\d{2}-\d{2}\.json$/;
 const BANNER = "Help SMOG verbeteren";
 const ALLOW = "Statistieken toestaan";
-const DECLINE = "Alleen noodzakelijke";
+const DECLINE = "Geen statistieken";
 const LANGUAGE_URL = /\/account\?section=language$/;
 const PASSWORD = "e2e-password-1234";
 const HEADERS = { origin: ORIGIN };
@@ -277,7 +277,7 @@ test.describe("consent banner", () => {
     expect(errors).toEqual([]);
   });
 
-  test("Only necessary closes it for good and sends nothing", async ({
+  test("declining statistics closes the banner and sends nothing", async ({
     page,
   }) => {
     const errors = watchErrors(page);

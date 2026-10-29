@@ -26,7 +26,9 @@ test("offers the guest import after sign-in and shows the result", async ({
   const sheet = page.getByRole("dialog", { name: "Je gegevens meenemen?" });
   await expect(sheet).toBeVisible();
   await expect(sheet.getByText("1 favoriet importeren?")).toBeVisible();
-  await sheet.getByRole("button", { name: "Importeren" }).click();
+  await sheet
+    .getByRole("button", { name: "Toevoegen aan mijn account" })
+    .click();
 
   await expect(
     sheet.getByText("Je favorieten en lijsten staan nu in je account.")

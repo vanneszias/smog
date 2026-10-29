@@ -280,7 +280,7 @@ function SponsorshipRows({
         cell: (row) => (
           <span className="flex flex-col items-start gap-1">
             <span className="whitespace-nowrap tabular-nums">
-              {row.amountCents === null ? "—" : money(row.amountCents)}
+              {row.amountCents === null ? "-" : money(row.amountCents)}
             </span>
             {row.paymentStatus ? (
               <Badge variant={PAYMENT_STATUS_TONES[row.paymentStatus]}>
@@ -299,7 +299,7 @@ function SponsorshipRows({
               {t("admin.sponsorships.invoice.short")}
             </Badge>
           ) : (
-            <span aria-hidden="true">—</span>
+            <span aria-hidden="true">-</span>
           ),
         header: t("admin.sponsorships.columns.invoice"),
         id: "invoice",

@@ -185,7 +185,7 @@ describe("the role gate", () => {
     expect(screen.queryByTestId("settings-lessons")).not.toBeOnTheScreen();
     await goTo("/settings/lessons");
     expect(await screen.findByTestId("lessons-forbidden")).toBeOnTheScreen();
-    expect(screen.getByText("Only for teachers")).toBeOnTheScreen();
+    expect(screen.getByText("Only for teachers and admins")).toBeOnTheScreen();
     expect(lessonRequests(fetch, "lessons/list")).toBe(0);
   });
 });
@@ -386,7 +386,11 @@ describe("the export", () => {
       "RATE_LIMITED",
       "You just made a lot of PDFs. Wait a moment and try again.",
     ],
-    [403, "FORBIDDEN", "Only teachers can make this PDF."],
+    [
+      403,
+      "FORBIDDEN",
+      "You need a teacher or admin role to make this PDF. Ask an admin for access.",
+    ],
   ])("a %i %s answer is explained", async (status, code, message) => {
     await openExport();
     global.fetch = jest.fn(() =>

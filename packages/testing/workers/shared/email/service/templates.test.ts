@@ -51,7 +51,7 @@ describe("the layout", () => {
     const year = new Date().getUTCFullYear();
     expect(email.text).toContain(`© ${year} SMOG & CO vzw · België`);
     expect(email.text).toContain(
-      "SMOG — Spreken Met Ondersteuning van Gebaren"
+      "Mensen gaan van nature hun spraak ondersteunen met gebaren"
     );
   });
 

@@ -245,7 +245,9 @@ describe("LessonBuilder", () => {
       {},
       AUTOSAVE_WAIT
     );
-    fireEvent.click(screen.getByRole("button", { name: "Keep mine" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Overwrite with my version" })
+    );
     await waitFor(() => {
       expect(updates(calls)).toHaveLength(2);
     }, AUTOSAVE_WAIT);

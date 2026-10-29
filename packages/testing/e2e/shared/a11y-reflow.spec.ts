@@ -217,13 +217,13 @@ test.describe("reflow at 320 x 256 px", () => {
         page.getByRole("region", { name: "Help SMOG verbeteren" })
       ).toBeVisible();
       await expectNoHorizontalScroll(page, "consent banner");
-      await page.getByRole("button", { name: "Alleen noodzakelijke" }).click();
+      await page.getByRole("button", { name: "Geen statistieken" }).click();
       await expectNoHorizontalScroll(page, "sponsor:1");
       await page.getByRole("button", { exact: true, name: "Doorgaan" }).click();
       await expect(
         page.getByRole("heading", {
           level: 1,
-          name: "Configureer je sponsoring",
+          name: "Je naam en contactgegevens",
         })
       ).toBeVisible();
       await expectNoHorizontalScroll(page, "sponsor:2");
@@ -356,7 +356,7 @@ test.describe("text spacing (WCAG 1.4.12)", () => {
         await expect(
           page.getByRole("heading", {
             level: 1,
-            name: "Configureer je sponsoring",
+            name: "Je naam en contactgegevens",
           })
         ).toBeVisible();
         await page.addStyleTag({ content: TEXT_SPACING });

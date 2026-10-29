@@ -28,7 +28,7 @@ const TOKEN = "e2eTokenPagesSpecStubbedOnly_0123456789a".padEnd(43, "0");
 const DAY = 86_400_000;
 const NAME_IN_THE_VIDEO = /^Naam in de video/;
 const SIGN_IN_HREF = /^\/sign-in/;
-const EDIT_TITLE = "Werk je video bij";
+const EDIT_TITLE = "Pas je naam of logo aan";
 const RENEW_TITLE = "Nog een jaar in de video";
 
 type State = "expired" | "invalid" | "unavailable" | "unknown" | "valid";

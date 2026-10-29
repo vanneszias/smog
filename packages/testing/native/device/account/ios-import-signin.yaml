@@ -25,7 +25,7 @@ appId: ${APP_ID}
 - tapOn: "Sign in"
 - assertVisible: 'Bring your data along\?'
 - takeScreenshot: ios-import-prompt
-- tapOn: "Import"
+- tapOn: "Add to my account"
 - assertVisible: "Your favorites and lists are now in your account."
 - tapOn: "Done"
 - tapOn: "Lists"

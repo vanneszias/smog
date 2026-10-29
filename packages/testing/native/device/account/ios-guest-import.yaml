@@ -3,7 +3,7 @@ appId: ${APP_ID}
 # Signed-out Home; QA_EMAIL is a verified disposable account with QA_PASSWORD.
 - launchApp
 - tapOn:
-    text: "Only necessary"
+    text: "No statistics"
     optional: true
 - tapOn: "Lists"
 - tapOn: "New list"

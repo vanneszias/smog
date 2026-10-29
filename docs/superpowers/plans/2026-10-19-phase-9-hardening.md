@@ -286,7 +286,7 @@ Wave B. Ruling 7.
 
 **Files (owned):**
 - `apps/site/src/routes/sponsor/{edit,renew}.tsx`, `apps/site/src/components/sponsor/{reedit-view,renewal-view,token-pages}*` and their tests, `apps/site/src/lib/sponsor-search.ts` (+ tests), **`apps/site/src/lib/legacy-redirects.ts`**, `apps/site/test/legacy-redirects.test.ts` and the call site in `src/worker.ts` (the legacy `/sponsors/re-edit` entry; `lib/redirect.ts` is the auth-callback sanitiser: not this task's). `lib/token-page.ts` (`tokenPageHeaders`/`tokenPageHead`) is pinned, not rewritten.
-- The URL builders: `packages/features/sponsorships/src/server/lifecycle.ts` (~245, `${siteUrl}${path}?token=`), `sweeps.ts` (~401), `use-reedit.ts`, and `packages/email/src/samples.ts` (sample links) — and the places that put a link in an email (`packages/email` template props are data; the **builder** is what changes), the admin token dialog text (`TokenDialog`: the copied URL), `apps/site/e2e/sponsor.spec.ts` and the CSP/sponsor specs that open token links.
+- The URL builders: `packages/features/sponsorships/src/server/lifecycle.ts` (~245, `${siteUrl}${path}?token=`), `sweeps.ts` (~401), `use-reedit.ts`, and `packages/email/src/samples.ts` (sample links), and the places that put a link in an email (`packages/email` template props are data; the **builder** is what changes), the admin token dialog text (`TokenDialog`: the copied URL), `apps/site/e2e/sponsor.spec.ts` and the CSP/sponsor specs that open token links.
 - `docs/API.md` (the sponsorship token paragraph only).
 
 **Behaviour (ruling 7):**

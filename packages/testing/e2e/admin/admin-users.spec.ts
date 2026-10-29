@@ -124,7 +124,7 @@ test.describe("admin users", () => {
     const member = await memberPage(browser);
     await openPanel(page, member.email);
     const panel = page.getByRole("dialog", { name: member.email });
-    for (const role of ["Vertaler", "Leerkracht"]) {
+    for (const role of ["Vertaler", "Lesgever"]) {
       // biome-ignore lint/performance/noAwaitInLoops: the grants run one after the other, each waits for its dialog.
       await panel
         .getByRole("button", { name: `Rol toevoegen: ${role}` })

@@ -61,6 +61,9 @@ test.describe("home", () => {
       name: "Gebaren die je spraak ondersteunen",
     });
     await expect(hero).toBeVisible();
+    await expect(
+      page.getByText("Een geheugensteun bij je SMOG-cursus of initiatie.")
+    ).toBeVisible();
     // The hero sits on the green surface.
     const surface = await hero.evaluate(
       (node) =>

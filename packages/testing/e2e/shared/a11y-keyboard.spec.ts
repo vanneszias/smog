@@ -420,7 +420,7 @@ test.describe("keyboard: guests", () => {
       const banner = page.getByRole("region", { name: "Help SMOG verbeteren" });
       await expect(banner).toBeVisible();
       const decline = banner.getByRole("button", {
-        name: "Alleen noodzakelijke",
+        name: "Geen statistieken",
       });
       await tabTo(page, decline, 60);
       await page.keyboard.press("Enter");

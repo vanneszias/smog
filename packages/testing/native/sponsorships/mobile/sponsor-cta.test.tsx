@@ -135,7 +135,11 @@ describe("the gesture's sponsor card on mobile (L-17, ruling 13)", () => {
       },
     });
     const cta = await card();
-    expect(cta.getByText("This gesture is being sponsored.")).toBeOnTheScreen();
+    expect(
+      cta.getByText(
+        "This gesture has already been chosen for sponsorship and is not available right now."
+      )
+    ).toBeOnTheScreen();
     expect(cta.queryByRole("button")).toBeNull();
   });
 

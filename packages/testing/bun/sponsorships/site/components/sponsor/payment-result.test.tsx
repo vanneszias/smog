@@ -50,9 +50,7 @@ describe("the payment's return page (S-14)", () => {
     expect(screen.getByText("Bakkerij Jansen")).toBeDefined();
     expect(screen.getByText(HUNDRED_TWENTY_EUROS)).toBeDefined();
     expect(
-      screen.getByText(
-        "An administrator reviews your sponsorship within five working days."
-      )
+      screen.getByText("We check your sponsorship before it goes online.")
     ).toBeDefined();
     expect(calls[0]?.input).toEqual({ payment: PAYMENT });
     // The done step says so to a screen reader (review Minor 7).

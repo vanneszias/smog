@@ -73,7 +73,9 @@ describe("the gesture's sponsor card (L-17, ruling 13)", () => {
       },
     });
     expect(
-      await screen.findByText("This gesture is being sponsored.")
+      await screen.findByText(
+        "This gesture has already been chosen for sponsorship and is not available right now."
+      )
     ).toBeDefined();
     expect(screen.queryByRole("link")).toBeNull();
   });

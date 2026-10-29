@@ -183,6 +183,8 @@ describe("the legal texts (spec §9, inventory P-07, P-08)", () => {
         "BullMQ",
         "SMTP",
         "IMAP",
+        "Workflows",
+        "Containers",
       ]) {
         expect(text, `${locale}: ${name}`).not.toContain(name);
       }

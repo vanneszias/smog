@@ -21,9 +21,9 @@ describe("CourseBanner", () => {
     const banner = screen.getByRole("status");
     expect(banner.textContent).toContain("Important notice");
     expect(banner.textContent).toContain(
-      "If you want to take a course after watching these videos, click here."
+      "Would you like to take a SMOG course or introductory session? Find a course."
     );
-    const link = screen.getByRole("link", { name: "click here" });
+    const link = screen.getByRole("link", { name: "Find a course" });
     expect(link.getAttribute("href")).toBe(COURSE_URL);
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
@@ -31,7 +31,9 @@ describe("CourseBanner", () => {
 
   test("the localized phrase is the link (nl)", () => {
     renderKit(<CourseBanner courseUrl={COURSE_URL} messageIndex={2} />, "nl");
-    expect(screen.getByRole("link", { name: "klik dan hier" })).toBeDefined();
+    expect(
+      screen.getByRole("link", { name: "Bekijk het cursusaanbod" })
+    ).toBeDefined();
   });
 
   test("a message without a phrase has no link", () => {

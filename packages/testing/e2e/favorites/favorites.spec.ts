@@ -30,7 +30,9 @@ test("a guest's favorite survives a reload and moves to the new account", async 
   await waitForApp(page);
   const sheet = page.getByRole("dialog", { name: "Je gegevens meenemen?" });
   await expect(sheet.getByText("1 favoriet importeren?")).toBeVisible();
-  await sheet.getByRole("button", { name: "Importeren" }).click();
+  await sheet
+    .getByRole("button", { name: "Toevoegen aan mijn account" })
+    .click();
   await expect(
     sheet.getByText("Je favorieten en lijsten staan nu in je account.")
   ).toBeVisible();
@@ -69,7 +71,9 @@ test("sign-out after the import never brings the guest's favorites back, and ano
   await page.reload();
   await waitForApp(page);
   const sheet = page.getByRole("dialog", { name: "Je gegevens meenemen?" });
-  await sheet.getByRole("button", { name: "Importeren" }).click();
+  await sheet
+    .getByRole("button", { name: "Toevoegen aan mijn account" })
+    .click();
   await sheet.getByRole("button", { name: "Klaar" }).click();
   await expect(heart).toHaveAttribute("aria-pressed", "true");
 

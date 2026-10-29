@@ -36,7 +36,7 @@ export interface ImportGuestDataOptions {
   store: LocalStore;
   /**
    * The name a list gets when its device name is empty (localised by the
-   * caller, e.g. `auth.import.untitledList`). Default `"—"`.
+   * caller, e.g. `auth.import.untitledList`). Default `"-"`.
    */
   untitledListName?: string;
 }
@@ -53,7 +53,7 @@ interface Payload {
   lists: readonly LocalList[];
 }
 
-const UNTITLED_LIST = "—";
+const UNTITLED_LIST = "-";
 
 function isGestureId(id: string): boolean {
   return gestureIdSchema.safeParse(id).success;

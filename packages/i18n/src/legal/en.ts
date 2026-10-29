@@ -25,7 +25,7 @@ export const en: LegalTexts = {
               "**Account and sign-in:** name, email address and whether it is verified, language, role, a profile picture from Google if any (which your browser fetches directly from Google whenever it is shown), sessions (with IP address and browser or app details) and timestamps. A password is only stored as an irreversible hash; for a passkey we only store its public key. If you sign in with Google or Apple, they send us an account ID, your name and your email address.",
               "**Use without an account:** favorites, lists, recent searches, preferences and your analytics choice stay on your device. They do not leave your device unless, after signing in, you choose to import them into your account, except for the optional analytics below (for example which gesture you viewed or saved).",
               "**Learning features:** favorite gestures, lists, list descriptions, share links and their rights (view or edit). Recent search terms stay locally on your device.",
-              "**Sponsorship:** contact name, sponsor or company name, email, chosen gestures, display name, optional logo, preview and final videos, status, payment reference and term.",
+              "**Sponsorship:** contact name, sponsor or company name, email, chosen gestures, display name, optional logo, preview of the name and logo with the gesture video, status, payment reference and term.",
               "**Invoicing:** invoice name, VAT or company number and invoice email address when you ask for an invoice. Mollie processes the payment details; SMOG&Co does not receive full card or bank details.",
               "**Technical data:** IP address, device, browser and app details, security logs, error information and data needed to deliver video and network traffic. When you sign in, sign up, reset your password or use other forms (such as asking for a sign-in code or link), Cloudflare Turnstile checks that the request comes from a human.",
               "**Consent history:** when you are signed in, we keep your analytics choices (yes or no, time and policy version), so we can show which choice applies.",
@@ -55,9 +55,9 @@ export const en: LegalTexts = {
           "Only authorised staff and service providers that support the Service get access, as far as needed:",
           {
             list: [
-              "**Cloudflare:** hosting of the website and the API (Workers), the database (D1), file storage such as sponsor logos (R2), temporary data (KV), queues (Queues), rendering sponsor videos with the name and logo (Workflows, Containers), sending email (Email) and abuse prevention (Turnstile). [Privacy policy](https://www.cloudflare.com/privacypolicy/)",
+              "**Cloudflare:** hosting of the website and the API (Workers), the database (D1), file storage such as sponsor logos (R2), temporary data (KV), queues (Queues), sending email (Email) and abuse prevention (Turnstile). [Privacy policy](https://www.cloudflare.com/privacypolicy/)",
               "**Better Auth:** open-source sign-in software that we run ourselves inside our Cloudflare environment. No data goes to a separate provider for it.",
-              "**Mux:** storage, processing and streaming of gesture and sponsor videos. [Privacy policy](https://www.mux.com/privacy)",
+              "**Mux:** storage, processing and streaming of gesture videos. The player shows the sponsor name and any logo over the end of that video; no separate sponsor video is created. [Privacy policy](https://www.mux.com/privacy)",
               "**Mollie:** hosted payment processing and payment status. [Privacy policy](https://www.mollie.com/legal/privacy)",
               "**Expo:** distribution and updates of the mobile app. [Privacy policy](https://expo.dev/privacy)",
               "**Google and Apple:** when you choose to sign in with your Google or Apple account. If you have a Google profile picture, your browser fetches it directly from Google each time it is shown, so Google sees your IP address and browser details. [Google](https://policies.google.com/privacy) · [Apple](https://www.apple.com/legal/privacy/)",
@@ -226,11 +226,11 @@ export const en: LegalTexts = {
         blocks: [
           {
             list: [
-              "A sponsorship links the chosen sponsor name, text and optional logo to one or more gesture videos for the term shown.",
+              "A sponsorship shows the chosen sponsor name, text and optional logo over the end of one or more gesture videos for the term shown. The gesture video itself does not change.",
               "The price, term and any logo surcharge are shown before payment. The server checks the amount due. A sponsorship request only counts as paid once Mollie confirms the payment.",
-              "SMOG&Co reviews the sponsored video before publication and may refuse content that is unlawful, misleading, harmful, inappropriate or technically unusable. If we refuse it, we contact you about changes or an appropriate handling of the payment.",
+              "SMOG&Co reviews the sponsorship before publication and may refuse content that is unlawful, misleading, harmful, inappropriate or technically unusable. If we refuse it, we contact you about changes or an appropriate handling of the payment.",
               "You guarantee that you hold the necessary rights and permissions for names, brands, logos, text and other submitted content. For carrying out the sponsorship, you grant SMOG&Co a non-exclusive licence to process, render, host and show that content.",
-              "Preview and final videos may be adjusted technically for format, legibility and streaming. A re-edit link provided by SMOG&Co is personal, valid for 7 days and may not be shared.",
+              "The preview and video display may be adjusted technically for format, legibility and streaming. The player shows the sponsor name and any logo; no separate sponsor video is created. A re-edit link provided by SMOG&Co is personal, valid for 7 days and may not be shared.",
               "About 30 days before the end of the term you receive an email with a link to renew the sponsorship. A renewal is a new payment for one more year at the price then shown; a sponsorship is never renewed automatically.",
               "Unpaid requests may be cancelled after 24 hours. For cancellation, a refund or a wrong payment, contact us; statutory consumer rights continue to apply.",
             ],

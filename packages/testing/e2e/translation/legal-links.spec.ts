@@ -11,8 +11,8 @@ import {
 /** Review artifacts are opt-in, not pixel assertions or files in the app tree. */
 const SCREENSHOTS = process.env.SCREENSHOTS_DIR ?? process.env.PUBLIC_SHOTS_DIR;
 const CONSENT = "Help SMOG verbeteren";
-const DECLINE = "Alleen noodzakelijke";
-const APP_BANNER = "SMOG is nu beschikbaar op je telefoon!";
+const DECLINE = "Geen statistieken";
+const APP_BANNER = "Je SMOG-gebaren bij de hand";
 const OPEN_IN_APP = "Heb je de SMOG-app?";
 const IPHONE = devices["iPhone 15"].userAgent;
 const SIGN_IN_URL = /\/sign-in\?redirect=%2Faccount$/;

@@ -14,6 +14,8 @@ interface Tree {
 }
 
 const PLACEHOLDER = /\{\{\s*([\w.]+)[^}]*\}\}/g;
+const REVIEW_DEADLINE = /\d|werkdagen?|working days?|jours? ouvrables?/i;
+const GENERIC_COURSE_LINK = /<course>(?:click|klik|cliquez)/i;
 
 function flatten(tree: Tree, prefix = ""): Map<string, string> {
   const out = new Map<string, string>();
@@ -117,6 +119,42 @@ describe("catalogues", () => {
           [...forms.values()].some((v) => v.trim() === "") ? [key] : []
         );
         expect(empty).toEqual([]);
+      });
+
+      test("explains SMOG and uses the same approved tagline on the site and in email", () => {
+        const flat = flatten(resources[locale].translation as unknown as Tree);
+        expect(flat.get("home.description")).toContain(
+          "Spreken Met Ondersteuning van Gebaren"
+        );
+        expect(flat.get("email.common.tagline")).toBe(flat.get("home.tagline"));
+        if (locale === "nl") {
+          expect(flat.get("home.tagline")).toBe(
+            "Mensen gaan van nature hun spraak ondersteunen met gebaren"
+          );
+        }
+      });
+
+      test("never uses em dashes in any translation", () => {
+        const flat = flatten(resources[locale].translation as unknown as Tree);
+        expect(
+          [...flat].filter(([, value]) => value.includes("\u2014"))
+        ).toEqual([]);
+      });
+
+      test("course support and sponsorship copy keep the owner's approved claims", () => {
+        const flat = flatten(resources[locale].translation as unknown as Tree);
+        expect(flat.get("home.intro")).toContain("SMOG");
+        for (const key of [
+          "email.transactional.paymentConfirmed.initialNext",
+          "sponsor.success.timeline.review",
+        ]) {
+          expect(flat.get(key)).not.toMatch(REVIEW_DEADLINE);
+        }
+        for (const index of [1, 2, 3, 6]) {
+          const text = flat.get(`gesture.videoComplete.${index}`) ?? "";
+          expect(text).toContain("<course>");
+          expect(text).not.toMatch(GENERIC_COURSE_LINK);
+        }
       });
 
       test("uses the same {{placeholders}} as nl per key", () => {
