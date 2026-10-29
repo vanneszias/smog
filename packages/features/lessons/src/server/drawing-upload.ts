@@ -30,7 +30,7 @@ export interface DrawingUploadEnv {
   SITE_URL: string;
 }
 
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 const BASE64URL = /^[A-Za-z0-9_-]{43}$/;
 const PADDING = /[=]+$/;
 const HKDF_INFO = "smog-drawing-upload";

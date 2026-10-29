@@ -14,6 +14,18 @@ import {
   shippedMessages,
   validateTranslation,
 } from "../../../../i18n/src/index";
+import { placeholdersOf } from "../../../../i18n/src/validate";
+
+test("placeholder scanning preserves formats and skips long unclosed input", () => {
+  expect(
+    placeholdersOf(
+      "{{ name }} {{user.name, format}} {{count}} {{outer{{inner}}"
+    )
+  ).toEqual(["name", "outer", "user.name"]);
+  expect(placeholdersOf(`{{{{${".".repeat(100_000)}`)).toEqual([]);
+  expect(placeholdersOf("{{name ".repeat(20_000))).toEqual([]);
+  expect(placeholdersOf("{{bad} {{good}}")).toEqual(["good"]);
+});
 
 describe("createI18n with the ui_string overlay", () => {
   test("an overlay value beats the shipped value of the language", () => {

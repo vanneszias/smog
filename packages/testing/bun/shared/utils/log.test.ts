@@ -42,6 +42,13 @@ describe("redactMessage", () => {
     const once = redactMessage(`bad ${TOKEN} for a@example.test`);
     expect(redactMessage(once)).toBe(once);
   });
+
+  test("handles long non-address runs without rescanning every suffix", () => {
+    expect(redactMessage("!".repeat(100_000))).toBe("!".repeat(300));
+    expect(redactMessage(`${"!".repeat(100_000)}@example.test`)).toBe(
+      "[redacted]"
+    );
+  });
 });
 
 describe("errorSummary", () => {

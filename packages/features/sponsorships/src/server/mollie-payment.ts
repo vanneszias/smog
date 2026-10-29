@@ -96,7 +96,7 @@ export interface StartMolliePaymentInput {
   siteUrl: string;
 }
 
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /** `/api/webhooks/mollie`, left out where Mollie cannot reach it. */

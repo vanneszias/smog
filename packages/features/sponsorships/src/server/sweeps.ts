@@ -413,7 +413,7 @@ export async function runReminderSweep({
   return result;
 }
 
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 
 // ── Stale payments (J-03) ──────────────────────────────────────────────
 

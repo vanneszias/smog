@@ -24,7 +24,7 @@ export interface RelayOptions {
 const MAX_BODY_BYTES = 4096;
 const SDK_NAME = "smog-relay";
 const SDK_VERSION = "3.0.0";
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 
 function status(code: string, statusCode: number, headers = {}): Response {
   return Response.json({ code }, { headers, status: statusCode });

@@ -87,7 +87,7 @@ export function retryAfterSeconds(
   return Number.isNaN(at) ? null : Math.max(0, Math.ceil((at - now) / 1000));
 }
 
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 
 /**
  * The Mux client, or `null` when the access token is not configured

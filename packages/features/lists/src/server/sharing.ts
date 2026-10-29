@@ -22,7 +22,7 @@ import {
   removeItemFromList,
 } from "./service";
 
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 
 /**
  * `SITE_URL/lists/<token>`: the site's shared-list route (also used by the

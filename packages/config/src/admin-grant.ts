@@ -24,7 +24,7 @@
  */
 
 /** Deliberately strict: one `local@domain.tld`, no spaces or control chars. */
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@.]+$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** Now, in the epoch milliseconds Better Auth's columns hold. */

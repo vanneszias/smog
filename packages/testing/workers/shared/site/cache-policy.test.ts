@@ -216,7 +216,7 @@ describe("public/_headers agrees with the policy", () => {
         continue;
       }
       // A splat stands for a file below it.
-      const sample = path.replace("*", "sample.svg");
+      const sample = path.replaceAll("*", "sample.svg");
       expect(policy(sample), path).toBe(value);
     }
   });

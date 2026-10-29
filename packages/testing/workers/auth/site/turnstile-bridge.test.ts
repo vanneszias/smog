@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const ORIGIN = "http://localhost:5173";
 const NONCE = /'nonce-([A-Za-z0-9+/=]+)'/;
-const SCRIPT_TAG = /<script\b[^>]*>/g;
+const SCRIPT_TAG = /<script\b[^>]*>/gi;
 
 async function bridge(query = "", headers: Record<string, string> = {}) {
   return await exports.default.fetch(`${ORIGIN}/turnstile-bridge${query}`, {

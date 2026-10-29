@@ -75,6 +75,31 @@ describe("parseLegalInline", () => {
       { text: "[x](javascript:alert(1))", type: "text" },
     ]);
   });
+
+  test("preserves nested brackets, markup precedence and malformed text", () => {
+    expect(parseLegalInline("**[link](/x)** [**label**](/y)")).toEqual([
+      { text: "[link](/x)", type: "strong" },
+      { text: " ", type: "text" },
+      { href: "/y", text: "**label**", type: "link" },
+    ]);
+    expect(parseLegalInline("[[label](/x) ***x**")).toEqual([
+      { href: "/x", text: "[label", type: "link" },
+      { text: " ", type: "text" },
+      { text: "*x", type: "strong" },
+    ]);
+    for (const text of ["**a\nb**", "[](/x)", "[a]( /x)", "[a](/x"]) {
+      expect(parseLegalInline(text)).toEqual([{ text, type: "text" }]);
+    }
+  });
+
+  test("handles long runs of unmatched and nested link openers", () => {
+    for (const text of [
+      "[\\".repeat(50_000),
+      `[\\](${"[!](!".repeat(20_000)}`,
+    ]) {
+      expect(parseLegalInline(text)).toEqual([{ text, type: "text" }]);
+    }
+  });
 });
 
 describe("the legal texts (spec §9, inventory P-07, P-08)", () => {

@@ -12,7 +12,7 @@ const MAX_MESSAGE_LENGTH = 300;
 const REDACTED = "[redacted]";
 
 /** An address: anything with an `@` between non-space characters. */
-const EMAIL = /[^\s@<>"'(),;]+@[^\s@<>"'(),;]+/g;
+const EMAIL = /(?<![^\s@<>"'(),;])[^\s@<>"'(),;]+@[^\s@<>"'(),;]+/g;
 /** A URL's query and fragment (re-edit and reset links carry tokens). */
 const URL_TAIL = /(https?:\/\/[^\s?#"'<>]*)[?#][^\s"'<>]*/g;
 /** `Bearer abc`, `Basic abc`. */

@@ -95,6 +95,13 @@ describe("buildGrantSql", () => {
       expect(() => buildGrantSql(email)).toThrow("[adminGrant]");
     }
   });
+
+  test("handles long dotted domains without overlapping regex repetitions", () => {
+    expect(() => buildGrantSql(`x@${"!.".repeat(50_000)}`)).toThrow();
+    expect(buildGrantSql(`x@${"!.".repeat(50_000)}test`)).toContain(
+      "UPDATE user"
+    );
+  });
 });
 
 describe("buildGrantSql with create (ruling 18)", () => {

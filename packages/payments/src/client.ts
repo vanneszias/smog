@@ -71,7 +71,7 @@ export class MollieRateLimitError extends MollieApiError {
   }
 }
 
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 
 /**
  * The Mollie client, or `null` without `MOLLIE_API_KEY` (staging until its

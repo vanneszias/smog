@@ -1,4 +1,4 @@
-import { SAFE_HREF } from "./inline";
+import { legalMarks, SAFE_HREF } from "./inline";
 import type {
   LegalBlock,
   LegalDocument,
@@ -43,7 +43,6 @@ export const LEGAL_LIMITS = {
 const SECTION_ID = /^[a-z]+(?:-[a-z]+)*$/;
 /** A tag or a closing tag: the texts are plain inline markup, never HTML. */
 const HTML = /<\/?[a-zA-Z!]/;
-const LINK = /\[([^\]]+)\]\(([^)]*)\)/g;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -64,8 +63,8 @@ function inlineIssues(value: unknown, path: string): LegalIssue[] {
   if (HTML.test(value)) {
     issues.push({ code: "html", path });
   }
-  for (const match of value.matchAll(LINK)) {
-    if (!SAFE_HREF.test((match[2] ?? "").trim())) {
+  for (const match of legalMarks(value, true)) {
+    if (!SAFE_HREF.test((match.href ?? "").trim())) {
       issues.push({ code: "unsafeLink", path });
     }
   }

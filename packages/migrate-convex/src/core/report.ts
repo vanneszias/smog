@@ -191,7 +191,7 @@ export function renderReportJson(report: Report): string {
 }
 
 const MARKDOWN_IDS_MAX = 20;
-const TRAILING_NEWLINES = /\n+$/;
+const TRAILING_NEWLINES = /(?<!\n)\n+$/;
 
 function markdownCell(value: DetailValue): string {
   if (value === null) {

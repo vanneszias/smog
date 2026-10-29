@@ -6,7 +6,7 @@
 import { MUX_DEFAULT_API_URL } from "@smog/config/env/worker";
 
 const MUX_HOST = /\.mux\.com$/;
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 
 /**
  * Whether the browser may PUT to this direct-upload URL: https on a

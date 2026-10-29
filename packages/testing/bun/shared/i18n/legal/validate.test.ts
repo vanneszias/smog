@@ -60,6 +60,16 @@ describe("validateLegalDocument", () => {
     ).toContain("unsafeLink");
   });
 
+  test("checks empty and spaced hrefs and long unmatched markup", () => {
+    for (const text of ["[x]()", "[x]( javascript:alert(1))"]) {
+      expect(codes("terms", doc([text]))).toContain("unsafeLink");
+    }
+    expect(codes("terms", doc(["[\\".repeat(50_000)]))).toEqual(["tooLong"]);
+    expect(codes("terms", doc([`[\\](${"[(]((".repeat(20_000)}`]))).toEqual([
+      "tooLong",
+    ]);
+  });
+
   test("refuses raw HTML", () => {
     expect(codes("terms", doc(["Hello <script>alert(1)</script>"]))).toContain(
       "html"

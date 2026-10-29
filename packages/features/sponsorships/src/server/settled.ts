@@ -35,7 +35,7 @@ const PAST_PAYMENT: readonly SponsorshipStatus[] =
   BLOCKING_SPONSORSHIP_STATUSES.filter(
     (status) => status !== "awaiting_payment"
   );
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 
 interface ItemRow {
   amountCents: number;

@@ -13,7 +13,7 @@ import { displayNameSchema, logoKeySchema } from "./wizard";
 /** A re-edit link is valid for 7 days (S-19). */
 export const REEDIT_TOKEN_TTL_MS = 7 * DAY_MS;
 
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 const NEW_TOKEN = /^[A-Za-z0-9_-]{43}$/;
 
 /** A token from a link: a new base64url token or an old UUID one. */

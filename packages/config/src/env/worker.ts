@@ -13,7 +13,7 @@ export const MUX_DEFAULT_API_URL = "https://api.mux.com";
 /** The Mollie API; `MOLLIE_API_URL` points at the Mollie fake in dev and e2e. */
 export const MOLLIE_DEFAULT_API_URL = "https://api.mollie.com";
 
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 /** A Mollie API key (ruling 2): `test_` or `live_`, then the key itself. */
 const MOLLIE_API_KEY_PATTERN = /^(test|live)_\w{20,}$/;
 

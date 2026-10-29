@@ -13,6 +13,30 @@ const KAT = /Kat/;
 const HOND = /Hond/;
 const CONTINUE = "Ga verder waar je bleef";
 
+function isMuxError(message: string): boolean {
+  const urls = message.match(/https?:\/\/[^\s"'<>]+/g) ?? [];
+  return (
+    urls.length > 0 &&
+    urls.every((url) => URL.parse(url)?.origin === "https://stream.mux.com")
+  );
+}
+
+test("Mux error filtering checks parsed origins, not URL substrings", () => {
+  expect(isMuxError("Failed to fetch https://stream.mux.com/video.m3u8")).toBe(
+    true
+  );
+  for (const message of [
+    "An unrelated error",
+    "https://evil.test/https://stream.mux.com/video.m3u8",
+    "https://evil.test/?url=https://stream.mux.com/video.m3u8",
+    "https://stream.mux.com.evil.test/video.m3u8",
+    "https://stream.mux.com@evil.test/video.m3u8",
+    "https://stream.mux.com/video.m3u8 https://evil.test/failure",
+  ]) {
+    expect(isMuxError(message), message).toBe(false);
+  }
+});
+
 /*
  * Home (phase 10a task 4): the green hero with the big search, illustrated
  * category chips, "continue where you left off" from the device's recent
@@ -51,9 +75,7 @@ test.describe("home", () => {
     // No recents yet on a fresh device: nothing to continue.
     await expect(page.getByRole("heading", { name: CONTINUE })).toHaveCount(0);
     expect(await blockingViolations(page)).toEqual([]);
-    expect(errors.filter((error) => !error.includes("stream.mux.com"))).toEqual(
-      []
-    );
+    expect(errors.filter((error) => !isMuxError(error))).toEqual([]);
   });
 
   test("the hero search opens the results, a category chip filters", async ({

@@ -38,4 +38,22 @@ describe("isAllowedUploadUrl", () => {
       isAllowedUploadUrl(`${fake}/upload/x`, fake, { allowFake: false })
     ).toBe(false);
   });
+
+  it("handles long slash runs in an API URL without repeated suffix scans", () => {
+    const fake = "http://localhost:4010";
+    expect(
+      isAllowedUploadUrl(`${fake}/upload/x`, `${fake}${"/".repeat(100_000)}`, {
+        allowFake: true,
+      })
+    ).toBe(true);
+    expect(
+      isAllowedUploadUrl(
+        `${fake}/upload/x`,
+        `${fake}/${"/".repeat(100_000)}x`,
+        {
+          allowFake: true,
+        }
+      )
+    ).toBe(true);
+  });
 });

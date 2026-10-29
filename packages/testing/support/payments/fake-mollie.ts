@@ -81,7 +81,7 @@ const ALPHABET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const AUTHORIZATION = /^Bearer (test|live)_\w{20,}$/;
 const PAYMENT_PATH = /^\/v2\/payments\/([^/]+)$/;
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /(?<!\/)\/+$/;
 
 /**
  * The decoded captures of an anchored path pattern, or `null` when it does

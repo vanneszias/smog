@@ -7,7 +7,7 @@ const PLURAL_FORMS = ["zero", "one", "two", "few", "many", "other"] as const;
 export type PluralForm = (typeof PLURAL_FORMS)[number];
 const PLURAL_FORM_SET: ReadonlySet<string> = new Set(PLURAL_FORMS);
 
-const PLACEHOLDER = /\{\{\s*([\w.]+)[^}]*\}\}/g;
+const PLACEHOLDER = /\{\{\s*([\w.]+)/g;
 
 /**
  * The `{{names}}` a string interpolates, sorted. `count` is left out: a
@@ -16,9 +16,24 @@ const PLACEHOLDER = /\{\{\s*([\w.]+)[^}]*\}\}/g;
 export function placeholdersOf(...values: readonly string[]): string[] {
   const names = new Set<string>();
   for (const value of values) {
+    let closing = -1;
+    let consumed = 0;
     for (const match of value.matchAll(PLACEHOLDER)) {
-      if (match[1] && match[1] !== "count") {
-        names.add(match[1]);
+      if (match.index < consumed) {
+        continue;
+      }
+      const from = match.index + match[0].length;
+      if (closing < from) {
+        const found = value.indexOf("}", from);
+        closing = found === -1 ? value.length : found;
+      }
+      if (value.slice(closing, closing + 2) !== "}}") {
+        continue;
+      }
+      consumed = closing + 2;
+      const [, name] = match;
+      if (name && name !== "count") {
+        names.add(name);
       }
     }
   }
