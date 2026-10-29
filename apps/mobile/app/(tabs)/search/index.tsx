@@ -242,7 +242,7 @@ export default function SearchScreen(): ReactElement {
             : {}
         }
       />
-      <ConnectionBanner className="mt-2" />
+      <ConnectionBanner className="mt-4" />
       {ios ? null : (
         <View className="flex-row items-center gap-2 px-4 py-2">
           <View className="flex-1">
@@ -272,7 +272,7 @@ export default function SearchScreen(): ReactElement {
         ) : (
           <>
             {matching.length > 0 ? (
-              <View className="gap-2 pt-2" testID="search-categories">
+              <View className="gap-2 pt-4" testID="search-categories">
                 <Heading className="px-4" level={2} size="title-3">
                   {t("search.categories")}
                 </Heading>
@@ -285,7 +285,7 @@ export default function SearchScreen(): ReactElement {
               </View>
             ) : null}
             <SearchResults
-              className="flex-1 pt-2"
+              className="flex-1 pt-4"
               emptyAction={
                 category.length > 0 ? (
                   <Button onPress={clearCategories} variant="secondary">

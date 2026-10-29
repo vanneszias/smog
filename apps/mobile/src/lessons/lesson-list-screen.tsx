@@ -16,6 +16,7 @@ import GraduationCap from "lucide-react-native/icons/graduation-cap";
 import { type ReactElement, useCallback, useMemo } from "react";
 import { FlatList, type ListRenderItemInfo, View } from "react-native";
 import { ConnectionBanner } from "@/components/connection-banner";
+import { ListScreen } from "@/components/screen";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 import { LessonGate } from "./lesson-gate";
 
@@ -137,11 +138,11 @@ function LessonList(): ReactElement {
 /** The signed-in teacher's view of every lesson (read only; lessons are made on the website). */
 export function LessonListScreen(): ReactElement {
   return (
-    <View className="flex-1 gap-2 bg-background pt-2" testID="lessons-screen">
+    <ListScreen testID="lessons-screen">
       <ConnectionBanner />
       <LessonGate>
         <LessonList />
       </LessonGate>
-    </View>
+    </ListScreen>
   );
 }

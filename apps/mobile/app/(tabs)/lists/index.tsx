@@ -20,6 +20,7 @@ import { FlatList, type ListRenderItemInfo, View } from "react-native";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { HeaderActions } from "@/components/header-actions";
 import { ListNameSheet } from "@/components/list-name-sheet";
+import { ListScreen } from "@/components/screen";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 
 const listQueries = (rpc: AppQueryUtils) => [rpc.lists.key()];
@@ -133,7 +134,7 @@ export default function ListsScreen(): ReactElement {
   }
 
   return (
-    <View className="flex-1 gap-2 bg-background pt-2" testID="lists-screen">
+    <ListScreen testID="lists-screen">
       <Stack.Screen options={{ headerRight }} />
       <ConnectionBanner />
       {content}
@@ -144,6 +145,6 @@ export default function ListsScreen(): ReactElement {
         submitLabel={t("lists.create")}
         title={t("lists.newList")}
       />
-    </View>
+    </ListScreen>
   );
 }

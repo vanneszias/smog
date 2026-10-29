@@ -25,6 +25,7 @@ import {
   useToggleFavorite,
 } from "@/components/gesture-cards";
 import { HeaderActions } from "@/components/header-actions";
+import { ListScreen } from "@/components/screen";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 
 const sharedQueries = (rpc: AppQueryUtils) => [rpc.lists.shared.get.key()];
@@ -205,7 +206,7 @@ export default function SharedListScreen(): ReactElement {
   }
 
   return (
-    <View className="flex-1 gap-2 bg-background pt-2" testID="shared-screen">
+    <ListScreen testID="shared-screen">
       <Stack.Screen options={{ headerRight, title: listName }} />
       <ConnectionBanner />
       {content}
@@ -218,6 +219,6 @@ export default function SharedListScreen(): ReactElement {
           present={present}
         />
       ) : null}
-    </View>
+    </ListScreen>
   );
 }

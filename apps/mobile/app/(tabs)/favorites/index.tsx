@@ -10,9 +10,9 @@ import {
 import { useRouter } from "expo-router";
 import Search from "lucide-react-native/icons/search";
 import { type ReactElement, useCallback } from "react";
-import { View } from "react-native";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
+import { ListScreen } from "@/components/screen";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 
 /** The account's favorites, or a guest's gestures by id. */
@@ -75,9 +75,9 @@ export default function FavoritesScreen(): ReactElement {
   }
 
   return (
-    <View className="flex-1 gap-2 bg-background pt-2" testID="favorites-screen">
+    <ListScreen testID="favorites-screen">
       <ConnectionBanner />
       {content}
-    </View>
+    </ListScreen>
   );
 }

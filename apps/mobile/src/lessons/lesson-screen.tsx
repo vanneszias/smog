@@ -17,9 +17,10 @@ import { useLocalSearchParams } from "expo-router";
 import ChevronRight from "lucide-react-native/icons/chevron-right";
 import FileDown from "lucide-react-native/icons/file-down";
 import { type ReactElement, useCallback, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useOpenGesture } from "@/components/gesture-cards";
+import { ScreenScrollView } from "@/components/screen";
 import { useRuntimeCatalogue } from "@/lib/catalogue";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 import { ExportSheet } from "./export-sheet";
@@ -133,7 +134,7 @@ function LessonBody({ id }: { id: string }): ReactElement {
     detail.sections.every((section) => section.items.length === 0);
   return (
     <>
-      <ScrollView contentContainerClassName="gap-6 px-4 pb-8 pt-2">
+      <ScreenScrollView contentContainerClassName="gap-6">
         <View className="gap-2">
           {detail.number === null ? null : (
             <Text size="body-sm" tone="muted">
@@ -183,7 +184,7 @@ function LessonBody({ id }: { id: string }): ReactElement {
             <Gestures items={section.items} onOpen={open} />
           </View>
         ))}
-      </ScrollView>
+      </ScreenScrollView>
       <ExportSheet
         lessonId={id}
         onOpenChange={setExporting}

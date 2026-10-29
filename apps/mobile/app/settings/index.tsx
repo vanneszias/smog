@@ -10,9 +10,10 @@ import LogIn from "lucide-react-native/icons/log-in";
 import ShieldCheck from "lucide-react-native/icons/shield-check";
 import Wrench from "lucide-react-native/icons/wrench";
 import { type ReactElement, useCallback } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 import { AnalyticsSwitch, openPrivacy } from "@/components/consent-sheet";
 import { PreferencesFields } from "@/components/preferences-fields";
+import { ScreenScrollView } from "@/components/screen";
 import { useLessonAccess } from "@/lessons/lesson-gate";
 import { useDevToolsUnlock } from "@/lib/dev-tools";
 
@@ -55,7 +56,10 @@ export default function SettingsScreen(): ReactElement {
   };
 
   return (
-    <ScrollView contentContainerClassName="gap-8 px-4 py-6">
+    <ScreenScrollView
+      contentContainerClassName="gap-8"
+      testID="settings-screen"
+    >
       <View className="gap-4">
         <Heading level={2}>{t("settings.preferences")}</Heading>
         <PreferencesFields />
@@ -123,6 +127,6 @@ export default function SettingsScreen(): ReactElement {
           />
         ) : null}
       </View>
-    </ScrollView>
+    </ScreenScrollView>
   );
 }

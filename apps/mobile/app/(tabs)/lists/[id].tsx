@@ -49,6 +49,7 @@ import {
 import { HeaderActions } from "@/components/header-actions";
 import { ListNameSheet } from "@/components/list-name-sheet";
 import { ListShareSheet } from "@/components/list-share-sheet";
+import { ListScreen as ListScreenFrame } from "@/components/screen";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 
 const listQueries = (rpc: AppQueryUtils) => [
@@ -367,7 +368,7 @@ export default function ListScreen(): ReactElement {
   }
 
   return (
-    <View className="flex-1 gap-2 bg-background pt-2" testID="list-screen">
+    <ListScreenFrame testID="list-screen">
       <Stack.Screen options={{ headerRight, title: list.list?.name ?? "" }} />
       <ConnectionBanner />
       {content}
@@ -401,6 +402,6 @@ export default function ListScreen(): ReactElement {
           />
         </>
       ) : null}
-    </View>
+    </ListScreenFrame>
   );
 }
