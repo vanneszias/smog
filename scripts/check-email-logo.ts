@@ -49,11 +49,13 @@ export async function emailLogoProblem(
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (response.status >= 300 && response.status < 400) {
-    const location = response.headers.get("location") ?? "";
-    const access = location.includes("cloudflareaccess.com")
-      ? ": Cloudflare Access asks for a login, so add /brand/* to the Access bypass (docs/deployment.md §8)"
-      : "";
-    return `${url} answers ${response.status} to ${new URL(location, url).origin}${access}`;
+    const target = new URL(response.headers.get("location") ?? "", url);
+    const access =
+      target.hostname === "cloudflareaccess.com" ||
+      target.hostname.endsWith(".cloudflareaccess.com")
+        ? ": Cloudflare Access asks for a login, so add /brand/* to the Access bypass (docs/deployment.md §8)"
+        : "";
+    return `${url} answers ${response.status} to ${target.origin}${access}`;
   }
   if (response.status !== 200) {
     return `${url} answers ${response.status}, not 200`;
