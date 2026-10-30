@@ -28,8 +28,10 @@ import {
 
 test.describe.configure({ mode: "serial" });
 
+// RegExp.escape is missing on the CI runtime (TypeError), so escape by hand.
+const REGEXP_SPECIALS = /[.*+?^${}()|[\]\\]/g;
 const REEDIT_LINK = new RegExp(
-  `^${RegExp.escape(ORIGIN)}/sponsor/edit#token=[A-Za-z0-9_-]{43}$`
+  `^${ORIGIN.replace(REGEXP_SPECIALS, "\\$&")}/sponsor/edit#token=[A-Za-z0-9_-]{43}$`
 );
 const NAAM_IN_DE_VIDEO = /^Naam in de video/;
 const REVIEW_TAB = /^Te beoordelen/;
