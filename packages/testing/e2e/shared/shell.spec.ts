@@ -45,6 +45,40 @@ test.describe("app shell", () => {
     await stubMux(page);
   });
 
+  for (const [locale, name] of [
+    ["nl", "Gemaakt met liefde door zias.be"],
+    ["en", "Made with love by zias.be"],
+    ["fr", "Fait avec amour par zias.be"],
+  ] as const) {
+    test(`footer credit is an accessible external link in ${locale}`, async ({
+      page,
+    }) => {
+      await page
+        .context()
+        .addCookies([{ name: "locale", url: ORIGIN, value: locale }]);
+      await page.goto("/");
+      const credit = page
+        .getByRole("contentinfo")
+        .getByRole("link", { exact: true, name });
+      await expect(credit).toHaveAttribute("href", "https://zias.be");
+      await expect(credit).toHaveAttribute("target", "_blank");
+      await expect(credit).toHaveAttribute("rel", "noopener noreferrer");
+      await expect(credit.locator("svg")).toHaveAttribute(
+        "aria-hidden",
+        "true"
+      );
+      await expect(credit).not.toContainText("<heart");
+      await credit.focus();
+      await expect(credit).toBeFocused();
+      const ring = await credit.evaluate(
+        (link) => getComputedStyle(link).boxShadow
+      );
+      expect(ring).not.toBe("none");
+      const bounds = await credit.boundingBox();
+      expect(bounds?.height).toBeGreaterThanOrEqual(44);
+    });
+  }
+
   for (const { heading, name, path, signedIn } of PAGES) {
     for (const width of WIDTHS) {
       test(`${name} at ${width}px in light and dark`, async ({ page }) => {

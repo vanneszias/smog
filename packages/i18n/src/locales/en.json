@@ -889,7 +889,8 @@
     "searchPlaceholder": "Look up a gesture, for example dog"
   },
   "footer": {
-    "madeBy": "Made with ♡ by zias.be"
+    "madeBy": "Made with ♡ by zias.be",
+    "love": "love"
   },
   "account": {
     "title": "Your account",
