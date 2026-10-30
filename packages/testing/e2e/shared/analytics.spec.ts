@@ -129,7 +129,9 @@ test("no /api/analytics request before consent, or after withdraw", async ({
   await settleAnalyticsEffects(page);
   expect(relay.requests).toHaveLength(live);
 
-  // Withdrawn and reloaded: nothing new.
+  // Withdrawn and reloaded: nothing new. The auth shell has no header, so
+  // the reload happens on the home page, where `browse` finds its links.
+  await page.goto("/");
   await page.reload();
   await settleAnalyticsEffects(page);
   const before = relay.requests.length;
