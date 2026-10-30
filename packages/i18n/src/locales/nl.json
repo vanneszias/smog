@@ -280,8 +280,15 @@
     },
     "notFound": {
       "title": "Pagina niet gevonden",
-      "description": "Deze pagina bestaat niet (meer).",
-      "action": "Naar de startpagina"
+      "description": "Deze pagina bestaat niet (meer). Misschien is de link verouderd of zit er een typfout in het adres.",
+      "action": "Naar de startpagina",
+      "browse": "Gebaren zoeken"
+    },
+    "pageError": {
+      "title": "Deze pagina laadt niet",
+      "description": "Er ging iets mis bij het laden. Vaak lukt het bij een nieuwe poging.",
+      "stillFailingTitle": "Het lukt nog steeds niet",
+      "stillFailingDescription": "Probeer het over een paar minuten opnieuw, of ga verder op de startpagina."
     },
     "actionFailed": "Dat lukte niet. Probeer het opnieuw."
   },

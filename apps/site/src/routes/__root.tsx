@@ -23,17 +23,11 @@ import { LocalStoreProvider } from "@smog/local-store/react";
 import { webAdapter } from "@smog/local-store/web";
 import { PurgeOtherUsers, RpcProvider } from "@smog/rpc/react";
 import { tokens } from "@smog/styles/tokens";
-import {
-  Button,
-  EmptyState,
-  ToastProvider,
-  TooltipProvider,
-} from "@smog/ui-web";
+import { ToastProvider, TooltipProvider } from "@smog/ui-web";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
   createRootRouteWithContext,
   HeadContent,
-  Link,
   Outlet,
   Scripts,
   useRouter,
@@ -45,6 +39,7 @@ import { SearchPaletteProvider } from "@/components/app-shell/search-palette-pro
 import { AuthShell, useAuthShell } from "@/components/auth/auth-shell";
 import { SiteConsentBanner } from "@/components/consent-banner";
 import { GuestImportSheet } from "@/components/guest-import-sheet";
+import { NotFoundPage } from "@/components/status-page";
 import { SiteAnalytics } from "@/lib/analytics";
 import { AuthClientProvider } from "@/lib/auth-client";
 import { LocaleProvider } from "@/lib/locale";
@@ -102,27 +97,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     await ensureCatalogues(shell.locale);
     return shell;
   },
-  notFoundComponent: NotFound,
+  notFoundComponent: NotFoundPage,
   shellComponent: RootDocument,
   staleTime: Number.POSITIVE_INFINITY,
 });
-
-function NotFound(): ReactNode {
-  const { t } = useTranslation();
-  return (
-    <EmptyState
-      action={
-        <Button asChild>
-          <Link to="/">{t("states.notFound.action")}</Link>
-        </Button>
-      }
-      description={t("states.notFound.description")}
-      illustration={1}
-      level={1}
-      title={t("states.notFound.title")}
-    />
-  );
-}
 
 /**
  * The session hook for `AuthStateProvider`: until the client has read the

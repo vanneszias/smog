@@ -283,8 +283,15 @@
     },
     "notFound": {
       "title": "Page introuvable",
-      "description": "Cette page n'existe pas (ou plus).",
-      "action": "Aller à l'accueil"
+      "description": "Cette page n'existe pas (ou plus). Le lien est peut-être ancien, ou l'adresse contient une faute de frappe.",
+      "action": "Aller à l'accueil",
+      "browse": "Chercher un geste"
+    },
+    "pageError": {
+      "title": "Cette page ne se charge pas",
+      "description": "Un problème est survenu pendant le chargement. Une nouvelle tentative suffit souvent.",
+      "stillFailingTitle": "Cela ne fonctionne toujours pas",
+      "stillFailingDescription": "Réessayez dans quelques minutes, ou continuez depuis l'accueil."
     },
     "actionFailed": "Cela n'a pas fonctionné. Réessayez."
   },

@@ -280,8 +280,15 @@
     },
     "notFound": {
       "title": "Page not found",
-      "description": "This page doesn't exist (anymore).",
-      "action": "Go to the home page"
+      "description": "This page doesn't exist (anymore). The link may be out of date, or the address may have a typo.",
+      "action": "Go to the home page",
+      "browse": "Search gestures"
+    },
+    "pageError": {
+      "title": "This page won't load",
+      "description": "Something went wrong while loading. Trying again often works.",
+      "stillFailingTitle": "It still isn't working",
+      "stillFailingDescription": "Try again in a few minutes, or carry on from the home page."
     },
     "actionFailed": "That didn't work. Please try again."
   },
