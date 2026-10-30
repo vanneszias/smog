@@ -114,3 +114,16 @@ jobs:
       - name: Deploy
         if: steps.secrets.outputs.enabled == 'true'
         run: bun -F @smog/site deploy
+      # Every email loads its header logo from <SITE_URL>/brand/: fetched
+      # anonymously, without following a redirect, as an image proxy does
+      # (issue #10). Staging only warns: Cloudflare Access answers 302
+      # there until its bypass covers /brand/* (docs/deployment.md §8).
+      - name: Check email logo
+        if: steps.secrets.outputs.enabled == 'true'
+        timeout-minutes: 3
+        run: |
+          if [ "$CLOUDFLARE_ENV" = "staging" ]; then
+            bun scripts/check-email-logo.ts --env staging --warn-only
+          else
+            bun scripts/check-email-logo.ts --env "$CLOUDFLARE_ENV"
+          fi

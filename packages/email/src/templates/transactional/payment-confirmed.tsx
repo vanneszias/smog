@@ -1,13 +1,7 @@
 import { Text } from "react-email";
 import { styles } from "../../theme";
 import { emailDate, emailMoney, gestureValue } from "../format";
-import {
-  type DetailRow,
-  DetailsBox,
-  EmailLayout,
-  Footer,
-  Greeting,
-} from "../layout";
+import { type DetailRow, DetailsBox, EmailLayout, Greeting } from "../layout";
 import type { EmailTemplate } from "../types";
 
 export interface PaymentConfirmedProps {
@@ -49,6 +43,7 @@ export const paymentConfirmed: EmailTemplate<PaymentConfirmedProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.transactional.paymentConfirmed.footer")}
         heading={t("email.transactional.paymentConfirmed.heading")}
         preheader={t("email.transactional.paymentConfirmed.preheader", {
           amount,
@@ -66,7 +61,6 @@ export const paymentConfirmed: EmailTemplate<PaymentConfirmedProps> = {
               })
             : t("email.transactional.paymentConfirmed.initialNext")}
         </Text>
-        <Footer>{t("email.transactional.paymentConfirmed.footer")}</Footer>
       </EmailLayout>
     );
   },

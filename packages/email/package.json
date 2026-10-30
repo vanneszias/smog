@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./body-policy": "./src/body-policy.ts",
-    "./samples": "./src/samples.ts"
+    "./samples": "./src/samples.ts",
+    "./theme": "./src/theme.ts"
   },
   "scripts": {
     "check-types": "wrangler types --config ../testing/config/workers/email.wrangler.jsonc && tsc -b",

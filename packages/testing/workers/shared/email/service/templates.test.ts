@@ -92,6 +92,60 @@ describe("the layout", () => {
     expect(plain(reminder.text)).not.toContain("de le geste");
   });
 
+  it("signs before the reason line, and marks the body with the email's language (issue #10)", async () => {
+    for (const locale of LOCALES) {
+      // biome-ignore lint/performance/noAwaitInLoops: one render per locale, checked in turn.
+      const email = await renderEmail(
+        "transactional/welcome",
+        EMAIL_SAMPLES["transactional/welcome"],
+        locale,
+        { siteUrl: SITE }
+      );
+      expect(email.html).toContain(`<body dir="ltr" lang="${locale}"`);
+      const text = plain(email.text);
+      const signature = {
+        en: "The SMOG & Co team",
+        fr: "L'équipe SMOG & Co",
+        nl: "Het team van SMOG & Co",
+      }[locale];
+      const reason = {
+        en: "Didn't create this account?",
+        fr: "Vous n'avez pas créé ce compte ?",
+        nl: "Heb jij dit account niet aangemaakt?",
+      }[locale];
+      expect(text.indexOf(signature)).toBeGreaterThan(-1);
+      expect(text.indexOf(plain(reason))).toBeGreaterThan(
+        text.indexOf(signature)
+      );
+    }
+  });
+
+  it("keeps the email light and gives phones a narrower padding", async () => {
+    const email = await renderEmail(
+      "auth/otp",
+      EMAIL_SAMPLES["auth/otp"],
+      "nl",
+      { siteUrl: SITE }
+    );
+    expect(email.html).toContain('name="color-scheme"');
+    expect(email.html).toContain("@media only screen and (max-width: 480px)");
+    expect(email.html).toContain('class="smog-content"');
+  });
+
+  it("breaks only raw URLs anywhere, never a link in a sentence", async () => {
+    const email = await renderEmail(
+      "transactional/welcome",
+      EMAIL_SAMPLES["transactional/welcome"],
+      "nl",
+      { siteUrl: SITE }
+    );
+    const links = email.html.match(/<a [^>]*>[^<]*<\/a>/g) ?? [];
+    const sponsor = links.find((link) => link.includes("/sponsor"));
+    const fallback = links.find((link) => link.includes(">https://"));
+    expect(sponsor).not.toContain("break-all");
+    expect(fallback).toContain("word-break:break-all");
+  });
+
   it("falls back to the wordmark without a site URL", async () => {
     const email = await renderEmail(
       "auth/otp",

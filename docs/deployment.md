@@ -119,8 +119,11 @@ Staging sits behind Cloudflare Access (`ziasbe.cloudflareaccess.com`): every pat
 | `/.well-known/*` | the app-link files (`apple-app-site-association`, `assetlinks.json`) |
 | `/turnstile-bridge` | the staging mobile builds' Turnstile challenge page (`/api/*` does not cover it), and likewise the app magic-link page `/magic-link/app` |
 | `/api/*` (or at least `/api/rpc/*` and `/api/auth/*`) | the staging **mobile builds**, which carry no Access session |
+| `/brand/*` (or at least `/brand/email-logo.png`) | mail clients and their image proxies (Gmail, Outlook, Apple Mail Privacy Protection) loading the email header logo; without it every staging email shows a broken image (issue #10) |
 
 How much of staging to open is the owner's decision. The same applies to production if Access is ever put in front of it.
+
+After every deploy, `scripts/check-email-logo.ts` fetches `<SITE_URL>/brand/email-logo.png` the way an image proxy does (no cookies, no redirects followed) and wants a `200` PNG. Production fails the deploy job on any other answer; staging prints a `::warning::` until the `/brand/*` bypass exists.
 
 ### 8a. Cloudflare notifications (owner, before the first production deploy)
 

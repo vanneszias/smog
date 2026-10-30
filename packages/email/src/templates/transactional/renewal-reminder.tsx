@@ -1,7 +1,7 @@
 import { Text } from "react-email";
 import { styles } from "../../theme";
 import { emailDate, gesturePhrase } from "../format";
-import { ActionLink, EmailLayout, Footer, Greeting } from "../layout";
+import { ActionLink, EmailLayout, Greeting } from "../layout";
 import type { EmailTemplate } from "../types";
 
 export interface RenewalReminderProps {
@@ -25,6 +25,7 @@ export const renewalReminder: EmailTemplate<RenewalReminderProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.transactional.renewalReminder.footer")}
         heading={t("email.transactional.renewalReminder.heading")}
         preheader={t("email.transactional.renewalReminder.preheader", {
           date,
@@ -46,7 +47,6 @@ export const renewalReminder: EmailTemplate<RenewalReminderProps> = {
           url={url}
         />
         <Text style={styles.text}>{t("email.common.questions")}</Text>
-        <Footer>{t("email.transactional.renewalReminder.footer")}</Footer>
       </EmailLayout>
     );
   },

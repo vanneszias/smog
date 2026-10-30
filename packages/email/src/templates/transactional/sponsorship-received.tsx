@@ -1,7 +1,7 @@
 import { Text } from "react-email";
 import { styles } from "../../theme";
 import { gesturePhrase } from "../format";
-import { EmailLayout, Footer, Greeting, StepsBox } from "../layout";
+import { EmailLayout, Greeting, StepsBox } from "../layout";
 import type { EmailTemplate } from "../types";
 
 export interface SponsorshipReceivedProps {
@@ -24,6 +24,7 @@ export const sponsorshipReceived: EmailTemplate<SponsorshipReceivedProps> = {
     return (
       <EmailLayout
         context={context}
+        footer={t("email.transactional.sponsorshipReceived.footer")}
         heading={t("email.transactional.sponsorshipReceived.heading")}
         preheader={t("email.transactional.sponsorshipReceived.preheader")}
       >
@@ -42,7 +43,6 @@ export const sponsorshipReceived: EmailTemplate<SponsorshipReceivedProps> = {
           title={t("email.transactional.sponsorshipReceived.nextTitle")}
         />
         <Text style={styles.text}>{t("email.common.questions")}</Text>
-        <Footer>{t("email.transactional.sponsorshipReceived.footer")}</Footer>
       </EmailLayout>
     );
   },
