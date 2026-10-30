@@ -38,7 +38,10 @@ describe("app shell (SSR)", () => {
       // `system` follows prefers-color-scheme before the first paint.
       expect(html).toContain("prefers-color-scheme: dark");
       expect(html).toContain("Hoofdnavigatie");
-      expect(html).toContain("Gemaakt met ♡ door zias.be");
+      // The heart is an icon with its own screen-reader word, not a text glyph.
+      expect(html).toContain("Gemaakt met");
+      expect(html).toContain("liefde");
+      expect(html).toContain("zias.be");
     },
     FIRST_RENDER_TIMEOUT
   );
