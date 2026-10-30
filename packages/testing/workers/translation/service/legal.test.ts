@@ -89,7 +89,7 @@ describe("who may call what", () => {
 });
 
 describe("the overview and the editor state", () => {
-  it("lists the seeded version 1 of every text, effective 2026-09-30, no draft", async () => {
+  it("lists the seeded version 2 of every text, effective 2026-10-29, no draft", async () => {
     const { items } = await callAs<LegalOverview>(translator, "legal.list");
     expect(items.map((item) => `${item.kind}:${item.locale}`).sort()).toEqual([
       "privacy:en",
@@ -102,8 +102,8 @@ describe("the overview and the editor state", () => {
     for (const item of items) {
       expect(item.draft).toBeNull();
       expect(item.published).toMatchObject({
-        effectiveDate: "2026-09-30",
-        version: 1,
+        effectiveDate: "2026-10-29",
+        version: 2,
       });
     }
   });
@@ -111,10 +111,10 @@ describe("the overview and the editor state", () => {
   it("opens a text with its published version, the Dutch source and the history", async () => {
     const en = await detail(translator, "privacy", "en");
     expect(en.draft).toBeNull();
-    expect(en.published?.version).toBe(1);
+    expect(en.published?.version).toBe(2);
     expect(en.published?.content).toEqual(legalDocument("en", "privacy"));
     expect(en.canonical).toEqual(legalDocument("nl", "privacy"));
-    expect(en.history.map((item) => item.version)).toEqual([1]);
+    expect(en.history.map((item) => item.version)).toEqual([2, 1]);
     const nl = await detail(translator, "privacy", "nl");
     expect(nl.canonical).toBeNull();
   });
@@ -154,15 +154,15 @@ describe("saving a draft", () => {
       kind: "terms",
       locale: "en",
     });
-    expect(draft.version).toBe(2);
+    expect(draft.version).toBe(3);
     expect(await i18nVersion()).toBe(before);
     const [audit, ...rest] = await auditRowsSince(mark);
     expect(rest).toEqual([]);
     expect(audit).toMatchObject({
       action: "legal.draft_save",
       actorId: translator.user.id,
-      data: { kind: "terms", locale: "en", version: 2 },
-      targetId: "terms:en:2",
+      data: { kind: "terms", locale: "en", version: 3 },
+      targetId: "terms:en:3",
       targetType: "legal_text",
     });
     const published = await loadLegalText(
@@ -170,7 +170,7 @@ describe("saving a draft", () => {
       "terms",
       "en"
     );
-    expect(published?.version).toBe(1);
+    expect(published?.version).toBe(2);
     const open = await detail(translator, "terms", "en");
     expect(open.draft?.updatedAt).toBe(draft.updatedAt);
   });
@@ -195,7 +195,7 @@ describe("saving a draft", () => {
       locale: "en",
     });
     expect(second.draft.updatedAt).toBeGreaterThan(first.draft.updatedAt);
-    expect(second.draft.version).toBe(2);
+    expect(second.draft.version).toBe(3);
     const mark = await auditMark();
     const again = await callAs<{ draft: { updatedAt: number } }>(
       translator,
@@ -232,8 +232,8 @@ describe("saving a draft", () => {
     );
     expect(lost.code).toBe("CONFLICT");
     expect(lost.data).toMatchObject({
-      current: { updatedAt: first.draft.updatedAt, version: 2 },
-      publishedVersion: 1,
+      current: { updatedAt: first.draft.updatedAt, version: 3 },
+      publishedVersion: 2,
     });
     const stale = await failureOf(
       callAs(admin, "legal.save", {
@@ -306,14 +306,14 @@ describe("publishing", () => {
     return draft.updatedAt;
   }
 
-  it("makes the draft version 2 with the effective date, audits it, bumps the i18n version and the page loader reads it", async () => {
+  it("makes the draft version 3 with the effective date, audits it, bumps the i18n version and the page loader reads it", async () => {
     const updatedAt = await draftAs(translator, "Published title");
     const warm = await loadLegalText(
       { kv: env.KV, source: legalPublishedSource(testDb()) },
       "terms",
       "en"
     );
-    expect(warm?.version).toBe(1);
+    expect(warm?.version).toBe(2);
     const before = await i18nVersion();
     const mark = await auditMark();
     const published = await callAs<LegalVersion>(translator, "legal.publish", {
@@ -325,7 +325,7 @@ describe("publishing", () => {
     expect(published).toMatchObject({
       effectiveDate: EFFECTIVE,
       publishedBy: "Test translator",
-      version: 2,
+      version: 3,
     });
     expect(await i18nVersion()).not.toBe(before);
     const [audit, ...rest] = await auditRowsSince(mark);
@@ -337,9 +337,9 @@ describe("publishing", () => {
         effectiveDate: EFFECTIVE,
         kind: "terms",
         locale: "en",
-        version: 2,
+        version: 3,
       },
-      targetId: "terms:en:2",
+      targetId: "terms:en:3",
     });
     // The loader keys its cache on the i18n version, so the new text shows at once.
     const live = await loadLegalText(
@@ -347,12 +347,12 @@ describe("publishing", () => {
       "terms",
       "en"
     );
-    expect(live).toMatchObject({ effectiveDate: EFFECTIVE, version: 2 });
+    expect(live).toMatchObject({ effectiveDate: EFFECTIVE, version: 3 });
     expect(live?.document.title).toBe("Published title");
     const open = await detail(translator, "terms", "en");
     expect(open.draft).toBeNull();
-    expect(open.history.map((item) => item.version)).toEqual([2, 1]);
-    expect(open.published?.version).toBe(2);
+    expect(open.history.map((item) => item.version)).toEqual([3, 2, 1]);
+    expect(open.published?.version).toBe(3);
   });
 
   it("needs a draft, a valid date and the draft the editor saw", async () => {
@@ -403,10 +403,10 @@ describe("publishing", () => {
       locale: "en",
     });
     expect((await detail(translator, "privacy", "fr")).published?.version).toBe(
-      1
+      2
     );
     expect((await detail(translator, "privacy", "en")).published?.version).toBe(
-      2
+      3
     );
   });
 });
@@ -440,23 +440,28 @@ describe("restoring", () => {
     expect(restored).toMatchObject({
       effectiveDate: "2026-12-01",
       publishedBy: "Test admin",
-      version: 3,
+      version: 4,
     });
     expect(await i18nVersion()).not.toBe(before);
     const [audit] = await auditRowsSince(mark);
     expect(audit).toMatchObject({
       action: "legal.restore",
       actorId: admin.user.id,
-      data: { kind: "terms", locale: "en", restoredFrom: 1, version: 3 },
-      targetId: "terms:en:3",
+      data: { kind: "terms", locale: "en", restoredFrom: 1, version: 4 },
+      targetId: "terms:en:4",
     });
     const open = await detail(admin, "terms", "en");
-    expect(open.history.map((item) => item.version)).toEqual([3, 2, 1]);
-    expect(open.published?.content).toEqual(legalDocument("en", "terms"));
+    expect(open.history.map((item) => item.version)).toEqual([4, 3, 2, 1]);
+    const seeded = await callAs<{ content: LegalDocument }>(
+      translator,
+      "legal.version",
+      { kind: "terms", locale: "en", version: 1 }
+    );
+    expect(open.published?.content).toEqual(seeded.content);
     const old = await callAs<{ content: LegalDocument }>(
       translator,
       "legal.version",
-      { kind: "terms", locale: "en", version: 2 }
+      { kind: "terms", locale: "en", version: 3 }
     );
     expect(old.content.title).toBe("Second text");
   });
@@ -504,16 +509,16 @@ describe("restoring", () => {
       locale: "en",
       version: 1,
     });
-    expect(restored.version).toBe(3);
+    expect(restored.version).toBe(4);
     const published = await callAs<LegalVersion>(translator, "legal.publish", {
       effectiveDate: EFFECTIVE,
       expectedUpdatedAt: draft.updatedAt,
       kind: "terms",
       locale: "en",
     });
-    expect(published.version).toBe(4);
+    expect(published.version).toBe(5);
     const live = await detail(translator, "terms", "en");
-    expect(live.published?.version).toBe(4);
+    expect(live.published?.version).toBe(5);
     expect(JSON.stringify(live.published?.content)).toContain("Pending");
   });
 });
