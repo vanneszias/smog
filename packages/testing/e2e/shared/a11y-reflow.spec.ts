@@ -7,6 +7,7 @@ import {
 } from "@playwright/test";
 import {
   decideConsent,
+  expectConsentOverlay,
   type Fixture,
   GUEST_ROUTES,
   newPublicPage,
@@ -217,6 +218,11 @@ test.describe("reflow at 320 x 256 px", () => {
         page.getByRole("region", { name: "Help SMOG verbeteren" })
       ).toBeVisible();
       await expectNoHorizontalScroll(page, "consent banner");
+      // Taller than a 256 px viewport: the footer cannot clear it here, but
+      // nothing is added after the footer either.
+      await expectConsentOverlay(page, "consent banner at 400 %", {
+        footerReachable: false,
+      });
       await page.getByRole("button", { name: "Geen statistieken" }).click();
       await expectNoHorizontalScroll(page, "sponsor:1");
       await page.getByRole("button", { exact: true, name: "Doorgaan" }).click();
@@ -237,6 +243,28 @@ test.describe("reflow at 320 x 256 px", () => {
         page.getByRole("heading", { level: 1, name: "Bekijk je sponsoring" })
       ).toBeVisible();
       await expectNoHorizontalScroll(page, "sponsor:3");
+    } finally {
+      await context.close();
+    }
+  });
+
+  test("the consent banner in French, the longest copy, at 320 px", async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      locale: "fr-BE",
+      reducedMotion: "reduce",
+      viewport: { height: 900, width: 320 },
+    });
+    try {
+      const page = await context.newPage();
+      await stubMux(page);
+      await page.goto("/gestures");
+      await waitForApp(page);
+      await expectNoHorizontalScroll(page, "consent banner [fr]");
+      await expectConsentOverlay(page, "consent banner [fr] at 320", {
+        name: "Aidez-nous à améliorer SMOG",
+      });
     } finally {
       await context.close();
     }

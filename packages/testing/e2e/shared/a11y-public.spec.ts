@@ -1,6 +1,7 @@
 import { devices, expect, type Page, test } from "@playwright/test";
 import {
   byRule,
+  expectConsentOverlay,
   type Finding,
   GUEST_ROUTES,
   newPublicPage,
@@ -165,12 +166,14 @@ test.describe("axe: guest overlays and banners", () => {
           await expect(
             page.getByRole("region", { name: CONSENT })
           ).toBeVisible();
+          await expectConsentOverlay(page, `home at ${width}`);
           found.push(...(await scanThemes(page, "consent-banner:home")));
           await page.goto("/privacy");
           await waitForApp(page);
           await expect(
             page.getByRole("region", { name: CONSENT })
           ).toBeVisible();
+          await expectConsentOverlay(page, `privacy at ${width}`);
           found.push(...(await scanThemes(page, "consent-banner:privacy")));
           expect(byRule(found)).toEqual([]);
         } finally {

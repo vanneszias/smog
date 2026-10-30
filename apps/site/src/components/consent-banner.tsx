@@ -22,12 +22,14 @@ function useSaveFailed(): () => void {
 /**
  * The analytics consent banner (inventory P-05), fixed at the bottom while
  * the decision is open (`useConsentPrompt`): not during SSR, before the
- * device store has loaded, or while the guest import is offered.
+ * device store has loaded, or while the guest import is offered. It takes
+ * no room in the page: it floats over the footer, which pads its end by the
+ * banner's height (`useReservedSpace({ overlay: true })`).
  */
 export function SiteConsentBanner(): ReactNode {
   const onSaveFailed = useSaveFailed();
   const prompt = useConsentPrompt({ onSaveFailed });
-  const space = useReservedSpace();
+  const reserve = useReservedSpace({ overlay: true });
   const { allow, decline } = prompt;
   const onAllow = useCallback(() => {
     allow();
@@ -39,16 +41,13 @@ export function SiteConsentBanner(): ReactNode {
     return null;
   }
   return (
-    <>
-      <div aria-hidden="true" style={{ height: space.height }} />
-      <ConsentBanner
-        busy={prompt.busy}
-        onAllow={onAllow}
-        onDecline={onDecline}
-        privacyHref={PRIVACY_HREF}
-        ref={space.ref}
-      />
-    </>
+    <ConsentBanner
+      busy={prompt.busy}
+      onAllow={onAllow}
+      onDecline={onDecline}
+      privacyHref={PRIVACY_HREF}
+      ref={reserve}
+    />
   );
 }
 
