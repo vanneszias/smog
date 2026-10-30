@@ -511,7 +511,7 @@ describe("migrations 0016 to 0023", () => {
   it("seeds version 1 of both legal texts in every language from the shipped texts", async () => {
     const rows = await db
       .prepare(
-        "SELECT id, kind, locale, version, status, effective_date, published_at, content FROM legal_text ORDER BY kind, locale"
+        "SELECT id, kind, locale, version, status, effective_date, published_at, content FROM legal_text WHERE version = 1 ORDER BY kind, locale"
       )
       .all<{
         content: string;
@@ -560,20 +560,20 @@ describe("migrations 0016 to 0023", () => {
     // History is kept: a second version beside the first, one draft at most.
     await db
       .prepare(
-        "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at) VALUES ('d-1', 'terms', 'nl', 2, '{}', '2026-11-01', 'draft', 1)"
+        "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at) VALUES ('d-1', 'terms', 'nl', 3, '{}', '2026-11-01', 'draft', 1)"
       )
       .run();
     await expect(
       db
         .prepare(
-          "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at) VALUES ('d-2', 'terms', 'nl', 3, '{}', '2026-11-01', 'draft', 1)"
+          "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at) VALUES ('d-2', 'terms', 'nl', 4, '{}', '2026-11-01', 'draft', 1)"
         )
         .run()
     ).rejects.toThrow(UNIQUE_FAILED);
     await expect(
       db
         .prepare(
-          "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at, published_at) VALUES ('d-3', 'terms', 'fr', 2, '{}', '2026-11-01', 'draft', 1, 5)"
+          "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at, published_at) VALUES ('d-3', 'terms', 'fr', 3, '{}', '2026-11-01', 'draft', 1, 5)"
         )
         .run()
     ).rejects.toThrow(CHECK_FAILED);
@@ -587,11 +587,38 @@ describe("migrations 0016 to 0023", () => {
     await expect(
       db
         .prepare(
-          "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at) VALUES ('d-5', 'terms', 'fr', 2, '{}', 'soon', 'draft', 1)"
+          "INSERT INTO legal_text (id, kind, locale, version, content, effective_date, status, updated_at) VALUES ('d-5', 'terms', 'fr', 3, '{}', 'soon', 'draft', 1)"
         )
         .run()
     ).rejects.toThrow(CHECK_FAILED);
     await db.prepare("DELETE FROM legal_text WHERE id = 'd-1'").run();
+  });
+
+  it("seeds version 2 of both legal texts, published, effective 2026-10-29", async () => {
+    const rows = await db
+      .prepare(
+        "SELECT kind, locale, status, effective_date, published_at FROM legal_text WHERE version = 2 ORDER BY kind, locale"
+      )
+      .all<{
+        effective_date: string;
+        kind: string;
+        locale: string;
+        published_at: number;
+        status: string;
+      }>();
+    expect(rows.results.map((row) => `${row.kind}/${row.locale}`)).toEqual([
+      "privacy/en",
+      "privacy/fr",
+      "privacy/nl",
+      "terms/en",
+      "terms/fr",
+      "terms/nl",
+    ]);
+    for (const row of rows.results) {
+      expect(row.status).toBe("published");
+      expect(row.effective_date).toBe("2026-10-29");
+      expect(row.published_at).toBe(Date.UTC(2026, 9, 29));
+    }
   });
 
   it("copies every admin into user_role and nobody else", async () => {
