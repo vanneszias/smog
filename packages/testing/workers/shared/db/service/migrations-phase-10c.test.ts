@@ -105,7 +105,7 @@ describe("migrations 0024 to 0027", () => {
     expect(before.audit_log?.rows.length).toBeGreaterThan(BULK_AUDIT_ROWS);
 
     const started = Date.now();
-    await applyD1Migrations(db, env.TEST_MIGRATIONS);
+    await applyD1Migrations(db, upTo("0027"));
     console.log(
       `[migration-0027] rebuilt audit_log with ${before.audit_log?.rows.length} rows in ${Date.now() - started} ms (0024 to 0027)`
     );

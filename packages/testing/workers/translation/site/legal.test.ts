@@ -34,19 +34,19 @@ describe("/privacy and /terms (spec §9, inventory P-07, P-08, R-16)", () => {
       "nl",
       "Privacybeleid",
       "Verwerkingsverantwoordelijke",
-      "Laatst bijgewerkt op 30 september 2026",
+      "Laatst bijgewerkt op 29 oktober 2026",
     ],
     [
       "en",
       "Privacy policy",
       "Data controller",
-      "Last updated on 30 September 2026",
+      "Last updated on 29 October 2026",
     ],
     [
       "fr",
       "Politique de confidentialité",
       "Responsable du traitement",
-      "Dernière mise à jour le 30 septembre 2026",
+      "Dernière mise à jour le 29 octobre 2026",
     ],
   ])(
     "renders the privacy policy in %s",
@@ -143,7 +143,7 @@ async function publishRow(
 async function removeRows(kind: string, locale: string): Promise<void> {
   await d1
     .prepare(
-      "DELETE FROM legal_text WHERE kind = ? AND locale = ? AND version > 1"
+      "DELETE FROM legal_text WHERE kind = ? AND locale = ? AND version > 2"
     )
     .bind(kind, locale)
     .run();
@@ -164,7 +164,7 @@ describe("legal texts from D1 (phase 10b task 7)", () => {
 
   it("shows a published edit at once, with its effective date, and the shipped text again without it", async () => {
     try {
-      await publishRow("terms", "en", 2, edited, "2026-11-15");
+      await publishRow("terms", "en", 3, edited, "2026-11-15");
       const { body } = await page("/terms", "en");
       expect(body).toMatch(EDITED_H1);
       expect(body).toContain("Edited scope");
@@ -186,7 +186,7 @@ describe("legal texts from D1 (phase 10b task 7)", () => {
 
   it("an edit of the Dutch text shows for ?lang=nl on another language's page", async () => {
     try {
-      await publishRow("terms", "nl", 2, edited, "2026-11-16");
+      await publishRow("terms", "nl", 3, edited, "2026-11-16");
       const { body } = await page("/terms?lang=nl", "en");
       expect(body).toMatch(LANG_NL_ARTICLE);
       expect(body).toMatch(EDITED_H1);
@@ -198,11 +198,11 @@ describe("legal texts from D1 (phase 10b task 7)", () => {
 
   it("a published row that does not validate never breaks the page: the shipped text shows", async () => {
     try {
-      await publishRow("terms", "fr", 2, { title: "broken" }, "2026-11-17");
+      await publishRow("terms", "fr", 3, { title: "broken" }, "2026-11-17");
       const { body, response } = await page("/terms", "fr");
       expect(response.status).toBe(200);
       expect(body).toContain("Droit applicable et litiges");
-      expect(body).toContain("Dernière mise à jour le 30 septembre 2026");
+      expect(body).toContain("Dernière mise à jour le 29 octobre 2026");
     } finally {
       await removeRows("terms", "fr");
     }
