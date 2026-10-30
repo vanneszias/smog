@@ -71,8 +71,8 @@ test.describe("layout shift", () => {
       // measured before the scroll below, which is no input to blame it on).
       await expect(page.locator(".animate-pulse")).toHaveCount(0);
       // Root hydration precedes guest-store hydration. Scrolling while the
-      // first-visit banner is still mounting makes the test itself move the
-      // footer under that spacer. Keep observing from navigation, but wait
+      // first-visit banner is still mounting makes the test itself grow the
+      // footer's padding under it. Keep observing from navigation, but wait
       // for the actual first-visit UI and fonts before the scripted scroll.
       await expect(
         page.getByRole("region", { name: "Help SMOG verbeteren" })
