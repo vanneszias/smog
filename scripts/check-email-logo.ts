@@ -113,7 +113,6 @@ export async function runEmailLogoCheck(
         return 0;
       }
       if (attempt < ATTEMPTS) {
-        // biome-ignore lint/performance/noAwaitInLoops: the pause between retries.
         await Bun.sleep(retryDelayMs);
       }
     }

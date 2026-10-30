@@ -94,6 +94,7 @@ describe("the layout", () => {
 
   it("signs before the reason line, and marks the body with the email's language (issue #10)", async () => {
     for (const locale of LOCALES) {
+      // biome-ignore lint/performance/noAwaitInLoops: one render per locale, checked in turn.
       const email = await renderEmail(
         "transactional/welcome",
         EMAIL_SAMPLES["transactional/welcome"],
