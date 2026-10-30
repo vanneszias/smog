@@ -7,6 +7,7 @@ import { validateAuthSearch } from "@/lib/redirect";
 export const Route = createFileRoute("/sign-in")({
   component: SignIn,
   head: ({ matches }) => pageMeta(matches, "nav.signIn"),
+  staticData: { authShell: true },
   validateSearch: validateAuthSearch,
 });
 

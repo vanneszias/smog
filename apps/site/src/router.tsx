@@ -79,4 +79,8 @@ declare module "@tanstack/react-router" {
   interface Register {
     router: AppRouter;
   }
+  interface StaticDataRouteOption {
+    /** Render the route in the full-screen auth shell, not the site's header and footer. */
+    authShell?: boolean;
+  }
 }

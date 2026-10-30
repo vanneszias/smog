@@ -606,7 +606,8 @@
   "shell": {
     "explore": "Explorer",
     "supportTitle": "Soutenir SMOG",
-    "supportText": "Montrez votre nom ou logo avec un geste."
+    "supportText": "Montrez votre nom ou logo avec un geste.",
+    "backToSite": "Retour au site"
   },
   "mySpace": {
     "title": "Mon espace",

@@ -599,7 +599,8 @@
   "shell": {
     "explore": "Ontdek",
     "supportTitle": "Steun SMOG",
-    "supportText": "Toon je naam of logo bij een gebaar."
+    "supportText": "Toon je naam of logo bij een gebaar.",
+    "backToSite": "Terug naar de website"
   },
   "mySpace": {
     "title": "Mijn ruimte",

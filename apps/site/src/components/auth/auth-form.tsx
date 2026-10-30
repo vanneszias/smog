@@ -36,6 +36,7 @@ import {
   KeyRound,
   Link2,
   Mail,
+  MailCheck,
 } from "lucide-react";
 import {
   type FormEvent,
@@ -50,7 +51,7 @@ import {
 import { useAuthClient } from "@/lib/auth-client";
 import { usePasskeySupport } from "@/lib/passkeys";
 import { withRedirect } from "@/lib/redirect";
-import { AuthCard } from "./auth-card";
+import { AuthPage } from "./auth-page";
 import { Turnstile } from "./turnstile";
 
 const rootApi = getRouteApi("__root__");
@@ -509,23 +510,29 @@ function StepBody({
   }
 }
 
-function useTitle(flow: AuthFlow): { description?: string; title: string } {
+/** The heading of the step; a sent email gets the mail icon (`AuthPage`). */
+function useTitle(flow: AuthFlow): {
+  description?: string;
+  icon?: ReactNode;
+  title: string;
+} {
   const { t } = useTranslation();
   const { mode, step } = flow.state;
   if (mode === "forgotPassword") {
-    return {
-      description:
-        step === "email" ? t("auth.forgotPassword.description") : undefined,
-      title: t("auth.forgotPassword.title"),
-    };
+    return step === "email"
+      ? {
+          description: t("auth.forgotPassword.description"),
+          title: t("auth.forgotPassword.title"),
+        }
+      : { icon: <MailCheck />, title: t("auth.forgotPassword.title") };
   }
   switch (step) {
     case "code":
-      return { title: t("auth.otp.title") };
+      return { icon: <Mail />, title: t("auth.otp.title") };
     case "magicLinkSent":
-      return { title: t("auth.magicLink.title") };
+      return { icon: <MailCheck />, title: t("auth.magicLink.title") };
     case "verifyEmailSent":
-      return { title: t("auth.verifyEmail.title") };
+      return { icon: <MailCheck />, title: t("auth.verifyEmail.title") };
     case "done":
       return { title: t("auth.signingIn") };
     default:
@@ -620,11 +627,11 @@ export function AuthForm({ error, mode, redirect }: AuthFormProps): ReactNode {
     token.current = value;
   }, []);
 
-  const { description, title } = useTitle(flow);
+  const { description, icon, title } = useTitle(flow);
   const showSwitch = flow.state.step === "email" && mode !== "forgotPassword";
 
   return (
-    <AuthCard description={description} title={title}>
+    <AuthPage description={description} icon={icon} title={title}>
       {error && flow.state.step === "email" ? (
         <Text role="alert" size="body-sm" tone="danger">
           {t("auth.errors.generic")}
@@ -668,6 +675,6 @@ export function AuthForm({ error, mode, redirect }: AuthFormProps): ReactNode {
           {t("auth.legal")}
         </Text>
       )}
-    </AuthCard>
+    </AuthPage>
   );
 }

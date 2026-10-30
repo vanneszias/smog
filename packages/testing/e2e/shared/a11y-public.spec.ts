@@ -348,6 +348,10 @@ test.describe("axe: sampled hover, focus and disabled states", () => {
       const primary = page.getByRole("button", { name: "Doorgaan" }).first();
       await primary.hover();
       found.push(...(await scanThemes(page, "hover:primary-button")));
+      await page.getByRole("link", { name: "Terug naar de website" }).hover();
+      found.push(...(await scanThemes(page, "hover:auth-back-link")));
+      // The site header's links (the auth shell has none).
+      await openPublic(page, "/");
       await page.getByRole("link", { name: "Mijn ruimte" }).first().hover();
       found.push(...(await scanThemes(page, "hover:nav-link")));
       await page.getByRole("link", { name: "Gebaren" }).first().focus();
