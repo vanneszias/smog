@@ -9,12 +9,12 @@ export * from "./markup";
 
 /**
  * The date both shipped texts take effect (ISO date), shown as "last
- * updated" while no published row exists (the migration seeds version 1 with
+ * updated" while no published row exists (migration 0028 publishes version 2 with
  * this date). The owner sets it at cutover (docs/LEGAL-SIGNOFF.md). It is
  * independent of `CONSENT_POLICY_VERSION`, so correcting it never asks for
  * consent again; a test keeps the consent version no later than it (review M2).
  */
-export const LEGAL_EFFECTIVE_DATE = "2026-09-30";
+export const LEGAL_EFFECTIVE_DATE = "2026-10-29";
 
 const TEXTS: Readonly<Record<string, LegalTexts>> = { en, fr, nl };
 
