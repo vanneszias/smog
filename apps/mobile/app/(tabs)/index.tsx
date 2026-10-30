@@ -22,7 +22,13 @@ import { useIsFocused, useRouter } from "expo-router";
 import ArrowRight from "lucide-react-native/icons/arrow-right";
 import Settings from "lucide-react-native/icons/settings";
 import { type ReactElement, useCallback, useState } from "react";
-import { Platform, ScrollView, StatusBar, View } from "react-native";
+import {
+  Platform,
+  ScrollView,
+  StatusBar,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
@@ -95,11 +101,20 @@ function RecentGestures(): ReactElement | null {
  * Home: a green hero (the reversed logo, the headline and the search
  * field; submitting opens the search tab), the categories, "continue where
  * you left off" and a featured row, as the site's home.
+ *
+ * The one screen without a stack header (the exception to the contract in
+ * `src/components/screen.tsx`): the hero runs under the status bar. The
+ * scroller keeps the tab's automatic insets, so the last row clears the tab
+ * bar; iOS also insets it below the status bar, Android draws edge to edge
+ * and the hero pads for it. A green band stays under the status bar while
+ * the page scrolls, and green fills the space a pull past the top opens, so
+ * the bounce stretches the hero instead of showing the page behind it.
  */
 export default function HomeScreen(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const window = useWindowDimensions();
   const focused = useIsFocused();
   const [query, setQuery] = useState("");
   const recent = useRecentSearches();
@@ -162,72 +177,93 @@ export default function HomeScreen(): ReactElement {
     );
   }
 
+  const heroTop = Platform.OS === "ios" ? 16 : insets.top + 16;
+
   return (
-    <ScrollView
-      className="flex-1 bg-background"
-      contentContainerClassName="gap-6 pb-10"
-      contentInsetAdjustmentBehavior="never"
-      keyboardShouldPersistTaps="handled"
-      testID="home-screen"
-    >
-      {focused && Platform.OS === "android" ? (
-        <StatusBar barStyle="light-content" />
-      ) : null}
-      <Surface
-        className="gap-4 rounded-b-3xl px-4 pb-8"
-        style={{ paddingTop: insets.top + 16 }}
-        tone="primary"
+    <View className="flex-1 bg-background">
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="gap-6 pb-10"
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+        testID="home-screen"
       >
-        <View className="flex-row items-center justify-between gap-3">
-          <Logo color="primaryForeground" decorative size="md" tone="current" />
-          <IconButton
-            icon={<Settings />}
-            label={t("nav.settings")}
-            onPress={openSettings}
-            variant="ghost"
-          />
-        </View>
-        <Heading level={1} size="title-1">
-          {t("home.title")}
-        </Heading>
-        <Text tone="muted">{t("home.tagline")}</Text>
-        <Text tone="muted">{t("home.intro")}</Text>
-        <SearchField
-          onSubmitEditing={submit}
-          onValueChange={setQuery}
-          placeholder={t("search.placeholder")}
-          value={query}
+        {focused && Platform.OS === "android" ? (
+          <StatusBar barStyle="light-content" />
+        ) : null}
+        <View
+          className="absolute inset-x-0 bg-primary"
+          pointerEvents="none"
+          style={{ bottom: "100%", top: -window.height }}
+          testID="home-overscroll"
         />
-      </Surface>
-      <ConnectionBanner />
-      {categories.data && categories.data.length > 0 ? (
-        <View className="gap-2">
-          <Heading className="px-4" level={2} size="title-3">
-            {t("landing.categoriesIntro")}
-          </Heading>
-          <CategoryChips
-            categories={categories.data}
-            onChange={pickCategory}
-            selected={[]}
-            showAll={false}
-          />
-        </View>
-      ) : null}
-      <RecentGestures />
-      <View className="gap-3">
-        <Heading className="px-4" level={2}>
-          {t("home.featured")}
-        </Heading>
-        {featuredContent}
-        <Button
-          className="mx-4 self-start"
-          icon={<ArrowRight />}
-          onPress={browseAll}
-          variant="secondary"
+        <Surface
+          className="gap-4 rounded-b-3xl px-4 pb-8"
+          style={{ paddingTop: heroTop }}
+          tone="primary"
         >
-          {t("home.browseAll")}
-        </Button>
-      </View>
-    </ScrollView>
+          <View className="flex-row items-center justify-between gap-3">
+            <Logo
+              color="primaryForeground"
+              decorative
+              size="md"
+              tone="current"
+            />
+            <IconButton
+              icon={<Settings />}
+              label={t("nav.settings")}
+              onPress={openSettings}
+              variant="ghost"
+            />
+          </View>
+          <Heading level={1} size="title-1">
+            {t("home.title")}
+          </Heading>
+          <Text tone="muted">{t("home.tagline")}</Text>
+          <Text tone="muted">{t("home.intro")}</Text>
+          <SearchField
+            onSubmitEditing={submit}
+            onValueChange={setQuery}
+            placeholder={t("search.placeholder")}
+            value={query}
+          />
+        </Surface>
+        <ConnectionBanner />
+        {categories.data && categories.data.length > 0 ? (
+          <View className="gap-2">
+            <Heading className="px-4" level={2} size="title-3">
+              {t("landing.categoriesIntro")}
+            </Heading>
+            <CategoryChips
+              categories={categories.data}
+              onChange={pickCategory}
+              selected={[]}
+              showAll={false}
+            />
+          </View>
+        ) : null}
+        <RecentGestures />
+        <View className="gap-3">
+          <Heading className="px-4" level={2}>
+            {t("home.featured")}
+          </Heading>
+          {featuredContent}
+          <Button
+            className="mx-4 self-start"
+            icon={<ArrowRight />}
+            onPress={browseAll}
+            variant="secondary"
+          >
+            {t("home.browseAll")}
+          </Button>
+        </View>
+      </ScrollView>
+      <View
+        className="absolute inset-x-0 top-0 bg-primary"
+        pointerEvents="none"
+        style={{ paddingTop: insets.top }}
+        testID="home-status-bar"
+      />
+    </View>
   );
 }

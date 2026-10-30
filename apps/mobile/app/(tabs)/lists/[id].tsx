@@ -40,7 +40,6 @@ import ReorderableList, {
   reorderItems,
   useReorderableDrag,
 } from "react-native-reorderable-list";
-import { ConnectionBanner } from "@/components/connection-banner";
 import {
   GestureRowItem,
   useOpenGesture,
@@ -49,6 +48,12 @@ import {
 import { HeaderActions } from "@/components/header-actions";
 import { ListNameSheet } from "@/components/list-name-sheet";
 import { ListShareSheet } from "@/components/list-share-sheet";
+import {
+  LIST_CONTENT,
+  ListScreen as ListScreenFrame,
+  ListState,
+  ListTop,
+} from "@/components/screen";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 
 const listQueries = (rpc: AppQueryUtils) => [
@@ -316,35 +321,45 @@ export default function ListScreen(): ReactElement {
   let content: ReactElement;
   if (list.status === "loading") {
     content = (
-      <View className="gap-3 px-4" testID="list-loading">
-        <Skeleton className="h-16" />
-        <Skeleton className="h-16" />
-        <Skeleton className="h-16" />
-      </View>
+      <ListState>
+        <View className="gap-3 px-4" testID="list-loading">
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+        </View>
+      </ListState>
     );
   } else if (list.notFound) {
     content = (
-      <EmptyState
-        action={
-          <Button onPress={goToLists} variant="secondary">
-            {t("nav.lists")}
-          </Button>
-        }
-        description={t("lists.notFound.description")}
-        title={t("lists.notFound.title")}
-      />
+      <ListState>
+        <EmptyState
+          action={
+            <Button onPress={goToLists} variant="secondary">
+              {t("nav.lists")}
+            </Button>
+          }
+          description={t("lists.notFound.description")}
+          title={t("lists.notFound.title")}
+        />
+      </ListState>
     );
   } else if (!list.list) {
-    content = <ErrorState onRetry={retry} />;
+    content = (
+      <ListState>
+        <ErrorState onRetry={retry} />
+      </ListState>
+    );
   } else if (items.length === 0) {
     content = (
-      <ListItemsEmptyState
-        action={
-          <Button icon={<Search />} onPress={explore} variant="secondary">
-            {t("common.exploreGestures")}
-          </Button>
-        }
-      />
+      <ListState>
+        <ListItemsEmptyState
+          action={
+            <Button icon={<Search />} onPress={explore} variant="secondary">
+              {t("common.exploreGestures")}
+            </Button>
+          }
+        />
+      </ListState>
     );
   } else {
     content = (
@@ -352,12 +367,16 @@ export default function ListScreen(): ReactElement {
         contentInsetAdjustmentBehavior="automatic"
         data={items}
         keyExtractor={keyOf}
+        // ReorderableList takes no NativeWind classes: a footer carries LIST_CONTENT.
+        ListFooterComponent={<View className={LIST_CONTENT} />}
         ListHeaderComponent={
-          list.list.description ? (
-            <Text className="px-4 pb-2" tone="muted">
-              {list.list.description}
-            </Text>
-          ) : null
+          <ListTop>
+            {list.list.description ? (
+              <Text className="px-4 pb-2" tone="muted">
+                {list.list.description}
+              </Text>
+            ) : null}
+          </ListTop>
         }
         onReorder={onReorder}
         renderItem={renderRow}
@@ -367,9 +386,8 @@ export default function ListScreen(): ReactElement {
   }
 
   return (
-    <View className="flex-1 gap-2 bg-background pt-2" testID="list-screen">
+    <ListScreenFrame testID="list-screen">
       <Stack.Screen options={{ headerRight, title: list.list?.name ?? "" }} />
-      <ConnectionBanner />
       {content}
       {list.list ? (
         <>
@@ -401,6 +419,6 @@ export default function ListScreen(): ReactElement {
           />
         </>
       ) : null}
-    </View>
+    </ListScreenFrame>
   );
 }

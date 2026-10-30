@@ -23,9 +23,10 @@ import {
 } from "@smog/ui-native";
 import { useRouter } from "expo-router";
 import { type ReactElement, useCallback } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { Alert, View } from "react-native";
 import { AnalyticsSwitch, openPrivacy } from "@/components/consent-sheet";
 import { PreferencesFields } from "@/components/preferences-fields";
+import { ScreenScrollView } from "@/components/screen";
 import { useAuthClient } from "@/lib/auth-client";
 import { shareJsonFile, sweepExportFiles } from "@/lib/export-file";
 import {
@@ -284,14 +285,10 @@ function Guest(): ReactElement {
 export function AccountScreen(): ReactElement {
   const auth = useAuthState();
   return (
-    <ScrollView
-      contentContainerClassName="gap-8 px-4 py-6"
-      keyboardShouldPersistTaps="handled"
-      testID="account-screen"
-    >
+    <ScreenScrollView contentContainerClassName="gap-8" testID="account-screen">
       {auth.status === "signedIn" ? <SignedIn /> : null}
       {auth.status === "signedOut" ? <Guest /> : null}
       {auth.status === "loading" ? <Skeleton className="h-16" /> : null}
-    </ScrollView>
+    </ScreenScrollView>
   );
 }

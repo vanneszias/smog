@@ -39,7 +39,7 @@ import {
 import { addScreenshotListener } from "expo-screen-capture";
 import Share2 from "lucide-react-native/icons/share-2";
 import { type ReactElement, useCallback, useEffect } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { Alert, View } from "react-native";
 import { ConnectionBanner } from "@/components/connection-banner";
 import {
   GestureRowItem,
@@ -48,6 +48,7 @@ import {
 } from "@/components/gesture-cards";
 import { HeaderActions } from "@/components/header-actions";
 import { SaveToList } from "@/components/save-to-list";
+import { ScreenScrollView } from "@/components/screen";
 import { usePreferences } from "@/lib/preferences";
 import { apiUrl, gestureUrl, shareUrl } from "@/lib/site";
 import { SponsorCta } from "@/sponsor-cta";
@@ -172,7 +173,7 @@ function GestureDetail({
     [setPreferences]
   );
   return (
-    <ScrollView contentContainerClassName="gap-6 px-4 pb-10 pt-2">
+    <ScreenScrollView contentContainerClassName="gap-6" testID="gesture-page">
       <ConnectionBanner className="mx-0" />
       <VideoPlayer
         autoPlay
@@ -254,7 +255,7 @@ function GestureDetail({
       ) : null}
       <SponsorCta gesture={gesture} />
       <RelatedGestures slug={gesture.canonicalSlug} />
-    </ScrollView>
+    </ScreenScrollView>
   );
 }
 

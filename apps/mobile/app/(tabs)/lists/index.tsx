@@ -17,9 +17,14 @@ import ListIcon from "lucide-react-native/icons/list";
 import Plus from "lucide-react-native/icons/plus";
 import { type ReactElement, useCallback, useState } from "react";
 import { FlatList, type ListRenderItemInfo, View } from "react-native";
-import { ConnectionBanner } from "@/components/connection-banner";
 import { HeaderActions } from "@/components/header-actions";
 import { ListNameSheet } from "@/components/list-name-sheet";
+import {
+  LIST_CONTENT,
+  ListScreen,
+  ListState,
+  ListTop,
+} from "@/components/screen";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 
 const listQueries = (rpc: AppQueryUtils) => [rpc.lists.key()];
@@ -103,39 +108,48 @@ export default function ListsScreen(): ReactElement {
   let content: ReactElement;
   if (status === "loading") {
     content = (
-      <View className="gap-3 px-4" testID="lists-loading">
-        <Skeleton className="h-12" />
-        <Skeleton className="h-12" />
-        <Skeleton className="h-12" />
-      </View>
+      <ListState>
+        <View className="gap-3 px-4" testID="lists-loading">
+          <Skeleton className="h-12" />
+          <Skeleton className="h-12" />
+          <Skeleton className="h-12" />
+        </View>
+      </ListState>
     );
   } else if (status === "error" && lists.length === 0) {
-    content = <ErrorState onRetry={retry} />;
+    content = (
+      <ListState>
+        <ErrorState onRetry={retry} />
+      </ListState>
+    );
   } else if (lists.length === 0) {
     content = (
-      <ListsEmptyState
-        action={
-          <Button icon={<Plus />} onPress={startCreate} variant="secondary">
-            {t("lists.newList")}
-          </Button>
-        }
-      />
+      <ListState>
+        <ListsEmptyState
+          action={
+            <Button icon={<Plus />} onPress={startCreate} variant="secondary">
+              {t("lists.newList")}
+            </Button>
+          }
+        />
+      </ListState>
     );
   } else {
     content = (
       <FlatList
+        contentContainerClassName={LIST_CONTENT}
         contentInsetAdjustmentBehavior="automatic"
         data={lists}
         keyExtractor={keyOf}
+        ListHeaderComponent={<ListTop />}
         renderItem={renderRow}
       />
     );
   }
 
   return (
-    <View className="flex-1 gap-2 bg-background pt-2" testID="lists-screen">
+    <ListScreen testID="lists-screen">
       <Stack.Screen options={{ headerRight }} />
-      <ConnectionBanner />
       {content}
       <ListNameSheet
         onOpenChange={setCreating}
@@ -144,6 +158,6 @@ export default function ListsScreen(): ReactElement {
         submitLabel={t("lists.create")}
         title={t("lists.newList")}
       />
-    </View>
+    </ListScreen>
   );
 }

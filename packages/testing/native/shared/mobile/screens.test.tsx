@@ -700,6 +700,33 @@ describe("after sign-in", () => {
   });
 });
 
+describe("screen contract", () => {
+  it("lets the header and tab bar own the safe area of a scrolling page", async () => {
+    await renderApp({ initialUrl: "/gestures/hond" });
+    await screen.findByRole("header", { name: "Hond" });
+    expect(screen.getByTestId("gesture-page")).toHaveProp(
+      "contentInsetAdjustmentBehavior",
+      "automatic"
+    );
+  });
+
+  it("keeps a list's empty state in a scroller that clears the large title", async () => {
+    await renderApp({ initialUrl: "/lists" });
+    const lists = await inScreen("lists");
+    const state = await lists.findByTestId("list-state");
+    // Under a large title only an inset scroller is moved below the header.
+    expect(state).toHaveProp("contentInsetAdjustmentBehavior", "automatic");
+    expect(within(state).getByText("No lists yet")).toBeOnTheScreen();
+  });
+
+  it("gives settings the same page as the other screens", async () => {
+    await renderApp({ initialUrl: "/settings", realSettings: true });
+    const page = await screen.findByTestId("settings-screen");
+    expect(page).toHaveProp("contentInsetAdjustmentBehavior", "automatic");
+    expect(page).toHaveProp("keyboardShouldPersistTaps", "handled");
+  });
+});
+
 describe("deep links", () => {
   it("opens a gesture link on the gesture card, with the tabs beneath", async () => {
     const { result } = await renderApp({

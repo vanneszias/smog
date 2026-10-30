@@ -15,7 +15,12 @@ import ChevronRight from "lucide-react-native/icons/chevron-right";
 import GraduationCap from "lucide-react-native/icons/graduation-cap";
 import { type ReactElement, useCallback, useMemo } from "react";
 import { FlatList, type ListRenderItemInfo, View } from "react-native";
-import { ConnectionBanner } from "@/components/connection-banner";
+import {
+  LIST_CONTENT,
+  ListScreen,
+  ListState,
+  ListTop,
+} from "@/components/screen";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 import { LessonGate } from "./lesson-gate";
 
@@ -106,18 +111,25 @@ function LessonList(): ReactElement {
 
   if (list.isPending) {
     return (
-      <View className="gap-3 px-4" testID="lessons-loading">
-        <Skeleton className="h-12" />
-        <Skeleton className="h-12" />
-        <Skeleton className="h-12" />
-      </View>
+      <ListState>
+        <View className="gap-3 px-4" testID="lessons-loading">
+          <Skeleton className="h-12" />
+          <Skeleton className="h-12" />
+          <Skeleton className="h-12" />
+        </View>
+      </ListState>
     );
   }
   if (list.isError && lessons.length === 0) {
-    return <ErrorState onRetry={retry} />;
+    return (
+      <ListState>
+        <ErrorState onRetry={retry} />
+      </ListState>
+    );
   }
   return (
     <FlatList
+      contentContainerClassName={LIST_CONTENT}
       contentInsetAdjustmentBehavior="automatic"
       data={lessons}
       keyExtractor={keyOf}
@@ -128,6 +140,7 @@ function LessonList(): ReactElement {
         />
       }
       ListFooterComponent={isFetchingNextPage ? <Spinner /> : null}
+      ListHeaderComponent={<ListTop />}
       onEndReached={more}
       renderItem={renderRow}
     />
@@ -137,11 +150,10 @@ function LessonList(): ReactElement {
 /** The signed-in teacher's view of every lesson (read only; lessons are made on the website). */
 export function LessonListScreen(): ReactElement {
   return (
-    <View className="flex-1 gap-2 bg-background pt-2" testID="lessons-screen">
-      <ConnectionBanner />
+    <ListScreen testID="lessons-screen">
       <LessonGate>
         <LessonList />
       </LessonGate>
-    </View>
+    </ListScreen>
   );
 }

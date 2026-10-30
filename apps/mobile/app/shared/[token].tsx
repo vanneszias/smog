@@ -18,13 +18,18 @@ import X from "lucide-react-native/icons/x";
 import { type ReactElement, useCallback, useMemo, useState } from "react";
 import { FlatList, type ListRenderItemInfo, View } from "react-native";
 import { AddToSharedList } from "@/components/add-to-shared-list";
-import { ConnectionBanner } from "@/components/connection-banner";
 import {
   GestureRowItem,
   useOpenGesture,
   useToggleFavorite,
 } from "@/components/gesture-cards";
 import { HeaderActions } from "@/components/header-actions";
+import {
+  LIST_CONTENT,
+  ListScreen,
+  ListState,
+  ListTop,
+} from "@/components/screen";
 import { type AppQueryUtils, useRetry } from "@/lib/retry";
 
 const sharedQueries = (rpc: AppQueryUtils) => [rpc.lists.shared.get.key()];
@@ -145,69 +150,79 @@ export default function SharedListScreen(): ReactElement {
   let content: ReactElement;
   if (shared.notFound) {
     content = (
-      <EmptyState
-        action={
-          <Button onPress={goHome} variant="secondary">
-            {t("states.notFound.action")}
-          </Button>
-        }
-        description={t("lists.notFound.description")}
-        title={t("lists.notFound.title")}
-      />
+      <ListState>
+        <EmptyState
+          action={
+            <Button onPress={goHome} variant="secondary">
+              {t("states.notFound.action")}
+            </Button>
+          }
+          description={t("lists.notFound.description")}
+          title={t("lists.notFound.title")}
+        />
+      </ListState>
     );
   } else if (data) {
     content = (
       <FlatList
+        contentContainerClassName={LIST_CONTENT}
         contentInsetAdjustmentBehavior="automatic"
         data={data.items}
         keyExtractor={keyOf}
         ListEmptyComponent={<ListItemsEmptyState />}
         ListHeaderComponent={
-          <View className="gap-2 px-4 pb-3">
-            <Text tone="muted">
-              {t("lists.sharedView.by", { owner: data.list.ownerName })}
-            </Text>
-            {data.list.description ? (
-              <Text>{data.list.description}</Text>
-            ) : null}
-            {canEdit ? (
-              <Text size="body-sm" tone="muted">
-                {t("lists.sharedCanEdit")}
+          <ListTop>
+            <View className="gap-2 px-4 pb-3">
+              <Text tone="muted">
+                {t("lists.sharedView.by", { owner: data.list.ownerName })}
               </Text>
-            ) : null}
-            {shared.requiresSignIn ? (
-              <View className="gap-2 rounded-lg bg-card p-4">
-                <Text>{t("lists.sharedView.signInToEdit")}</Text>
-                <Button
-                  className="self-start"
-                  icon={<LogIn />}
-                  onPress={signIn}
-                  variant="secondary"
-                >
-                  {t("nav.signIn")}
-                </Button>
-              </View>
-            ) : null}
-          </View>
+              {data.list.description ? (
+                <Text>{data.list.description}</Text>
+              ) : null}
+              {canEdit ? (
+                <Text size="body-sm" tone="muted">
+                  {t("lists.sharedCanEdit")}
+                </Text>
+              ) : null}
+              {shared.requiresSignIn ? (
+                <View className="gap-2 rounded-lg bg-card p-4">
+                  <Text>{t("lists.sharedView.signInToEdit")}</Text>
+                  <Button
+                    className="self-start"
+                    icon={<LogIn />}
+                    onPress={signIn}
+                    variant="secondary"
+                  >
+                    {t("nav.signIn")}
+                  </Button>
+                </View>
+              ) : null}
+            </View>
+          </ListTop>
         }
         renderItem={renderRow}
       />
     );
   } else if (shared.status === "error") {
-    content = <ErrorState onRetry={retry} />;
+    content = (
+      <ListState>
+        <ErrorState onRetry={retry} />
+      </ListState>
+    );
   } else {
     content = (
-      <View className="gap-3 px-4" testID="shared-loading">
-        <Skeleton className="h-16" />
-        <Skeleton className="h-16" />
-      </View>
+      <ListState>
+        <View className="gap-3 px-4" testID="shared-loading">
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+        </View>
+      </ListState>
     );
   }
 
   return (
-    <View className="flex-1 gap-2 bg-background pt-2" testID="shared-screen">
+    <ListScreen testID="shared-screen">
       <Stack.Screen options={{ headerRight, title: listName }} />
-      <ConnectionBanner />
       {content}
       {canEdit ? (
         <AddToSharedList
@@ -218,6 +233,6 @@ export default function SharedListScreen(): ReactElement {
           present={present}
         />
       ) : null}
-    </View>
+    </ListScreen>
   );
 }
