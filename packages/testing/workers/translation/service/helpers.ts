@@ -179,9 +179,9 @@ export async function resetTranslationData(): Promise<void> {
   resetCatalogueCache();
   await env.DB.batch([
     env.DB.prepare("DELETE FROM ui_string"),
-    // The seeded version 1 stays; every draft, later version and added language's text goes.
+    // The seeded versions 1 and 2 stay; every draft, later version and added language's text goes.
     env.DB.prepare(
-      "DELETE FROM legal_text WHERE version > 1 OR status = 'draft' OR locale NOT IN ('nl', 'en', 'fr')"
+      "DELETE FROM legal_text WHERE version > 2 OR status = 'draft' OR locale NOT IN ('nl', 'en', 'fr')"
     ),
     env.DB.prepare("DELETE FROM language WHERE code NOT IN ('nl', 'en', 'fr')"),
     env.DB.prepare(
