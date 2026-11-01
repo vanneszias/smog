@@ -1,12 +1,13 @@
 import { fileURLToPath } from "node:url";
 import { cloudflare, type WorkerConfig } from "@cloudflare/vite-plugin";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { ENVIRONMENTS } from "@smog/config/env/worker";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import { bytesModules } from "./build-bytes";
-import { THEME_SCRIPT_HASH_DEFINE } from "./build-defines";
+import { RELEASE_DEFINE, THEME_SCRIPT_HASH_DEFINE } from "./build-defines";
 
 const SRC = fileURLToPath(new URL("./src", import.meta.url));
 const I18N_LAZY_ENTRY = fileURLToPath(
@@ -103,9 +104,45 @@ function customizeWorker(
   return { vars: { ...worker.vars, ...devVars } };
 }
 
+/**
+ * Source maps for error monitoring (docs/ERROR_MONITORING.md): only a
+ * staging or production build with `SENTRY_AUTH_TOKEN` (the deploy job)
+ * makes them, and only for the Worker (`ssr`): `hidden` (no map comment),
+ * uploaded to Rustrak with debug ids, then deleted before the deploy guard
+ * runs. Every other build makes none. The browser bundle gets none: Rustrak
+ * matches maps by debug id only, and the id snippet the plugin injects into
+ * every chunk (about 250 bytes gzip each) costs about 20 kB per route
+ * (`docs/DECISIONS.md`, "Error monitoring with Rustrak").
+ */
+const uploadSourceMaps =
+  Boolean(process.env.SENTRY_AUTH_TOKEN) &&
+  process.env.CLOUDFLARE_ENV !== "dev";
+
+/** The Vite environment of the Worker (the Cloudflare plugin's `ssr`). */
+const WORKER_ENVIRONMENT = "ssr";
+
+/** Rustrak (never sentry.io); it ignores the organization. Worker only. */
+function sourceMapUpload(): Plugin[] {
+  return sentryVitePlugin({
+    authToken: process.env.SENTRY_AUTH_TOKEN,
+    org: process.env.SENTRY_ORG || "rustrak",
+    project: process.env.SENTRY_PROJECT || "2",
+    release: { create: false, finalize: false, inject: false },
+    sourcemaps: { filesToDeleteAfterUpload: ["./dist/**/*.map"] },
+    telemetry: false,
+    url: process.env.SENTRY_URL || "https://errors.zias.be/",
+  }).map((plugin) => ({
+    ...plugin,
+    applyToEnvironment: (environment) =>
+      environment.name === WORKER_ENVIRONMENT,
+  }));
+}
+
 export default defineConfig({
   // No source map ships (phase 9 task 6): the deploy guard fails on a `.map`
   // file or a map comment, and perf-budget.test.ts on this line changing.
+  // With the token the Worker's are made only to be uploaded and deleted
+  // (above); the browser's never.
   build: { sourcemap: false },
   // `/dev/*` pages are compiled out of production builds (spec §9: dev and
   // staging only); see src/routes/dev/ui.tsx and scripts/deploy-guard.ts.
@@ -117,13 +154,19 @@ export default defineConfig({
     __SMOG_E2E_SEED__: JSON.stringify(
       (process.env.CLOUDFLARE_ENV ?? "dev") === "dev"
     ),
+    __SMOG_RELEASE__: RELEASE_DEFINE,
     __SMOG_THEME_SCRIPT_HASH__: THEME_SCRIPT_HASH_DEFINE,
   },
   // The client build's manifest (`dist/client/.vite/manifest.json`), for the
   // deploy guard's performance budgets (every route chunk needs an entry of
   // `perf-budget.json`). `public/.assetsignore` keeps it out of the deployed
   // assets.
-  environments: { client: { build: { manifest: true } } },
+  environments: {
+    client: { build: { manifest: true } },
+    [WORKER_ENVIRONMENT]: {
+      build: { sourcemap: uploadSourceMaps ? "hidden" : false },
+    },
+  },
   plugins: [
     i18nLazyCatalogues(),
     bytesModules(),
@@ -134,6 +177,7 @@ export default defineConfig({
     tanstackStart(),
     react(),
     tailwindcss(),
+    ...(uploadSourceMaps ? sourceMapUpload() : []),
   ],
   resolve: { alias: { "@": SRC } },
 });

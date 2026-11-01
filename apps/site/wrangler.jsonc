@@ -151,7 +151,10 @@
         // Cloudflare's always-pass test site key, the pair of the test secret
         // staging may use (DECISIONS). Production sets the real widget's key
         // before launch; without one the sign-in pages show no widget.
-        "TURNSTILE_SITE_KEY": "1x00000000000000000000AA"
+        "TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
+        // The Rustrak DSN (docs/ERROR_MONITORING.md); public. Empty: no
+        // error monitoring until errors.zias.be answers.
+        "SENTRY_DSN": ""
       },
       "r2_buckets": [
         { "binding": "MEDIA", "bucket_name": "smog-staging-media" }
@@ -255,6 +258,9 @@
         // still the placeholders.
         "R2_ACCOUNT_ID": "",
         "TURNSTILE_SITE_KEY": "",
+        // The Rustrak DSN (docs/ERROR_MONITORING.md); public. Empty: no
+        // error monitoring until errors.zias.be answers.
+        "SENTRY_DSN": "",
         "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
         "EMAIL_REPLY_TO": "info@smog.vlaanderen"
       },

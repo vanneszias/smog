@@ -32,6 +32,20 @@ export {
   sponsorLogoPath,
 } from "./media";
 export { formatMoney, type MoneyLocale } from "./money";
+export {
+  FILTERED,
+  featureOf,
+  isSensitiveKey,
+  type MonitoringService,
+  monitoringRelease,
+  type ScrubbableEvent,
+  scrubMonitoringBreadcrumb,
+  scrubMonitoringEvent,
+  scrubTransactionName,
+  scrubValue,
+  tracesSampleRate,
+} from "./monitoring";
 export { newId } from "./new-id";
 export { normalizeText, slugify } from "./text";
 export { addDays, DAY_MS } from "./time";
+export { redactUrl, redactUrlPath, TOKEN_MARK } from "./url";

@@ -262,8 +262,27 @@ describe("eas.json profiles", () => {
 
   it.each(MATRIX)("$name builds for its origin", (row) => {
     const { env: profileEnv, ...rest } = profile(row.name);
-    const { APP_VARIANT: _variant, ...env } = profileEnv;
+    const {
+      APP_VARIANT: _variant,
+      SENTRY_ALLOW_FAILURE: allowFailure,
+      SENTRY_DISABLE_AUTO_UPLOAD: disableUpload,
+      ...env
+    } = profileEnv;
     const variant = profileEnv.APP_VARIANT as string | undefined;
+    // The error-monitoring upload (docs/ERROR_MONITORING.md): development
+    // uploads nothing; staging and production upload with the EAS secret
+    // and never fail the build over it.
+    if (row.name === "development") {
+      expect({ allowFailure, disableUpload }).toEqual({
+        allowFailure: undefined,
+        disableUpload: "true",
+      });
+    } else {
+      expect({ allowFailure, disableUpload }).toEqual({
+        allowFailure: "true",
+        disableUpload: undefined,
+      });
+    }
     expect(rest.channel).toBe(row.channel);
     expect(rest.environment).toBe(row.environment);
     // Only the reviewed public origin keys; the OpenPanel pair lives in the

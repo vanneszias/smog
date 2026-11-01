@@ -17,10 +17,26 @@ const TRAILING_SLASHES = /(?<!\/)\/+$/;
 /** A Mollie API key (ruling 2): `test_` or `live_`, then the key itself. */
 const MOLLIE_API_KEY_PATTERN = /^(test|live)_\w{20,}$/;
 
+/**
+ * A Sentry-protocol DSN (`<scheme>://<public key>@<host>/<project id>`),
+ * here always the self-hosted Rustrak (docs/ERROR_MONITORING.md). Public:
+ * it is baked into the browser and app bundles.
+ */
+const MONITORING_DSN = /^https?:\/\/[0-9a-f]{16,}@[^/\s@]+\/\d+$/;
+
 /** An optional value: unset and empty (`KEY=` in `.dev.vars`) both mean "off". */
 export const optionalValue = z.preprocess(
   (value) => (value === "" ? undefined : value),
   z.string().min(1).optional()
+);
+
+/** An optional DSN: unset and empty both mean "no error monitoring". */
+export const monitoringDsn = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z
+    .string()
+    .regex(MONITORING_DSN, "must be a DSN: https://<key>@<host>/<project>")
+    .optional()
 );
 
 /** Plain `vars` of the site Worker (`wrangler.jsonc` `env.*.vars`). */
@@ -37,6 +53,12 @@ export const workerVarsSchema = z.object({
   OPENPANEL_API_URL: z.url().default(OPENPANEL_DEFAULT_API_URL),
   /** The account id of the R2 S3 endpoint (`<id>.r2.cloudflarestorage.com`). */
   R2_ACCOUNT_ID: optionalValue,
+  /**
+   * The Rustrak DSN of the Worker and the browser (the same project as the
+   * app; the `service` tag tells them apart). Unset: no error monitoring,
+   * and `/api/monitoring` drops what it gets.
+   */
+  SENTRY_DSN: monitoringDsn,
   SITE_URL: z.url(),
   /** The public Turnstile widget key; the widget is hidden without it. */
   TURNSTILE_SITE_KEY: optionalValue,

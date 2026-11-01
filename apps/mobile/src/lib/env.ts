@@ -10,6 +10,7 @@ export function mobileEnv(): MobileEnv {
       process.env.EXPO_PUBLIC_OPENPANEL_CLIENT_ID,
     EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET:
       process.env.EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET,
+    EXPO_PUBLIC_SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN,
     EXPO_PUBLIC_SITE_HOST: process.env.EXPO_PUBLIC_SITE_HOST,
   });
 }

@@ -104,6 +104,14 @@ exports[`the production config matches the snapshot with no variant 1`] = `
     ],
     "./plugins/with-screen-capture-permissions.js",
     "./plugins/with-ios-scenes.js",
+    [
+      "@sentry/react-native/expo",
+      {
+        "organization": "rustrak",
+        "project": "2",
+        "url": "https://errors.zias.be/",
+      },
+    ],
   ],
   "runtimeVersion": {
     "policy": "fingerprint",
