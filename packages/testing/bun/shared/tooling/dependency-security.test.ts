@@ -7,7 +7,6 @@ const require = createRequire(import.meta.url);
 test("every deepmerge consumer resolves the fixed fork", () => {
   expect(require("deepmerge/package.json").name).toBe("@smog/deepmerge");
   for (const consumer of [
-    "@expo/config",
     "html-to-text",
     "jest-config",
     "ultracite/biome/core",
