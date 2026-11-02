@@ -155,6 +155,10 @@ A teacher or admin enters private teaching information and drawings per gesture,
 - **Mobile.** Settings, "Lessons" (teacher or admin by `session.user.roles`; the server decides again): a lesson list, a read-only lesson and "Export as PDF" through the same route to the share sheet (`fetch` with the session cookie, a typed refusal per code). Read procedures only; lessons are never written to the offline cache and the PDF file is swept like the account export. The sheet reuses the web dialog's `admin.lessons.export.*` strings.
 - **Migrations.** 0024 to 0027 (teacher info, drawings, the lesson tables, the `audit_log` rebuild), 0028 (legal text version 2, the corrected privacy and terms); **the next free number is 0029** (the number stays in the Development section above; `packages/testing/bun/shared/tooling/docs-check.test.ts` checks it).
 
+## Error monitoring (Rustrak)
+
+The Worker, the browser and the app report errors, transactions and cron check-ins to the self-hosted Rustrak through the Sentry SDKs (`docs/ERROR_MONITORING.md`; `docs/DECISIONS.md`, "Error monitoring with Rustrak"). Every reporter is off without its DSN (`SENTRY_DSN` var of the site, `EXPO_PUBLIC_SENTRY_DSN` of the app), and `apps/site/src/worker.ts` wraps the handler with `withSentry` only when the env has one. Every event goes through `scrubMonitoringEvent` (`packages/utils/src/monitoring.ts`): no cookies, bodies, queries, fragments, addresses or tokens, the user is an id. A `console.error("[feature] Failed to ...", error)` line becomes an issue tagged with that feature, on the Worker and in the app, so keep the prefix convention. The browser SDK is a lazy chunk (`apps/site/src/lib/monitoring.sdk.ts`) and reports through `POST /api/monitoring`; never import `@sentry/react` from another module, or it joins every route's initial JavaScript. `@sentry/react-native` is a native module: adding or upgrading it needs an EAS build.
+
 ## Code Style
 
 ### Imports

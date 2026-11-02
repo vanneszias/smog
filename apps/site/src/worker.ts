@@ -1,3 +1,5 @@
+import { env as workerEnv } from "cloudflare:workers";
+import { captureException, withSentry } from "@sentry/cloudflare";
 import { ENVIRONMENTS } from "@smog/config/env/worker";
 import handler from "@tanstack/react-start/server-entry";
 import { legacyRedirect } from "@/lib/legacy-redirects";
@@ -14,6 +16,7 @@ import {
   maintenanceGate,
   SIGN_IN_ONLY,
 } from "@/worker/maintenance";
+import { monitoringDsn, monitoringOptions } from "@/worker/monitoring";
 import { dispatchQueue } from "@/worker/queues";
 import { dispatchScheduled } from "@/worker/scheduled";
 import { guardedQueue, guardedScheduled } from "@/worker/top-level";
@@ -49,7 +52,7 @@ async function route(request: Request, nonce: string): Promise<Response> {
  * an escaping exception included. `queue` dispatches by queue name
  * (`worker/queues.ts`) and `scheduled` by cron (`worker/scheduled.ts`).
  */
-export default {
+const siteHandler = {
   fetch(request: Request, env: Env): Promise<Response> {
     // Read raw so a broken env still gets a headed 500 (dev: no HSTS).
     const environment =
@@ -61,6 +64,11 @@ export default {
         ...devConnectSources(environment, muxApiUrl),
         ...r2ConnectSources(env.R2_ACCOUNT_ID),
       ],
+      onError: (error) => {
+        captureException(error, {
+          mechanism: { handled: false, type: "auto.function.respond" },
+        });
+      },
       requestId: request.headers.get("cf-ray") ?? crypto.randomUUID(),
       requestUrl: request.url,
     });
@@ -81,3 +89,13 @@ export default {
     );
   },
 } satisfies ExportedHandler<Env>;
+
+/**
+ * Error monitoring (`worker/monitoring.ts`): `withSentry` wraps the handler
+ * only when the env has a `SENTRY_DSN`, decided once per isolate. Without
+ * one (dev, the tests, an env before Rustrak) the handler runs unwrapped,
+ * exactly as before.
+ */
+export default monitoringDsn(workerEnv)
+  ? withSentry(monitoringOptions, siteHandler)
+  : siteHandler;

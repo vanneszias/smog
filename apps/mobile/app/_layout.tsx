@@ -2,7 +2,11 @@ import "../global.css";
 
 import type { ReactElement } from "react";
 import { AppShell } from "@/app-shell";
+import { initMonitoring, wrapRoot } from "@/monitoring";
 import { AppProviders } from "@/providers";
+
+// Before the first render, so a crash at launch is reported too.
+initMonitoring();
 
 /**
  * The tabs sit beneath every screen the root stack pushes, including one
@@ -12,10 +16,14 @@ import { AppProviders } from "@/providers";
  */
 export const unstable_settings = { initialRouteName: "(tabs)" };
 
-export default function RootLayout(): ReactElement {
+function RootLayout(): ReactElement {
   return (
     <AppProviders>
       <AppShell />
     </AppProviders>
   );
 }
+
+// Sentry's root wrapper (touch breadcrumbs, the app-start span) only when
+// monitoring runs.
+export default wrapRoot(RootLayout);

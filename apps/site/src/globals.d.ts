@@ -4,6 +4,9 @@ declare const __SMOG_DEV_TOOLS__: boolean;
 /** The CSP hash of the theme pre-paint script, base64 (build-defines.ts). */
 declare const __SMOG_THEME_SCRIPT_HASH__: string;
 
+/** The commit of this build, or "" (build-defines.ts `RELEASE_DEFINE`). */
+declare const __SMOG_RELEASE__: string;
+
 /**
  * `true` only in a dev build (no `CLOUDFLARE_ENV`, or `dev`): the e2e seed
  * endpoint `/dev/e2e-seed` is compiled out of staging and production.

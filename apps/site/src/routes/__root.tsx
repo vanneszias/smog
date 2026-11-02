@@ -43,6 +43,11 @@ import { NotFoundPage } from "@/components/status-page";
 import { SiteAnalytics } from "@/lib/analytics";
 import { AuthClientProvider } from "@/lib/auth-client";
 import { LocaleProvider } from "@/lib/locale";
+import {
+  MONITORING_DSN_META,
+  MONITORING_ENVIRONMENT_META,
+  MonitoringUser,
+} from "@/lib/monitoring";
 import { SYSTEM_THEME_SCRIPT, type Theme } from "@/lib/preferences";
 import { ThemeProvider, useSystemDark } from "@/lib/theme";
 import {
@@ -83,6 +88,19 @@ export const Route = createRootRouteWithContext<RouterContext>()({
           "common.appName"
         ),
       },
+      // Error monitoring (lib/monitoring.ts): only when the env has a DSN.
+      ...(loaderData?.monitoring
+        ? [
+            {
+              content: loaderData.monitoring.dsn,
+              name: MONITORING_DSN_META,
+            },
+            {
+              content: loaderData.monitoring.environment,
+              name: MONITORING_ENVIRONMENT_META,
+            },
+          ]
+        : []),
     ],
   }),
   // The shell (locale, theme, session) changes only through the setters
@@ -206,6 +224,7 @@ function RootDocument({ children }: { children: ReactNode }): ReactNode {
               <AuthClientProvider client={clients.auth}>
                 <AuthStateProvider useSession={clients.useSession}>
                   <PurgeOtherUsers />
+                  <MonitoringUser />
                   <LocalStoreProvider store={clients.store}>
                     <SiteAnalytics>
                       <ThemeProvider value={themeValue}>

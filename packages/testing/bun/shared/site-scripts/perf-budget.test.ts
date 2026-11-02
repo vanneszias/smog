@@ -73,6 +73,10 @@ function budget(gzip: { a: number; b: number }): PerfBudget {
   };
 }
 
+/** The source-map upload runs only with the Rustrak token, outside dev. */
+const UPLOAD_GATE =
+  /const uploadSourceMaps =\s+Boolean\(process\.env\.SENTRY_AUTH_TOKEN\) &&\s+process\.env\.CLOUDFLARE_ENV !== "dev";/;
+
 describe("measureEntries", () => {
   it("adds the entry's closure and the route's chunks, once each", () => {
     const sizes = measureEntries(MANIFEST, budget({ a: 1, b: 1 }), read);
@@ -253,16 +257,25 @@ describe("checkNoSourceMaps", () => {
     ).toThrow("source maps");
   });
 
-  it("keeps sourcemap off in vite.config.ts", () => {
+  it("keeps sourcemap off in vite.config.ts, except to upload and delete them", () => {
     const config = readFileSync(
       fileURLToPath(
         new URL("../../../../../apps/site/vite.config.ts", import.meta.url)
       ),
       "utf8"
     );
-    expect(config).toContain("sourcemap: false");
+    // Hidden maps only with the Rustrak token outside dev, deleted after
+    // the upload (docs/ERROR_MONITORING.md); the deploy guard still fails
+    // on any map left in dist.
+    expect(config).toContain("build: { sourcemap: false }");
+    // The Worker's only, with the token: never the browser's.
+    expect(config).toContain(
+      'build: { sourcemap: uploadSourceMaps ? "hidden" : false }'
+    );
+    expect(config).toContain("environment.name === WORKER_ENVIRONMENT");
+    expect(config).toContain('filesToDeleteAfterUpload: ["./dist/**/*.map"]');
+    expect(config).toMatch(UPLOAD_GATE);
     expect(config.includes("sourcemap: true")).toBe(false);
-    expect(config.includes("sourcemap: 'hidden'")).toBe(false);
   });
 });
 

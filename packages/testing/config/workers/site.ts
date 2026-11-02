@@ -46,6 +46,7 @@ export default defineConfig(async () => ({
   define: {
     __SMOG_DEV_TOOLS__: "true",
     __SMOG_E2E_SEED__: "true",
+    __SMOG_RELEASE__: '""',
     __SMOG_THEME_SCRIPT_HASH__: THEME_SCRIPT_HASH_DEFINE,
   },
   plugins: [

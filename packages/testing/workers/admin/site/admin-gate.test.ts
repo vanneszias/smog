@@ -96,6 +96,10 @@ describe("the admin gate (ruling 10)", () => {
 
   it("keeps a translator from every other admin screen and from the languages", async () => {
     const { cookie } = await signedIn("translator");
+    // One request first: the Workers pool loads route modules on first use,
+    // and five concurrent first loads share that I/O across requests, which
+    // workerd cancels as a hang. The deployed bundle has no lazy loading.
+    await (await open("/admin/users", cookie)).text();
     const statuses = await Promise.all(
       [
         "/admin/users",

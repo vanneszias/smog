@@ -37,6 +37,12 @@ export interface Shell {
   languages: LanguageInfo[];
   locale: Locale;
   /**
+   * Error monitoring of the browser (`lib/monitoring.ts`): this env's
+   * public DSN and environment, or null when the Worker has no
+   * `SENTRY_DSN` (then the page loads no SDK).
+   */
+  monitoring: { dsn: string; environment: string } | null;
+  /**
    * The `ui_string` rows of the active and the default language, over the
    * shipped catalogue the bundle carries (phase 10b ruling 1). Data only: a
    * translator's edit reaches the next navigation without a deploy.
@@ -72,6 +78,9 @@ export const getShell = createServerFn().handler(async (): Promise<Shell> => {
       auth: publicAuthConfig(worker),
       languages: [...catalogue.languages],
       locale: catalogue.locale,
+      monitoring: vars.SENTRY_DSN
+        ? { dsn: vars.SENTRY_DSN, environment: vars.ENVIRONMENT }
+        : null,
       overlay: catalogue.overlay,
       siteUrl: vars.SITE_URL,
       theme: parseTheme(getCookie(THEME_COOKIE)),

@@ -66,3 +66,9 @@ OPENPANEL_CLIENT_SECRET=
 # too. Production needs them before launch (phase 8).
 # R2_ACCESS_KEY_ID=
 # R2_SECRET_ACCESS_KEY=
+
+# Optional. Error monitoring (Rustrak, docs/ERROR_MONITORING.md): the DSN of
+# the Worker and the browser. Off when unset. Staging and production set it
+# as a var in wrangler.jsonc (it is public). Locally, point it at a Rustrak
+# in Docker to try it (`http://<key>@localhost:8080/<project>`).
+# SENTRY_DSN=

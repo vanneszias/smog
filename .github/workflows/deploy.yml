@@ -111,8 +111,15 @@ jobs:
         run: bunx wrangler d1 migrations apply DB --env "$CLOUDFLARE_ENV" --remote
       # The guarded site script: vite build for CLOUDFLARE_ENV, the deploy
       # guard, then wrangler deploy --env. Never a bare wrangler deploy.
+      # Error monitoring (docs/ERROR_MONITORING.md): the commit is the
+      # release, and with the SENTRY_AUTH_TOKEN secret the build uploads its
+      # source maps to Rustrak and deletes them; without it there are none.
       - name: Deploy
         if: steps.secrets.outputs.enabled == 'true'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_RELEASE: ${{ github.sha }}
+          SENTRY_URL: ${{ vars.SENTRY_URL }}
         run: bun -F @smog/site deploy
       # Every email loads its header logo from <SITE_URL>/brand/: fetched
       # anonymously, without following a redirect, as an image proxy does

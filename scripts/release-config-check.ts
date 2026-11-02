@@ -1331,13 +1331,18 @@ const EAS_PROFILES = {
  * The only keys a profile's `env` may hold: public, reviewed in git.
  * `APP_VARIANT` (phase 9 task 3, ruling 9) is the build variant of the
  * development and staging profiles; `mobile-release-check` and the app-config
- * tests pin which profile sets which value.
+ * tests pin which profile sets which value. The two `SENTRY_*` keys are
+ * build switches of the error-monitoring upload (docs/ERROR_MONITORING.md),
+ * no secret: development uploads nothing, staging and production never fail
+ * a build over a failed upload (the token itself is an EAS secret).
  */
 const EAS_ENV_KEYS = [
   "APP_VARIANT",
   "EXPO_PUBLIC_API_URL",
   "EXPO_PUBLIC_ENVIRONMENT",
   "EXPO_PUBLIC_SITE_HOST",
+  "SENTRY_ALLOW_FAILURE",
+  "SENTRY_DISABLE_AUTO_UPLOAD",
 ];
 
 interface EasProfilesResult {
