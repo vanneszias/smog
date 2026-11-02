@@ -109,7 +109,7 @@ exports[`the production config matches the snapshot with no variant 1`] = `
       {
         "organization": "rustrak",
         "project": "2",
-        "url": "https://errors.zias.be/",
+        "url": "https://error.zias.be/",
       },
     ],
   ],

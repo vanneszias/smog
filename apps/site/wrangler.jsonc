@@ -152,9 +152,9 @@
         // staging may use (DECISIONS). Production sets the real widget's key
         // before launch; without one the sign-in pages show no widget.
         "TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
-        // The Rustrak DSN (docs/ERROR_MONITORING.md); public. Empty: no
-        // error monitoring until errors.zias.be answers.
-        "SENTRY_DSN": ""
+        // The Rustrak DSN (docs/ERROR_MONITORING.md); public, it also ships
+        // in the page.
+        "SENTRY_DSN": "https://362e622e801048f5b5533990ba0ef540@error.zias.be/2"
       },
       "r2_buckets": [
         { "binding": "MEDIA", "bucket_name": "smog-staging-media" }
@@ -258,8 +258,9 @@
         // still the placeholders.
         "R2_ACCOUNT_ID": "",
         "TURNSTILE_SITE_KEY": "",
-        // The Rustrak DSN (docs/ERROR_MONITORING.md); public. Empty: no
-        // error monitoring until errors.zias.be answers.
+        // The Rustrak DSN (docs/ERROR_MONITORING.md); public. Empty until
+        // the privacy text names Rustrak (docs/LEGAL-SIGNOFF.md, item 12);
+        // then the same DSN as staging.
         "SENTRY_DSN": "",
         "EMAIL_FROM": "SMOG & Co <noreply@smog.vlaanderen>",
         "EMAIL_REPLY_TO": "info@smog.vlaanderen"

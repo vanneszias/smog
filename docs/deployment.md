@@ -139,7 +139,7 @@ Staging's Access bypass (above) must include `/api/csp-report` for the CSP repor
 
 ### 8b. Error monitoring (Rustrak)
 
-The Worker, the browser and the app report to the self-hosted Rustrak at `https://errors.zias.be` once their DSN is set; until then they report nothing. The full setup is `docs/ERROR_MONITORING.md`, "Setup (owner)": the Rustrak project and API token, `SENTRY_DSN` in `env.staging.vars` and `env.production.vars` of `apps/site/wrangler.jsonc`, the GitHub secret `SENTRY_AUTH_TOKEN` (and optionally the variable `SENTRY_URL`) for the site's source maps, the EAS variables `EXPO_PUBLIC_SENTRY_DSN` (plain text) and `SENTRY_AUTH_TOKEN` (secret), the `/api/monitoring` Access bypass above, and Rustrak's own alerts (an email or webhook on a new issue and on a missed cron check-in).
+The Worker, the browser and the app report to the self-hosted Rustrak at `https://error.zias.be` once their DSN is set; until then they report nothing. The full setup is `docs/ERROR_MONITORING.md`, "Setup (owner)": the Rustrak project and API token, `SENTRY_DSN` in `env.staging.vars` and `env.production.vars` of `apps/site/wrangler.jsonc`, the GitHub secret `SENTRY_AUTH_TOKEN` (and optionally the variable `SENTRY_URL`) for the site's source maps, the EAS variables `EXPO_PUBLIC_SENTRY_DSN` (plain text) and `SENTRY_AUTH_TOKEN` (secret), the `/api/monitoring` Access bypass above, and Rustrak's own alerts (an email or webhook on a new issue and on a missed cron check-in).
 
 ## 9. Mux: environments and webhooks
 

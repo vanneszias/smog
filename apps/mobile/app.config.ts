@@ -97,7 +97,7 @@ const APP_LINK_PATH_PREFIXES = ["/gestures/", "/lists/"] as const;
  * files (docs/ERROR_MONITORING.md). Rustrak ignores the organization; the
  * project is its id.
  */
-const RUSTRAK_URL = "https://errors.zias.be/";
+const RUSTRAK_URL = "https://error.zias.be/";
 const RUSTRAK_ORGANIZATION = "rustrak";
 const RUSTRAK_PROJECT = "2";
 

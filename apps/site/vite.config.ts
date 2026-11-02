@@ -130,7 +130,7 @@ function sourceMapUpload(): Plugin[] {
     release: { create: false, finalize: false, inject: false },
     sourcemaps: { filesToDeleteAfterUpload: ["./dist/**/*.map"] },
     telemetry: false,
-    url: process.env.SENTRY_URL || "https://errors.zias.be/",
+    url: process.env.SENTRY_URL || "https://error.zias.be/",
   }).map((plugin) => ({
     ...plugin,
     applyToEnvironment: (environment) =>
