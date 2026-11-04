@@ -236,3 +236,24 @@ Before the first `master` push (every item is in `docs/PROGRESS.md`, "Owner acti
 - The e2e runs as the `e2e` job of `ci.yml` (seven shards) and locally with `bun run test:e2e` on its own ports (`E2E_PORT`, `E2E_MUX_PORT`, `E2E_MOLLIE_PORT`); a green `release:check` does not include it.
 - A dead letter is stored in D1 (14 days) and shown in `/admin/dead-letters` with replay and discard; a message that carries a secret (sign-in codes, magic and reset links, renewal tokens) is stored without its body and cannot be replayed (the person asks again). The real queue behaviour (consumer attach, retry delay) is first proven on staging. Treat the stored bodies as personal data (recipient addresses): do not paste them into tickets.
 - Device checks no test covers are the owner's (`docs/PROGRESS.md`, owner step 7): a screen reader (VoiceOver, TalkBack), large text and high contrast on real devices, Turnstile in the iOS simulator and on an Android device, universal links and `/magic-link/app` on a real iPhone, and a link scanner (Outlook Safe Links) that must keep the `#token=` of a sponsor link.
+
+## 18. PR preview environments
+
+Every pull request from a branch of this repository gets its own environment (`.github/workflows/preview.yml`, `scripts/preview-env.ts`): the Worker `smog-site-pr-<n>` at `https://smog-site-pr-<n>.zias.workers.dev`, with its own D1 (`smog-pr-<n>`), KV namespace (`smog-pr-<n>`), queues and DLQs (`smog-pr-<n>-…`, consumed by that Worker) and bucket (`smog-pr-<n>-media`). Pushing to the PR updates it; closing or merging the PR deletes all of it; a nightly sweep (04:30 UTC, or **Run workflow** by hand) deletes any PR environment whose PR is no longer open. The workflow comments the URL on the PR and links it as the `preview` deployment. Fork PRs get none (no secrets).
+
+**How it works.** The PR's code is built and deployed exactly like staging: `prepare` rewrites `env.staging` of `apps/site/wrangler.jsonc` **in the runner's checkout only** into the PR's env (Worker name, origin, resource names and ids; `SENTRY_DSN` empty; `env.production` removed), and every later step is the ordinary staging command (`ensure-cloudflare-resources.ts --env staging --create`, `wrangler d1 migrations apply DB --env staging --remote`, `admin:grant --env staging`, `CLOUDFLARE_ENV=staging bun -F @smog/site deploy`). `ENVIRONMENT` stays `staging`, so a preview behaves like staging: the dev pages, Turnstile's always-pass keys, the Email Service sender `info@smog.zias.be`, the four crons. `seed` and `secrets` refuse to run on a checkout that was not prepared for that PR.
+
+**Data.** A new preview gets the migrations and the dev seed (5 categories, 20 gestures, invented teacher information) **without** `admin@smog.test`, whose password is public in this repository. Later pushes apply new migrations and keep the data.
+
+**Owner setup, once:**
+
+1. GitHub → Settings → Environments → **New environment** `preview`. Give it the secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (staging's token has the permissions of section 2, which is what this needs: Workers Scripts, R2, Queues, D1 and KV, all Edit). Repository-level secrets of the same names work too.
+2. The secret **`PREVIEW_ADMIN_EMAIL`** (a secret, not a variable: the repository is public and so are its Actions logs): that address becomes a verified, password-less admin on every preview and signs in with an email code. Without it a preview has no admin.
+3. Optional secrets `PREVIEW_MOLLIE_API_KEY` (a `test_` key; anything else fails the step), `PREVIEW_MUX_TOKEN_ID` and `PREVIEW_MUX_TOKEN_SECRET` (staging's Mux environment). Without them sponsoring is paused and only a pasted playback id works, as in any env without them.
+
+**Limits.**
+
+- **A preview is public.** The URL is in a public PR comment, Turnstile always passes and the Email Service really sends, so anyone with the link can create an account and make it send sign-in emails from `info@smog.zias.be`. If that matters, put the previews behind Cloudflare Access (an Access application for `smog-site-pr-*.zias.workers.dev`, **(dashboard)**); the mobile staging builds cannot talk to a preview anyway.
+- Rate limits share staging's namespaces (`ratelimits` ids `2001` to `2004`): a burst on staging counts against a preview from the same IP.
+- Mux and Mollie webhooks are not registered for a preview: an upload or a payment does not complete by itself there (the hourly stale sweep still asks Mollie).
+- A bucket the API cannot list is given a 1-day expiry rule instead of being emptied; the nightly sweep deletes it once it is empty.
