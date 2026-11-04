@@ -1,0 +1,205 @@
+name: Preview
+
+# One isolated environment per pull request (scripts/preview-env.ts,
+# docs/deployment.md "PR preview environments"): the Worker
+# smog-site-pr-<n> on workers.dev with its own D1, KV, queues and bucket,
+# built from the PR's code like staging. Opened, pushed or reopened: create
+# or update it. Closed: delete it. Every night: delete the environments
+# whose PR is no longer open (a missed close, a failed deletion).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  schedule:
+    - cron: "30 4 * * *"
+  workflow_dispatch:
+
+# One run per PR at a time; a newer push cancels the older deploy (every
+# step is idempotent, the next run finishes the job).
+concurrency:
+  group: preview-${{ github.event.pull_request.number || 'sweep' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
+
+permissions:
+  contents: read
+
+env:
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+jobs:
+  deploy:
+    name: Deploy PR preview
+    # Forks get no secrets; their PRs have no preview.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+    environment:
+      name: preview
+      url: ${{ steps.prepare.outputs.url }}
+    env:
+      PR: ${{ github.event.pull_request.number }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check Cloudflare secrets
+        id: secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set for the preview environment; no PR preview."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.secrets.outputs.enabled == 'true'
+        uses: actions/checkout@v7
+      - if: steps.secrets.outputs.enabled == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - if: steps.secrets.outputs.enabled == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - if: steps.secrets.outputs.enabled == 'true'
+        run: bun install --frozen-lockfile
+      # Finds or creates the PR's D1 and KV, then rewrites env.staging of
+      # apps/site/wrangler.jsonc in this checkout into the PR's env (and
+      # drops env.production). Every step below is the staging command and
+      # reaches only the PR's resources.
+      - name: Prepare the PR environment
+        id: prepare
+        if: steps.secrets.outputs.enabled == 'true'
+        run: bun scripts/preview-env.ts prepare --pr "$PR"
+      - name: Ensure queues and bucket
+        if: steps.secrets.outputs.enabled == 'true'
+        run: bun scripts/ensure-cloudflare-resources.ts --env staging --create
+      - name: Apply D1 migrations
+        if: steps.secrets.outputs.enabled == 'true'
+        working-directory: apps/site
+        run: bunx wrangler d1 migrations apply DB --env staging --remote
+      # The dev seed without its admin (its password is public), once.
+      - name: Seed
+        if: steps.secrets.outputs.enabled == 'true'
+        run: bun scripts/preview-env.ts seed --pr "$PR"
+      # The secret PREVIEW_ADMIN_EMAIL (a secret, not a variable: the
+      # repository is public and so are its logs) becomes a verified,
+      # password-less admin who signs in with an email code. Without it
+      # nobody is admin.
+      - name: Grant the preview admin
+        if: steps.secrets.outputs.enabled == 'true'
+        env:
+          PREVIEW_ADMIN_EMAIL: ${{ secrets.PREVIEW_ADMIN_EMAIL }}
+        run: |
+          if [ -z "$PREVIEW_ADMIN_EMAIL" ]; then
+            echo "::notice::PREVIEW_ADMIN_EMAIL is not set; the preview has no admin."
+            exit 0
+          fi
+          bun run admin:grant --env staging --create --yes "$PREVIEW_ADMIN_EMAIL"
+      - name: Deploy
+        if: steps.secrets.outputs.enabled == 'true'
+        env:
+          CLOUDFLARE_ENV: staging
+        run: bun -F @smog/site deploy
+      # After the deploy: the first deploy creates the Worker. The optional
+      # PREVIEW_* secrets switch on Mollie (a test_ key) and Mux uploads.
+      - name: Set secrets
+        if: steps.secrets.outputs.enabled == 'true'
+        env:
+          MOLLIE_API_KEY: ${{ secrets.PREVIEW_MOLLIE_API_KEY }}
+          MUX_TOKEN_ID: ${{ secrets.PREVIEW_MUX_TOKEN_ID }}
+          MUX_TOKEN_SECRET: ${{ secrets.PREVIEW_MUX_TOKEN_SECRET }}
+        run: bun scripts/preview-env.ts secrets --pr "$PR"
+      - name: Comment the preview URL
+        if: steps.secrets.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.prepare.outputs.url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          marker='<!-- smog-preview -->'
+          body="$marker
+          **Preview:** $URL
+
+          Built from $SHA. Its own D1, KV, queues and bucket, seeded with the dev gestures (no dev admin: the preview admin signs in with an email code). Emails are really sent. Deleted when the PR closes."
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq "[.[] | select(.body | startswith(\"$marker\")) | .id] | first // empty")
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body" > /dev/null
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body" > /dev/null
+          fi
+
+  destroy:
+    name: Delete PR preview
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: preview
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check Cloudflare secrets
+        id: secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set for the preview environment; nothing deleted."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.secrets.outputs.enabled == 'true'
+        uses: actions/checkout@v7
+      - if: steps.secrets.outputs.enabled == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - if: steps.secrets.outputs.enabled == 'true'
+        run: bun install --frozen-lockfile
+      - if: steps.secrets.outputs.enabled == 'true'
+        run: bun scripts/preview-env.ts down --pr "${{ github.event.pull_request.number }}"
+
+  sweep:
+    name: Sweep closed PR previews
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+    environment: preview
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check Cloudflare secrets
+        id: secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set for the preview environment; nothing swept."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.secrets.outputs.enabled == 'true'
+        uses: actions/checkout@v7
+      - if: steps.secrets.outputs.enabled == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - if: steps.secrets.outputs.enabled == 'true'
+        run: bun install --frozen-lockfile
+      - if: steps.secrets.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 1000 --json number --jq '[.[].number] | join(" ")')
+          bun scripts/preview-env.ts sweep --open "$open"
