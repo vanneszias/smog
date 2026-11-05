@@ -23,8 +23,8 @@
       "env": {
         "APP_VARIANT": "staging",
         "EXPO_PUBLIC_ENVIRONMENT": "staging",
-        "EXPO_PUBLIC_API_URL": "https://smog-site-staging.zias.workers.dev",
-        "EXPO_PUBLIC_SITE_HOST": "smog-site-staging.zias.workers.dev"
+        "EXPO_PUBLIC_API_URL": "https://smog.zias.be",
+        "EXPO_PUBLIC_SITE_HOST": "smog.zias.be"
       }
     },
     "production": {

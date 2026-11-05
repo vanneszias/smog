@@ -89,7 +89,7 @@ const BRAND_GREEN = tokens.color.brand.green;
  * staging's host. `scripts/release-config-check.ts` keeps it equal to
  * staging's `SITE_URL` host; every EAS profile sets its own (`eas.json`).
  */
-const DEFAULT_SITE_HOST = "smog-site-staging.zias.workers.dev";
+const DEFAULT_SITE_HOST = "smog.zias.be";
 /** Site paths the app opens itself instead of the browser. */
 const APP_LINK_PATH_PREFIXES = ["/gestures/", "/lists/"] as const;
 /** Exact site paths the app opens (the magic-link hand-off, phase 4 task 5). */

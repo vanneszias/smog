@@ -109,11 +109,11 @@ describe("app.config", () => {
     ]);
   });
 
-  it("falls back to the staging workers.dev host", () => {
+  it("falls back to the staging host", () => {
     delete process.env.EXPO_PUBLIC_SITE_HOST;
     const config = load();
     expect(config.ios?.associatedDomains).toEqual([
-      "applinks:smog-site-staging.zias.workers.dev",
+      "applinks:smog.zias.be",
     ]);
   });
 
@@ -225,13 +225,13 @@ describe("eas.json profiles", () => {
       variant: "development",
     },
     {
-      api: "https://smog-site-staging.zias.workers.dev",
+      api: "https://smog.zias.be",
       applicationId: "be.zias.smog.staging",
       appName: "SMOG Staging",
       channel: "staging",
       devTools: true,
       environment: "preview",
-      host: "smog-site-staging.zias.workers.dev",
+      host: "smog.zias.be",
       name: "staging",
       runtime: "staging",
       scheme: "smog-staging",

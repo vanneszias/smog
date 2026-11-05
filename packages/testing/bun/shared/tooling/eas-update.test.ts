@@ -90,7 +90,7 @@ describe("planUpdate", () => {
       "preview",
     ]);
     expect(plan.env.EXPO_PUBLIC_API_URL).toBe(
-      "https://smog-site-staging.zias.workers.dev"
+      "https://smog.zias.be"
     );
     // The variant is part of the runtime fingerprint (phase 9 ruling 9).
     expect(plan.env.APP_VARIANT).toBe("staging");
@@ -145,9 +145,9 @@ describe("main", () => {
       "preview",
     ]);
     expect(calls[0]?.env).toMatchObject({
-      EXPO_PUBLIC_API_URL: "https://smog-site-staging.zias.workers.dev",
+      EXPO_PUBLIC_API_URL: "https://smog.zias.be",
       EXPO_PUBLIC_ENVIRONMENT: "staging",
-      EXPO_PUBLIC_SITE_HOST: "smog-site-staging.zias.workers.dev",
+      EXPO_PUBLIC_SITE_HOST: "smog.zias.be",
       PATH: "/bin",
     });
   });

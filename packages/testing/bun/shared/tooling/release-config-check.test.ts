@@ -1013,7 +1013,7 @@ describe("checkEasUpdateScripts (OTA updates carry the profile's origin)", () =>
 
 describe("checkEasProfiles (phase 8 ruling 3)", () => {
   const EAS = readFileSync(join(ROOT, "apps", "mobile", "eas.json"), "utf8");
-  const STAGING = "https://smog-site-staging.zias.workers.dev";
+  const STAGING = "https://smog.zias.be";
   // The committed launch origin, whichever path the owner chose (workers.dev
   // or the domain, `docs/cutover-runbook.md`): no test assumes either.
   const PRODUCTION = PRODUCTION_LAUNCH_ORIGIN;
@@ -1021,7 +1021,7 @@ describe("checkEasProfiles (phase 8 ruling 3)", () => {
   const ELSEWHERE = "https://elsewhere.zias.workers.dev";
   const base = {
     eas: EAS,
-    fallbackHost: "smog-site-staging.zias.workers.dev",
+    fallbackHost: "smog.zias.be",
     launchOrigin: PRODUCTION,
     wrangler: WRANGLER,
   };
@@ -1044,11 +1044,11 @@ describe("checkEasProfiles (phase 8 ruling 3)", () => {
 
   test("fails when the staging profile's host is not staging's host", () => {
     const eas = EAS.replace(
-      '"EXPO_PUBLIC_SITE_HOST": "smog-site-staging.zias.workers.dev"',
+      '"EXPO_PUBLIC_SITE_HOST": "smog.zias.be"',
       '"EXPO_PUBLIC_SITE_HOST": "smog-site-staging.workers.dev"'
     );
     expect(errorsOf({ eas })).toEqual([
-      "apps/mobile/eas.json: build.staging.env.EXPO_PUBLIC_SITE_HOST must be smog-site-staging.zias.workers.dev",
+      "apps/mobile/eas.json: build.staging.env.EXPO_PUBLIC_SITE_HOST must be smog.zias.be",
     ]);
   });
 
@@ -1107,7 +1107,7 @@ describe("checkEasProfiles (phase 8 ruling 3)", () => {
   test("fails when app.config.ts falls back to another host", () => {
     expect(errorsOf({ fallbackHost: "smog-site-staging.workers.dev" })).toEqual(
       [
-        "apps/mobile/app.config.ts: the fallback host must be staging's host smog-site-staging.zias.workers.dev, not smog-site-staging.workers.dev",
+        "apps/mobile/app.config.ts: the fallback host must be staging's host smog.zias.be, not smog-site-staging.workers.dev",
       ]
     );
   });
