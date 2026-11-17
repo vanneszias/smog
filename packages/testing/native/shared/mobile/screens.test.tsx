@@ -124,9 +124,7 @@ describe("home", () => {
     ).toBeOnTheScreen();
     expect(home.getByPlaceholderText("Search for a gesture")).toBeOnTheScreen();
     // The product is announced on the first screen.
-    expect(
-      home.getByRole("image", { name: "SMOG & Co logo" })
-    ).toBeOnTheScreen();
+    expect(home.getByRole("image", { name: "SMOG & Co" })).toBeOnTheScreen();
     // The find hand points at the field: decoration, hidden from the reader.
     const hand = home.getByTestId("home-find-hand", {
       includeHiddenElements: true,
