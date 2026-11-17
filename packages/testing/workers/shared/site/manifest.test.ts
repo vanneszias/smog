@@ -28,10 +28,10 @@ describe("/manifest.webmanifest (inventory P-14, R-18)", () => {
       categories: ["education", "reference"],
       display: "standalone",
       lang: "nl",
-      name: "SMOG&Co",
+      name: "SMOG & Co",
       orientation: "any",
       scope: "/",
-      short_name: "SMOG&Co",
+      short_name: "SMOG & Co",
       start_url: "/",
       theme_color: "#00805f",
     });

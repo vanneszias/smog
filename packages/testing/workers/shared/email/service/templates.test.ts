@@ -49,7 +49,7 @@ describe("the layout", () => {
     );
     expect(email.html).toContain('alt="SMOG &amp; Co"');
     const year = new Date().getUTCFullYear();
-    expect(email.text).toContain(`© ${year} SMOG & CO vzw · België`);
+    expect(plain(email.text)).toContain(`© ${year} SMOG & Co vzw · België`);
     expect(email.text).toContain(
       "Mensen gaan van nature hun spraak ondersteunen met gebaren"
     );
@@ -397,9 +397,9 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
   const NEW_ORIGIN = "https://smog-site-production.zias.workers.dev";
 
   const SUBJECT: Record<Locale, string> = {
-    en: "SMOG has moved",
-    fr: "SMOG a déménagé",
-    nl: "SMOG is verhuisd",
+    en: "SMOG & Co has moved",
+    fr: "SMOG & Co a déménagé",
+    nl: "SMOG & Co is verhuisd",
   };
   const NEW_ADDRESS: Record<Locale, string> = {
     en: "SMOG & Co has a new address:",
@@ -413,7 +413,7 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
       "a code we email you",
       "a sign-in link by email",
       "Forgot your password",
-      "favourite gestures and your lists",
+      "favorite gestures and your lists",
       "update the app",
     ],
     fr: [

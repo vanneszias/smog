@@ -9,8 +9,10 @@ describe("ErrorState", () => {
     const onRetry = mock();
     renderKit(<ErrorState onRetry={onRetry} />);
     const alert = screen.getByRole("alert");
-    expect(alert.textContent).toContain("Something went wrong");
-    expect(alert.textContent).toContain("We couldn't load this.");
+    expect(alert.textContent).toContain("This won’t load right now");
+    expect(alert.textContent).toContain(
+      "Check your internet connection and try again."
+    );
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });

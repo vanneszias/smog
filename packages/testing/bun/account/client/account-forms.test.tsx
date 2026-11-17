@@ -361,7 +361,7 @@ describe("useChangePasswordForm", () => {
     });
     expect(feedback).toBeNull();
     expect(hook.result.current.errorFor("current")).toBe(
-      "That password is not correct."
+      "That password isn’t correct."
     );
     error.mockRestore();
   });

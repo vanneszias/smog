@@ -54,10 +54,10 @@ export function webManifest(): WebManifest {
     display: "standalone",
     icons: MANIFEST_ICONS.map((icon) => ({ ...icon })),
     lang: "nl",
-    name: "SMOG&Co",
+    name: "SMOG & Co",
     orientation: "any",
     scope: "/",
-    short_name: "SMOG&Co",
+    short_name: "SMOG & Co",
     start_url: "/",
     theme_color: tokens.color.brand.green.toLowerCase(),
   };

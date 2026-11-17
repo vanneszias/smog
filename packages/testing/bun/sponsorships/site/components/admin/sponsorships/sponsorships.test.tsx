@@ -268,7 +268,7 @@ describe("sponsorship labels", () => {
       "You are no longer an admin. Reload the page."
     );
     expect(sponsorshipActionError(t, new Error("network"))).toBe(
-      "The action failed. Please try again."
+      "The action failed. Try again."
     );
   });
 
@@ -543,7 +543,7 @@ describe("SponsorshipDetail", () => {
     expect(alert.textContent).toContain("Hond");
     expect(alert.textContent).toMatch(SIXTY_EUROS);
     fireEvent.click(within(alert).getByRole("button", { name: "Approve" }));
-    await screen.findByText("The video is not ready yet.");
+    await screen.findByText("The video isn’t ready yet.");
   });
 
   test("request changes shows the link once, with Copy and the expiry", async () => {
@@ -735,7 +735,7 @@ describe("SponsorshipDetail", () => {
 
   test("mark paid that fails with the payment cancelled meanwhile is a plain error", async () => {
     await markPaidFailsThen("canceled");
-    await screen.findByText("The action failed. Please try again.");
+    await screen.findByText("The action failed. Try again.");
     expect(screen.queryByText(LATE_FAILURE)).toBeNull();
   });
 

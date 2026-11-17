@@ -160,8 +160,8 @@ describe("shared view (public)", () => {
       contextFor(null, { locale: "en" })
     );
 
-    expect(nl.list.ownerName).toBe("een SMOG-gebruiker");
-    expect(en.list.ownerName).toBe("a SMOG user");
+    expect(nl.list.ownerName).toBe("iemand die SMOG\u00a0&\u00a0Co gebruikt");
+    expect(en.list.ownerName).toBe("someone using SMOG\u00a0&\u00a0Co");
   });
 
   it("a private list is unreachable, by its id or a made-up token", async () => {

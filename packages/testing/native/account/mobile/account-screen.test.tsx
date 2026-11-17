@@ -97,7 +97,9 @@ describe("consent sheet", () => {
     });
     const sheet = within(await screen.findByTestId("consent-banner"));
     expect(
-      sheet.getByRole("header", { name: "Help improve SMOG" })
+      sheet.getByRole("header", {
+        name: "Help make SMOG\u00a0&\u00a0Co better",
+      })
     ).toBeOnTheScreen();
     await fireEvent.press(
       sheet.getByRole("button", { name: "Allow statistics" })
@@ -370,7 +372,9 @@ describe("settings/account", () => {
       });
       await waitFor(() => expect(signOut).toHaveBeenCalled());
       expect(
-        await screen.findByText("Something went wrong. Please try again.")
+        await screen.findByText(
+          "That didn’t work. Try again. If it keeps happening, email info@smog.vlaanderen."
+        )
       ).toBeOnTheScreen();
       expect(result.getPathname()).toBe("/settings/account");
       logged.mockRestore();
@@ -491,7 +495,7 @@ describe("settings/account", () => {
     }
     await fireEvent.press(confirm);
     expect(
-      await screen.findByText("That password is not correct.")
+      await screen.findByText("That password isn’t correct.")
     ).toBeOnTheScreen();
     expect(signOut).not.toHaveBeenCalled();
   });

@@ -131,7 +131,7 @@ describe("GestureAudio", () => {
       target: { files: [file("voice.wav", "audio/wav")] },
     });
     expect(
-      await screen.findByText("This is not a valid MP3 or M4A file.")
+      await screen.findByText("This isn’t a valid MP3 or M4A file.")
     ).toBeDefined();
     expect(put).not.toHaveBeenCalled();
     expect(calls.some((call) => call.path === "translation/uploadAudio")).toBe(
