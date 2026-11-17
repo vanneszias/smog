@@ -14,7 +14,7 @@ import { OpenInApp } from "@/components/app-banner";
 import { GestureDetailView } from "@/components/learning/gesture-detail";
 import { GestureDetailSkeleton } from "@/components/learning/gesture-detail-skeleton";
 import { gestureHref } from "@/components/learning/links";
-import { Page, RouteError } from "@/components/learning/page";
+import { RouteError } from "@/components/learning/page";
 import { useHearts } from "@/components/learning/use-hearts";
 import { RELATED_LIMIT } from "@/lib/gesture-queries";
 import { pageMeta, seoHead, shellHead } from "@/lib/head";
@@ -156,22 +156,19 @@ function GesturePage(): ReactNode {
   const related = useRelated(slug, RELATED_LIMIT);
   const hearts = useHearts("gesture_detail");
   const viewSource = useViewSource(gesture.data !== undefined);
-  return (
-    <Page>
-      {gesture.data ? (
-        <GestureDetailView
-          // Under the actions, not above the video: it mounts after
-          // hydration, so the video never moves (review M6).
-          appLink={<OpenInApp path={gestureHref(slug)} />}
-          gesture={gesture.data}
-          hearts={hearts}
-          layout="page"
-          related={related}
-          viewSource={viewSource}
-        />
-      ) : (
-        <GestureDetailSkeleton />
-      )}
-    </Page>
+  // The view and its skeleton bring their own stage and page column.
+  return gesture.data ? (
+    <GestureDetailView
+      // Under the actions, not above the video: it mounts after
+      // hydration, so the video never moves (review M6).
+      appLink={<OpenInApp path={gestureHref(slug)} />}
+      gesture={gesture.data}
+      hearts={hearts}
+      layout="page"
+      related={related}
+      viewSource={viewSource}
+    />
+  ) : (
+    <GestureDetailSkeleton />
   );
 }

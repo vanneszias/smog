@@ -38,10 +38,9 @@ describe("app shell (SSR)", () => {
       // `system` follows prefers-color-scheme before the first paint.
       expect(html).toContain("prefers-color-scheme: dark");
       expect(html).toContain("Hoofdnavigatie");
-      // The heart is an icon with its own screen-reader word, not a text glyph.
-      expect(html).toContain("Gemaakt met");
-      expect(html).toContain("liefde");
-      expect(html).toContain("zias.be");
+      // The plain credit line and what SMOG stands for, in the footer.
+      expect(html).toContain("Gemaakt door zias.be");
+      expect(html).toContain("SMOG staat voor Spreken Met Ondersteuning");
     },
     FIRST_RENDER_TIMEOUT
   );

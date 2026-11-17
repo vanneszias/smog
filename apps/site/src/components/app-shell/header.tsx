@@ -17,7 +17,7 @@ import { UserMenu } from "./user-menu";
 
 /** The search trigger from `md`: a pill that names the `/` shortcut. */
 const SEARCH_PILL =
-  "relative hidden h-11 min-w-56 items-center gap-2 rounded-full border border-sidebar-border bg-sidebar-accent px-4 text-sidebar-foreground text-body-sm outline-none transition duration-fast ease-standard hover:bg-sidebar-accent/80 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar motion-reduce:transition-none md:inline-flex lg:min-w-72";
+  "relative hidden h-11 min-w-40 items-center gap-2 rounded-full border border-sidebar-border bg-sidebar-accent px-4 text-sidebar-foreground text-body-sm outline-none transition duration-fast ease-standard hover:bg-sidebar-accent/80 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar motion-reduce:transition-none md:inline-flex lg:min-w-72";
 
 /**
  * The site header on the green surface (phase 10a): the logo (reversed),

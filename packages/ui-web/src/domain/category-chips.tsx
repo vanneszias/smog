@@ -13,6 +13,11 @@ export interface CategoryChipsProps
   selected: readonly string[];
   /** Leads with an `All` chip (`search.allCategories`) that clears the selection. */
   showAll?: boolean;
+  /**
+   * `action`: a selected category is the orange "do it" (the active filter
+   * of a search). The `All` chip keeps the green tint.
+   */
+  tone?: "action" | "default";
 }
 
 /**
@@ -27,6 +32,7 @@ export function CategoryChips({
   onChange,
   selected,
   showAll = true,
+  tone = "default",
   ...props
 }: CategoryChipsProps): ReactNode {
   const { t } = useTranslation();
@@ -68,10 +74,12 @@ export function CategoryChips({
         <CategoryChip
           icon={category.icon}
           key={category.slug}
+          lang={category.lang}
           name={category.name}
           onToggle={toggle}
           selected={selected.includes(category.slug)}
           slug={category.slug}
+          tone={tone}
         />
       ))}
     </fieldset>
@@ -80,16 +88,20 @@ export function CategoryChips({
 
 function CategoryChip({
   icon,
+  lang,
   name,
   onToggle,
   selected,
   slug,
+  tone,
 }: {
   icon?: ReactNode;
+  lang?: string | undefined;
   name: string;
   onToggle: (slug: string, on: boolean) => void;
   selected: boolean;
   slug: string;
+  tone: "action" | "default";
 }): ReactNode {
   const change = useCallback(
     (on: boolean): void => {
@@ -98,8 +110,8 @@ function CategoryChip({
     [onToggle, slug]
   );
   return (
-    <Chip icon={icon} onSelectedChange={change} selected={selected}>
-      {name}
+    <Chip icon={icon} onSelectedChange={change} selected={selected} tone={tone}>
+      <span lang={lang}>{name}</span>
     </Chip>
   );
 }

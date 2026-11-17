@@ -1,5 +1,5 @@
 import { useTranslation } from "@smog/i18n/react";
-import { Button, FavoriteButton, useToast } from "@smog/ui-web";
+import { Button, FavoriteButton, IconButton, useToast } from "@smog/ui-web";
 import { QrCode, Share2 } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
 import { LazyGestureQrDialog } from "@/components/lazy-gesture-qr-dialog";
@@ -15,8 +15,9 @@ interface ActionGesture {
 }
 
 /**
- * The gesture's actions, all in view (phase 10a): the heart, "save to list",
- * share and the QR code (spec §16).
+ * The gesture's actions in one row that never wraps a lone button (spec
+ * §16): the heart (outlined like its neighbours, it is the "save"), "save to
+ * list", share (its label from `sm`) and the QR code as an icon button.
  */
 export function GestureActions({
   gesture,
@@ -46,15 +47,27 @@ export function GestureActions({
   }, [gesture.name, t, toast, url]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <FavoriteButton active={heart.active} onToggle={heart.onToggle} />
+    <div className="flex items-center gap-2">
+      <FavoriteButton
+        active={heart.active}
+        className="border-muted-foreground bg-card hover:bg-muted"
+        onToggle={heart.onToggle}
+      />
       <SaveToList gestureId={gesture.id} gestureName={gesture.name} />
-      <Button icon={<Share2 />} onClick={share} variant="secondary">
-        {t("gesture.share")}
+      <Button
+        aria-label={t("gesture.share")}
+        icon={<Share2 />}
+        onClick={share}
+        variant="secondary"
+      >
+        <span className="hidden sm:inline">{t("gesture.share")}</span>
       </Button>
-      <Button icon={<QrCode />} onClick={openQr} variant="secondary">
-        {t("gesture.qr.open")}
-      </Button>
+      <IconButton
+        icon={<QrCode />}
+        label={t("gesture.qr.open")}
+        onClick={openQr}
+        variant="secondary"
+      />
       <LazyGestureQrDialog
         gesture={gesture}
         onOpenChange={setQrOpen}

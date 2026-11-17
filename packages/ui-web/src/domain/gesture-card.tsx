@@ -4,7 +4,12 @@ import { Badge } from "../components/badge";
 import { cn } from "../lib/cn";
 import { transition } from "../lib/variants";
 import { FavoriteButton } from "./favorite-button";
-import { categoryLine, GestureLink, GestureThumbnail } from "./gesture-parts";
+import {
+  categoryLine,
+  categoryLineLang,
+  GestureLink,
+  GestureThumbnail,
+} from "./gesture-parts";
 import type { GestureCardData, KitLinkComponent } from "./types";
 
 export interface GestureCardProps
@@ -59,7 +64,10 @@ export function GestureCard({
         width={480}
       />
       <div className="flex min-w-0 flex-col items-start gap-1.5 p-3">
-        <Heading className="w-full truncate font-semibold text-body">
+        <Heading
+          className="w-full truncate font-semibold text-body"
+          lang={gesture.nameLang}
+        >
           <GestureLink href={href} linkComponent={linkComponent}>
             {gesture.name}
           </GestureLink>
@@ -68,6 +76,7 @@ export function GestureCard({
           <Badge
             className="max-w-full"
             data-slot="gesture-category"
+            lang={categoryLineLang(gesture.categories)}
             variant="primary"
           >
             <span className="truncate">{categories}</span>

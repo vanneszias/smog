@@ -1,7 +1,7 @@
 import { useRecentSearches } from "@smog/gestures/client";
 import { useTranslation } from "@smog/i18n/react";
-import { Button, Card, ListItem, SearchField, Text } from "@smog/ui-web";
-import { History } from "lucide-react";
+import { Button, Card, cn, ListItem, SearchField, Text } from "@smog/ui-web";
+import { History, Search } from "lucide-react";
 import {
   type FocusEvent,
   type FormEvent,
@@ -31,6 +31,11 @@ export interface SearchBoxProps {
   action?: string;
   label: string;
   /**
+   * The box sits on the deep green (the home hero): the field and the
+   * submit button take the white focus ring.
+   */
+  onGreen?: boolean;
+  /**
    * Enter, or a recent search picked (a non-empty one is stored first);
    * `trigger` says which (`search_performed.source`).
    */
@@ -38,8 +43,14 @@ export interface SearchBoxProps {
   onValueChange: (value: string) => void;
   placeholder?: string;
   size?: "md" | "lg";
+  /** Adds an orange submit button (the "do it") with this label. */
+  submitLabel?: string;
   value: string;
 }
+
+/** The kit's `focusRingOnGreen`: the white ring with a green offset. */
+const FOCUS_ON_GREEN =
+  "focus-visible:ring-sidebar-ring focus-visible:ring-offset-sidebar";
 
 /**
  * The search field in a `search` landmark. While it is focused and empty,
@@ -50,9 +61,11 @@ export function SearchBox({
   action,
   label,
   onSubmit,
+  onGreen = false,
   onValueChange,
   placeholder,
   size = "lg",
+  submitLabel,
   value,
 }: SearchBoxProps): ReactNode {
   const { t } = useTranslation();
@@ -108,18 +121,39 @@ export function SearchBox({
   return (
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: tracks focus within the box (the field and its recent searches); no action of its own.
     <search className="relative flex flex-col" onBlur={blur} onFocus={focus}>
-      <form action={action} method="get" onSubmit={submit} role="none">
-        <SearchField
-          aria-controls={showRecent ? recentId : undefined}
-          aria-label={label}
-          autoComplete="off"
-          name="q"
-          onValueChange={onValueChange}
-          placeholder={placeholder}
-          ref={inputRef}
-          size={size}
-          value={value}
-        />
+      <form
+        action={action}
+        className="flex items-center gap-2"
+        method="get"
+        onSubmit={submit}
+        role="none"
+      >
+        <div className="min-w-0 flex-1">
+          <SearchField
+            aria-controls={showRecent ? recentId : undefined}
+            aria-label={label}
+            autoComplete="off"
+            className={onGreen ? FOCUS_ON_GREEN : undefined}
+            name="q"
+            onValueChange={onValueChange}
+            placeholder={placeholder}
+            ref={inputRef}
+            size={size}
+            value={value}
+          />
+        </div>
+        {submitLabel ? (
+          <Button
+            className={cn("shrink-0 px-4 sm:px-6", onGreen && FOCUS_ON_GREEN)}
+            icon={<Search />}
+            size={size}
+            type="submit"
+            variant="action"
+          >
+            {/* Icon only on a phone, so the field keeps its width. */}
+            <span className="sr-only sm:not-sr-only">{submitLabel}</span>
+          </Button>
+        ) : null}
       </form>
       {showRecent ? (
         <Card

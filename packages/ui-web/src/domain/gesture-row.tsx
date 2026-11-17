@@ -2,7 +2,12 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../lib/cn";
 import { transition } from "../lib/variants";
 import { FavoriteButton } from "./favorite-button";
-import { categoryLine, GestureLink, GestureThumbnail } from "./gesture-parts";
+import {
+  categoryLine,
+  categoryLineLang,
+  GestureLink,
+  GestureThumbnail,
+} from "./gesture-parts";
 import type { GestureCardData, KitLinkComponent } from "./types";
 
 export interface GestureRowProps
@@ -56,10 +61,13 @@ export function GestureRow({
           href={href}
           linkComponent={linkComponent}
         >
-          {gesture.name}
+          <span lang={gesture.nameLang}>{gesture.name}</span>
         </GestureLink>
         {categories ? (
-          <span className="truncate text-body-sm text-muted-foreground">
+          <span
+            className="truncate text-body-sm text-muted-foreground"
+            lang={categoryLineLang(gesture.categories)}
+          >
             {categories}
           </span>
         ) : null}

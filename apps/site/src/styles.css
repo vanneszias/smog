@@ -50,3 +50,58 @@
     @apply bg-background font-sans text-body text-foreground;
   }
 }
+
+/*
+ * The home hero's hand draws itself once (HeroHand), from wrist to
+ * fingertip, over the `gesture` duration on the `enter` curve. Stroke art
+ * (`fill="none"`, `pathLength="1"`) draws its parts one after another;
+ * filled art falls back to a wipe in the same direction. The start state
+ * lives only in the keyframes, so the resting state is the drawn hand,
+ * and the animation exists only without a reduced-motion preference:
+ * otherwise the hand is simply there.
+ */
+@layer components {
+  /* The hero weight of the line (the art's own is the inline 2 px). */
+  .hero-hand > svg[fill="none"] {
+    stroke-width: 2.5;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-hand > svg:not([fill="none"]) {
+      animation: hero-hand-wipe var(--duration-gesture) var(--ease-enter) 160ms
+        both;
+    }
+
+    .hero-hand > svg[fill="none"] :is(path, line, polyline) {
+      stroke-dasharray: 1;
+      animation: hero-hand-stroke
+        calc(var(--duration-gesture) * 1.6 / (var(--n, 1) + 0.6))
+        var(--ease-enter)
+        calc(
+          160ms +
+          var(--duration-gesture) *
+          var(--i, 0) /
+          (var(--n, 1) + 0.6)
+        )
+        both;
+    }
+  }
+}
+
+@keyframes hero-hand-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes hero-hand-stroke {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
