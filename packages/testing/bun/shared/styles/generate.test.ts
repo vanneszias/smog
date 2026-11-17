@@ -54,7 +54,8 @@ describe("renderWebThemeCss", () => {
     expect(theme).toContain("--color-popover: #FFFFFF;");
     expect(theme).toContain("--color-primary: #00805F;");
     expect(dark).toContain("--color-primary: #2BB38A;");
-    expect(dark).toContain("--color-background: #0C110E;");
+    expect(dark).toContain("--color-background: #0C1513;");
+    expect(dark).toContain("--color-sidebar: #0E2E29;");
     expect(dark).toContain("color-scheme: dark;");
   });
 

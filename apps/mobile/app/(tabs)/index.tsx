@@ -192,7 +192,7 @@ export default function HomeScreen(): ReactElement {
           <StatusBar barStyle="light-content" />
         ) : null}
         <View
-          className="absolute inset-x-0 bg-primary"
+          className="absolute inset-x-0 bg-sidebar"
           pointerEvents="none"
           style={{ bottom: "100%", top: -window.height }}
           testID="home-overscroll"
@@ -204,7 +204,7 @@ export default function HomeScreen(): ReactElement {
         >
           <View className="flex-row items-center justify-between gap-3">
             <Logo
-              color="primaryForeground"
+              color="sidebarForeground"
               decorative
               size="md"
               tone="current"
@@ -259,7 +259,7 @@ export default function HomeScreen(): ReactElement {
         </View>
       </ScrollView>
       <View
-        className="absolute inset-x-0 top-0 bg-primary"
+        className="absolute inset-x-0 top-0 bg-sidebar"
         pointerEvents="none"
         style={{ paddingTop: insets.top }}
         testID="home-status-bar"

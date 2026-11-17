@@ -92,7 +92,10 @@ function on(
  *   - `primaryStrong`, `successStrong`, `warningStrong`, `dangerStrong` on
  *     their own `*Subtle` tint and on every neutral background (inline status
  *     text; `primaryStrong` is the green for text on warm neutrals);
- *   - `destructive` on the page backgrounds and `primarySubtle` (field errors).
+ *   - `destructive` on the page backgrounds and `primarySubtle` (field errors);
+ *   - **orange as text**: `highlightStrong` on every neutral background and
+ *     the `accent` tint (the brand orange itself is never text on a light
+ *     surface).
  * - Large text and UI (3:1):
  *   - **green on warm neutral**: `primary` on every neutral background,
  *     `accent` and `primarySubtle` (links, icons, outlines); `success` and
@@ -100,7 +103,8 @@ function on(
  *   - `input` (the form-control border) on every neutral background;
  *   - `ring` on every neutral background and the tints;
  *     `sidebarRing` on `sidebar` and `sidebarAccent`, `primaryRing` on `primary`;
- *   - `sidebarPrimary` (the active-item mark) on `sidebar`; `chart1` to
+ *   - **orange on the deep green**: `sidebarPrimary` (the active-item mark)
+ *     and `highlight` (the "do it" fill, its edge) on `sidebar`; `chart1` to
  *     `chart5` on the page backgrounds `background`, `card`, `popover`.
  *
  * Not allowed: `success`/`warning` as fills under white text (4.38 and
@@ -126,6 +130,7 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   ...on("warningStrong", [...TEXT_BACKGROUNDS, "warningSubtle"], AA_BODY),
   ...on("dangerStrong", [...PAGE_BACKGROUNDS, "dangerSubtle"], AA_BODY),
   ...on("destructive", [...PAGE_BACKGROUNDS, "primarySubtle"], AA_BODY),
+  ...on("highlightStrong", TEXT_BACKGROUNDS, AA_BODY),
   ...on("primary", [...TEXT_BACKGROUNDS, "primarySubtle"], AA_LARGE),
   ...on("success", STATUS_ICON_BACKGROUNDS, AA_LARGE),
   ...on("warning", STATUS_ICON_BACKGROUNDS, AA_LARGE),
@@ -134,6 +139,7 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   ...on("sidebarRing", ["sidebar", "sidebarAccent"], AA_LARGE),
   ...on("primaryRing", ["primary"], AA_LARGE),
   ...on("sidebarPrimary", ["sidebar"], AA_LARGE),
+  ...on("highlight", ["sidebar"], AA_LARGE),
   ...on("destructive", [...TEXT_BACKGROUNDS], AA_LARGE),
   ...["chart1", "chart2", "chart3", "chart4", "chart5"].flatMap((chart) =>
     on(chart as ColorRole, ["background", "card", "popover"], AA_LARGE)

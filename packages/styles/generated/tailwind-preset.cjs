@@ -37,6 +37,7 @@ const preset = {
       "foreground": "rgb(var(--color-foreground) / <alpha-value>)",
       "highlight": "rgb(var(--color-highlight) / <alpha-value>)",
       "highlight-foreground": "rgb(var(--color-highlight-foreground) / <alpha-value>)",
+      "highlight-strong": "rgb(var(--color-highlight-strong) / <alpha-value>)",
       "input": "rgb(var(--color-input) / <alpha-value>)",
       "muted": "rgb(var(--color-muted) / <alpha-value>)",
       "muted-foreground": "rgb(var(--color-muted-foreground) / <alpha-value>)",

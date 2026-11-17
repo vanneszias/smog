@@ -11,8 +11,11 @@ import { View, type ViewProps } from "react-native";
 import { cn } from "../lib/cn";
 
 /**
- * The surface the content sits on: the page (`default`), the filled green
- * (`primary`: hero, auth) or the deeper green of the header (`header`).
+ * The surface the content sits on: the page (`default`) or the deep green
+ * (`sidebar`): `primary` for the hero and the auth band, `header` for the
+ * stack headers. Both tones are the same deep green in both themes (the
+ * brand identity pass, DECISIONS "Brand identity: colour"); the brand green
+ * `primary` is a control colour, not a surface.
  */
 export type SurfaceTone = "default" | "header" | "primary";
 
@@ -65,11 +68,11 @@ const SURFACE_ROLES: Record<SurfaceTone, SurfaceRoles> = {
     ring: "sidebarRing",
   },
   primary: {
-    foreground: "primaryForeground",
-    foregroundClass: "text-primary-foreground",
-    muted: "primaryForegroundMuted",
-    mutedClass: "text-primary-foreground-muted",
-    ring: "primaryRing",
+    foreground: "sidebarForeground",
+    foregroundClass: "text-sidebar-foreground",
+    muted: "sidebarForegroundMuted",
+    mutedClass: "text-sidebar-foreground-muted",
+    ring: "sidebarRing",
   },
 };
 
@@ -84,7 +87,7 @@ const surfaceVariants = cva("", {
     tone: {
       default: "bg-background",
       header: "bg-sidebar",
-      primary: "bg-primary",
+      primary: "bg-sidebar",
     },
   },
 });
@@ -97,7 +100,7 @@ export interface SurfaceProps
 }
 
 /**
- * A green (or plain) surface. `Text`, `Heading`, `Button` and `IconButton`
+ * A deep green (or plain) surface. `Text`, `Heading`, `Button` and `IconButton`
  * inside it switch to their on-green colours: white text, a white outline
  * for `secondary`, and the orange highlight for `primary` (green on green
  * would vanish). Every pair is in `@smog/styles/contrast`.

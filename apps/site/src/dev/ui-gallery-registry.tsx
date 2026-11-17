@@ -148,25 +148,25 @@ export function RegistryShowcase(): ReactNode {
   );
 }
 
-/** `bg-primary` / `bg-sidebar` with their foregrounds: the header, hero and auth surfaces. */
+/** `bg-sidebar` with its foregrounds: the deep green of the header, hero and auth surfaces. */
 function GreenSurfaces(): ReactNode {
   const { t } = useTranslation();
   return (
-    <Section name="Green surfaces (primary / sidebar)">
-      <div className="flex flex-col gap-4 rounded-2xl bg-primary p-6 text-primary-foreground">
+    <Section name="Deep green surface (sidebar)">
+      <div className="flex flex-col gap-4 rounded-2xl bg-sidebar p-6 text-sidebar-foreground">
         <p className="font-semibold text-title-2">
           {t("devTools.gallery.sampleTitle")}
         </p>
         <p className="text-body">{t("devTools.gallery.sampleText")}</p>
-        <p className="text-body-sm text-primary-foreground-muted">
+        <p className="text-body-sm text-sidebar-foreground-muted">
           {t("devTools.gallery.sampleText")}
         </p>
         <Row>
-          <Button className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
+          <Button className="bg-highlight text-highlight-foreground hover:bg-highlight/85 focus-visible:ring-sidebar-ring focus-visible:ring-offset-sidebar">
             {t("common.continue")}
           </Button>
           <Button
-            className="border-primary-foreground bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
+            className="border-sidebar-foreground bg-transparent text-sidebar-foreground hover:bg-sidebar-accent focus-visible:ring-sidebar-ring focus-visible:ring-offset-sidebar"
             variant="secondary"
           >
             {t("common.learnMore")}

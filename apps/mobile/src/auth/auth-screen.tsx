@@ -531,7 +531,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }): ReactElement {
             the form below stays on the page, where errors keep their
             contrast. */}
         <Surface className="gap-3 rounded-b-3xl px-4 pt-2 pb-8" tone="primary">
-          <Logo color="primaryForeground" decorative size="lg" tone="current" />
+          <Logo color="sidebarForeground" decorative size="lg" tone="current" />
           <Heading level={1}>{useTitle(flow)}</Heading>
           {flow.state.step === "email" && mode === "signIn" ? (
             <Text tone="muted">{t("auth.subtitle")}</Text>

@@ -136,21 +136,23 @@ function Home(): ReactNode {
 
   return (
     <>
-      <section className="relative overflow-hidden bg-primary text-primary-foreground">
+      <section className="relative overflow-hidden bg-sidebar text-sidebar-foreground">
         <div className="mx-auto grid w-full max-w-content items-center gap-8 px-4 py-10 md:px-6 md:py-16 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:px-8">
           <div className="flex flex-col gap-6">
             <div className="flex max-w-reading flex-col gap-3">
               <Heading
-                className="text-primary-foreground"
+                className="text-sidebar-foreground"
                 level={1}
                 size="display"
               >
                 {t("home.title")}
               </Heading>
-              <Text className="text-primary-foreground">
+              <Text className="text-sidebar-foreground">
                 {t("home.tagline")}
               </Text>
-              <Text className="text-primary-foreground">{t("home.intro")}</Text>
+              <Text className="text-sidebar-foreground-muted">
+                {t("home.intro")}
+              </Text>
             </div>
             <div className="w-full max-w-reading">
               <SearchBox
@@ -164,7 +166,7 @@ function Home(): ReactNode {
             </div>
           </div>
           <HandIllustration
-            className="hidden h-64 justify-self-end text-primary-foreground/25 lg:inline-flex"
+            className="hidden h-64 justify-self-end text-sidebar-foreground/25 lg:inline-flex"
             hand={1}
           />
         </div>

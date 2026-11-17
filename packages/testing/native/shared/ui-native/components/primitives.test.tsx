@@ -275,19 +275,27 @@ describe("Surface", () => {
       </Surface>
     );
     expect(screen.getByTestId("h")).toHaveStyle({
-      color: rgba(light.primaryForeground),
+      color: rgba(light.sidebarForeground),
     });
     expect(screen.getByTestId("p")).toHaveStyle({
-      color: rgba(light.primaryForegroundMuted),
+      color: rgba(light.sidebarForegroundMuted),
     });
     expect(screen.getByTestId("warn")).toHaveStyle({
       color: rgba(light.warningStrong),
     });
   });
 
-  it("paints the header tone with the deeper green", async () => {
-    await inTheme(<Surface testID="s" tone="header" />);
+  it("paints both green tones with the deep green", async () => {
+    await inTheme(
+      <>
+        <Surface testID="s" tone="header" />
+        <Surface testID="hero" tone="primary" />
+      </>
+    );
     expect(screen.getByTestId("s")).toHaveStyle({
+      backgroundColor: rgba(light.sidebar),
+    });
+    expect(screen.getByTestId("hero")).toHaveStyle({
       backgroundColor: rgba(light.sidebar),
     });
   });

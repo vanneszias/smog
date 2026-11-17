@@ -9,6 +9,14 @@ import { cva, type VariantProps } from "class-variance-authority";
 export const focusRing =
   "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
+/**
+ * The focus ring on a deep green surface (`bg-sidebar`: the header, the hero,
+ * the auth panel, banners): white with a green offset. Put it after
+ * `focusRing`; any control on green takes it, never the orange `ring`.
+ */
+export const focusRingOnGreen =
+  "focus-visible:ring-sidebar-ring focus-visible:ring-offset-sidebar";
+
 /** Colour and shadow changes on hover/press; none under reduced motion. */
 export const transition =
   "transition duration-fast ease-standard motion-reduce:transition-none";

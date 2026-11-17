@@ -97,10 +97,7 @@ function onSurface(
   const roles = surfaceRoles(tone);
   let container = "";
   if (variant === "secondary") {
-    container =
-      tone === "header"
-        ? "border-sidebar-foreground bg-transparent"
-        : "border-primary-foreground bg-transparent";
+    container = "border-sidebar-foreground bg-transparent";
   }
   return { container, label: roles.foregroundClass, role: roles.foreground };
 }

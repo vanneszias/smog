@@ -67,7 +67,7 @@ export function StatusPage({
           className={cn(
             "relative order-first flex h-40 w-full items-center justify-center overflow-hidden rounded-4xl md:order-last md:h-auto md:aspect-square",
             tone === "brand"
-              ? "bg-primary text-primary-foreground"
+              ? "bg-sidebar text-sidebar-foreground"
               : "bg-accent text-primary-strong"
           )}
           data-slot="status-art"
