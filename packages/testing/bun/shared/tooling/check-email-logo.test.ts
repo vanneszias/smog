@@ -22,8 +22,8 @@ const DEPLOY = readFileSync(
 const PNG = readFileSync(
   join(ROOT, "apps", "site", "public", "brand", "email-logo.png")
 );
-const URL_STAGING =
-  "https://smog-site-staging.zias.workers.dev/brand/email-logo.png";
+// Staging runs on the owner's custom domain (wrangler.jsonc `env.staging`).
+const URL_STAGING = "https://smog.zias.be/brand/email-logo.png";
 
 function fetcher(response: () => Response): {
   calls: { init: RequestInit; url: string }[];
@@ -43,7 +43,7 @@ const png = () =>
   new Response(PNG, { headers: { "content-type": "image/png" } });
 const accessLogin = () =>
   Response.redirect(
-    "https://ziasbe.cloudflareaccess.com/cdn-cgi/access/login/smog-site-staging.zias.workers.dev?kid=x",
+    "https://ziasbe.cloudflareaccess.com/cdn-cgi/access/login/smog.zias.be?kid=x",
     302
   );
 
