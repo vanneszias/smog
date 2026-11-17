@@ -68,7 +68,7 @@ function themeBlock(): string[] {
     ...declarations(
       Object.entries(radius).map(([key, px]) => [
         `radius-${key}`,
-        key === "full" ? `${px}px` : rem(px),
+        px >= 9999 ? `${px}px` : rem(px),
       ])
     ),
     "",

@@ -7,7 +7,7 @@ import { cn } from "../lib/cn";
  * shade on its `*-subtle` tint (the documented contrast pairs).
  */
 const alertVariants = cva(
-  "group/alert relative grid w-full gap-0.5 rounded-2xl px-4 py-3 text-left text-body-sm ring-1 ring-foreground/10 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5 has-data-[slot=alert-action]:pr-18 *:[svg:not([class*='size-'])]:size-4 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current",
+  "group/alert relative grid w-full gap-0.5 rounded-card px-4 py-3 text-left text-body-sm ring-1 ring-foreground/10 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5 has-data-[slot=alert-action]:pr-18 *:[svg:not([class*='size-'])]:size-4 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current",
   {
     defaultVariants: { variant: "default" },
     variants: {

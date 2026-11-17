@@ -45,7 +45,7 @@ export function GestureCard({
   return (
     <article
       className={cn(
-        "group/card relative flex min-w-0 flex-col overflow-hidden rounded-2xl bg-card text-card-foreground shadow-0 ring-1 ring-foreground/10",
+        "group/card relative flex min-w-0 flex-col overflow-hidden rounded-card bg-card text-card-foreground shadow-0 ring-1 ring-foreground/10",
         href !== undefined &&
           cn("hover:shadow-2 dark:hover:ring-border", transition),
         className

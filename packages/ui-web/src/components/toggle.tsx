@@ -11,7 +11,7 @@ import { disabled, focusRing, hitArea, transition } from "../lib/variants";
  */
 export const toggleVariants = cva(
   [
-    "group/toggle relative inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-4xl font-medium hover:bg-muted hover:text-foreground aria-pressed:bg-muted data-[state=on]:bg-muted [&_svg:not([class*='size-'])]:size-5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+    "group/toggle relative inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-pill font-medium hover:bg-muted hover:text-foreground aria-pressed:bg-muted data-[state=on]:bg-muted [&_svg:not([class*='size-'])]:size-5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
     focusRing,
     transition,
     disabled,

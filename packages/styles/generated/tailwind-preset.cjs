@@ -71,9 +71,11 @@ const preset = {
     },
     "extend": {
       "borderRadius": {
+        "card": "20px",
         "full": "9999px",
         "lg": "14px",
         "md": "10px",
+        "pill": "9999px",
         "sm": "6px",
         "xl": "20px"
       },

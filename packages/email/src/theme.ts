@@ -37,7 +37,7 @@ export const styles = {
   /** A tinted box (details, next steps, the invoice). */
   box: {
     backgroundColor: color.primarySubtle,
-    borderRadius: px(radius.md),
+    borderRadius: px(radius.lg),
     margin: `${px(spacing["4"])} 0`,
     padding: `${px(spacing["4"])} ${px(spacing["5"])}`,
   },
@@ -55,9 +55,10 @@ export const styles = {
     margin: "0",
     textAlign: "center",
   },
+  /** The brand pill (clients without `border-radius` show a rectangle). */
   button: {
     backgroundColor: color.primary,
-    borderRadius: px(radius.md),
+    borderRadius: px(radius.pill),
     color: color.primaryForeground,
     display: "inline-block",
     fontSize: px(fontSize.body.size),
@@ -69,7 +70,7 @@ export const styles = {
   },
   code: {
     backgroundColor: color.surfaceSunken,
-    borderRadius: px(radius.md),
+    borderRadius: px(radius.lg),
     color: color.foreground,
     fontFamily: "ui-monospace, Menlo, Consolas, monospace",
     fontSize: px(fontSize["title-1"].size),
@@ -82,7 +83,7 @@ export const styles = {
   container: {
     backgroundColor: color.card,
     border: `1px solid ${color.border}`,
-    borderRadius: px(radius.lg),
+    borderRadius: px(radius.card),
     margin: "0 auto",
     maxWidth: px(EMAIL_WIDTH),
     overflow: "hidden",

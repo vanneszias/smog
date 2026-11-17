@@ -235,7 +235,7 @@ export function VideoPlayer({
     <section
       aria-label={name}
       className={cn(
-        "relative w-full overflow-hidden rounded-2xl bg-muted shadow-1 ring-1 ring-foreground/10",
+        "relative w-full overflow-hidden rounded-card bg-muted shadow-1 ring-1 ring-foreground/10",
         ASPECT[aspect],
         className
       )}

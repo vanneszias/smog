@@ -89,6 +89,8 @@ describe("renderWebThemeCss", () => {
   it("emits radius, type, shadow, motion and breakpoints", () => {
     expect(css).toContain("--radius-md: 0.625rem;");
     expect(css).toContain("--radius-full: 9999px;");
+    expect(css).toContain("--radius-pill: 9999px;");
+    expect(css).toContain("--radius-card: 1.25rem;");
     expect(css).toContain("--text-title-1: 1.75rem;");
     expect(css).toContain("--text-title-1--line-height: 2.125rem;");
     expect(css).toContain("--text-body-sm: 0.875rem;");
@@ -196,6 +198,8 @@ describe("renderNativeTailwindConfig", () => {
     expect(preset.theme.extend.spacing["4"]).toBe("16px");
     expect(preset.theme.extend.spacing.touch).toBe("44px");
     expect(preset.theme.extend.borderRadius.lg).toBe("14px");
+    expect(preset.theme.extend.borderRadius.pill).toBe("9999px");
+    expect(preset.theme.extend.borderRadius.card).toBe("20px");
     expect(preset.theme.extend.fontSize.body).toEqual([
       "16px",
       { lineHeight: "24px" },

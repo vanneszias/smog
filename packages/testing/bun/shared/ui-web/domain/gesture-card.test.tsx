@@ -43,7 +43,7 @@ describe("GestureCard", () => {
     const badge = container.querySelector('[data-slot="gesture-category"]');
     expect(badge?.textContent).toBe("Greetings, Everyday");
     expect(container.querySelector("article")?.className).toContain(
-      "rounded-2xl"
+      "rounded-card"
     );
   });
 

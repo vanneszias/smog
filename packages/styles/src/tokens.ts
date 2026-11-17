@@ -253,10 +253,19 @@ const spacing = {
   touch: touchTarget,
 } as const;
 
+/**
+ * Corner radii. Two are the brand's shape, used by both kits and email:
+ * `pill` for every control a finger presses or types into (buttons, fields,
+ * chips, toggles, tabs), so a control's ends are as round as the palm in the
+ * hands; `card` for the one card frame (cards, gesture tiles, the video, banners,
+ * alerts). The steps (`sm` to `xl`) are for small inner parts and overlays.
+ */
 const radius = {
+  card: 20,
   full: 9999,
   lg: 14,
   md: 10,
+  pill: 9999,
   sm: 6,
   xl: 20,
 } as const;

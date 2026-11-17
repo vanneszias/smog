@@ -32,7 +32,7 @@ describe("Card", () => {
       </Card>
     );
     expect(screen.getByRole("header", { name: "Greetings" })).toBeOnTheScreen();
-    expect(screen.getByTestId("card")).toHaveStyle({ borderRadius: 14 });
+    expect(screen.getByTestId("card")).toHaveStyle({ borderRadius: 20 });
   });
 
   it("becomes a button with onPress", async () => {

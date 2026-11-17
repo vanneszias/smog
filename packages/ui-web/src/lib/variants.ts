@@ -61,12 +61,12 @@ export const disabled =
 
 /**
  * Border and fill of text inputs, selects and textareas: the registry's
- * pill field (`rounded-4xl`, a `bg-input/30` wash) with the kit's contracts on
+ * pill field (`rounded-pill`, a `bg-input/30` wash) with the kit's contracts on
  * top (44 px, the 2 px `focus-ring`, a 3:1 `border-input`).
  */
 export const fieldVariants = cva(
   [
-    "w-full min-w-0 rounded-4xl border border-input bg-card text-body text-foreground placeholder:text-muted-foreground",
+    "w-full min-w-0 rounded-pill border border-input bg-card text-body text-foreground placeholder:text-muted-foreground",
     "hover:border-foreground aria-invalid:border-destructive",
     focusRing,
     transition,

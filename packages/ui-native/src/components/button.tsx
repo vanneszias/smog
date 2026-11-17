@@ -21,7 +21,7 @@ import { Spinner } from "./spinner";
 import { type SurfaceTone, surfaceRoles, useSurface } from "./surface";
 
 export const buttonVariants = cva(
-  "flex-row items-center justify-center gap-2 rounded-md border active:opacity-80",
+  "flex-row items-center justify-center gap-2 rounded-pill border active:opacity-80",
   {
     defaultVariants: { size: "md", variant: "primary" },
     variants: {

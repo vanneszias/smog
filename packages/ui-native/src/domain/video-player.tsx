@@ -151,7 +151,7 @@ export function VideoPlayer({
     <View
       accessibilityLabel={title ?? t("a11y.gestureVideo")}
       className={cn(
-        "w-full overflow-hidden rounded-lg bg-surface-sunken",
+        "w-full overflow-hidden rounded-card bg-surface-sunken",
         className
       )}
       style={[ASPECT[aspect], style]}

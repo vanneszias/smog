@@ -6,14 +6,14 @@ import { disabled, focusRing, hitArea, transition } from "../lib/variants";
 import { Spinner } from "./spinner";
 
 /**
- * The registry button (shadcn maia: a pill, `bg-primary`, a soft hover) with
+ * The registry button (shadcn maia: a pill, `rounded-pill`, `bg-primary`, a soft hover) with
  * the kit's sizes: 44 px at `md`, 48 at `lg`, 32 + a 44 px hit area at `sm`.
  * `primary | secondary | ghost | danger` are the registry's
  * `default | outline | ghost | destructive`.
  */
 export const buttonVariants = cva(
   [
-    "group/button relative inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-4xl border bg-clip-padding font-medium",
+    "group/button relative inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-pill border bg-clip-padding font-medium",
     "aria-invalid:border-destructive aria-invalid:ring-destructive/20",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0",
     focusRing,

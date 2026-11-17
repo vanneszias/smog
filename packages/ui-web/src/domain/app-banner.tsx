@@ -30,7 +30,7 @@ export interface AppBannerProps
 }
 
 const storeLink = cn(
-  "relative inline-flex min-h-touch items-center gap-3 rounded-full bg-highlight px-5 py-2 text-left text-highlight-foreground",
+  "relative inline-flex min-h-touch items-center gap-3 rounded-pill bg-highlight px-5 py-2 text-left text-highlight-foreground",
   stateLayer.full,
   focusRing,
   focusRingOnGreen,
@@ -85,7 +85,7 @@ export function AppBanner({
     <section
       aria-labelledby={titleId}
       className={cn(
-        "relative flex animate-fade-in flex-col gap-4 overflow-hidden rounded-2xl bg-sidebar p-4 pr-16 text-sidebar-foreground shadow-1 motion-reduce:animate-none md:p-6 md:pr-16",
+        "relative flex animate-fade-in flex-col gap-4 overflow-hidden rounded-card bg-sidebar p-4 pr-16 text-sidebar-foreground shadow-1 motion-reduce:animate-none md:p-6 md:pr-16",
         className
       )}
       {...props}
@@ -157,7 +157,7 @@ export function OpenInAppBanner({
     <section
       aria-labelledby={titleId}
       className={cn(
-        "flex items-center gap-3 rounded-2xl bg-accent p-3 text-accent-foreground ring-1 ring-foreground/10",
+        "flex items-center gap-3 rounded-card bg-accent p-3 text-accent-foreground ring-1 ring-foreground/10",
         className
       )}
       {...props}

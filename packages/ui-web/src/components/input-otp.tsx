@@ -40,7 +40,7 @@ export function InputOTPGroup({
   return (
     <div
       className={cn(
-        "flex items-center rounded-4xl has-aria-invalid:border-destructive",
+        "flex items-center rounded-pill has-aria-invalid:border-destructive",
         className
       )}
       data-slot="input-otp-group"
@@ -61,7 +61,7 @@ export function InputOTPSlot({
   return (
     <div
       className={cn(
-        "relative flex size-touch items-center justify-center border-input border-y border-r bg-card text-body outline-none transition-all first:rounded-l-4xl first:border-l last:rounded-r-4xl aria-invalid:border-destructive data-[active=true]:z-10 data-[active=true]:border-ring data-[active=true]:ring-2 data-[active=true]:ring-ring motion-reduce:transition-none",
+        "relative flex size-touch items-center justify-center border-input border-y border-r bg-card text-body outline-none transition-all first:rounded-l-pill first:border-l last:rounded-r-pill aria-invalid:border-destructive data-[active=true]:z-10 data-[active=true]:border-ring data-[active=true]:ring-2 data-[active=true]:ring-ring motion-reduce:transition-none",
         className
       )}
       data-active={isActive}

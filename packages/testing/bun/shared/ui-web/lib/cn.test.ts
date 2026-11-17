@@ -22,6 +22,8 @@ describe("cn", () => {
     expect(cn("shadow-1", "shadow-md")).toBe("shadow-md");
     expect(cn("shadow-md", "shadow-2")).toBe("shadow-2");
     expect(cn("rounded-md", "rounded-xl")).toBe("rounded-xl");
+    expect(cn("rounded-4xl", "rounded-pill")).toBe("rounded-pill");
+    expect(cn("rounded-2xl", "rounded-card")).toBe("rounded-card");
     expect(cn("size-9", "size-touch")).toBe("size-touch");
     expect(cn("font-bold", "font-regular")).toBe("font-regular");
     expect(cn("ease-in-out", "ease-standard")).toBe("ease-standard");
