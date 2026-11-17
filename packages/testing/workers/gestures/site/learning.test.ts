@@ -192,11 +192,13 @@ describe("/gestures/$slug (SSR detail)", () => {
   it("renders the detail with its SEO head and JSON-LD", async () => {
     const { body, response } = await get("/gestures/hond");
     expect(response.status).toBe(200);
-    expect(body).toContain("<title>Hond · SMOG &amp; Co</title>");
+    expect(body).toContain("<title>Hond · SMOG-gebaar · SMOG &amp; Co</title>");
     expect(body).toMatch(CANONICAL_LINK);
+    // A landscape JPEG still at the card's size, cropped to the signer.
     expect(body).toContain(
-      `https://image.mux.com/${SAMPLE_PLAYBACK_ID}/thumbnail.webp?width=1200`
+      `https://image.mux.com/${SAMPLE_PLAYBACK_ID}/thumbnail.jpg?fit_mode=smartcrop&amp;height=630&amp;width=1200`
     );
+    expect(body).toContain('<meta content="1200" property="og:image:width"');
     expect(body).toContain('name="description"');
     expect(body).toContain("Het gebaar voor hond.");
     expect(body).toContain('"@type":"VideoObject"');

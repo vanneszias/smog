@@ -46,6 +46,68 @@
 }
 
 @layer base {
+  /*
+   * The phone's edges (docs/DECISIONS.md, "Brand identity: the phone's
+   * edges"). The page runs under the notch (`viewport-fit=cover`); the
+   * sticky header, the sheets and the fixed bars pad themselves by the
+   * safe-area insets.
+   *
+   * - The pull past the top shows the header green, as the native app does
+   *   (the html background is only seen in the overscroll: the body paints
+   *   the page). One colour, not a top and bottom gradient: Safari tiles
+   *   the root's background beyond the page, so a gradient would show its
+   *   lower half above the top. The auth pages start on the page background.
+   * - No grey tap flash: every control has its own pressed state (the kit's
+   *   state layer and `press` scale). `manipulation` drops the double-tap
+   *   zoom wait on controls; pinch zoom stays.
+   * - An anchor or a focused field scrolls clear of the sticky header.
+   * - The installed app does not rubber-band or pull-to-refresh the whole
+   *   page; the browser keeps both.
+   */
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    background-color: var(--color-sidebar);
+    scroll-padding-top: calc(
+      var(--spacing) *
+      20 +
+      env(safe-area-inset-top, 0px)
+    );
+  }
+
+  html:has([data-auth-shell]) {
+    background-color: var(--color-background);
+  }
+
+  a,
+  button,
+  [role="button"],
+  summary,
+  label {
+    touch-action: manipulation;
+  }
+
+  /* biome-ignore lint/suspicious/useBaseline: only an installed app matches; every other browser ignores the block, as intended */
+  @media (display-mode: standalone) {
+    html,
+    body {
+      overscroll-behavior-y: none;
+    }
+
+    /* The installed iOS app draws white status icons over the page
+       (`black-translucent`): on the auth pages, which start on the light
+       page background, a green strip under them keeps them legible. */
+    [data-auth-shell]::before {
+      position: fixed;
+      inset-inline: 0;
+      top: 0;
+      z-index: 50;
+      height: env(safe-area-inset-top, 0px);
+      content: "";
+      background: var(--color-sidebar);
+    }
+  }
+
   body {
     @apply bg-background font-sans text-body text-foreground;
   }

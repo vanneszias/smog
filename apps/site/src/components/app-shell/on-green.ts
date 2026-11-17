@@ -24,3 +24,11 @@ export const GREEN_ICON_BUTTON =
  */
 export const GREEN_PRIMARY_BUTTON =
   "border-transparent bg-highlight text-highlight-foreground hover:bg-highlight/85 focus-visible:ring-sidebar-ring focus-visible:ring-offset-sidebar";
+
+/**
+ * A row on the deep green: white text and icon, the sidebar wash on hover
+ * and press, the white focus ring, and the orange mark beside the current
+ * section (green says where you are).
+ */
+export const GREEN_ROW =
+  "text-sidebar-foreground before:bg-sidebar-foreground focus-visible:ring-sidebar-ring focus-visible:ring-offset-sidebar [&>span:first-child]:text-sidebar-foreground aria-[current=page]:font-semibold aria-[current=page]:after:absolute aria-[current=page]:after:inset-y-3 aria-[current=page]:after:left-0 aria-[current=page]:after:w-1 aria-[current=page]:after:rounded-full aria-[current=page]:after:bg-sidebar-primary";

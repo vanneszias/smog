@@ -44,7 +44,8 @@
     "toggleSidebar": "Afficher ou masquer la barre latérale",
     "sidebar": "Barre latérale",
     "loading": "Chargement en cours",
-    "logo": "Logo de SMOG & Co",
+    "logo": "SMOG & Co",
+    "homeLink": "SMOG & Co, page d'accueil",
     "clearSearch": "Effacer la recherche",
     "showPassword": "Afficher le mot de passe",
     "hidePassword": "Masquer le mot de passe",
@@ -540,7 +541,7 @@
       "share": "Partager le lien",
       "dismiss": "Pas maintenant"
     },
-    "metaDescription": "Regardez le geste SMOG pour « {{name}} » en vidéo.",
+    "metaDescription": "Comment faire le geste SMOG pour « {{name}} ». Regardez la vidéo comme aide-mémoire pour votre cours ou votre initiation SMOG.",
     "description": "Description",
     "actions": "Actions pour {{name}}",
     "linkCopied": "Lien copié",
@@ -1038,6 +1039,30 @@
     "description": "Regardez ce geste dans l'application.",
     "action": "Ouvrir dans l'application",
     "getApp": "Obtenir l'application"
+  },
+  "meta": {
+    "home": {
+      "title": "Gestes SMOG en vidéo",
+      "description": "Les gestes SMOG en vidéo, un aide-mémoire pour votre cours ou votre initiation SMOG. Cherchez un geste, voyez comment le faire et gardez-le dans une liste."
+    },
+    "shareImageAlt": "SMOG & Co : Les gens accompagnent naturellement leur parole de gestes",
+    "gesture": {
+      "title": "{{name}} · Geste SMOG",
+      "imageAlt": "Image tirée de la vidéo du geste SMOG pour « {{name}} »"
+    },
+    "list": {
+      "description": "Une liste de gestes SMOG, partagée via SMOG & Co."
+    },
+    "privacy": {
+      "description": "Comment SMOG & Co traite vos données sur le site et dans l'app, et les choix dont vous disposez."
+    },
+    "terms": {
+      "description": "Les conditions d'utilisation du site et de l'app SMOG & Co."
+    },
+    "shortcuts": {
+      "gestures": "Chercher un geste",
+      "mySpace": "Mon espace"
+    }
   },
   "legal": {
     "lastUpdated": "Dernière mise à jour le {{date}}",
@@ -2745,7 +2770,7 @@
   "sponsor": {
     "meta": {
       "title": "Devenez parrain ou marraine d'un geste",
-      "description": "Devenez parrain ou marraine d'un geste SMOG. Pendant un an, votre nom apparaît à la fin de la vidéo du geste."
+      "description": "Devenez parrain ou marraine d'un geste SMOG. Après vérification, votre nom (et votre logo, si vous le souhaitez) apparaît pendant un an à la fin de la vidéo du geste."
     },
     "steps": {
       "select": "Choisir des gestes",

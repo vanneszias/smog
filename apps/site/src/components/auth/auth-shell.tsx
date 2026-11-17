@@ -76,9 +76,15 @@ function LegalLink({
 export function AuthShell({ children }: { children: ReactNode }): ReactNode {
   const { t } = useTranslation();
   return (
-    <div className="flex min-h-dvh flex-col md:grid md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] xl:grid-cols-2">
+    <div
+      className="flex min-h-dvh flex-col md:grid md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] xl:grid-cols-2"
+      data-auth-shell
+    >
       <div className="flex min-h-dvh min-w-0 flex-col">
-        <header className="flex items-center justify-between gap-2 px-2 py-2 md:px-6 md:py-4">
+        {/* Under the notch (viewport-fit=cover): the slim header pads itself
+            by the safe-area insets, on the page background like the browser
+            bar above it (`theme-color` follows the page on these routes). */}
+        <header className="flex items-center justify-between gap-2 pt-[calc(--spacing(2)+env(safe-area-inset-top,0px))] pr-[max(--spacing(2),env(safe-area-inset-right,0px))] pb-2 pl-[max(--spacing(2),env(safe-area-inset-left,0px))] md:px-6 md:pt-[calc(--spacing(4)+env(safe-area-inset-top,0px))] md:pb-4">
           {/* Wraps instead of pushing the settings off a narrow, spaced screen. */}
           <Button
             asChild

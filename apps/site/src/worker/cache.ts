@@ -6,12 +6,15 @@
  * runs: `public/_headers` repeats the same values and `test/cache-policy.
  * test.ts` holds the two together.
  *
- * No `Vary` is needed: every locale-dependent response is a document
- * (`private, no-cache`) and the static files are language-free.
+ * Every locale-dependent response is a document (`private, no-cache`),
+ * and `headers.ts` adds `Vary: Accept-Language, Cookie` to each one, so
+ * no shared cache can ever hand one language to everyone; the static files
+ * are language-free (the share cards are one file per language).
  *
  * - hashed build output, `/assets/<name>-<hash>.<ext>`: a year, immutable
  *   (the hash changes with the content);
- * - the unhashed brand files, icons, `og.png`, and any other `/assets/*`
+ * - the unhashed brand files, icons, `og.png`, the share cards
+ *   `og-<locale>.png`, and any other `/assets/*`
  *   (the legacy `/assets/logo.svg`): a day;
  * - `/robots.txt`, `/sitemap.xml`, the web manifest: an hour;
  * - documents: `private, no-cache` (each carries its CSP nonce);
@@ -69,6 +72,10 @@ const ICON_FILES = new Set([
   "/icon-maskable-512.png",
   "/icon.svg",
   "/og.png",
+  // The brand share cards, one per shipped language (scripts/share-cards.ts).
+  "/og-en.png",
+  "/og-fr.png",
+  "/og-nl.png",
 ]);
 
 const HOURLY_FILES = new Set([

@@ -4,16 +4,21 @@ import {
   IconButton,
   Logo,
   Sheet,
+  SheetClose,
   SheetContent,
   SheetTrigger,
 } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
-import { Menu as MenuIcon, Search } from "lucide-react";
+import { Menu as MenuIcon, Search, X } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
 import { MainNav, MainNavList } from "./nav";
 import { GREEN_ICON_BUTTON } from "./on-green";
 import { useSearchPalette } from "./search-palette-provider";
 import { UserMenu } from "./user-menu";
+
+/** `/brand/logo-small.svg` (2666.67 × 578.88) at 24 px, in `currentColor`. */
+const SMALL_LOGO =
+  "block aspect-[2666.67/578.88] h-6 bg-current mask-[url(/brand/logo-small.svg)] mask-contain mask-center mask-no-repeat";
 
 /** The search trigger from `md`: a pill that names the `/` shortcut. */
 const SEARCH_PILL =
@@ -25,6 +30,10 @@ const SEARCH_PILL =
  * palette, also `/`) and one user and settings menu with the language and
  * the theme. Below `md` the sections move into a sheet and the search
  * trigger shrinks to its icon.
+ *
+ * The page runs under the notch (`viewport-fit=cover`): the header pads
+ * itself by the safe-area insets, so its green fills the strip under the
+ * status bar and the browser bar above it is the same green.
  */
 export function Header(): ReactNode {
   const { t } = useTranslation();
@@ -33,8 +42,8 @@ export function Header(): ReactNode {
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = useCallback((): void => setMenuOpen(false), []);
   return (
-    <header className="sticky top-0 z-40 bg-sidebar text-sidebar-foreground">
-      <div className="mx-auto flex h-16 w-full max-w-content items-center gap-2 px-4 md:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 bg-sidebar pt-[env(safe-area-inset-top,0px)] text-sidebar-foreground">
+      <div className="mx-auto flex h-16 w-full max-w-content items-center gap-2 pr-[max(--spacing(4),env(safe-area-inset-right,0px))] pl-[max(--spacing(4),env(safe-area-inset-left,0px))] md:px-6 lg:px-8">
         <Sheet onOpenChange={setMenuOpen} open={menuOpen}>
           <SheetTrigger asChild>
             <IconButton
@@ -43,15 +52,53 @@ export function Header(): ReactNode {
               label={t("a11y.openMenu")}
             />
           </SheetTrigger>
-          <SheetContent side="left" title={t("common.appName")}>
-            <MainNavList onNavigate={closeMenu} />
+          {/* The phone menu on the header's green: the logo heads it, the
+              sections are on-green rows. The title stays the app name for
+              assistive tech; the logo inside it is decorative. */}
+          <SheetContent
+            className="border-sidebar-border bg-sidebar text-sidebar-foreground"
+            hideClose
+            side="left"
+            title={
+              <span className="flex min-h-touch items-center">
+                <Logo decorative size="md" tone="current" />
+                <span className="sr-only">{t("common.appName")}</span>
+              </span>
+            }
+          >
+            <MainNavList onGreen onNavigate={closeMenu} />
+            <SheetClose asChild>
+              <IconButton
+                className={cn(
+                  "absolute top-[calc(--spacing(3)+env(safe-area-inset-top,0px))] right-3",
+                  GREEN_ICON_BUTTON
+                )}
+                icon={<X />}
+                label={t("a11y.close")}
+              />
+            </SheetClose>
           </SheetContent>
         </Sheet>
         <Link
+          aria-label={t("a11y.homeLink")}
           className="inline-flex items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
           to="/"
         >
-          <Logo size="sm" tone="current" />
+          {/* The full logo needs 32 px of height; on the narrowest phones,
+              where the header's controls leave no room for it, the small
+              logo (hands drawn to hold at 24 px) takes its place. It is a
+              mask over the text colour, from the published file, so its
+              artwork is not bundled into every page's JavaScript. */}
+          <Logo
+            className="max-[24rem]:hidden"
+            decorative
+            size="md"
+            tone="current"
+          />
+          <span
+            aria-hidden="true"
+            className={cn(SMALL_LOGO, "min-[24rem]:hidden")}
+          />
         </Link>
         <MainNav className="ml-4 hidden md:block" />
         <div className="ml-auto flex items-center gap-1">

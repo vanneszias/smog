@@ -48,7 +48,7 @@ export function ConsentBanner({
       className={cn(
         inline
           ? "text-foreground"
-          : "pointer-events-none fixed inset-x-0 bottom-0 z-40 animate-slide-up p-2 pb-[max(--spacing(2),env(safe-area-inset-bottom))] text-foreground motion-reduce:animate-none md:p-4",
+          : "pointer-events-none fixed inset-x-0 bottom-0 z-40 animate-slide-up p-2 pb-[max(--spacing(2),env(safe-area-inset-bottom))] text-foreground motion-reduce:animate-none md:p-4 md:pb-[max(--spacing(4),env(safe-area-inset-bottom))]",
         className
       )}
       data-slot="consent-banner"
