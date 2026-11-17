@@ -213,7 +213,7 @@ The approved Dutch tagline is "Mensen gaan van nature hun spraak ondersteunen me
 - **Status** text is a `*-strong` colour on its `*-subtle` tint; `success` and `warning` alone are for icons, never fills under white text. `destructive` is a solid fill under `destructive-foreground` for danger buttons.
 - **Charts** use `chart-1` to `chart-5` as fills, with their values also printed as text.
 - Every pair that carries text or a mark is listed in `packages/styles/src/contrast.ts` and tested in both themes (4.5:1 for body text, 3:1 for large text, controls, marks and focus rings). A new pair goes there before it is used. The web theme closes the colour namespace and the app forbids hex values, so only these roles exist.
-- The browser bar (`theme-color`), the web manifest and the installed app's splash follow the header's deep green (`tokens.chrome`).
+- The browser bar (`theme-color`), the web manifest and the installed app's splash follow the header's deep green (`tokens.chrome`). The sign-in pages, which start on the page background, keep the page background in the bar. On a phone the green runs under the notch and fills the pull past the top; whatever sits at an edge pads itself by the safe-area insets.
 
 ## Themes
 
