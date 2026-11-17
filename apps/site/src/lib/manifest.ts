@@ -1,3 +1,4 @@
+import { createI18n } from "@smog/i18n";
 import { tokens } from "@smog/styles/tokens";
 
 /** The web app manifest's icon members (files `@smog/brand` generates). */
@@ -8,17 +9,25 @@ interface ManifestIcon {
   type: string;
 }
 
+/** A long-press shortcut on the installed app's icon. */
+interface ManifestShortcut {
+  name: string;
+  url: string;
+}
+
 export interface WebManifest {
   background_color: string;
   categories: string[];
   description: string;
   display: "standalone";
   icons: ManifestIcon[];
+  id: "/";
   lang: "nl";
   name: string;
   orientation: "any";
   scope: "/";
   short_name: string;
+  shortcuts: ManifestShortcut[];
   start_url: "/";
   theme_color: string;
 }
@@ -43,22 +52,32 @@ export const MANIFEST_ICONS: readonly ManifestIcon[] = [
 /**
  * `/manifest.webmanifest` (inventory P-14, R-18): the app's identity and purpose.
  * Dutch, like the old one: a manifest is fetched without cookies, so it has
- * no locale to follow.
+ * no locale to follow (the shipped Dutch texts, no overlay).
+ *
+ * The colours follow the header green (`tokens.chrome`, DECISIONS "Brand
+ * identity: the browser bar follows the header"): the title bar of the
+ * installed app and its splash are one green field with the white icon.
+ * The name is the product's, "SMOG & Co", as everywhere else.
  */
 export function webManifest(): WebManifest {
+  const { t } = createI18n("nl");
   return {
-    background_color: "#ebf4eb",
+    background_color: tokens.chrome.manifestBackground.toLowerCase(),
     categories: ["education", "reference"],
-    description:
-      "Mensen gaan van nature hun spraak ondersteunen met gebaren. SMOG staat voor Spreken Met Ondersteuning van Gebaren.",
+    description: `${t("home.tagline")}. SMOG staat voor Spreken Met Ondersteuning van Gebaren.`,
     display: "standalone",
     icons: MANIFEST_ICONS.map((icon) => ({ ...icon })),
+    id: "/",
     lang: "nl",
-    name: "SMOG&Co",
+    name: t("common.appName"),
     orientation: "any",
     scope: "/",
-    short_name: "SMOG&Co",
+    short_name: t("common.appName"),
+    shortcuts: [
+      { name: t("meta.shortcuts.gestures"), url: "/gestures" },
+      { name: t("meta.shortcuts.mySpace"), url: "/my" },
+    ],
     start_url: "/",
-    theme_color: tokens.color.brand.green.toLowerCase(),
+    theme_color: tokens.chrome.manifestTheme.toLowerCase(),
   };
 }

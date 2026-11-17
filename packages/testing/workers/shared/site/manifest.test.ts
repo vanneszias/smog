@@ -1,4 +1,5 @@
 import { exports } from "cloudflare:workers";
+import { tokens } from "@smog/styles/tokens";
 import { describe, expect, it } from "vitest";
 import { MANIFEST_ICONS } from "../../../../../apps/site/src/lib/manifest";
 
@@ -14,7 +15,7 @@ const PUBLIC_FILES = Object.keys(
 );
 
 describe("/manifest.webmanifest (inventory P-14, R-18)", () => {
-  it("serves the old manifest's values as application/manifest+json", async () => {
+  it("serves the brand's manifest as application/manifest+json", async () => {
     const response = await exports.default.fetch(
       `${ORIGIN}/manifest.webmanifest`
     );
@@ -24,16 +25,25 @@ describe("/manifest.webmanifest (inventory P-14, R-18)", () => {
     );
     expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
     expect(await response.json()).toMatchObject({
-      background_color: "#ebf4eb",
+      // The installed app's title bar and splash are the header green
+      // (DECISIONS, "Brand identity: the browser bar follows the header").
+      background_color: tokens.chrome.manifestBackground.toLowerCase(),
       categories: ["education", "reference"],
+      description:
+        "Mensen gaan van nature hun spraak ondersteunen met gebaren. SMOG staat voor Spreken Met Ondersteuning van Gebaren.",
       display: "standalone",
+      id: "/",
       lang: "nl",
-      name: "SMOG&Co",
+      name: "SMOG & Co",
       orientation: "any",
       scope: "/",
-      short_name: "SMOG&Co",
+      short_name: "SMOG & Co",
+      shortcuts: [
+        { name: "Gebaar opzoeken", url: "/gestures" },
+        { name: "Mijn ruimte", url: "/my" },
+      ],
       start_url: "/",
-      theme_color: "#00805f",
+      theme_color: tokens.color.light.sidebar.toLowerCase(),
     });
   });
 
