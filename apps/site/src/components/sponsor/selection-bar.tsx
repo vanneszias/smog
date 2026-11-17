@@ -47,8 +47,8 @@ export function SelectionBar({
       data-sticky={overlayOpen ? "false" : "true"}
       ref={overlayOpen ? undefined : reserve}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div aria-live="polite" className="flex flex-col">
+      <div className="flex items-center justify-between gap-3">
+        <div aria-live="polite" className="flex min-w-0 flex-col">
           <Text className="font-semibold" data-testid="selection-count">
             {t("sponsor.bar.selected", { count })}
           </Text>
