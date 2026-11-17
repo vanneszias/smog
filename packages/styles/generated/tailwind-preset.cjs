@@ -88,42 +88,56 @@ const preset = {
         "body": [
           "16px",
           {
+            "letterSpacing": "0px",
             "lineHeight": "24px"
           }
         ],
         "body-sm": [
           "14px",
           {
+            "letterSpacing": "0.07px",
             "lineHeight": "20px"
           }
         ],
         "caption": [
           "12px",
           {
+            "letterSpacing": "0.14px",
             "lineHeight": "16px"
           }
         ],
         "display": [
           "40px",
           {
-            "lineHeight": "48px"
+            "letterSpacing": "-0.88px",
+            "lineHeight": "44px"
+          }
+        ],
+        "lead": [
+          "18px",
+          {
+            "letterSpacing": "-0.05px",
+            "lineHeight": "28px"
           }
         ],
         "title-1": [
           "28px",
           {
+            "letterSpacing": "-0.45px",
             "lineHeight": "34px"
           }
         ],
         "title-2": [
           "22px",
           {
+            "letterSpacing": "-0.22px",
             "lineHeight": "28px"
           }
         ],
         "title-3": [
           "18px",
           {
+            "letterSpacing": "-0.09px",
             "lineHeight": "24px"
           }
         ]
@@ -132,7 +146,8 @@ const preset = {
         "body": "24px",
         "body-sm": "20px",
         "caption": "16px",
-        "display": "48px",
+        "display": "44px",
+        "lead": "28px",
         "title-1": "34px",
         "title-2": "28px",
         "title-3": "24px"

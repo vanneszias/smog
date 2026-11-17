@@ -70,23 +70,34 @@
   --radius-xl: 1.25rem;
 
   --font-sans: Figtree, "Figtree Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-weight-bold: 700;
   --font-weight-medium: 500;
   --font-weight-regular: 400;
   --font-weight-semibold: 600;
   --text-body: 1rem;
   --text-body--line-height: 1.5rem;
+  --text-body--letter-spacing: 0;
   --text-body-sm: 0.875rem;
   --text-body-sm--line-height: 1.25rem;
+  --text-body-sm--letter-spacing: 0.005em;
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;
+  --text-caption--letter-spacing: 0.012em;
   --text-display: 2.5rem;
-  --text-display--line-height: 3rem;
+  --text-display--line-height: 2.75rem;
+  --text-display--letter-spacing: -0.022em;
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.75rem;
+  --text-lead--letter-spacing: -0.003em;
   --text-title-1: 1.75rem;
   --text-title-1--line-height: 2.125rem;
+  --text-title-1--letter-spacing: -0.016em;
   --text-title-2: 1.375rem;
   --text-title-2--line-height: 1.75rem;
+  --text-title-2--letter-spacing: -0.01em;
   --text-title-3: 1.125rem;
   --text-title-3--line-height: 1.5rem;
+  --text-title-3--letter-spacing: -0.005em;
 
   --shadow-0: none;
   --shadow-1: 0 1px 2px rgb(23 33 26 / 0.06), 0 2px 6px rgb(23 33 26 / 0.08);
@@ -122,7 +133,8 @@
 @media (width >= 48rem) {
   :root {
     --text-display: 3.5rem;
-    --text-display--line-height: 4rem;
+    --text-display--line-height: 3.75rem;
+    --text-display--letter-spacing: -0.028em;
   }
 }
 

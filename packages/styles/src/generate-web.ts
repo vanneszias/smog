@@ -13,6 +13,11 @@ function rem(px: number): string {
   return `${Number((px / ROOT_FONT_SIZE).toFixed(4))}rem`;
 }
 
+/** A tracking in em (`0` stays unitless). */
+function em(value: number): string {
+  return value === 0 ? "0" : `${value}em`;
+}
+
 /** `surfaceRaised` → `surface-raised`, `chart1` → `chart-1`. */
 export function kebab(name: string): string {
   return name
@@ -82,6 +87,7 @@ function themeBlock(): string[] {
       Object.entries(fontSize).flatMap(([key, step]) => [
         [`text-${key}`, rem(step.size)],
         [`text-${key}--line-height`, rem(step.lineHeight)],
+        [`text-${key}--letter-spacing`, em(step.tracking)],
       ])
     ),
     "",
@@ -121,6 +127,7 @@ function responsiveType(): string[] {
           [
             [`text-${key}`, rem(step.md.size)],
             [`text-${key}--line-height`, rem(step.md.lineHeight)],
+            [`text-${key}--letter-spacing`, em(step.md.tracking)],
           ],
           "    "
         )

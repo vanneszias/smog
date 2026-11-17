@@ -14,6 +14,15 @@ describe("Text and Heading", () => {
     expect(text.tagName).toBe("P");
     expect(classesOf(text)).toContain("text-body-sm");
     expect(classesOf(text)).toContain("text-muted-foreground");
+    // No lone last word on a paragraph.
+    expect(classesOf(text)).toContain("text-pretty");
+  });
+
+  test("Text has a lead step for the line under a display title", () => {
+    renderKit(<Text size="lead">Under the title</Text>);
+    expect(classesOf(screen.getByText("Under the title"))).toContain(
+      "text-lead"
+    );
   });
 
   test("Text as span", () => {
@@ -29,6 +38,9 @@ describe("Text and Heading", () => {
     );
     const heading = screen.getByRole("heading", { level: 1, name: "Welcome" });
     expect(classesOf(heading)).toContain("text-display");
+    // Display is the one bold step; it replaces the semibold default.
+    expect(classesOf(heading)).toContain("font-bold");
+    expect(classesOf(heading)).not.toContain("font-semibold");
   });
 
   test("Heading size defaults from the level", () => {

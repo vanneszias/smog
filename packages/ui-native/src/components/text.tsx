@@ -12,6 +12,8 @@ const textVariants = cva("", {
       body: "text-body",
       "body-sm": "text-body-sm",
       caption: "text-caption",
+      // The line under a display title (the home hero, the auth band).
+      lead: "text-lead",
     },
     tone: toneText,
     weight: {
@@ -28,7 +30,7 @@ export interface TextProps
   ref?: Ref<RNText>;
 }
 
-/** Body copy: `body | body-sm | caption`, a tone and a weight. Web's `as` has no native counterpart. */
+/** Body copy: `lead | body | body-sm | caption`, a tone and a weight. Web's `as` has no native counterpart. */
 export function Text({
   className,
   size,
@@ -62,7 +64,8 @@ function useSurfaceText(tone: string | null | undefined): string | undefined {
 const headingVariants = cva("font-semibold", {
   variants: {
     size: {
-      display: "text-display",
+      // The display step is the one bold heading, as on the web.
+      display: "text-display font-bold",
       "title-1": "text-title-1",
       "title-2": "text-title-2",
       "title-3": "text-title-3",

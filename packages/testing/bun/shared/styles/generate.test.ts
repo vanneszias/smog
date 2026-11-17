@@ -112,6 +112,17 @@ describe("renderWebThemeCss", () => {
   it("grows the display size from md", () => {
     expect(css).toContain("@media (width >= 48rem)");
     expect(css).toContain("--text-display: 3.5rem;");
+    expect(css).toContain("--text-display--letter-spacing: -0.028em;");
+  });
+
+  it("tunes Figtree: tracking tightens and leading falls as the size grows", () => {
+    expect(css).toContain("--text-display--letter-spacing: -0.022em;");
+    expect(css).toContain("--text-display--line-height: 2.75rem;");
+    expect(css).toContain("--text-body--letter-spacing: 0;");
+    expect(css).toContain("--text-caption--letter-spacing: 0.012em;");
+    expect(css).toContain("--text-lead: 1.125rem;");
+    expect(css).toContain("--text-lead--line-height: 1.75rem;");
+    expect(css).toContain("--font-weight-bold: 700;");
   });
 
   it("turns durations and delays off for reduced motion", () => {
@@ -147,7 +158,10 @@ interface Preset {
     extend: {
       borderRadius: Record<string, string>;
       fontFamily: Record<string, string[]>;
-      fontSize: Record<string, [string, { lineHeight: string }]>;
+      fontSize: Record<
+        string,
+        [string, { letterSpacing: string; lineHeight: string }]
+      >;
       lineHeight: Record<string, string>;
       spacing: Record<string, string>;
     };
@@ -200,7 +214,8 @@ describe("renderNativeTailwindConfig", () => {
       body: "24px",
       "body-sm": "20px",
       caption: "16px",
-      display: "48px",
+      display: "44px",
+      lead: "28px",
       "title-1": "34px",
       "title-2": "28px",
       "title-3": "24px",
@@ -215,7 +230,12 @@ describe("renderNativeTailwindConfig", () => {
     expect(preset.theme.extend.borderRadius.card).toBe("20px");
     expect(preset.theme.extend.fontSize.body).toEqual([
       "16px",
-      { lineHeight: "24px" },
+      { letterSpacing: "0px", lineHeight: "24px" },
+    ]);
+    // Tracking tightens with size: -0.022em of 40 pt.
+    expect(preset.theme.extend.fontSize.display).toEqual([
+      "40px",
+      { letterSpacing: "-0.88px", lineHeight: "44px" },
     ]);
   });
 });

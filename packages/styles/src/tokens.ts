@@ -176,22 +176,46 @@ const chrome = {
 
 interface TypeStep {
   lineHeight: number;
-  /** Web only: the size from the `md` breakpoint up. */
-  md?: { size: number; lineHeight: number };
+  /** Web only: the size, line height and tracking from the `md` breakpoint up. */
+  md?: { size: number; lineHeight: number; tracking: number };
   size: number;
+  /**
+   * Letter spacing in em: tighter as the size grows, a touch looser when
+   * small (Figtree is generous at its defaults). Native gets it in pt.
+   */
+  tracking: number;
 }
 
+/**
+ * The type scale, Figtree tuned as an identity element (DECISIONS, "Brand
+ * identity: type"): leading falls and tracking tightens as the size grows.
+ * `display` is set bold (the hero), the titles semibold, body regular;
+ * `lead` is the line under a display title (the hero's supporting line,
+ * the auth panel). Body never goes below 16, anything read to act never
+ * below 14; `caption` is for redundant labels only.
+ */
 const fontSize = {
-  body: { lineHeight: 24, size: 16 },
-  "body-sm": { lineHeight: 20, size: 14 },
-  caption: { lineHeight: 16, size: 12 },
-  display: { lineHeight: 48, md: { lineHeight: 64, size: 56 }, size: 40 },
-  "title-1": { lineHeight: 34, size: 28 },
-  "title-2": { lineHeight: 28, size: 22 },
-  "title-3": { lineHeight: 24, size: 18 },
+  body: { lineHeight: 24, size: 16, tracking: 0 },
+  "body-sm": { lineHeight: 20, size: 14, tracking: 0.005 },
+  caption: { lineHeight: 16, size: 12, tracking: 0.012 },
+  display: {
+    lineHeight: 44,
+    md: { lineHeight: 60, size: 56, tracking: -0.028 },
+    size: 40,
+    tracking: -0.022,
+  },
+  lead: { lineHeight: 28, size: 18, tracking: -0.003 },
+  "title-1": { lineHeight: 34, size: 28, tracking: -0.016 },
+  "title-2": { lineHeight: 28, size: 22, tracking: -0.01 },
+  "title-3": { lineHeight: 24, size: 18, tracking: -0.005 },
 } as const satisfies Record<string, TypeStep>;
 
+/**
+ * The weights in use. Bold is the display weight (the native app embeds
+ * Figtree-Bold; the web loads the variable font).
+ */
 const fontWeight = {
+  bold: 700,
   medium: 500,
   regular: 400,
   semibold: 600,
