@@ -41,7 +41,7 @@ export function ConsentBanner({
       className={cn(
         inline
           ? "text-foreground"
-          : "pointer-events-none fixed inset-x-0 bottom-0 z-40 animate-slide-up p-3 text-foreground motion-reduce:animate-none md:p-4",
+          : "pointer-events-none fixed inset-x-0 bottom-0 z-40 animate-slide-up p-3 pb-[calc(--spacing(3)+env(safe-area-inset-bottom,0px))] text-foreground motion-reduce:animate-none md:p-4 md:pb-[calc(--spacing(4)+env(safe-area-inset-bottom,0px))]",
         className
       )}
       {...props}

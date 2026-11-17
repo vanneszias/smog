@@ -32,7 +32,7 @@ export function SelectionBar({
   const reserve = useReservedSpace();
   return (
     <div
-      className="sticky bottom-[var(--overlay-bottom,0px)] z-[1] -mx-4 border-border-subtle border-t bg-card px-4 py-3 shadow-2 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 dark:shadow-none"
+      className="sticky bottom-[var(--overlay-bottom,0px)] z-[1] -mx-4 border-border-subtle border-t bg-card px-4 pt-3 pb-[calc(--spacing(3)+env(safe-area-inset-bottom,0px))] shadow-2 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 dark:shadow-none"
       ref={reserve}
     >
       <div className="mx-auto flex max-w-content flex-wrap items-center justify-between gap-3">

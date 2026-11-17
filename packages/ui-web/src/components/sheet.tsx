@@ -13,15 +13,26 @@ export const Sheet = DialogPrimitive.Root;
 export const SheetTrigger = DialogPrimitive.Trigger;
 export const SheetClose = DialogPrimitive.Close;
 
+/*
+ * The page runs under the notch and the home indicator
+ * (`viewport-fit=cover`), so each edge a sheet touches pads itself by the
+ * safe-area inset (0 where there is none).
+ */
 const bottom =
-  "inset-x-0 bottom-0 max-h-5/6 rounded-t-4xl border-t data-closed:animate-slide-down data-open:animate-slide-up";
-const right =
-  "inset-y-0 right-0 h-full w-11/12 max-w-reading border-l data-closed:animate-slide-out-right data-open:animate-slide-in-right";
-const left =
-  "inset-y-0 left-0 h-full w-11/12 max-w-reading border-r data-closed:animate-slide-out-left data-open:animate-slide-in-left";
+  "inset-x-0 bottom-0 max-h-5/6 rounded-t-4xl border-t pb-[calc(--spacing(6)+env(safe-area-inset-bottom,0px))] data-closed:animate-slide-down data-open:animate-slide-up";
+const sideEdge =
+  "inset-y-0 h-full w-11/12 max-w-reading pt-[calc(--spacing(6)+env(safe-area-inset-top,0px))] pb-[calc(--spacing(6)+env(safe-area-inset-bottom,0px))]";
+const right = cn(
+  sideEdge,
+  "right-0 border-l pr-[calc(--spacing(6)+env(safe-area-inset-right,0px))] data-closed:animate-slide-out-right data-open:animate-slide-in-right"
+);
+const left = cn(
+  sideEdge,
+  "left-0 border-r pl-[calc(--spacing(6)+env(safe-area-inset-left,0px))] data-closed:animate-slide-out-left data-open:animate-slide-in-left"
+);
 
 const sheetVariants = cva(
-  "fixed z-50 flex flex-col gap-4 overflow-y-auto border-border-subtle bg-popover p-6 text-popover-foreground shadow-2 outline-none motion-reduce:animate-none",
+  "fixed z-50 flex flex-col gap-4 overflow-y-auto overscroll-contain border-border-subtle bg-popover p-6 text-popover-foreground shadow-2 outline-none motion-reduce:animate-none",
   {
     defaultVariants: { side: "auto" },
     variants: {
