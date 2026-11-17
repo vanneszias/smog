@@ -16,6 +16,10 @@ import { GREEN_ICON_BUTTON } from "./on-green";
 import { useSearchPalette } from "./search-palette-provider";
 import { UserMenu } from "./user-menu";
 
+/** `/brand/logo-small.svg` (2666.67 × 578.88) at 24 px, in `currentColor`. */
+const SMALL_LOGO =
+  "block aspect-[2666.67/578.88] h-6 bg-current mask-[url(/brand/logo-small.svg)] mask-contain mask-center mask-no-repeat";
+
 /** The search trigger from `md`: a pill that names the `/` shortcut. */
 const SEARCH_PILL =
   "relative hidden h-11 min-w-56 items-center gap-2 rounded-full border border-sidebar-border bg-sidebar-accent px-4 text-sidebar-foreground text-body-sm outline-none transition duration-fast ease-standard hover:bg-sidebar-accent/80 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar motion-reduce:transition-none md:inline-flex lg:min-w-72";
@@ -82,19 +86,18 @@ export function Header(): ReactNode {
         >
           {/* The full logo needs 32 px of height; on the narrowest phones,
               where the header's controls leave no room for it, the small
-              logo (hands drawn to hold at 24 px) takes its place. */}
+              logo (hands drawn to hold at 24 px) takes its place. It is a
+              mask over the text colour, from the published file, so its
+              artwork is not bundled into every page's JavaScript. */}
           <Logo
             className="max-[24rem]:hidden"
             decorative
             size="md"
             tone="current"
           />
-          <Logo
-            className="min-[24rem]:hidden"
-            decorative
-            size="sm"
-            tone="current"
-            variant="small"
+          <span
+            aria-hidden="true"
+            className={cn(SMALL_LOGO, "min-[24rem]:hidden")}
           />
         </Link>
         <MainNav className="ml-4 hidden md:block" />
