@@ -902,7 +902,8 @@
     "intro": "Un aide-mémoire pour votre cours ou initiation SMOG.",
     "description": "SMOG signifie Spreken Met Ondersteuning van Gebaren : des gestes pour soutenir la parole. Retrouvez en vidéo ce que vous avez appris dans un cours ou une initiation SMOG. Enregistrez les gestes dans vos favoris et vos listes.",
     "searchLabel": "Chercher un geste",
-    "searchPlaceholder": "Cherchez un geste, par exemple chien"
+    "searchPlaceholder": "Cherchez un geste, par exemple chien",
+    "eyebrow": "Spreken Met Ondersteuning van Gebaren"
   },
   "footer": {
     "madeBy": "Fait avec ♡ par zias.be",

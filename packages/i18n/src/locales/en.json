@@ -893,7 +893,8 @@
     "intro": "A reminder of what you learned in your SMOG course or introductory session.",
     "description": "SMOG stands for Spreken Met Ondersteuning van Gebaren: using gestures to support speech. Use the videos to refresh what you learned in a SMOG course or introductory session. Save gestures in your favorites and lists.",
     "searchLabel": "Look up a gesture",
-    "searchPlaceholder": "Look up a gesture, for example dog"
+    "searchPlaceholder": "Look up a gesture, for example dog",
+    "eyebrow": "Spreken Met Ondersteuning van Gebaren"
   },
   "footer": {
     "madeBy": "Made with ♡ by zias.be",

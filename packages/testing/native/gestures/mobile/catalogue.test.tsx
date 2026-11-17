@@ -52,7 +52,7 @@ describe("the runtime catalogue", () => {
     // Everything else stays the bundled English text.
     expect(
       screenHome.getByRole("header", {
-        name: "Gestures that support your speech",
+        name: "People naturally use gestures to support their speech",
       })
     ).toBeOnTheScreen();
   });
@@ -64,7 +64,7 @@ describe("the runtime catalogue", () => {
     const screenHome = await home();
     expect(
       await screenHome.findByRole("header", {
-        name: "Gestures that support your speech",
+        name: "People naturally use gestures to support their speech",
       })
     ).toBeOnTheScreen();
   });

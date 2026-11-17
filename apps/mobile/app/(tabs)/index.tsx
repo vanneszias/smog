@@ -1,3 +1,4 @@
+import { handSvgs } from "@smog/brand/svg";
 import {
   useCategories,
   useFeaturedGestures,
@@ -17,6 +18,7 @@ import {
   Skeleton,
   Surface,
   Text,
+  useColor,
 } from "@smog/ui-native";
 import { useIsFocused, useRouter } from "expo-router";
 import ArrowRight from "lucide-react-native/icons/arrow-right";
@@ -30,6 +32,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SvgXml } from "react-native-svg";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
 
@@ -97,10 +100,38 @@ function RecentGestures(): ReactElement | null {
   );
 }
 
+/** The find hand: twice as wide as it is tall (`hand-2.svg`, 400 by 200). */
+const FIND_HAND = { height: 28, width: 56 } as const;
+
 /**
- * Home: a green hero (the reversed logo, the headline and the search
- * field; submitting opens the search tab), the categories, "continue where
- * you left off" and a featured row, as the site's home.
+ * The hand pointing across, at the search field: on SMOG & Co that hand
+ * always means "find". A static drawing, decorative and hidden from the
+ * screen reader, beside the field and never behind text.
+ */
+function FindHand(): ReactElement {
+  const color = useColor("sidebarForegroundMuted");
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      testID="home-find-hand"
+    >
+      <SvgXml
+        color={color}
+        height={FIND_HAND.height}
+        width={FIND_HAND.width}
+        xml={handSvgs[1]}
+      />
+    </View>
+  );
+}
+
+/**
+ * Home: the deep green hero as the site's (the logo, "Spreken Met
+ * Ondersteuning van Gebaren" as a small line, the approved tagline as the
+ * heading, the memory-aid line and the search field with the find hand
+ * pointing at it; submitting opens the search tab), then the categories,
+ * "continue where you left off" and a featured row.
  *
  * The one screen without a stack header (the exception to the contract in
  * `src/components/screen.tsx`): the hero runs under the status bar. The
@@ -203,12 +234,8 @@ export default function HomeScreen(): ReactElement {
           tone="primary"
         >
           <View className="flex-row items-center justify-between gap-3">
-            <Logo
-              color="sidebarForeground"
-              decorative
-              size="md"
-              tone="current"
-            />
+            {/* Named, so a screen reader hears the product on its first screen. */}
+            <Logo color="sidebarForeground" size="md" tone="current" />
             <IconButton
               icon={<Settings />}
               label={t("nav.settings")}
@@ -216,17 +243,35 @@ export default function HomeScreen(): ReactElement {
               variant="ghost"
             />
           </View>
-          <Heading level={1} size="title-1">
-            {t("home.title")}
-          </Heading>
-          <Text tone="muted">{t("home.tagline")}</Text>
-          <Text tone="muted">{t("home.intro")}</Text>
-          <SearchField
-            onSubmitEditing={submit}
-            onValueChange={setQuery}
-            placeholder={t("search.placeholder")}
-            value={query}
-          />
+          <View className="gap-2 pt-2">
+            {/* The method's Dutch name, in every language. */}
+            <Text
+              accessibilityLanguage="nl"
+              size="body-sm"
+              testID="home-eyebrow"
+              tone="muted"
+              weight="medium"
+            >
+              {t("home.eyebrow")}
+            </Text>
+            <Heading level={1} size="display">
+              {t("home.tagline")}
+            </Heading>
+            <Text size="lead" tone="muted">
+              {t("home.intro")}
+            </Text>
+          </View>
+          <View className="flex-row items-center gap-3">
+            <FindHand />
+            <View className="flex-1">
+              <SearchField
+                onSubmitEditing={submit}
+                onValueChange={setQuery}
+                placeholder={t("search.placeholder")}
+                value={query}
+              />
+            </View>
+          </View>
         </Surface>
         <ConnectionBanner />
         {categories.data && categories.data.length > 0 ? (

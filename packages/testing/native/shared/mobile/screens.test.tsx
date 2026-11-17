@@ -104,20 +104,36 @@ describe("home", () => {
     expect(home.queryByTestId("home-recent")).toBeNull();
   });
 
-  it("opens with the hero: the headline and the search, on green", async () => {
+  it("opens with the hero: the method, the tagline, the memory aid and the search", async () => {
     await renderApp();
     const home = await inScreen("home");
+    // The approved tagline is the heading.
     expect(
       await home.findByRole("header", {
-        name: "Gestures that support your speech",
+        name: "People naturally use gestures to support their speech",
       })
     ).toBeOnTheScreen();
-    expect(home.getByPlaceholderText("Search for a gesture")).toBeOnTheScreen();
+    // The method's Dutch name stays Dutch in every language.
+    const eyebrow = home.getByTestId("home-eyebrow");
+    expect(eyebrow).toHaveTextContent("Spreken Met Ondersteuning van Gebaren");
+    expect(eyebrow.props.accessibilityLanguage).toBe("nl");
     expect(
       home.getByText(
         "A reminder of what you learned in your SMOG course or introductory session."
       )
     ).toBeOnTheScreen();
+    expect(home.getByPlaceholderText("Search for a gesture")).toBeOnTheScreen();
+    // The product is announced on the first screen.
+    expect(
+      home.getByRole("image", { name: "SMOG & Co logo" })
+    ).toBeOnTheScreen();
+    // The find hand points at the field: decoration, hidden from the reader.
+    const hand = home.getByTestId("home-find-hand", {
+      includeHiddenElements: true,
+    });
+    expect(hand.props.accessibilityElementsHidden).toBe(true);
+    // The invented headline is gone (one slogan only).
+    expect(home.queryByText("Gestures that support your speech")).toBeNull();
   });
 
   it("continues where this device left off", async () => {

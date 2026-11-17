@@ -893,7 +893,8 @@
     "intro": "Een geheugensteun bij je SMOG-cursus of initiatie.",
     "description": "SMOG staat voor Spreken Met Ondersteuning van Gebaren. Fris met de video's op wat je in een SMOG-cursus of initiatie leerde. Bewaar gebaren in je favorieten en lijsten.",
     "searchLabel": "Zoek een gebaar",
-    "searchPlaceholder": "Zoek een gebaar, bijvoorbeeld hond"
+    "searchPlaceholder": "Zoek een gebaar, bijvoorbeeld hond",
+    "eyebrow": "Spreken Met Ondersteuning van Gebaren"
   },
   "footer": {
     "madeBy": "Gemaakt met ♡ door zias.be",
