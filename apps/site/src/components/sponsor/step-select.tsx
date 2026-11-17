@@ -26,6 +26,7 @@ import {
 import { END_CARD_SECONDS, formatMoney } from "@smog/utils";
 import { Check, Heart } from "lucide-react";
 import { type ReactNode, useCallback, useId, useMemo, useState } from "react";
+import { useCatalogDisplay } from "@/components/learning/catalog-display";
 import { usePageLocale } from "./page-locale";
 
 /** Category chips shown before "+N more" (S-03). */
@@ -231,6 +232,8 @@ function CategoryBadges({
 }: {
   categories: GestureSummary["categories"];
 }): ReactNode {
+  // As on the public pages: sentence case, `lang` when untranslated.
+  const display = useCatalogDisplay();
   const [first, second, ...rest] = categories;
   if (!first) {
     return null;
@@ -239,11 +242,18 @@ function CategoryBadges({
     <span className="flex flex-wrap gap-1 px-3 pb-3">
       {[first, second]
         .filter((category) => category !== undefined)
-        .map((category) => (
-          <Badge className="max-w-full whitespace-normal" key={category.slug}>
-            {category.name}
-          </Badge>
-        ))}
+        .map((category) => {
+          const shown = display.category(category);
+          return (
+            <Badge
+              className="max-w-full whitespace-normal"
+              key={category.slug}
+              lang={shown.lang}
+            >
+              {shown.name}
+            </Badge>
+          );
+        })}
       {rest.length > 0 ? <Badge>+{rest.length}</Badge> : null}
     </span>
   );
@@ -508,6 +518,17 @@ export function StepSelect({
       (gesture) => cardState(gesture, availability, state.taken) === "available"
     ).length ?? 0;
   const filtered = search.q.trim() !== "" || search.categories.length > 0;
+  // The chips as the catalogue shows them: sentence case, `lang` if
+  // untranslated, the active filter orange.
+  const display = useCatalogDisplay();
+  const chipCategories = useMemo(
+    () =>
+      chips.shown.map((category) => {
+        const shown = display.category(category);
+        return { lang: shown.lang, name: shown.name, slug: shown.slug };
+      }),
+    [chips.shown, display]
+  );
 
   const grid = (
     <Grid
@@ -559,9 +580,10 @@ export function StepSelect({
         {categories.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
             <CategoryChips
-              categories={chips.shown}
+              categories={chipCategories}
               onChange={setCategories}
               selected={search.categories}
+              tone="action"
             />
             {categories.length > CHIPS_SHOWN ? (
               <Button onClick={chips.toggle} size="sm" variant="ghost">
