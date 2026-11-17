@@ -7,7 +7,7 @@
  * `src/outputs.test.ts` fails when the committed files drift from the plan.
  */
 
-import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { ART_DIR, brandPlan, REPO_ROOT } from "../src/compose";
 import { encodeIco } from "../src/ico";
@@ -43,9 +43,9 @@ async function main(): Promise<void> {
     write(path, contents);
   }
 
-  // The store icon is the artwork itself, not a rendering of it: it must stay
-  // the exact file the stores already ship.
-  write("apps/mobile/assets/icon.png", readFileSync(join(ART_DIR, "icon.png")));
+  // The iOS 26 layered icon is an Icon Composer package, copied as is
+  // (replaced whole, so a removed layer does not linger in the copy).
+  rmSync(join(MOBILE_ASSETS, "smog.icon"), { force: true, recursive: true });
   cpSync(join(ART_DIR, "smog.icon"), join(MOBILE_ASSETS, "smog.icon"), {
     recursive: true,
   });

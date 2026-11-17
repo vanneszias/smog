@@ -24,7 +24,7 @@ export default defineConfig({
           FONT_REGULAR_B64: asset(
             "apps/mobile/assets/fonts/Figtree-Regular.ttf"
           ),
-          IMAGE_B64: asset("packages/brand/src/art/icon.png"),
+          IMAGE_B64: asset("apps/mobile/assets/icon.png"),
           LOGO_B64: asset("packages/pdf/assets/logo.png"),
         },
       },

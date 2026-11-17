@@ -10,7 +10,7 @@ const read = (path: string): Uint8Array => readFileSync(`${ROOT}${path}`);
 
 const assets = {
   boldFont: read("apps/mobile/assets/fonts/Figtree-Bold.ttf"),
-  image: read("packages/brand/src/art/icon.png"),
+  image: read("apps/mobile/assets/icon.png"),
   regularFont: read("apps/mobile/assets/fonts/Figtree-Regular.ttf"),
 };
 
