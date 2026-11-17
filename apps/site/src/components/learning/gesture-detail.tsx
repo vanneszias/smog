@@ -209,7 +209,11 @@ export function GestureDetailView({
   });
   const shown = useCatalogDisplay().gesture(gesture);
   const video = (
+    // On the deep green stage the frame lies flat: the stage already sets
+    // it apart, and the kit's ring and raised shadow (made for a light
+    // page) drew a light edge around the video in the dark theme.
     <VideoPlayer
+      className="shadow-none ring-0"
       endCard={endCardOf(gesture)}
       nameOverlay={
         overlayApplies && nameOverlay.loaded && nameOverlay.shown
