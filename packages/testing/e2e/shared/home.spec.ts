@@ -142,11 +142,11 @@ test.describe("home", () => {
   });
 
   for (const width of [390, 768]) {
-    test(`at ${width} px the public pages reflow without sideways scroll`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ height: 800, width });
-      for (const path of ["/gestures", "/gestures/hond"]) {
+    for (const path of ["/gestures", "/gestures/hond"]) {
+      test(`at ${width} px ${path} reflows without sideways scroll`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ height: 800, width });
         await page.goto(path);
         await waitForApp(page);
         const overflow = await page.evaluate(
@@ -154,9 +154,9 @@ test.describe("home", () => {
             document.documentElement.scrollWidth -
             document.documentElement.clientWidth
         );
-        expect(overflow, path).toBeLessThanOrEqual(1);
-      }
-    });
+        expect(overflow).toBeLessThanOrEqual(1);
+      });
+    }
   }
 
   test("on a phone the hero, the contents and the footer reflow without sideways scroll", async ({
