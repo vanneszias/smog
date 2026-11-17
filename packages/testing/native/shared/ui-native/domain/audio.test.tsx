@@ -197,9 +197,8 @@ describe("the name over the video", () => {
     const hand = screen.getByTestId("gesture-title-hand", HIDDEN_TOO);
     expect(hand.props.width).toBeCloseTo(66);
     const name = screen.getByText("Hond", HIDDEN_TOO);
-    // 12 % of the width, Figtree Regular, white, never scaled past the frame.
+    // 12 % of the width, Figtree Regular, white.
     expect(name).toHaveStyle({ color: "#FFFFFF", fontSize: 36 });
-    expect(name.props.allowFontScaling).toBe(false);
   });
 
   it("steps a long word down so it stays inside the frame", async () => {

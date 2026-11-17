@@ -49,29 +49,6 @@ describe("Heading", () => {
     ) as { letterSpacing?: number };
     expect(style.letterSpacing).toBeCloseTo(-0.88, 2);
   });
-
-  it("caps text-size growth at 1.5 on display and title-1 only", async () => {
-    await renderKit(
-      <>
-        <Heading size="display">Display</Heading>
-        <Heading level={1}>Title</Heading>
-        <Heading level={2}>Section</Heading>
-        <Text>Body</Text>
-        <Heading maxFontSizeMultiplier={2} size="display">
-          Own cap
-        </Heading>
-      </>
-    );
-    const cap = (name: string): unknown =>
-      screen.getByRole("header", { name }).props.maxFontSizeMultiplier;
-    expect(cap("Display")).toBe(1.5);
-    expect(cap("Title")).toBe(1.5);
-    expect(cap("Section")).toBeUndefined();
-    expect(cap("Own cap")).toBe(2);
-    expect(
-      screen.getByText("Body").props.maxFontSizeMultiplier
-    ).toBeUndefined();
-  });
 });
 
 describe("Logo", () => {

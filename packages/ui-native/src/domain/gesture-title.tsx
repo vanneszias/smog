@@ -68,16 +68,16 @@ export function GestureTitle({
   name,
   ...props
 }: GestureTitleProps): ReactElement {
-  const [frame, setFrame] = useState({ height: 0, width: 0 });
+  const [frame, setFrame] = useState({ frameHeight: 0, frameWidth: 0 });
   const measure = useCallback((event: LayoutChangeEvent): void => {
     const { height, width } = event.nativeEvent.layout;
     setFrame((current) =>
-      current.height === height && current.width === width
+      current.frameHeight === height && current.frameWidth === width
         ? current
-        : { height, width }
+        : { frameHeight: height, frameWidth: width }
     );
   }, []);
-  const { height, width } = frame;
+  const { frameHeight: height, frameWidth: width } = frame;
   const size = titleFontSize(name, width);
   const handWidth = HAND_WIDTH * width;
   return (
@@ -89,11 +89,13 @@ export function GestureTitle({
       {...props}
     >
       {width > 0 ? (
+        // A band from the top to 44 % of the frame centres the row 22 % down;
+        // the row may outgrow it at large text sizes (nothing is clipped).
         <View
           className="absolute inset-x-0 top-0 flex-row items-center justify-center"
           style={{
+            bottom: (1 - 2 * ROW_CENTRE) * height,
             gap: GAP * width,
-            height: 2 * ROW_CENTRE * height,
             paddingHorizontal: INSET * width,
           }}
         >
@@ -105,7 +107,6 @@ export function GestureTitle({
             xml={handSvgs[1]}
           />
           <Text
-            allowFontScaling={false}
             className="min-w-0 flex-1 font-regular"
             style={{
               color: WHITE,

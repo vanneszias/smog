@@ -94,40 +94,26 @@ export interface HeadingProps
   ref?: Ref<RNText>;
 }
 
-/**
- * How far the system text size may grow the largest titles. iOS scales its
- * own large titles less than body text; without a cap a display title at
- * the largest accessibility sizes pushes the search field off the screen.
- * At 1.5 a display title still reaches 60 pt and title-1 42 pt; body text
- * and the smaller titles are never capped.
- */
-const DISPLAY_FONT_SCALE_CAP = 1.5;
-
-const CAPPED_SIZES: ReadonlySet<HeadingSize> = new Set(["display", "title-1"]);
-
 /** A heading (`accessibilityRole="header"`); `size` defaults from `level`. */
 export function Heading({
   className,
   level = 2,
-  maxFontSizeMultiplier,
   size,
   tone,
   ...props
 }: HeadingProps): ReactElement {
   const onSurface = useSurfaceText(tone);
-  const resolved = size ?? SIZE_FOR_LEVEL[level];
   return (
     <RNText
       accessibilityRole="header"
       className={cn(
-        headingVariants({ size: resolved, tone: tone ?? "default" }),
+        headingVariants({
+          size: size ?? SIZE_FOR_LEVEL[level],
+          tone: tone ?? "default",
+        }),
         onSurface,
         className
       )}
-      maxFontSizeMultiplier={
-        maxFontSizeMultiplier ??
-        (CAPPED_SIZES.has(resolved) ? DISPLAY_FONT_SCALE_CAP : undefined)
-      }
       {...props}
     />
   );
