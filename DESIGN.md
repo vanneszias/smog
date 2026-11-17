@@ -302,8 +302,50 @@ In dark mode a level-1 raised card has no shadow; it is drawn with a border on `
 - **Motion.** The interface moves like a calm hand: it arrives quickly, settles slowly, grows from where you pointed and never bounces. Things appearing or leaving ease out (`enter`), sheets slide on the drawer curve, something already on screen moving to a new place uses `move`, hover and colour stay on `standard`. Menus, selects, hover cards and tooltips grow from their trigger; dialogs pop from the centre; the search palette opens and closes instantly. The favourite heart is the one bounce: it pops, dips and settles. A hand drawing itself once takes the `gesture` duration. Under reduced motion nothing moves: every duration and every delay is zero on the web and native skips the animation.
 - **Feedback on native** adds haptics: a warning haptic on danger buttons, a selection haptic on chips, switches and toggles.
 - **Alerts and banners** use the `*-subtle` tint with `*-strong` text.
-- **Sponsor end card.** A sponsor's name and logo appear as an end card over the gesture's own video; nothing is rendered into it.
+- **Sponsor end card.** A sponsor's name and logo appear as an end card over the gesture's own video; nothing is rendered into it. Its look and motion are in "Video player".
 - **Email** uses the light theme resolved to literal values: the deep green header band with the white logo, a pill button in the brand green, the card frame. **Lesson PDFs** print in the same light roles.
+
+## Video player
+
+The gesture video is the product, so its player carries the brand. Web (`VideoPlayer`, `GestureTitle`, `SponsorEndCard`, `GestureThumbnail` in `@smog/ui-web`) is the reference; the app mirrors these values (its player keeps the platform's native controls, so the skin rows apply to the overlays and the play affordance only).
+
+**Frame.** 3:4, the card frame (`rounded.card`), the deep green (`sidebar`) behind the picture while it loads. Every overlay length below is a share of the frame's **width** (web: `cqw` inside an `@container`; native: computed from the measured frame width, `onLayout`), so it scales with the frame from a 160 px card to fullscreen.
+
+**Stills and posters.** Taken one second in (`GESTURE_STILL_SECONDS = 1` in `@smog/utils`): the title and the movement starting, never the white closing slate that the middle of the shortest clips lands on. Under every still sits its placeholder: the deep green with the gesture's title (below), or the pointing hand alone (40 % of the width, centred) on a frame too small to read a name. It shows while the still loads and replaces it when it fails. Never a blank tile or a lone letter.
+
+**The title: "the hand points at the word".** The kit draws the same title the burned-in videos open with, so a textless video, a missing still and an old video look alike (overlaid on a burned-in clip, it covers it within a few pixels).
+
+| Part | Value |
+| --- | --- |
+| Hand | `handSvgs[1]` (pointing across), white, 23 % wide (height follows the 2:1 drawing), starting 6 % from the left |
+| Hand height | its centre 3.5 % lower than the name's (web: `margin-top: 7cqw` in a centred row) |
+| Name | Figtree Regular (never bold), white, line height 1.05, tracking -0.01 em, starting 30 % from the left (0.5 % after the hand) |
+| Name size | 10.7 % of the width (cap height about 6.7 %); a long word steps it down so the longest word fits in 64 % of the width: `min(10.7, 64 / (letters × 0.55))` % of the width (`titleFontSize`); names wrap only at spaces |
+| Position | the row's centre 20.7 % down the frame (of its height); 6 % inset on both sides |
+| Contrast | white on the studio set (`#0B5F55`, about 7.5:1); no scrim, no shadow, no pill |
+| Motion | fades in (`fade-in`, `duration-normal`, `ease-enter`); it never slides over the gesture; none under reduced motion |
+| Access | decorative (`aria-hidden`): the frame's own label is the accessible name; taps pass through |
+| When | only for a textless video (`needsRecut` false) and while `preferences.hideGestureName` is off |
+
+**Play.** One play affordance everywhere: the orange `highlight` disc with the dark `highlight-foreground` triangle. On the player it is 64 px with a `shadow-2`, scales to 0.94 while pressed and has a white 2 px focus ring; on cards it is the 36 px badge at the bottom left of the still. Never black, never a bare triangle.
+
+**Controls (web).** Figtree, white icons on a transparent bar, hover a 16 % white wash, the scrubber a 4 px pill track with the played part in `primary` and a 14 px thumb. Kept: play/pause, the scrubber, the time, mute, speed and fullscreen (of the frame, so the overlays stay). Speed toggles 1x and 0.5x, for studying the movement. Removed: the ten-second seeks (the clips are a few seconds long), the volume slider (most clips are silent), picture-in-picture, cast and AirPlay. Looping is the page's choice (`loop`), not a button.
+
+**Sponsor end card.** Over the last 4 seconds (`END_CARD_SECONDS`, never before the middle of a short clip), as part of the film, not a card on top of it:
+
+| Part | Value |
+| --- | --- |
+| Band | full width at the bottom of the frame, a gradient of the deep `sidebar` green, solid over its lower 70 % and fading to transparent above; the text sits on the solid part |
+| Padding | 6 % of the width at the sides, 18 % above the text, 16 px below (web adds 64 px under it to clear the control bar) |
+| Message | `endCard.message` ("Mogelijk gemaakt door", "Made possible by", "Rendu possible grâce à"), `body-sm`, `sidebar-foreground-muted` |
+| Name | as typed, `title-3` semibold, `sidebar-foreground`, wraps anywhere |
+| Logo | optional, 40 px, `object-contain` on a light plate (`sidebar-foreground`, 6 px padding, `rounded.md`), before the text |
+| Enter | rises 8 px and fades in, `duration-slow` (320 ms), `ease-enter` |
+| Leave | fades out and drops 8 px, `duration-normal` (200 ms), `ease-standard`; it stays mounted while hidden, so a loop or a seek back makes it leave gently instead of vanishing |
+| Reduced motion | appears and goes at once |
+| Access | decorative (`aria-hidden`); the page states the credit in text; taps pass through |
+
+The real clips end on the white SMOG slate, so during its four seconds the band sits over white; that is intended (credits over the closing slate).
 
 ## Do's and Don'ts
 
@@ -315,5 +357,5 @@ In dark mode a level-1 raised card has no shadow; it is drawn with a border on `
 - Don't make a target smaller than `touch`, and don't give a control a rectangle where the kit has a pill.
 - Don't animate under reduced motion, and don't let anything bounce except the heart.
 - Don't add a second typeface.
-- Don't pick a hand at random; each hand has one meaning.
+- Don't pick a hand at random; each hand has one meaning. Errors show the open palm in `primary` on a pale red (`danger-subtle`) disc; no results and search show the hand pointing across; nothing here yet shows the open palm.
 - Don't use an em dash in any copy, don't change or paraphrase the Dutch tagline, and don't present the videos as a course.
