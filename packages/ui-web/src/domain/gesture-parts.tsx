@@ -89,6 +89,16 @@ export function GestureThumbnail({
   );
 }
 
+/** The language shared by every category of the line, if they share one. */
+export function categoryLineLang(
+  categories: readonly CategoryRef[]
+): string | undefined {
+  const first = categories[0]?.lang;
+  return first && categories.every((category) => category.lang === first)
+    ? first
+    : undefined;
+}
+
 /** "Greetings, Everyday". */
 export function categoryLine(categories: readonly CategoryRef[]): string {
   return categories.map((category) => category.name).join(", ");
