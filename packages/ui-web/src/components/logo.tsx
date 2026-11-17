@@ -1,4 +1,4 @@
-import { logoStackedSvg, logoSvg } from "@smog/brand/svg";
+import { logoSmallSvg, logoStackedSvg, logoSvg } from "@smog/brand/svg";
 import { useTranslation } from "@smog/i18n/react";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps, ReactNode } from "react";
@@ -19,12 +19,18 @@ const logoVariants = cva("inline-flex shrink-0 *:h-full *:w-auto", {
     },
     variant: {
       horizontal: "",
+      /** The full logo below 32 px tall (`sm`): hands drawn to hold at 20 px. */
+      small: "",
       stacked: "",
     },
   },
 });
 
-const SVG = { horizontal: logoSvg, stacked: logoStackedSvg } as const;
+const SVG = {
+  horizontal: logoSvg,
+  small: logoSmallSvg,
+  stacked: logoStackedSvg,
+} as const;
 
 export interface LogoProps
   extends Omit<ComponentProps<"span">, "children">,

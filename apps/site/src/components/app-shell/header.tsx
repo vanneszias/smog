@@ -80,7 +80,22 @@ export function Header(): ReactNode {
           className="inline-flex items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
           to="/"
         >
-          <Logo decorative size="md" tone="current" />
+          {/* The full logo needs 32 px of height; on the narrowest phones,
+              where the header's controls leave no room for it, the small
+              logo (hands drawn to hold at 24 px) takes its place. */}
+          <Logo
+            className="max-[24rem]:hidden"
+            decorative
+            size="md"
+            tone="current"
+          />
+          <Logo
+            className="min-[24rem]:hidden"
+            decorative
+            size="sm"
+            tone="current"
+            variant="small"
+          />
         </Link>
         <MainNav className="ml-4 hidden md:block" />
         <div className="ml-auto flex items-center gap-1">
