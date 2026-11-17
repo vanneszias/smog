@@ -1,4 +1,3 @@
-import { handSvgs } from "@smog/brand/svg";
 import {
   useCategories,
   useFeaturedGestures,
@@ -11,6 +10,7 @@ import {
   CategoryChips,
   ErrorState,
   GestureGrid,
+  HandIllustration,
   Heading,
   IconButton,
   Logo,
@@ -18,7 +18,6 @@ import {
   Skeleton,
   Surface,
   Text,
-  useColor,
 } from "@smog/ui-native";
 import { useIsFocused, useRouter } from "expo-router";
 import ArrowRight from "lucide-react-native/icons/arrow-right";
@@ -32,7 +31,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { SvgXml } from "react-native-svg";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useGestureCardRenderer } from "@/components/gesture-cards";
 
@@ -100,31 +98,24 @@ function RecentGestures(): ReactElement | null {
   );
 }
 
-/** The find hand: twice as wide as it is tall (`hand-2.svg`, 400 by 200). */
-const FIND_HAND = { height: 28, width: 56 } as const;
-
 /**
  * The hand pointing across, at the search field: on SMOG & Co that hand
  * always means "find". A static drawing, decorative and hidden from the
  * screen reader, beside the field and never behind text.
  */
 function FindHand(): ReactElement {
-  const color = useColor("sidebarForegroundMuted");
   return (
-    <View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
+    <HandIllustration
+      color="sidebarForegroundMuted"
+      hand={1}
+      height={FIND_HAND_HEIGHT}
       testID="home-find-hand"
-    >
-      <SvgXml
-        color={color}
-        height={FIND_HAND.height}
-        width={FIND_HAND.width}
-        xml={handSvgs[1]}
-      />
-    </View>
+    />
   );
 }
+
+/** The find hand's height in pt (it is twice as wide). */
+const FIND_HAND_HEIGHT = 28;
 
 /**
  * Home: the deep green hero as the site's (the logo, "Spreken Met

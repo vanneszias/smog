@@ -37,6 +37,9 @@ const CHAR_EM = 0.55;
 /** Where the row's centre sits, as a share of the frame's height. */
 const ROW_CENTRE = 0.22;
 
+/** Splits a name into its words. */
+const WORDS = /\s+/u;
+
 /** White over the studio set in both themes, as the burned-in title. */
 const WHITE = tokens.color.light.sidebarForeground;
 
@@ -44,7 +47,7 @@ const WHITE = tokens.color.light.sidebarForeground;
 function titleFontSize(name: string, frameWidth: number): number {
   const longest = Math.max(
     1,
-    ...name.split(/\s+/u).map((word) => [...word].length)
+    ...name.split(WORDS).map((word) => [...word].length)
   );
   const fit = (NAME_WIDTH * frameWidth) / (longest * CHAR_EM);
   return Math.min(MAX_SIZE * frameWidth, fit);
