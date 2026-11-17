@@ -53,6 +53,8 @@ export interface ResultsViewProps {
   footer?: ReactNode;
   hearts: Hearts;
   items: readonly GestureSummary[];
+  /** Clears the search (the empty state's way out when `emptyAction` is not given). */
+  onClearSearch?: (() => void) | undefined;
   onRetry: () => void;
   retrying: boolean;
   /** The slug shown beside the rows (desktop). */
@@ -90,6 +92,7 @@ function ResultRows({
   footer,
   hearts,
   items,
+  onClearSearch,
   onRetry,
   retrying,
   selected,
@@ -117,7 +120,7 @@ function ResultRows({
         <p className="sr-only" role="status">
           {t("search.noResults.title")}
         </p>
-        <NoResultsEmptyState action={emptyAction} />
+        <NoResultsEmptyState action={emptyAction} onClear={onClearSearch} />
       </>
     );
   }
@@ -151,8 +154,16 @@ function ResultRows({
  * from `lg` (master–detail). Only one of the two is displayed.
  */
 export function ResultsView(props: ResultsViewProps): ReactNode {
-  const { emptyAction, footer, hearts, items, onRetry, retrying, state } =
-    props;
+  const {
+    emptyAction,
+    footer,
+    hearts,
+    items,
+    onClearSearch,
+    onRetry,
+    retrying,
+    state,
+  } = props;
   const renderItem = useCallback(
     (gesture: GestureSummary) => (
       <LinkedGestureCard
@@ -170,6 +181,7 @@ export function ResultsView(props: ResultsViewProps): ReactNode {
         <SearchResults
           emptyAction={emptyAction}
           items={items}
+          onClearSearch={onClearSearch}
           onRetry={onRetry}
           renderItem={renderItem}
           retrying={retrying}

@@ -65,6 +65,22 @@ describe("SearchResults", () => {
     expect(screen.getByRole("status").textContent).toBe("No gestures found");
   });
 
+  test("empty: without an action, onClearSearch gives the way out", async () => {
+    const onClearSearch = mock();
+    renderKit(
+      <SearchResults
+        items={[]}
+        onClearSearch={onClearSearch}
+        onRetry={noop}
+        state="empty"
+      />
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Clear the search" })
+    );
+    expect(onClearSearch).toHaveBeenCalledTimes(1);
+  });
+
   test("error: an alert with retry", async () => {
     const onRetry = mock();
     renderKit(<SearchResults items={[]} onRetry={onRetry} state="error" />);

@@ -126,6 +126,30 @@ describe("/gestures (search sources)", () => {
     );
   });
 
+  test("a search with no match offers Clear the search, back to the catalogue", async () => {
+    await renderSite(null, {
+      api: API,
+      path: "/gestures?q=xyz",
+      routes: [[BrowseRoute, "/gestures/"]],
+    });
+    // The phone grid and the desktop rows both render (CSS shows one).
+    const clear = await screen.findAllByRole("button", {
+      name: "Clear the search",
+    });
+    await act(async () => {
+      fireEvent.click(clear[0] as HTMLElement);
+    });
+    await waitFor(() =>
+      expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("")
+    );
+    expect(
+      (await screen.findAllByRole("link", { name: /Hond/ })).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByRole("button", { name: "Clear the search" })
+    ).toEqual([]);
+  });
+
   test("the detail beside the results counts as search_results", async () => {
     const { events } = await renderSite(null, {
       api: API,
