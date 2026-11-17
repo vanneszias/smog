@@ -512,7 +512,7 @@
     }
   },
   "gesture": {
-    "sponsored": "Sponsorisé",
+    "sponsored": "Parrainé",
     "disclaimer": {
       "title": "Avis important"
     },
@@ -553,18 +553,18 @@
     },
     "sponsorCta": {
       "available": {
-        "title": "Parrainez ce geste",
-        "description": "Devenez le parrain ou la marraine de ce geste.",
-        "action": "Parrainer maintenant"
+        "title": "Devenez parrain ou marraine de ce geste",
+        "description": "Pendant un an, votre nom apparaît à la fin de cette vidéo.",
+        "action": "Parrainer ce geste"
       },
       "pending": {
         "title": "Parrainage en cours de traitement",
-        "description": "Ce geste a déjà été choisi pour un parrainage et n'est pas disponible pour le moment."
+        "description": "Quelqu'un parraine déjà ce geste. Choisissez-en un autre si vous le souhaitez."
       },
       "sponsored": {
         "title": "Actuellement parrainé",
         "description": "Ce geste est parrainé par {{name}}.",
-        "availableFrom": "Il sera de nouveau disponible au parrainage à partir du {{date}}."
+        "availableFrom": "Vous pourrez parrainer ce geste à nouveau à partir du {{date}}."
       }
     }
   },
@@ -2731,8 +2731,8 @@
   },
   "sponsor": {
     "meta": {
-      "title": "Parrainer un geste",
-      "description": "Soutenez un geste pendant un an. Votre nom apparaît dans la vidéo et aide le projet SMOG."
+      "title": "Devenez parrain ou marraine d'un geste",
+      "description": "Devenez parrain ou marraine d'un geste SMOG. Pendant un an, votre nom apparaît à la fin de la vidéo du geste."
     },
     "steps": {
       "select": "Choisir des gestes",
@@ -2743,18 +2743,26 @@
       "title": "Le parrainage est suspendu pour le moment",
       "description": "Vous ne pouvez pas parrainer de geste pour le moment. Réessayez plus tard."
     },
+    "story": {
+      "howTitle": "Comment ça marche",
+      "priceTitle": "Ce que ça coûte",
+      "where": "Votre nom s'affiche à la fin de la vidéo pendant {{duration}}, sur le geste lui-même.",
+      "review": "Nous vérifions votre parrainage avant sa mise en ligne. Vous recevez un e-mail dès qu'il est en ligne.",
+      "expiry": "Après un an, votre nom disparaît. Le geste et sa vidéo restent.",
+      "sampleName": "Votre nom",
+      "sampleLabel": "Exemple\u00a0: votre nom à la fin de la vidéo d'un geste"
+    },
     "select": {
-      "title": "Soutenez un geste",
-      "description": "Soutenez un geste pendant un an. Votre nom apparaît dans la vidéo et aide le projet SMOG.",
+      "title": "Devenez parrain ou marraine d'un geste",
+      "description": "Pendant un an, votre nom apparaît à la fin de la vidéo du geste. Vous pouvez aussi ajouter votre logo.",
       "value": {
         "perGesture": "Par geste, par an",
-        "seconds": "{{seconds}} s",
-        "nameInVideo": "Votre nom avec les gestes choisis",
+        "nameInVideo": "À l'écran à la fin de chaque vidéo",
         "logoPrice": "+{{price}}",
-        "optionalLogo": "Ajoutez votre logo (facultatif)"
+        "optionalLogo": "Avec votre logo, par geste"
       },
       "search": "Rechercher des gestes",
-      "searchPlaceholder": "Rechercher par nom, notion ou catégorie...",
+      "searchPlaceholder": "Rechercher par nom, notion ou catégorie…",
       "showMore": "+{{count}} de plus",
       "showLess": "Afficher moins",
       "clearFilters": "Effacer les filtres",
@@ -2769,7 +2777,7 @@
       "badge": {
         "sponsored": "Parrainé",
         "pending": "En cours",
-        "taken": "Déjà pris"
+        "taken": "Vient d'être pris"
       },
       "limit": "Vous pouvez parrainer jusqu'à {{max}} gestes par paiement. Retirez-en un pour en choisir un autre.",
       "taken": "Quelqu'un d'autre a été plus rapide. Ces gestes sont signalés\u00a0; choisissez-en d'autres si vous le souhaitez.",
@@ -2894,11 +2902,11 @@
       },
       "paid": {
         "title": "Paiement réussi\u00a0!",
-        "description": "Merci de soutenir SMOG."
+        "description": "Merci de soutenir SMOG & Co."
       },
       "renewed": {
         "title": "Votre parrainage est prolongé\u00a0!",
-        "description": "Votre nom reste dans la vidéo jusqu'au {{date}}."
+        "description": "Votre nom reste à la fin de la vidéo jusqu'au {{date}}."
       },
       "failed": {
         "title": "Le paiement n'a pas abouti",
@@ -2991,5 +2999,14 @@
     "title": "Se déconnecter\u202f?",
     "message": "Vous pouvez vous reconnecter à tout moment.",
     "confirm": "Se déconnecter"
+  },
+  "stateActions": {
+    "noResults": {
+      "clear": "Effacer la recherche",
+      "suggestions": "Vouliez-vous dire l'un de ces gestes\u202f?"
+    },
+    "offline": {
+      "web": "Ce qui est déjà affiché reste ici. Les autres pages, la recherche et les vidéos reviennent dès que la connexion est rétablie."
+    }
   }
 }
