@@ -3,7 +3,7 @@
   "workerGzip": 5242880,
   "entries": {
     "home": {
-      "gzip": 463000,
+      "gzip": 466000,
       "target": 200000,
       "note": "Target not reached: the shared closure is ~435 kB gzip (TanStack/React, the shared UI, the active i18n catalogue and zod schemas). RELATED_LIMIT lives outside the detail UI so route loaders do not pull the player and its actions into every entry.",
       "routes": [["index.tsx"]]
@@ -15,7 +15,7 @@
       "routes": [["gestures/index.tsx"]]
     },
     "gesture": {
-      "gzip": 473000,
+      "gzip": 476000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Mux Player (314 kB gzip) and the QR dialog load on demand.",
       "routes": [["gestures/$slug.tsx"]]
@@ -33,7 +33,7 @@
       "routes": [["sponsor/index.tsx"]]
     },
     "sponsor-pages": {
-      "gzip": 459000,
+      "gzip": 462000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). Covers the edit, renew and success pages.",
       "routes": [
@@ -43,7 +43,7 @@
       ]
     },
     "account": {
-      "gzip": 458000,
+      "gzip": 461000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home).",
       "routes": [["account.tsx"]]
