@@ -38,7 +38,7 @@ describe("metadata (brand identity)", () => {
       expect(meta(page, "og:image")).toBe(`${ORIGIN}/og-fr.png`);
       expect(meta(page, "og:image:width")).toBe("1200");
       expect(meta(page, "og:image:height")).toBe("630");
-      expect(meta(page, "og:image:alt")).toContain("SMOG &amp; Co");
+      expect(meta(page, "og:image:alt")).toContain("SMOG\u00a0&amp;\u00a0Co");
       expect(meta(page, "twitter:image:alt")).toBe(meta(page, "og:image:alt"));
       const description = meta(page, "description") ?? "";
       expect(description.length).toBeGreaterThan(50);
