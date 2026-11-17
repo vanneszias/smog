@@ -361,7 +361,7 @@ describe("GestureEditor", () => {
       name: "Overwrite their changes?",
     });
     expect(confirm.textContent).toContain(
-      "This replaces the other admin's name with yours."
+      "This replaces the other admin’s name with yours."
     );
     expect(updates(calls)).toHaveLength(1);
     fireEvent.click(within(confirm).getByRole("button", { name: "Overwrite" }));

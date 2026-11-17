@@ -819,6 +819,6 @@ describe("offline", () => {
     const home = await inScreen("home");
     expect(await home.findByRole("button", { name: "Hond" })).toBeOnTheScreen();
     expect(home.getByTestId("offline-banner")).toBeOnTheScreen();
-    expect(home.getByText("You're offline")).toBeOnTheScreen();
+    expect(home.getByText("You’re offline")).toBeOnTheScreen();
   });
 });

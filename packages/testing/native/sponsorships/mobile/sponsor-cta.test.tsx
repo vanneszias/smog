@@ -68,7 +68,7 @@ describe("the gesture's sponsor card on mobile (L-17, ruling 13)", () => {
       routes: { "sponsorships/availability": availability({}) },
     });
     const cta = await card();
-    expect(cta.getByText("Become this gesture's sponsor")).toBeOnTheScreen();
+    expect(cta.getByText("Become this gesture’s sponsor")).toBeOnTheScreen();
     fireEvent.press(cta.getByRole("button", { name: "Sponsor this gesture" }));
     expect(openURL).toHaveBeenCalledWith(
       expect.stringMatching(SPONSOR_GESTURE_HOND)

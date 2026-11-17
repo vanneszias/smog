@@ -48,7 +48,7 @@ describe("the gesture's sponsor card (L-17, ruling 13)", () => {
     const link = await screen.findByRole("link", { name: SPONSOR_LINK });
     expect(link.getAttribute("href")).toBe("/sponsor?gesture=hond");
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
-      "Become this gesture's sponsor"
+      "Become this gesture’s sponsor"
     );
     expect(calls).toContainEqual({
       input: { gestureIds: ["g-hond"] },

@@ -339,7 +339,7 @@ describe("useChangePasswordForm", () => {
       feedback = await hook.result.current.submit();
     });
     expect(hook.result.current.errorFor("confirm")).toBe(
-      "The passwords don't match."
+      "The passwords don’t match."
     );
     expect(hook.result.current.errorFor("current")).toBeUndefined();
     expect(auth.calls).toEqual([]);

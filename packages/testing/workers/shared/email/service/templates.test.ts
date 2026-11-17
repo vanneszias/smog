@@ -105,7 +105,7 @@ describe("the layout", () => {
       const text = plain(email.text);
       const signature = {
         en: "The SMOG & Co team",
-        fr: "L'équipe SMOG & Co",
+        fr: "L’équipe SMOG & Co",
         nl: "Het team van SMOG & Co",
       }[locale];
       const reason = {

@@ -291,7 +291,7 @@ describe("settings/account", () => {
     expect(account.queryByText("Email language")).not.toBeOnTheScreen();
     expect(
       account.getByText(
-        "When you're signed in, this is also the language of the emails we send you."
+        "When you’re signed in, this is also the language of the emails we send you."
       )
     ).toBeOnTheScreen();
     await fireEvent.press(account.getByRole("combobox", { name: "Language" }));
@@ -376,7 +376,7 @@ describe("settings/account", () => {
       });
       expect(signOut).not.toHaveBeenCalled();
       expect(result.getPathname()).toBe("/settings/account");
-      expect(screen.queryByText("You're signed out.")).toBeNull();
+      expect(screen.queryByText("You’re signed out.")).toBeNull();
     });
 
     it("Sign out signs out, says so and goes to the welcome screen", async () => {
@@ -397,7 +397,7 @@ describe("settings/account", () => {
         buttons.find((button) => button.text === "Sign out")?.onPress?.();
       });
       await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
-      expect(await screen.findByText("You're signed out.")).toBeOnTheScreen();
+      expect(await screen.findByText("You’re signed out.")).toBeOnTheScreen();
       expect(mockFiles.has(leftover)).toBe(false);
       await waitFor(() => expect(result.getPathname()).toBe("/"));
     });
