@@ -95,7 +95,7 @@ export function SponsorEndCard({
       <Band />
       <View className="flex-row items-center gap-3 px-5">
         {logoSrc ? (
-          <View className="shrink-0 rounded-md bg-sidebar-foreground p-1.5">
+          <View className="shrink-0 rounded-md bg-sidebar-foreground p-1">
             <Image
               accessibilityIgnoresInvertColors
               resizeMode="contain"

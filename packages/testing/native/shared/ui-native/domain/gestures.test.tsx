@@ -1,8 +1,10 @@
 import { describe, expect, it, jest } from "@jest/globals";
+import { themeVars } from "@smog/styles/native";
+import { tokens } from "@smog/styles/tokens";
 import { fireEvent, screen, within } from "@testing-library/react-native";
 import { impactAsync, selectionAsync } from "expo-haptics";
 import type { ReactElement } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 // biome-ignore lint/performance/noNamespaceImport: the test spies on a Reanimated export
 import * as Reanimated from "react-native-reanimated";
 import { Button } from "../../../../../ui-native/src/components/button";
@@ -12,6 +14,7 @@ import { GestureCard } from "../../../../../ui-native/src/domain/gesture-card";
 import { GestureGrid } from "../../../../../ui-native/src/domain/gesture-grid";
 import { GestureRow } from "../../../../../ui-native/src/domain/gesture-row";
 import type { GestureCardData } from "../../../../../ui-native/src/domain/types";
+import { rgba } from "../../../../support/ui-native/colour";
 import { EAT, HELLO } from "../../../../support/ui-native/gestures";
 import { renderKit, t } from "../../../../support/ui-native/render";
 
@@ -26,6 +29,23 @@ describe("GestureCard", () => {
     expect(screen.getByText("Greetings, Everyday")).toBeOnTheScreen();
     await fireEvent.press(card);
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it("carries the orange play glyph on the still, decorative", async () => {
+    await renderKit(
+      <View style={themeVars.light}>
+        <GestureCard gesture={HELLO} onPress={jest.fn()} />
+      </View>
+    );
+    const play = screen.getByTestId("gesture-play", {
+      includeHiddenElements: true,
+    });
+    expect(play.props.accessibilityElementsHidden).toBe(true);
+    expect(play).toHaveStyle({
+      backgroundColor: rgba(tokens.color.light.highlight),
+      height: 36,
+      width: 36,
+    });
   });
 
   it("shows the Mux still, decorative", async () => {

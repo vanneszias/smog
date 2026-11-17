@@ -1,3 +1,4 @@
+import { tokens } from "@smog/styles/tokens";
 import { muxThumbnailUrl } from "@smog/utils";
 import Play from "lucide-react-native/icons/play";
 import type { ReactElement } from "react";
@@ -8,6 +9,9 @@ import { useColor } from "../lib/theme";
 import type { CategoryRef } from "./types";
 
 const THUMBNAIL_STYLE = { aspectRatio: 3 / 4 } as const;
+/** The play disc, 36 pt as the web's `size-9` (native's rem is 14). */
+const PLAY_SIZE = tokens.spacing["8"] + tokens.spacing["1"];
+const PLAY_STYLE = { height: PLAY_SIZE, width: PLAY_SIZE } as const;
 
 /**
  * The orange play glyph on a still (as the web card): orange means "do
@@ -19,9 +23,10 @@ function PlayBadge(): ReactElement {
   return (
     <View
       accessibilityElementsHidden
-      className="absolute bottom-2 left-2 size-9 items-center justify-center rounded-full bg-highlight"
+      className="absolute bottom-2 left-2 items-center justify-center rounded-full bg-highlight"
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
+      style={PLAY_STYLE}
       testID="gesture-play"
     >
       <Play color={ink} fill={ink} size={ICON_SIZE.sm} />

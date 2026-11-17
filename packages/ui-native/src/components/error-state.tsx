@@ -22,8 +22,9 @@ export interface ErrorStateProps extends Omit<ViewProps, "children"> {
   title?: ReactNode;
 }
 
-/** The open palm inside the disc (the disc is `size-24`). */
+/** The open palm, and the 96 pt disc around it (the web's `size-24`). */
 const HAND_SIZE = tokens.spacing["12"];
+const DISC = { height: 2 * HAND_SIZE, width: 2 * HAND_SIZE } as const;
 
 /**
  * A data view failed to load: the brand's open palm in the brand green on
@@ -54,8 +55,9 @@ export function ErrorState({
       >
         <View
           accessibilityElementsHidden
-          className="mb-1 size-24 items-center justify-center rounded-full bg-danger-subtle"
+          className="mb-1 items-center justify-center rounded-full bg-danger-subtle"
           importantForAccessibility="no-hide-descendants"
+          style={DISC}
           testID="error-illustration"
         >
           <SvgXml
