@@ -30,8 +30,12 @@ jest.mock("react-native-svg", () => {
     jest.requireActual<typeof import("react-native")>("react-native");
   return {
     ...actual,
+    // `xml` rides along as an extra prop of the host view.
     SvgXml: (props: { xml: string }) =>
-      react.createElement(native.View, { testID: "svg-xml", xml: props.xml }),
+      react.createElement(native.View, {
+        testID: "svg-xml",
+        xml: props.xml,
+      } as Record<string, unknown>),
   };
 });
 
