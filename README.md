@@ -1,9 +1,9 @@
-# SMOG
+# SMOG & Co
 
-SMOG & Co's platform for **Spreken Met Ondersteuning van Gebaren** (SMOG): using gestures to support spoken communication. It offers a library of SMOG gesture videos that people search, favorite and collect in lists, and that organisations can sponsor with their logo on a gesture. The rewrite of the old Convex + WorkOS system runs on Cloudflare; the old data moves over with an importer.
+SMOG & Co helps people find and remember SMOG gestures. SMOG stands for **Spreken Met Ondersteuning van Gebaren**: gestures that support spoken communication. SMOG is the method; SMOG & Co is the app, the website and the organization behind them. This repository holds the website, the API and the mobile app: a library of SMOG gesture videos that people use as a memory aid alongside a SMOG course or initiation, save as favorites and collect in lists. Anyone can sponsor a gesture for a year; their name, and their logo if they add one, appears at the end of the gesture's video.
 
 - **Site and API:** one Cloudflare Worker (`apps/site`): TanStack Start (React 19), oRPC procedures at `/api/rpc`, Better Auth, D1 (SQLite) through Drizzle, KV, R2 and Queues.
-- **App:** one Expo app (`apps/mobile`, SDK 57, Expo Router, NativeWind) for iOS and Android.
+- **App:** one Expo app (`apps/mobile`, SDK 58, Expo Router, NativeWind) for iOS and Android.
 - **Logic:** everything else is in `packages/*` (the feature packages are in `packages/features/*`); the apps are routing, screens and wiring only.
 - **Tooling:** Bun, Turborepo, Biome (Ultracite), TypeScript 7, Vitest (Workers pool), Jest (Expo), Playwright.
 
@@ -46,7 +46,7 @@ Tests are grouped by runtime, then feature, in [`packages/testing`](packages/tes
 
 ## Environments and deploys
 
-Three environments: `dev` (your machine), `staging` (the `develop` branch) and `production` (the `master` branch). `.github/workflows/deploy.yml` runs the whole of CI first, then the deploy config check, the Cloudflare resources, the D1 migrations and the guarded `bun -F @smog/site deploy`; without the Cloudflare secrets a staging deploy skips with a warning and a production deploy fails. Nothing in the repository holds a credential. Production has never deployed: the owner's ordered list is in `docs/PROGRESS.md`.
+Three environments: `dev` (your machine), `staging` (the `develop` branch) and `production` (the `master` branch). `.github/workflows/deploy.yml` runs the whole of CI first, then the deploy config check, the Cloudflare resources, the D1 migrations and the guarded `bun -F @smog/site deploy`; without the Cloudflare secrets a staging deploy skips with a warning and a production deploy fails. Nothing in the repository holds a credential. Production has never deployed: the owner's ordered list is in `docs/PROGRESS.md`. This codebase replaces the old Convex + WorkOS system; the old data moves over with an importer (`docs/cutover-runbook.md`).
 
 ## Where things are written down
 
@@ -56,6 +56,6 @@ Three environments: `dev` (your machine), `staging` (the `develop` branch) and `
 - `docs/DECISIONS.md`: every non-trivial choice and why; `docs/API.md` (procedures, routes, queues, crons, rate limits, cache policy), `docs/DATA_MODEL.md` (tables, migrations, retention), `docs/LEGAL-SIGNOFF.md` (the texts awaiting the owner's approval).
 - `docs/superpowers/specs/2026-09-29-cloudflare-rewrite-design.md`: the design spec; `docs/superpowers/specs/2026-09-29-feature-inventory.md`: the feature checklist; `docs/superpowers/plans/`: one plan per phase.
 
-## Licence and credits
+## License and credits
 
-The repository declares no licence (no `LICENSE` file): treat it as all rights reserved until the owner decides otherwise. The brand, the content and the legal texts are SMOG & Co vzw's. Built on Cloudflare Workers, TanStack, Better Auth, oRPC, Drizzle, Expo, Mux (video) and Mollie (payments).
+The repository declares no license (no `LICENSE` file): treat it as all rights reserved until the owner decides otherwise. The brand, the content and the legal texts belong to SMOG & Co vzw. Built on Cloudflare Workers, TanStack, Better Auth, oRPC, Drizzle, Expo, Mux (video) and Mollie (payments).

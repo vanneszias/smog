@@ -317,3 +317,70 @@ In dark mode a level-1 raised card has no shadow; it is drawn with a border on `
 - Don't add a second typeface.
 - Don't pick a hand at random; each hand has one meaning.
 - Don't use an em dash in any copy, don't change or paraphrase the Dutch tagline, and don't present the videos as a course.
+
+## Voice and words
+
+The copy is part of the identity. AGENTS.md ("Product terminology", "Brand voice and copy workflow") holds the rules that are never broken; this section is how they are applied, string by string. A guard test (`packages/testing/bun/shared/i18n/brand-naming.test.ts`) keeps the names and the word for a gesture; a second one (`typography.test.ts` beside it) holds the typography rules below and is switched on after the catalogue-wide sweep.
+
+### Voice
+
+- **Warm, direct, concrete.** Talk to one person about one thing they are doing: finding a gesture, saving it, preparing a lesson. Use the words people use about speaking and gestures, not product or technical words.
+- **One register per language.** Dutch says "je", French says "vous", English uses contractions ("you're", "don't") and American spelling ("favorite", "organization", "canceled", "catalog").
+- **Short and plain.** One idea per sentence, about twenty words at most. Keep a separable verb together ("Met de video's herhaal je" rather than "Fris ... op"). No brackets inside a sentence ("bestaat niet (meer)"): say it as a sentence.
+- **Honest.** The videos are a memory aid alongside a SMOG course or initiation, never a course. Promise nothing that is not true today: no review deadline, no claim about what a sponsorship funds until the owner states it.
+- **Calm.** No urgency ("Nu", "Now"), no pressure to convert, no slogans beside the approved tagline.
+
+### Names
+
+- **SMOG** is the method: Spreken Met Ondersteuning van Gebaren, the Dutch name in every language, explained in the reader's language where it helps. Write "SMOG-gebaar", "SMOG gesture", "geste SMOG"; "SMOG-cursus", "SMOG course", "cours SMOG".
+- **SMOG & Co** is the app, the website and the organisation: "Steun SMOG & Co", "de SMOG & Co-app", "l'application SMOG & Co". Always with spaces around the ampersand, a capital C and a lower-case o, and never shortened to "SMOG" when the app or the organisation is meant ("de SMOG-app", "het SMOG-project", "Steun SMOG" are wrong).
+- In running text the ampersand is held by a no-break space on both sides (`SMOG & Co` in the catalogues), so the name never breaks over two lines. Where the name stands alone and never wraps (the app name, a page title, an email subject, a payment description) plain spaces are fine.
+- The legal entity is written "SMOG & Co vzw" (French "asbl") in the email footer. The legal texts keep their own spelling until the owner confirms the entity's name.
+
+### Fixed terms
+
+| Concept | nl | en | fr |
+| --- | --- | --- | --- |
+| The method | SMOG (Spreken Met Ondersteuning van Gebaren) | SMOG | SMOG |
+| The product and organisation | SMOG & Co | SMOG & Co | SMOG & Co |
+| Approved tagline | Mensen gaan van nature hun spraak ondersteunen met gebaren | People naturally use gestures to support their speech | Les gens accompagnent naturellement leur parole de gestes |
+| Gesture | gebaar | gesture (never "sign") | geste (never "signe") |
+| Course | SMOG-cursus | SMOG course | cours SMOG |
+| Initiation | initiatie | introductory session | initiation |
+| Memory aid | geheugensteun | memory aid | aide-mémoire |
+| Favorites | favorieten | favorites | favoris |
+| List | lijst | list | liste |
+| Device | toestel | device | appareil |
+| Sign in | aanmelden | sign in | se connecter |
+| Usage statistics | gebruiksstatistieken | usage statistics | statistiques d'utilisation |
+| To sponsor | sponsoren | sponsor | parrainer |
+| Sponsorship | sponsoring | sponsorship | parrainage |
+| A sponsor, warmly | peter of meter | sponsor | parrain ou marraine |
+| Visible to everyone | online (never "live" in a sentence) | online | en ligne |
+| Contact | info@smog.vlaanderen | info@smog.vlaanderen | info@smog.vlaanderen |
+
+Translators find the short form of this list on the strings screen of the translation admin (`admin.translation.strings.description`).
+
+### Capitals and punctuation
+
+- **Sentence case everywhere**, in all three languages: titles, buttons, navigation, labels. Only names take capitals (SMOG, SMOG & Co, Google, Apple).
+- **Full stops** end sentences, not buttons, labels, titles or list items.
+- **Exclamation marks**: none in the interface. At most one per payment or thank-you moment ("Bedankt om SMOG & Co te steunen!").
+- **No em dash** anywhere. A colon introduces what follows, parentheses hold an aside, a hyphen is an empty value.
+- **Typography** (enforced after the sweep): the curly apostrophe `’` (`video’s`, `don’t`, `l’appareil`); quotes `“ ”` in Dutch and English, `« »` with a narrow no-break space inside in French; the ellipsis character `…`, never three dots; a no-break space between a number and its unit (`2 MB`, `4 s`); in French a no-break space before `: ; ? !`.
+
+### Buttons and links
+
+- **Verb and object, saying what happens**: "Bekijk het gebaar", "Dit gebaar sponsoren", "Lijst maken". The same act keeps the same verb across the product.
+- **Links say where they go**: "Bekijk het cursusaanbod" goes to the course page; never "klik hier" or a phrase that promises another page.
+- **A choice reads as an answer**: "Statistieken toestaan" beside "Liever niet".
+
+### Errors and states
+
+- **Say what happened, plainly, without blame**, then what to do: "Dat lukte niet. Probeer het opnieuw." / "That didn't work. Try again." / "Cela n'a pas fonctionné. Réessayez." No "Please", no "Veuillez", never "Er ging iets mis" on its own.
+- **When the person cannot fix it, give a way to get help**: "Blijft het misgaan? Mail naar info@smog.vlaanderen." / "If it keeps happening, email info@smog.vlaanderen." / "Si le problème persiste, écrivez à info@smog.vlaanderen."
+- **Empty, offline and no-result states name the product's own nouns** (gesture, video, favorite, list, course) **and offer one next action.** Reference wording for the learning screens:
+  - Error loading gestures: "De gebaren laden nu niet" / "The gestures won't load right now" / "Les gestes ne se chargent pas pour l'instant", with the retry and the help line above.
+  - Offline: "Je favorieten en lijsten blijven hier. Zoeken en video's werken weer zodra je verbinding hebt." (the shipped `states.offline.description`).
+  - No results: "Geen gebaar voor “{{q}}”. Probeer een korter of verwant woord, of kijk per thema." / "No gesture for “{{q}}”. Try a shorter or related word, or browse by theme." / "Aucun geste pour « {{q}} ». Essayez un mot plus court ou proche, ou parcourez par thème."
+- **The course notices after a video are a friendly series** titled "Goed om te weten" / "Good to know" / "Bon à savoir": each one says one useful thing about the course or the gestures and links where it says.
