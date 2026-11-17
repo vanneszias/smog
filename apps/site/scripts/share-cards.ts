@@ -42,13 +42,15 @@ const TAGLINE = { lineHeight: 1.12, maxWidth: 780, size: 62 } as const;
 const SUBLINE_SIZE = 34;
 
 /** The open hand (`hand-3.svg`, welcome), cropped by the right edge. */
-const HAND = { width: 480, x: 840, y: 360 } as const;
+const HAND = { stroke: 7, width: 480, x: 840, y: 360 } as const;
 
 type Font = ReturnType<typeof fontkit.create>;
 
 const OPEN_TAG = /^<svg\b[^>]*>/;
 const VIEW_BOX = /\bviewBox="([^"]+)"/;
 const WHITESPACE = /\s+/;
+const PAINT_ATTRIBUTE =
+  /\b(fill|stroke|stroke-width|stroke-linecap|stroke-linejoin)="([^"]*)"/g;
 
 interface Art {
   body: string;
@@ -57,7 +59,12 @@ interface Art {
   width: number;
 }
 
-function readArt(name: string): Art {
+/**
+ * One artwork file, its root's paint attributes (`fill`, `stroke`, the line
+ * width and caps: the hands are strokes) moved onto a group, any of them
+ * overridden by `paint`.
+ */
+function readArt(name: string, paint: Record<string, string> = {}): Art {
   const source = readFileSync(`${ART}${name}`, "utf8");
   const open = source.match(OPEN_TAG)?.[0] ?? "";
   const viewBox = open.match(VIEW_BOX)?.[1] ?? "";
@@ -65,12 +72,17 @@ function readArt(name: string): Art {
   if (!(width && height)) {
     throw new Error(`[share-cards] ${name} has no readable viewBox`);
   }
-  // The artwork is drawn in currentColor; the root's fill comes along.
-  const fill = open.includes('fill="currentColor"')
-    ? ' fill="currentColor"'
-    : "";
+  const attributes = Object.fromEntries(
+    [...open.matchAll(PAINT_ATTRIBUTE)].map(([, key = "", value = ""]) => [
+      key,
+      value,
+    ])
+  );
+  const group = Object.entries({ ...attributes, ...paint })
+    .map(([key, value]) => ` ${key}="${value}"`)
+    .join("");
   return {
-    body: `<g${fill}>${source.slice(open.length, source.lastIndexOf("</svg>"))}</g>`,
+    body: `<g${group}>${source.slice(open.length, source.lastIndexOf("</svg>"))}</g>`,
     height,
     viewBox,
     width,
@@ -180,7 +192,8 @@ export function shareCardPlan(): ShareCardOutput[] {
   const bold = fontkit.create(readFileSync(`${FONTS}Figtree-Bold.ttf`));
   const regular = fontkit.create(readFileSync(`${FONTS}Figtree-Regular.ttf`));
   const logo = readArt("logo.svg");
-  const hand = readArt("hand-3.svg");
+  // The hands are drawn with a non-scaling hairline: a card-sized line here.
+  const hand = readArt("hand-3.svg", { "stroke-width": String(HAND.stroke) });
   return LOCALES.map((locale) => {
     const { t } = createI18n(locale);
     const lines = balancedWrap(
