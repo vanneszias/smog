@@ -9,28 +9,24 @@ import { screen } from "@testing-library/react";
 import { Footer } from "../../../../../apps/site/src/components/app-shell/footer";
 import { renderKit } from "../../../support/ui-web/render";
 
-for (const [locale, name, phrase] of [
-  ["nl", "Gemaakt met liefde door zias.be", "Gemaakt met"],
-  ["en", "Made with love by zias.be", "Made with"],
-  ["fr", "Fait avec amour par zias.be", "Fait avec"],
+for (const [locale, credit, about] of [
+  ["nl", "Gemaakt door zias.be", "SMOG staat voor Spreken Met Ondersteuning"],
+  ["en", "Made by zias.be", "SMOG stands for Spreken Met Ondersteuning"],
+  ["fr", "Réalisé par zias.be", "SMOG signifie Spreken Met Ondersteuning"],
 ] as const) {
-  test(`footer credits the author with one localized link in ${locale}`, async () => {
+  test(`footer says what SMOG stands for and credits the author in plain text in ${locale}`, async () => {
     const router = createRouter({
       history: createMemoryHistory({ initialEntries: ["/"] }),
       routeTree: createRootRoute({ component: Footer }),
     });
     await router.load();
     renderKit(<RouterProvider router={router} />, locale);
-    const credit = await screen.findByRole("link", { name });
-    expect(credit.getAttribute("href")).toBe("https://zias.be");
-    expect(credit.getAttribute("target")).toBe("_blank");
-    expect(credit.getAttribute("rel")).toBe("noopener noreferrer");
-    expect(credit.textContent).toContain(phrase);
-    expect(credit.textContent).toContain("zias.be");
-    expect(credit.textContent).not.toContain("<heart");
-    expect(credit.querySelector("svg")?.getAttribute("aria-hidden")).toBe(
-      "true"
-    );
-    expect(credit.querySelectorAll("svg").length).toBe(1);
+    const link = await screen.findByRole("link", { name: credit });
+    expect(link.getAttribute("href")).toBe("https://zias.be");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    // A plain credit line: no pill, no heart icon.
+    expect(link.querySelectorAll("svg").length).toBe(0);
+    expect(screen.getByText(about, { exact: false })).toBeTruthy();
   });
 }

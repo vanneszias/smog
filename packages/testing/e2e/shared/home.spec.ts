@@ -10,6 +10,7 @@ const Q_HOND = /\/gestures\?q=hond$/;
 const CATEGORY_DIEREN = /\/gestures\?category=dieren$/;
 const SLUG_HOND = /\/gestures\/hond$/;
 const KAT = /Kat/;
+const DIEREN = /^Dieren/;
 const HOND = /Hond/;
 const CONTINUE = "Ga verder waar je bleef";
 
@@ -38,9 +39,10 @@ test("Mux error filtering checks parsed origins, not URL substrings", () => {
 });
 
 /*
- * Home (phase 10a task 4): the green hero with the big search, illustrated
- * category chips, "continue where you left off" from the device's recent
- * gestures, the featured gestures and the footer.
+ * Home (the identity overhaul): the deep green hero (the tagline as the
+ * heading, the search with its orange action, the pointing hand), the
+ * themes as a contents list, "continue where you left off" from the
+ * device's recent gestures, a few gestures and the footer.
  */
 
 test.describe("home", () => {
@@ -58,22 +60,25 @@ test.describe("home", () => {
     await waitForApp(page);
     const hero = page.getByRole("heading", {
       level: 1,
-      name: "Gebaren die je spraak ondersteunen",
+      name: "Mensen gaan van nature hun spraak ondersteunen met gebaren",
     });
     await expect(hero).toBeVisible();
     await expect(
       page.getByText("Een geheugensteun bij je SMOG-cursus of initiatie.")
     ).toBeVisible();
-    // The hero sits on the green surface.
+    // The hero sits on the deep green surface (`sidebar`).
     const surface = await hero.evaluate(
       (node) =>
         getComputedStyle(node.closest("section") ?? node).backgroundColor
     );
-    expect(surface).toBe("rgb(0, 128, 95)");
-    const nav = page.getByRole("navigation", { name: "Categorieën" });
-    await expect(nav.getByRole("link", { name: "Dieren" })).toBeVisible();
+    expect(surface).toBe("rgb(9, 86, 76)");
     await expect(
-      page.getByRole("heading", { level: 2, name: "Ontdek gebaren" })
+      page.getByRole("button", { name: "Zoeken" }).first()
+    ).toBeVisible();
+    const nav = page.getByRole("navigation", { name: "Gebaren per thema" });
+    await expect(nav.getByRole("link", { name: DIEREN })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Om mee te beginnen" })
     ).toBeVisible();
     // No recents yet on a fresh device: nothing to continue.
     await expect(page.getByRole("heading", { name: CONTINUE })).toHaveCount(0);
@@ -94,8 +99,8 @@ test.describe("home", () => {
     await page.goto("/");
     await waitForApp(page);
     await page
-      .getByRole("navigation", { name: "Categorieën" })
-      .getByRole("link", { name: "Dieren" })
+      .getByRole("navigation", { name: "Gebaren per thema" })
+      .getByRole("link", { name: DIEREN })
       .click();
     await expect(page).toHaveURL(CATEGORY_DIEREN);
   });
@@ -136,7 +141,25 @@ test.describe("home", () => {
     await expect(page.getByRole("heading", { name: CONTINUE })).toHaveCount(0);
   });
 
-  test("on a phone the hero, the chips and the footer reflow without sideways scroll", async ({
+  for (const width of [390, 768]) {
+    test(`at ${width} px the public pages reflow without sideways scroll`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height: 800, width });
+      for (const path of ["/gestures", "/gestures/hond"]) {
+        await page.goto(path);
+        await waitForApp(page);
+        const overflow = await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth
+        );
+        expect(overflow, path).toBeLessThanOrEqual(1);
+      }
+    });
+  }
+
+  test("on a phone the hero, the contents and the footer reflow without sideways scroll", async ({
     page,
   }) => {
     await page.setViewportSize({ height: 800, width: 390 });
