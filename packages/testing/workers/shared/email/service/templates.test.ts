@@ -109,8 +109,8 @@ describe("the layout", () => {
         nl: "Het team van SMOG & Co",
       }[locale];
       const reason = {
-        en: "Didn't create this account?",
-        fr: "Vous n'avez pas créé ce compte ?",
+        en: "Didn’t create this account?",
+        fr: "Vous n’avez pas créé ce compte ?",
         nl: "Heb jij dit account niet aangemaakt?",
       }[locale];
       expect(text.indexOf(signature)).toBeGreaterThan(-1);
@@ -422,7 +422,7 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
       "un lien de connexion par e-mail",
       "Mot de passe oublié",
       "gestes favoris et vos listes",
-      "mettez l'application à jour",
+      "mettez l’application à jour",
     ],
     nl: [
       "Je oude wachtwoord werkt niet meer",
