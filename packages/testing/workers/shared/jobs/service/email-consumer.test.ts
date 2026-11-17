@@ -192,7 +192,7 @@ describe("processEmailMessage", () => {
     expect(again).toEqual({ action: "ack", outcome: "duplicate" });
     expect(sender.sent).toHaveLength(1);
     const [message] = sender.sent;
-    expect(message?.subject).toBe("SMOG a déménagé");
+    expect(message?.subject).toBe("SMOG & Co a déménagé");
     expect(message?.to).toBe("alex@smog.example");
     expect(message?.text).toContain("smog-site-production.zias.workers.dev");
   });

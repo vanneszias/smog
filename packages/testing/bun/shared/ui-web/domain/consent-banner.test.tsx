@@ -13,14 +13,16 @@ describe("ConsentBanner", () => {
         privacyHref="/privacy"
       />
     );
-    const region = screen.getByRole("region", { name: "Help improve SMOG" });
+    const region = screen.getByRole("region", {
+      name: "Help make SMOG\u00a0&\u00a0Co better",
+    });
     expect(region.textContent).toContain("limited usage statistics");
     const link = screen.getByRole("link", { name: "Read the privacy policy" });
     expect(link.getAttribute("href")).toBe("/privacy");
     expect(
       screen.getByRole("button", { name: "Allow statistics" })
     ).toBeDefined();
-    expect(screen.getByRole("button", { name: "No statistics" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "No thanks" })).toBeDefined();
   });
 
   test("the buttons report the choice", async () => {
@@ -29,9 +31,7 @@ describe("ConsentBanner", () => {
     renderKit(
       <ConsentBanner onAllow={onAllow} onDecline={onDecline} privacyHref="/p" />
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "No statistics" })
-    );
+    await userEvent.click(screen.getByRole("button", { name: "No thanks" }));
     expect(onDecline).toHaveBeenCalledTimes(1);
     await userEvent.click(
       screen.getByRole("button", { name: "Allow statistics" })
@@ -47,7 +47,7 @@ describe("ConsentBanner", () => {
       screen.getByRole("button", { name: "Allow statistics" })
     );
     const decline = classesOf(
-      screen.getByRole("button", { name: "No statistics" })
+      screen.getByRole("button", { name: "No thanks" })
     );
     const sizes = (list: string[]): string[] =>
       list.filter((name) => name.startsWith("h-") || name.startsWith("min-h"));
@@ -63,7 +63,7 @@ describe("ConsentBanner", () => {
         privacyHref="/p"
       />
     );
-    for (const name of ["Allow statistics", "No statistics"]) {
+    for (const name of ["Allow statistics", "No thanks"]) {
       const button = screen.getByRole("button", { name });
       expect(button.hasAttribute("disabled")).toBe(true);
     }
@@ -92,10 +92,10 @@ describe("ConsentBanner", () => {
       "nl"
     );
     expect(
-      screen.getByRole("region", { name: "Help SMOG verbeteren" })
+      screen.getByRole("region", {
+        name: "Help SMOG\u00a0&\u00a0Co beter maken",
+      })
     ).toBeDefined();
-    expect(
-      screen.getByRole("button", { name: "Geen statistieken" })
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "Liever niet" })).toBeDefined();
   });
 });

@@ -140,16 +140,16 @@ describe("the gesture detail", () => {
     await playThrough();
     // Two loops of one video: the sixth video, not the seventh.
     expect(localStorage.getItem(COURSE_PROGRESS_KEY)).toBe("6");
-    expect(screen.queryByText("Important notice")).toBeNull();
+    expect(screen.queryByText("Good to know")).toBeNull();
 
     // A new visit (the page again) is the seventh.
     cleanup();
     await renderSite(Detail);
     await playThrough();
-    expect(await screen.findByText("Important notice")).toBeDefined();
+    expect(await screen.findByText("Good to know")).toBeDefined();
     expect(localStorage.getItem(COURSE_PROGRESS_KEY)).toBe("0");
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    expect(screen.queryByText("Important notice")).toBeNull();
+    expect(screen.queryByText("Good to know")).toBeNull();
   });
 
   test("the hearts report gesture_detail; related gestures link with their source", async () => {

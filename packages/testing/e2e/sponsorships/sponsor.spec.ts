@@ -138,7 +138,7 @@ function card(page: Page, name: string) {
 
 /** The consent banner shows after hydration; decline it so it covers nothing. */
 async function declineConsent(page: Page): Promise<void> {
-  const decline = page.getByRole("button", { name: "Geen statistieken" });
+  const decline = page.getByRole("button", { name: "Liever niet" });
   try {
     await decline.click({ timeout: 3000 });
   } catch {

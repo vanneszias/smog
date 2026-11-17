@@ -67,10 +67,10 @@ function Brand({
 }
 
 /**
- * The shared frame (inventory §4): the green header with the logo, the
- * heading, the body, the signature, the reason for the email, and under
- * the card the organisation's footer ("© <year> SMOG & CO vzw · België"
- * and the tagline). Light only: the colours are literal (`theme.ts`), so
+ * The shared frame (inventory §4): the green header with the logo and the
+ * approved tagline under it, the heading, the body, the signature, the
+ * reason for the email, and under the card the organisation's footer
+ * ("© <year> SMOG & Co vzw · België"). Light only: the colours are literal (`theme.ts`), so
  * clients that honour `color-scheme` keep them instead of inverting.
  */
 export function EmailLayout({
@@ -98,6 +98,7 @@ export function EmailLayout({
               tdClassName="smog-header"
             >
               <Brand siteUrl={siteUrl} t={t} />
+              <Text style={styles.tagline}>{t("email.common.tagline")}</Text>
             </Section>
             <Section style={styles.content} tdClassName="smog-content">
               <Heading as="h1" style={styles.heading}>
@@ -115,7 +116,6 @@ export function EmailLayout({
                 year: new Date().getUTCFullYear(),
               })}
             </Text>
-            <Text style={styles.legal}>{t("email.common.tagline")}</Text>
           </Section>
         </Section>
       </Body>

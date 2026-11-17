@@ -113,7 +113,7 @@ test.describe("turnstile bridge", () => {
       .poll(() => posted(page))
       .toEqual([{ source: "smog-turnstile", type: "error" }]);
     await expect(page.getByRole("status")).toHaveText(
-      "The security check didn't work. Please try again."
+      "The security check didn’t work. Try again."
     );
   });
 

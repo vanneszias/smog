@@ -267,9 +267,7 @@ describe("sign-in with Turnstile on (the WebView sheet)", () => {
       first.props.onMessage(bridgeMessage({ type: "error" }, `${SITE}/x`))
     );
     expect(
-      await screen.findByText(
-        "The security check didn't work. Please try again."
-      )
+      await screen.findByText("The security check didn’t work. Try again.")
     ).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(await webview()).not.toBe(first);

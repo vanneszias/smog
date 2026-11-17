@@ -91,7 +91,7 @@
     "terms": "Conditions",
     "signIn": "Se connecter",
     "signOut": "Se déconnecter",
-    "gestures": "Signes",
+    "gestures": "Gestes",
     "legal": "Mentions légales",
     "translation": "Traduction"
   },
@@ -166,7 +166,7 @@
       "resend": "Renvoyer le lien",
       "resent": "Nous vous avons envoyé un nouveau lien.",
       "appTitle": "Se connecter dans l'app",
-      "appDescription": "Ce lien vous connecte à l'app SMOG & Co. Ouvrez-le sur le téléphone où l'app est installée.",
+      "appDescription": "Ce lien vous connecte à l’application SMOG\u00a0&\u00a0Co. Ouvrez-le sur le téléphone où l’application est installée.",
       "continueInBrowser": "Se connecter dans ce navigateur",
       "confirmTitle": "Se connecter avec le lien de votre e-mail\u202f?",
       "confirmDescription": "Ne continuez que si vous avez demandé ce lien vous-même. Vous verrez à quel compte vous êtes connecté.",
@@ -211,8 +211,8 @@
     "captcha": {
       "label": "Contrôle de sécurité",
       "description": "Nous vérifions que vous n'êtes pas un robot. Cela prend quelques secondes.",
-      "appOnly": "Cette page ne fonctionne que dans l'app SMOG & Co.",
-      "failed": "Le contrôle de sécurité a échoué. Veuillez réessayer.",
+      "appOnly": "Cette page ne fonctionne que dans l’application SMOG\u00a0&\u00a0Co.",
+      "failed": "Le contrôle de sécurité a échoué. Réessayez.",
       "retry": "Réessayer"
     },
     "signedIn": "Vous êtes connecté.",
@@ -235,10 +235,10 @@
       "codeInvalid": "Ce code est incorrect ou a expiré. Vérifiez-le ou demandez-en un nouveau.",
       "linkInvalid": "Ce lien a expiré ou n'est plus valide.",
       "rateLimited": "Trop de tentatives. Patientez un instant, puis réessayez.",
-      "captchaFailed": "Le contrôle de sécurité a échoué. Veuillez réessayer.",
-      "socialFailed": "La connexion avec {{provider}} a échoué. Veuillez réessayer.",
+      "captchaFailed": "Le contrôle de sécurité a échoué. Réessayez.",
+      "socialFailed": "La connexion avec {{provider}} a échoué. Réessayez.",
       "passkeyFailed": "La connexion avec votre clé d'accès a échoué. Réessayez ou choisissez une autre méthode de connexion.",
-      "generic": "Une erreur s'est produite. Veuillez réessayer."
+      "generic": "Cela n’a pas fonctionné. Réessayez. Si le problème persiste, écrivez à info@smog.vlaanderen."
     },
     "import": {
       "title": "Récupérer vos données\u202f?",
@@ -273,30 +273,30 @@
       "description": "Dès qu'il y aura quelque chose, vous le trouverez ici."
     },
     "error": {
-      "title": "Une erreur s'est produite",
-      "description": "Nous n'avons pas pu charger ce contenu. Veuillez réessayer."
+      "title": "Ce contenu ne se charge pas pour l’instant",
+      "description": "Vérifiez votre connexion internet et réessayez."
     },
     "offline": {
       "title": "Vous êtes hors ligne",
-      "description": "Certaines fonctionnalités ne fonctionneront à nouveau qu'une fois la connexion rétablie.",
+      "description": "Vos favoris et vos listes restent ici. La recherche et les vidéos fonctionnent à nouveau dès que vous êtes connecté.",
       "backOnline": "Vous êtes de nouveau en ligne."
     },
     "notFound": {
       "title": "Page introuvable",
-      "description": "Cette page n'existe pas (ou plus). Le lien est peut-être ancien, ou l'adresse contient une faute de frappe.",
+      "description": "Nous ne trouvons pas cette page. Le lien est peut-être ancien, ou l’adresse contient une faute.",
       "action": "Aller à l'accueil",
       "browse": "Chercher un geste"
     },
     "pageError": {
       "title": "Cette page ne se charge pas",
-      "description": "Un problème est survenu pendant le chargement. Une nouvelle tentative suffit souvent.",
+      "description": "Une nouvelle tentative suffit souvent.",
       "stillFailingTitle": "Cela ne fonctionne toujours pas",
-      "stillFailingDescription": "Réessayez dans quelques minutes, ou continuez depuis l'accueil."
+      "stillFailingDescription": "Réessayez dans quelques minutes, ou continuez depuis l’accueil. Si le problème persiste, écrivez à info@smog.vlaanderen."
     },
     "actionFailed": "Cela n'a pas fonctionné. Réessayez."
   },
   "lists": {
-    "ownerFallback": "un utilisateur de SMOG",
+    "ownerFallback": "une personne qui utilise SMOG\u00a0&\u00a0Co",
     "addToList": "Enregistrer dans une liste",
     "noLists": "Vous n'avez pas encore de listes.",
     "newList": "Nouvelle liste",
@@ -352,7 +352,7 @@
     "reorderFailed": "L'ordre n'a pas pu être enregistré.",
     "notFound": {
       "title": "Liste introuvable",
-      "description": "Ce lien ne fonctionne pas (ou plus), ou la liste est privée."
+      "description": "Nous ne trouvons pas cette liste. Le lien est peut-être ancien, ou la liste est privée."
     },
     "sharedCanEdit": "Vous pouvez modifier cette liste.",
     "description": "Regroupez des gestes pour un cours, un thème ou à la maison.",
@@ -453,7 +453,7 @@
     },
     "notFound": {
       "title": "Leçon introuvable",
-      "description": "Cette leçon n'existe pas (ou plus)."
+      "description": "Nous ne trouvons pas cette leçon. Elle a peut-être été supprimée."
     },
     "notes": "Notes",
     "ungrouped": "Gestes",
@@ -514,25 +514,25 @@
   "gesture": {
     "sponsored": "Sponsorisé",
     "disclaimer": {
-      "title": "Avis important"
+      "title": "Bon à savoir"
     },
     "videoComplete": {
-      "1": "Ces vidéos accompagnent ce que vous apprenez dans un cours ou une initiation SMOG. Elles ne les remplacent pas. <course>Trouver un cours</course>.",
+      "1": "Ces vidéos accompagnent ce que vous apprenez dans un cours ou une initiation SMOG. Elles ne le remplacent pas. <course>Trouver un cours</course>.",
       "2": "Vous souhaitez suivre un cours ou une initiation SMOG\u202f? <course>Trouver un cours</course>.",
       "3": "Un cours SMOG explique aussi la théorie derrière les gestes. <course>En savoir plus sur les cours</course>.",
-      "4": "Les gestes sont protégés. N'en inventez pas d'autres.",
+      "4": "Les gestes SMOG sont fixés et protégés. Faites-les comme dans la vidéo, pour que toute personne qui connaît SMOG vous comprenne.",
       "5": "Suivez un cours ou une initiation SMOG pour apprendre les gestes. Utilisez ensuite ces vidéos comme aide-mémoire.",
-      "6": "Découvrez les origines de SMOG. <course>En savoir plus sur SMOG</course>.",
-      "7": "Une question sur SMOG\u202f? Écrivez à info@smog.vlaanderen."
+      "6": "Un cours SMOG raconte aussi comment SMOG est né. <course>Trouver un cours</course>.",
+      "7": "Une question sur SMOG\u202f? Écrivez-nous à info@smog.vlaanderen."
     },
     "about": "À propos de ce geste",
     "keywords": "Concepts liés",
     "related": "Gestes liés",
     "share": "Partager le geste",
-    "shareMessage": "{{name}} en SMOG\u00a0: {{url}}",
+    "shareMessage": "Le geste SMOG pour «\u00a0{{name}}\u00a0»\u00a0: {{url}}",
     "notFound": {
       "title": "Geste introuvable",
-      "description": "Ce geste n'existe pas (ou plus)."
+      "description": "Nous ne trouvons pas ce geste. Il a peut-être été retiré, ou le lien est ancien."
     },
     "screenshot": {
       "title": "Partager ce geste\u202f?",
@@ -612,7 +612,7 @@
   },
   "shell": {
     "explore": "Explorer",
-    "supportTitle": "Soutenir SMOG",
+    "supportTitle": "Soutenir SMOG\u00a0&\u00a0Co",
     "supportText": "Montrez votre nom ou logo avec un geste.",
     "backToSite": "Retour au site"
   },
@@ -679,7 +679,7 @@
         "subject": "Confirmez votre adresse e-mail",
         "preheader": "Encore un clic et votre compte est prêt.",
         "heading": "Confirmez votre adresse e-mail",
-        "body": "Merci d'avoir créé un compte SMOG & Co. Cliquez sur le bouton ci-dessous pour confirmer votre adresse e-mail.",
+        "body": "Merci d'avoir créé un compte SMOG\u00a0&\u00a0Co. Cliquez sur le bouton ci-dessous pour confirmer votre adresse e-mail.",
         "button": "Confirmer l'adresse e-mail",
         "expiry": "Le lien est valable {{minutes}} minutes.",
         "footer": "Vous n'avez pas créé de compte\u202f? Vous pouvez ignorer cet e-mail."
@@ -695,7 +695,7 @@
       "magicLink": {
         "subject": "Votre lien de connexion SMOG & Co",
         "preheader": "Cliquez sur le lien pour vous connecter.",
-        "heading": "Connexion à SMOG & Co",
+        "heading": "Connexion à SMOG\u00a0&\u00a0Co",
         "body": "Cliquez sur le bouton ci-dessous pour vous connecter. Aucun mot de passe n'est nécessaire.",
         "button": "Se connecter",
         "expiry": "Le lien est valable {{minutes}} minutes et ne fonctionne qu'une seule fois.",
@@ -715,10 +715,10 @@
       "yourGesture": "votre geste",
       "gestureNamed": "le geste «\u00a0{{name}}\u00a0»",
       "logoAlt": "SMOG & Co",
-      "copyright": "© {{year}} SMOG & CO asbl · Belgique",
+      "copyright": "© {{year}} SMOG\u00a0&\u00a0Co asbl · Belgique",
       "tagline": "Les gens accompagnent naturellement leur parole de gestes",
-      "questions": "Des questions\u00a0? Répondez simplement à cet e-mail.",
-      "adminFooter": "Vous recevez cet e-mail parce que vous êtes administrateur de SMOG & Co.",
+      "questions": "Des questions\u00a0? Répondez à cet e-mail.",
+      "adminFooter": "Vous recevez cet e-mail parce que vous êtes administrateur de SMOG\u00a0&\u00a0Co.",
       "contactWithCompany": "{{name}} ({{company}})",
       "oneYear": "1 an",
       "yes": "Oui",
@@ -748,12 +748,12 @@
     "transactional": {
       "welcome": {
         "subject": "Bienvenue chez SMOG & Co",
-        "preheader": "Découvrez des gestes et soutenez SMOG en parrainant un geste.",
-        "heading": "Bienvenue chez SMOG & Co",
-        "body": "Votre compte est prêt. Voici ce que vous pouvez faire\u00a0:",
-        "explore": "Découvrir des gestes et voir comment les faire",
+        "preheader": "Retrouvez les gestes que vous avez appris et gardez vos favoris.",
+        "heading": "Bienvenue chez SMOG\u00a0&\u00a0Co",
+        "body": "Votre compte est prêt. Les vidéos vous aident à revoir ce que vous avez appris dans votre cours ou initiation SMOG. Voici ce que vous pouvez faire\u00a0:",
+        "explore": "Chercher des gestes et voir comment les faire",
         "favorites": "Enregistrer vos gestes favoris et créer vos propres listes",
-        "sponsor": "Soutenir SMOG en parrainant un geste",
+        "sponsor": "Devenir parrain ou marraine d’un geste et soutenir SMOG\u00a0&\u00a0Co",
         "button": "Découvrir les gestes",
         "footer": "Vous n'avez pas créé ce compte\u00a0? Vous pouvez ignorer cet e-mail."
       },
@@ -765,28 +765,28 @@
         "nextTitle": "Et maintenant\u00a0?",
         "stepReview": "Nous vérifions votre parrainage avant sa mise en ligne.",
         "stepLive": "Vous recevez un e-mail dès que votre parrainage est en ligne.",
-        "footer": "Vous recevez cet e-mail parce que vous avez récemment soumis un parrainage via SMOG & Co."
+        "footer": "Vous recevez cet e-mail parce que vous avez récemment soumis un parrainage via SMOG\u00a0&\u00a0Co."
       },
       "paymentConfirmed": {
         "subject": "Paiement confirmé. Merci\u00a0!",
         "preheader": "Nous avons bien reçu votre paiement de {{amount}}.",
         "heading": "Paiement confirmé",
-        "body": "Nous avons bien reçu votre paiement. Merci\u00a0!",
+        "body": "Merci, nous avons bien reçu votre paiement.",
         "initialNext": "Nous vérifions votre parrainage avant sa mise en ligne. Vous recevrez un e-mail dès qu'il sera en ligne.",
         "renewalNext": "Votre parrainage a été prolongé et court désormais jusqu'au {{date}}.",
-        "footer": "Conservez cet e-mail comme preuve de paiement. Besoin d'une facture\u00a0? Contactez-nous."
+        "footer": "Conservez cet e-mail comme preuve de paiement. Besoin d’une facture\u00a0? Répondez à cet e-mail."
       },
       "sponsorshipLive": {
-        "subject": "Votre parrainage est en ligne\u00a0!",
-        "preheader": "Votre vidéo parrainée est en ligne.",
-        "heading": "Votre parrainage est en ligne\u00a0!",
+        "subject": "Votre parrainage est en ligne",
+        "preheader": "Votre nom apparaît maintenant à la fin de la vidéo du geste.",
+        "heading": "Votre parrainage est en ligne",
         "body": "Votre parrainage de {{gesture}} est maintenant en ligne : la fin de la vidéo affiche le nom {{displayName}}.",
-        "button": "Voir sur SMOG",
-        "thanks": "Merci de soutenir SMOG\u00a0!",
+        "button": "Voir le geste",
+        "thanks": "Merci de soutenir SMOG\u00a0&\u00a0Co\u00a0!",
         "footer": "Nous vous enverrons un rappel 30 jours avant la fin, pour que vous puissiez prolonger."
       },
       "renewalReminder": {
-        "subject": "Votre parrainage SMOG se termine bientôt",
+        "subject": "Votre parrainage chez SMOG & Co se termine bientôt",
         "preheader": "Votre parrainage se termine le {{date}}.",
         "heading": "Votre parrainage se termine bientôt",
         "body": "Votre parrainage pour {{gesture}} se termine le {{date}}, dans moins de 30 jours. Votre nom et votre éventuel logo n'apparaîtront alors plus sur la vidéo. Le geste restera disponible.",
@@ -801,7 +801,7 @@
         "heading": "Nouveau parrainage payé",
         "headingRenewal": "Parrainage prolongé",
         "body": "Un parrainage a été payé. Il attend maintenant une approbation.",
-        "bodyRenewal": "Un parrainage a été prolongé d'un an. Aucune nouvelle vidéo ni approbation n'est nécessaire.",
+        "bodyRenewal": "Un parrainage a été prolongé d’un an. Aucune approbation n’est nécessaire.",
         "detailsTitle": "Parrainage",
         "invoiceTitle": "Facturation",
         "button": "Voir dans l'administration"
@@ -819,11 +819,11 @@
         "button": "Ouvrir dans Mollie"
       },
       "weMoved": {
-        "subject": "SMOG a déménagé",
+        "subject": "SMOG & Co a déménagé",
         "preheader": "Votre compte, vos favoris et vos listes ont déménagé avec nous. Voici comment vous connecter.",
-        "heading": "SMOG a déménagé",
-        "body": "SMOG & Co fonctionne désormais sur un nouveau système. Votre compte a déménagé avec nous, avec vos gestes favoris et vos listes.",
-        "newAddress": "SMOG & Co a une nouvelle adresse\u00a0:",
+        "heading": "SMOG\u00a0&\u00a0Co a déménagé",
+        "body": "SMOG\u00a0&\u00a0Co fonctionne désormais sur un nouveau système. Votre compte a déménagé avec nous, avec vos gestes favoris et vos listes.",
+        "newAddress": "SMOG\u00a0&\u00a0Co a une nouvelle adresse\u00a0:",
         "signInTitle": "Votre ancien mot de passe ne fonctionne plus. Connectez-vous avec\u00a0:",
         "signInCode": "un code que nous vous envoyons par e-mail",
         "signInLink": "un lien de connexion par e-mail",
@@ -833,7 +833,7 @@
         "signInReset": "ou choisissez « Mot de passe oublié » et définissez un nouveau mot de passe",
         "app": "Vous utilisez l'application\u00a0? Alors mettez l'application à jour vers la dernière version\u00a0: l'ancienne version ne fonctionne plus.",
         "button": "Se connecter",
-        "footer": "Vous recevez cet e-mail une seule fois, parce que vous avez un compte chez SMOG & Co."
+        "footer": "Vous recevez cet e-mail une seule fois, parce que vous avez un compte chez SMOG\u00a0&\u00a0Co."
       },
       "adminDeadLetter": {
         "subject": "Des dead letters demandent votre attention",
@@ -864,7 +864,7 @@
     "gallery": {
       "intro": "Chaque composant dans chaque variante et chaque taille, clair et sombre côte à côte.",
       "sampleTitle": "Salutations",
-      "sampleText": "Apprenez les signes que vous utilisez tous les jours.",
+      "sampleText": "Apprenez les gestes que vous utilisez tous les jours.",
       "rowGreetings": "Salutations",
       "rowFood": "Manger et boire",
       "rowFeelings": "Sentiments",
@@ -918,7 +918,7 @@
       "passwordRequired": "Saisissez votre mot de passe pour supprimer votre compte.",
       "sessionNotFresh": "Reconnectez-vous pour supprimer votre compte.",
       "invalidPassword": "Ce mot de passe n'est pas correct.",
-      "deleteFailed": "La suppression de votre compte a échoué. Veuillez réessayer.",
+      "deleteFailed": "La suppression de votre compte a échoué. Réessayez.",
       "lastAdmin": "Vous êtes le seul administrateur. Nommez d’abord un autre compte administrateur avant de supprimer le vôtre.",
       "signInAgain": "Pour votre sécurité, reconnectez-vous pour effectuer cette action."
     },
@@ -970,8 +970,8 @@
       "export": "Télécharger mes données",
       "exportDescription": "Un fichier JSON avec votre profil, vos favoris, vos listes, l'historique de vos consentements et vos parrainages.",
       "exported": "Vos données ont été téléchargées.",
-      "exportFailed": "Vos données n'ont pas pu être téléchargées. Veuillez réessayer.",
-      "shareTitle": "Vos données SMOG",
+      "exportFailed": "Vos données n’ont pas pu être téléchargées. Réessayez.",
+      "shareTitle": "Vos données SMOG & Co",
       "policy": "Politique de confidentialité"
     },
     "delete": {
@@ -1003,15 +1003,15 @@
     "about": "À propos de l'app"
   },
   "consent": {
-    "title": "Aidez-nous à améliorer SMOG",
-    "description": "Avec votre accord, nous collectons des statistiques d'utilisation limitées pour améliorer SMOG. Nous ne les utilisons pas pour la publicité et ne vous suivons pas dans d'autres applications ni sur d'autres sites.",
+    "title": "Aidez-nous à améliorer SMOG\u00a0&\u00a0Co",
+    "description": "Avec votre accord, nous collectons des statistiques d’utilisation limitées pour améliorer SMOG\u00a0&\u00a0Co. Nous ne les utilisons pas pour la publicité et ne vous suivons pas dans d’autres applications ni sur d’autres sites.",
     "privacyLink": "Lire la politique de confidentialité",
     "allow": "Autoriser les statistiques",
-    "decline": "Sans statistiques",
+    "decline": "Non merci",
     "toggle": "Statistiques d'utilisation",
-    "toggleDescription": "Partagez des statistiques d'utilisation limitées pour aider à améliorer SMOG.",
+    "toggleDescription": "Partagez des statistiques d’utilisation limitées pour aider à améliorer SMOG\u00a0&\u00a0Co.",
     "saved": "Votre choix a été enregistré.",
-    "saveFailed": "Votre choix n'a pas pu être enregistré. Veuillez réessayer."
+    "saveFailed": "Votre choix n’a pas pu être enregistré. Réessayez."
   },
   "appBanner": {
     "badge": "L'application",
@@ -1022,7 +1022,7 @@
     "dismiss": "Fermer la bannière de l'application"
   },
   "openInApp": {
-    "title": "Vous avez l'application SMOG\u202f?",
+    "title": "Vous avez l’application SMOG\u00a0&\u00a0Co\u202f?",
     "description": "Regardez ce geste dans l'application.",
     "action": "Ouvrir dans l'application",
     "getApp": "Obtenir l'application"
@@ -1044,10 +1044,10 @@
     }
   },
   "maintenance": {
-    "documentTitle": "SMOG\u00a0: Merci de votre patience",
+    "documentTitle": "SMOG & Co\u00a0: merci de patienter",
     "badge": "Maintenance en cours",
-    "title": "SMOG est en maintenance",
-    "description": "Nous effectuons une maintenance. Vous pourrez utiliser SMOG dès qu'elle sera terminée.",
+    "title": "SMOG\u00a0&\u00a0Co est en maintenance",
+    "description": "Nous faisons quelques travaux sur le site et l’application. Dès que ce sera terminé, vous pourrez de nouveau chercher des gestes.",
     "until": "Nous prévoyons d'être de retour le {{time}}."
   },
   "admin": {
@@ -1586,7 +1586,7 @@
       },
       "notFound": {
         "title": "Leçon introuvable",
-        "description": "Cette leçon n’existe pas (ou plus)."
+        "description": "Nous ne trouvons pas cette leçon. Elle a peut-être été supprimée."
       },
       "actions": {
         "label": "Actions pour {{title}}",
@@ -2547,7 +2547,7 @@
       },
       "strings": {
         "title": "Textes",
-        "description": "Modifiez les textes du site, de l'application et des e-mails sans nouvelle version. Un délai peut être nécessaire avant qu'une modification apparaisse sur chaque appareil."
+        "description": "Modifiez les textes du site, de l’application et des e-mails sans nouvelle version. Un délai peut être nécessaire avant qu’une modification apparaisse sur chaque appareil. Termes fixes\u00a0: SMOG est la méthode et reste SMOG dans chaque langue\u202f; SMOG\u00a0&\u00a0Co est l’application et l’organisation\u202f; un geste se dit een gebaar en néerlandais et a gesture en anglais."
       },
       "filters": {
         "label": "Filtres des textes",
@@ -2716,7 +2716,7 @@
       "noLogo": "Ce parrainage n’a pas de logo, vous ne pouvez donc pas en ajouter.",
       "notRenewable": "Ce parrainage ne peut plus être prolongé.",
       "gestureTaken": "Quelqu’un d’autre parraine ce geste entre-temps.",
-      "rejectedTooLongAgo": "Ce parrainage a été refusé il y a 30 jours ou plus. Vous ne pouvez plus demander de modification. Contactez SMOG pour obtenir de l'aide.",
+      "rejectedTooLongAgo": "Ce parrainage a été refusé il y a 30 jours ou plus\u00a0: vous ne pouvez plus demander de modification. Écrivez à info@smog.vlaanderen et nous chercherons une solution ensemble.",
       "noVideo": "La vidéo n’est pas encore prête.",
       "paid": "Ce paiement a été réglé et ne peut pas être annulé.",
       "notRefunded": "Mollie n’indique encore aucun remboursement. Remboursez d’abord dans le tableau de bord Mollie.",

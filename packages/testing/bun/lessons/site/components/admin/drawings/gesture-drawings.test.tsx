@@ -188,7 +188,7 @@ describe("GestureDrawingCard", () => {
     });
     expect(
       await screen.findByText(
-        "This is not a valid PNG or JPEG image (a WebP cannot go into the PDF)."
+        "This isn’t a valid PNG or JPEG image (a WebP can’t go into the PDF)."
       )
     ).toBeDefined();
     fireEvent.change(screen.getByTestId("drawing-file-1"), {

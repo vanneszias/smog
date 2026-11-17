@@ -98,9 +98,7 @@ describe("/privacy and /terms (spec §9, inventory P-07, P-08, R-16)", () => {
     // The site stays English; only the legal text is Dutch.
     expect(body).toContain('<html lang="en"');
     expect(body).toMatch(DUTCH_ARTICLE);
-    expect(body).toContain(
-      "You are reading the Dutch version, which prevails."
-    );
+    expect(body).toContain("You’re reading the Dutch version, which prevails.");
     expect(body).toContain('href="/privacy"');
     // Dutch readers never see the switch.
     const nl = await page("/privacy?lang=nl", "nl");

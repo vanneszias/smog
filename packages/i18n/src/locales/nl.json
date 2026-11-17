@@ -166,7 +166,7 @@
       "resend": "Stuur de link opnieuw",
       "resent": "We stuurden je een nieuwe link.",
       "appTitle": "Aanmelden in de app",
-      "appDescription": "Deze link meldt je aan in de SMOG & Co-app. Open hem op de telefoon waarop de app staat.",
+      "appDescription": "Deze link meldt je aan in de SMOG\u00a0&\u00a0Co-app. Open hem op de telefoon waarop de app staat.",
       "continueInBrowser": "Aanmelden in deze browser",
       "confirmTitle": "Aanmelden met de link uit je e-mail?",
       "confirmDescription": "Open deze link alleen als je hem zelf hebt aangevraagd. Na het aanmelden zie je met welk account.",
@@ -211,7 +211,7 @@
     "captcha": {
       "label": "Beveiligingscontrole",
       "description": "Even controleren of je geen robot bent. Dat duurt maar een paar seconden.",
-      "appOnly": "Deze pagina werkt alleen in de SMOG & Co-app.",
+      "appOnly": "Deze pagina werkt alleen in de SMOG\u00a0&\u00a0Co-app.",
       "failed": "De beveiligingscontrole is niet gelukt. Probeer het opnieuw.",
       "retry": "Opnieuw proberen"
     },
@@ -238,7 +238,7 @@
       "captchaFailed": "De beveiligingscontrole is mislukt. Probeer het opnieuw.",
       "socialFailed": "Aanmelden met {{provider}} is niet gelukt. Probeer het opnieuw.",
       "passkeyFailed": "Aanmelden met je passkey is niet gelukt. Probeer het opnieuw of kies een andere aanmeldmethode.",
-      "generic": "Er ging iets mis. Probeer het opnieuw."
+      "generic": "Dat lukte niet. Probeer het opnieuw. Blijft het misgaan? Mail naar info@smog.vlaanderen."
     },
     "import": {
       "title": "Je gegevens meenemen?",
@@ -270,30 +270,30 @@
       "description": "Zodra er iets is, vind je het hier."
     },
     "error": {
-      "title": "Er ging iets mis",
-      "description": "We konden dit niet laden. Probeer het opnieuw."
+      "title": "Dit laadt nu niet",
+      "description": "Controleer je internetverbinding en probeer het opnieuw."
     },
     "offline": {
       "title": "Je bent offline",
-      "description": "Sommige functies werken pas weer als je verbinding hebt.",
+      "description": "Je favorieten en lijsten blijven hier. Zoeken en video's werken weer zodra je verbinding hebt.",
       "backOnline": "Je bent weer online."
     },
     "notFound": {
       "title": "Pagina niet gevonden",
-      "description": "Deze pagina bestaat niet (meer). Misschien is de link verouderd of zit er een typfout in het adres.",
+      "description": "We vinden deze pagina niet. Misschien is de link oud, of staat er een fout in het adres.",
       "action": "Naar de startpagina",
       "browse": "Gebaren zoeken"
     },
     "pageError": {
       "title": "Deze pagina laadt niet",
-      "description": "Er ging iets mis bij het laden. Vaak lukt het bij een nieuwe poging.",
+      "description": "Vaak lukt het bij een nieuwe poging.",
       "stillFailingTitle": "Het lukt nog steeds niet",
-      "stillFailingDescription": "Probeer het over een paar minuten opnieuw, of ga verder op de startpagina."
+      "stillFailingDescription": "Probeer het over een paar minuten opnieuw, of ga verder op de startpagina. Blijft het misgaan? Mail naar info@smog.vlaanderen."
     },
     "actionFailed": "Dat lukte niet. Probeer het opnieuw."
   },
   "lists": {
-    "ownerFallback": "een SMOG-gebruiker",
+    "ownerFallback": "iemand die SMOG\u00a0&\u00a0Co gebruikt",
     "addToList": "Opslaan in lijst",
     "noLists": "Je hebt nog geen lijsten.",
     "newList": "Nieuwe lijst",
@@ -348,7 +348,7 @@
     "reorderFailed": "De volgorde kon niet bewaard worden.",
     "notFound": {
       "title": "Lijst niet gevonden",
-      "description": "Deze link werkt niet (meer), of de lijst is privé."
+      "description": "We vinden deze lijst niet. Misschien is de link oud, of is de lijst privé."
     },
     "sharedCanEdit": "Je kunt deze lijst bewerken.",
     "description": "Groepeer gebaren voor een les, een thema of thuis.",
@@ -448,7 +448,7 @@
     },
     "notFound": {
       "title": "Les niet gevonden",
-      "description": "Deze les bestaat niet (meer)."
+      "description": "We vinden deze les niet. Misschien is ze verwijderd."
     },
     "notes": "Notities",
     "ungrouped": "Gebaren",
@@ -499,7 +499,7 @@
       "format": "Dit is geen geldige PNG- of JPEG-afbeelding (WebP kan niet in de pdf).",
       "dimensions": "De afbeelding is groter dan 1200 pixels per zijde.",
       "tooLarge": "Het bestand is groter dan 512 kB.",
-      "missing": "De upload is niet aangekomen. Probeer opnieuw.",
+      "missing": "De upload is niet aangekomen. Probeer het opnieuw.",
       "key": "Deze upload hoort niet bij dit gebaar.",
       "network": "De upload is mislukt. Controleer je verbinding en probeer opnieuw.",
       "generic": "Opslaan is mislukt. Probeer opnieuw.",
@@ -509,25 +509,25 @@
   "gesture": {
     "sponsored": "Gesponsord",
     "disclaimer": {
-      "title": "Belangrijke mededeling"
+      "title": "Goed om te weten"
     },
     "videoComplete": {
       "1": "Deze video's ondersteunen wat je in een SMOG-cursus of initiatie leert. Ze vervangen die niet. <course>Bekijk het cursusaanbod</course>.",
       "2": "Wil je een SMOG-cursus of initiatie volgen? <course>Bekijk het cursusaanbod</course>.",
       "3": "In een SMOG-cursus leer je ook de theorie achter de gebaren. <course>Meer over de cursussen</course>.",
-      "4": "De gebaren zijn beschermd. Vind er geen anderen uit.",
+      "4": "De SMOG-gebaren liggen vast en zijn beschermd. Maak ze zoals in de video, dan begrijpt iedereen die SMOG kent je.",
       "5": "Volg een SMOG-cursus of initiatie om de gebaren te leren. Gebruik deze video's daarna als geheugensteun.",
-      "6": "Ontdek hoe SMOG is ontstaan. <course>Meer over SMOG</course>.",
-      "7": "Een vraag over SMOG? Mail naar info@smog.vlaanderen."
+      "6": "In een SMOG-cursus hoor je ook hoe SMOG is ontstaan. <course>Bekijk het cursusaanbod</course>.",
+      "7": "Heb je een vraag over SMOG? Mail ons op info@smog.vlaanderen."
     },
     "about": "Over dit gebaar",
     "keywords": "Verwante begrippen",
     "related": "Verwante gebaren",
     "share": "Gebaar delen",
-    "shareMessage": "{{name}} in SMOG: {{url}}",
+    "shareMessage": "Het SMOG-gebaar voor “{{name}}”: {{url}}",
     "notFound": {
       "title": "Gebaar niet gevonden",
-      "description": "Dit gebaar bestaat niet (meer)."
+      "description": "We vinden dit gebaar niet. Misschien is het weggehaald, of is de link oud."
     },
     "screenshot": {
       "title": "Dit gebaar delen?",
@@ -605,7 +605,7 @@
   },
   "shell": {
     "explore": "Ontdek",
-    "supportTitle": "Steun SMOG",
+    "supportTitle": "Steun SMOG\u00a0&\u00a0Co",
     "supportText": "Toon je naam of logo bij een gebaar.",
     "backToSite": "Terug naar de website"
   },
@@ -671,7 +671,7 @@
         "subject": "Bevestig je e-mailadres",
         "preheader": "Nog één klik en je account is klaar.",
         "heading": "Bevestig je e-mailadres",
-        "body": "Bedankt om een account aan te maken bij SMOG & Co. Klik op de knop hieronder om je e-mailadres te bevestigen.",
+        "body": "Bedankt om een account aan te maken bij SMOG\u00a0&\u00a0Co. Klik op de knop hieronder om je e-mailadres te bevestigen.",
         "button": "E-mailadres bevestigen",
         "expiry": "De link is {{minutes}} minuten geldig.",
         "footer": "Heb jij geen account aangemaakt? Dan mag je deze e-mail negeren."
@@ -687,7 +687,7 @@
       "magicLink": {
         "subject": "Je aanmeldlink voor SMOG & Co",
         "preheader": "Klik op de link om je aan te melden.",
-        "heading": "Aanmelden bij SMOG & Co",
+        "heading": "Aanmelden bij SMOG\u00a0&\u00a0Co",
         "body": "Klik op de knop hieronder om je aan te melden. Je hoeft geen wachtwoord in te vullen.",
         "button": "Aanmelden",
         "expiry": "De link is {{minutes}} minuten geldig en werkt maar één keer.",
@@ -707,10 +707,10 @@
       "yourGesture": "je gebaar",
       "gestureNamed": "het gebaar ‘{{name}}’",
       "logoAlt": "SMOG & Co",
-      "copyright": "© {{year}} SMOG & CO vzw · België",
+      "copyright": "© {{year}} SMOG\u00a0&\u00a0Co vzw · België",
       "tagline": "Mensen gaan van nature hun spraak ondersteunen met gebaren",
-      "questions": "Vragen? Beantwoord deze e-mail gewoon.",
-      "adminFooter": "Je krijgt deze e-mail omdat je beheerder bent van SMOG & Co.",
+      "questions": "Vragen? Antwoord op deze e-mail.",
+      "adminFooter": "Je krijgt deze e-mail omdat je beheerder bent van SMOG\u00a0&\u00a0Co.",
       "contactWithCompany": "{{name}} ({{company}})",
       "oneYear": "1 jaar",
       "yes": "Ja",
@@ -740,12 +740,12 @@
     "transactional": {
       "welcome": {
         "subject": "Welkom bij SMOG & Co",
-        "preheader": "Ontdek gebaren en steun SMOG door er een te sponsoren.",
-        "heading": "Welkom bij SMOG & Co",
-        "body": "Je account is klaar. Dit kun je nu doen:",
-        "explore": "Gebaren ontdekken en bekijken hoe je ze maakt",
+        "preheader": "Zoek de gebaren op die je leerde en bewaar je favorieten.",
+        "heading": "Welkom bij SMOG\u00a0&\u00a0Co",
+        "body": "Je account is klaar. Met de video's herhaal je wat je in je SMOG-cursus of initiatie leerde. Dit kun je nu doen:",
+        "explore": "Gebaren opzoeken en bekijken hoe je ze maakt",
         "favorites": "Je favoriete gebaren bewaren en eigen lijsten maken",
-        "sponsor": "SMOG steunen door een gebaar te sponsoren",
+        "sponsor": "Peter of meter worden van een gebaar en zo SMOG\u00a0&\u00a0Co steunen",
         "button": "Ontdek gebaren",
         "footer": "Heb jij dit account niet aangemaakt? Dan mag je deze e-mail negeren."
       },
@@ -757,28 +757,28 @@
         "nextTitle": "Wat gebeurt er nu?",
         "stepReview": "We bekijken je sponsoring voor ze online komt.",
         "stepLive": "Je krijgt een e-mail zodra je sponsoring online staat.",
-        "footer": "Je krijgt deze e-mail omdat je onlangs een sponsoring hebt ingediend via SMOG & Co."
+        "footer": "Je krijgt deze e-mail omdat je onlangs een sponsoring hebt ingediend via SMOG\u00a0&\u00a0Co."
       },
       "paymentConfirmed": {
         "subject": "Betaling bevestigd. Bedankt!",
         "preheader": "We hebben je betaling van {{amount}} ontvangen.",
         "heading": "Betaling bevestigd",
-        "body": "We hebben je betaling goed ontvangen. Bedankt!",
+        "body": "Bedankt, we hebben je betaling goed ontvangen.",
         "initialNext": "We controleren je sponsoring voor ze online gaat. Je krijgt een e-mail zodra het zover is.",
         "renewalNext": "Je sponsoring is verlengd en loopt nu tot {{date}}.",
-        "footer": "Bewaar deze e-mail als betaalbewijs. Heb je een factuur nodig? Neem dan contact met ons op."
+        "footer": "Bewaar deze e-mail als betaalbewijs. Heb je een factuur nodig? Antwoord op deze e-mail."
       },
       "sponsorshipLive": {
-        "subject": "Je sponsoring is nu live!",
-        "preheader": "Je gesponsorde video staat online.",
-        "heading": "Je sponsoring is live!",
+        "subject": "Je sponsoring staat online",
+        "preheader": "Je naam staat nu aan het einde van de video van het gebaar.",
+        "heading": "Je sponsoring staat online",
         "body": "Je sponsoring van {{gesture}} staat nu online: aan het einde van de video staat de naam {{displayName}}.",
-        "button": "Bekijk op SMOG",
-        "thanks": "Bedankt om SMOG te steunen!",
+        "button": "Bekijk het gebaar",
+        "thanks": "Bedankt om SMOG\u00a0&\u00a0Co te steunen!",
         "footer": "30 dagen voor het einde sturen we je een herinnering, zodat je kunt verlengen."
       },
       "renewalReminder": {
-        "subject": "Je SMOG-sponsoring verloopt binnenkort",
+        "subject": "Je sponsoring bij SMOG & Co loopt binnenkort af",
         "preheader": "Je sponsoring loopt af op {{date}}.",
         "heading": "Je sponsoring verloopt binnenkort",
         "body": "Je sponsoring van {{gesture}} loopt af op {{date}}, binnen 30 dagen. Daarna verdwijnen je naam en eventueel logo bij de video. Het gebaar blijft beschikbaar.",
@@ -793,7 +793,7 @@
         "heading": "Nieuwe sponsoring betaald",
         "headingRenewal": "Sponsoring verlengd",
         "body": "Er is een sponsoring betaald. Ze wacht nu op goedkeuring.",
-        "bodyRenewal": "Een sponsoring is verlengd voor een jaar. Er is geen nieuwe video of goedkeuring nodig.",
+        "bodyRenewal": "Een sponsoring is met een jaar verlengd. Je hoeft niets goed te keuren.",
         "detailsTitle": "Sponsoring",
         "invoiceTitle": "Facturatie",
         "button": "Bekijk in het beheer"
@@ -811,11 +811,11 @@
         "button": "Openen in Mollie"
       },
       "weMoved": {
-        "subject": "SMOG is verhuisd",
+        "subject": "SMOG & Co is verhuisd",
         "preheader": "Je account, je favorieten en je lijsten zijn mee verhuisd. Zo meld je je aan.",
-        "heading": "SMOG is verhuisd",
-        "body": "SMOG & Co draait op een nieuw systeem. Je account is mee verhuisd, met je favoriete gebaren en je lijsten.",
-        "newAddress": "SMOG & Co heeft een nieuw adres:",
+        "heading": "SMOG\u00a0&\u00a0Co is verhuisd",
+        "body": "SMOG\u00a0&\u00a0Co draait op een nieuw systeem. Je account is mee verhuisd, met je favoriete gebaren en je lijsten.",
+        "newAddress": "SMOG\u00a0&\u00a0Co heeft een nieuw adres:",
         "signInTitle": "Je oude wachtwoord werkt niet meer. Meld je aan met:",
         "signInCode": "een code die we je mailen",
         "signInLink": "een aanmeldlink per e-mail",
@@ -825,7 +825,7 @@
         "signInReset": "of kies ‘Wachtwoord vergeten’ en stel een nieuw wachtwoord in",
         "app": "Gebruik je de app? Werk de app dan bij naar de nieuwste versie: de oude versie werkt niet meer.",
         "button": "Aanmelden",
-        "footer": "Je krijgt deze e-mail één keer, omdat je een account hebt bij SMOG & Co."
+        "footer": "Je krijgt deze e-mail één keer, omdat je een account hebt bij SMOG\u00a0&\u00a0Co."
       },
       "adminDeadLetter": {
         "subject": "Dead letters vragen aandacht",
@@ -962,7 +962,7 @@
       "exportDescription": "Een JSON-bestand met je profiel, favorieten, lijsten, toestemmingen en sponsoringen.",
       "exported": "Je gegevens zijn gedownload.",
       "exportFailed": "Je gegevens downloaden is niet gelukt. Probeer het opnieuw.",
-      "shareTitle": "Je SMOG-gegevens",
+      "shareTitle": "Je gegevens bij SMOG & Co",
       "policy": "Privacybeleid"
     },
     "delete": {
@@ -994,13 +994,13 @@
     "about": "Over de app"
   },
   "consent": {
-    "title": "Help SMOG verbeteren",
-    "description": "Met je toestemming verzamelen we beperkte gebruiksstatistieken om SMOG te verbeteren. We gebruiken ze niet voor advertenties en volgen je niet in andere apps of op andere websites.",
+    "title": "Help SMOG\u00a0&\u00a0Co beter maken",
+    "description": "Met je toestemming houden we beperkte gebruiksstatistieken bij om SMOG\u00a0&\u00a0Co beter te maken. We gebruiken ze niet voor reclame en volgen je niet in andere apps of op andere websites.",
     "privacyLink": "Lees het privacybeleid",
     "allow": "Statistieken toestaan",
-    "decline": "Geen statistieken",
+    "decline": "Liever niet",
     "toggle": "Gebruiksstatistieken",
-    "toggleDescription": "Deel beperkte gebruiksstatistieken om SMOG te helpen verbeteren.",
+    "toggleDescription": "Deel beperkte gebruiksstatistieken om SMOG\u00a0&\u00a0Co beter te maken.",
     "saved": "Je keuze is bewaard.",
     "saveFailed": "Je keuze bewaren is niet gelukt. Probeer het opnieuw."
   },
@@ -1013,7 +1013,7 @@
     "dismiss": "Sluit de app-banner"
   },
   "openInApp": {
-    "title": "Heb je de SMOG-app?",
+    "title": "Heb je de SMOG\u00a0&\u00a0Co-app?",
     "description": "Bekijk dit gebaar in de app.",
     "action": "Open in de app",
     "getApp": "Nog geen app? Download hem"
@@ -1035,10 +1035,10 @@
     }
   },
   "maintenance": {
-    "documentTitle": "SMOG: Even geduld",
+    "documentTitle": "SMOG & Co: even geduld",
     "badge": "Onderhoud bezig",
-    "title": "SMOG is in onderhoud",
-    "description": "We voeren onderhoud uit. Je kunt SMOG weer gebruiken zodra het onderhoud klaar is.",
+    "title": "SMOG\u00a0&\u00a0Co is even in onderhoud",
+    "description": "We werken even aan de website en de app. Zodra we klaar zijn, kun je weer gebaren opzoeken.",
     "until": "We verwachten terug te zijn op {{time}}."
   },
   "admin": {
@@ -1555,7 +1555,7 @@
       },
       "notFound": {
         "title": "Les niet gevonden",
-        "description": "Deze les bestaat niet (meer)."
+        "description": "We vinden deze les niet. Misschien is ze verwijderd."
       },
       "actions": {
         "label": "Acties voor {{title}}",
@@ -2506,7 +2506,7 @@
       },
       "strings": {
         "title": "Teksten",
-        "description": "Bewerk de teksten van de site, de app en de e-mails zonder nieuwe release. Het kan even duren voordat een wijziging op elk toestel verschijnt."
+        "description": "Bewerk de teksten van de site, de app en de e-mails zonder nieuwe release. Het kan even duren voordat een wijziging op elk toestel verschijnt. Vaste woorden: SMOG is de methode en blijft in elke taal SMOG; SMOG\u00a0&\u00a0Co is de app en de organisatie; een gebaar is in het Frans un geste en in het Engels a gesture."
       },
       "filters": {
         "label": "Filters voor de teksten",
@@ -2675,7 +2675,7 @@
       "noLogo": "Deze sponsoring heeft geen logo, dus je kunt er geen toevoegen.",
       "notRenewable": "Deze sponsoring kan niet meer verlengd worden.",
       "gestureTaken": "Dit gebaar wordt intussen door iemand anders gesponsord.",
-      "rejectedTooLongAgo": "Deze sponsoring werd 30 dagen of langer geleden afgewezen. Je kunt geen aanpassing meer vragen. Neem contact op met SMOG voor hulp.",
+      "rejectedTooLongAgo": "Deze sponsoring werd 30 dagen of langer geleden afgewezen, dus je kunt geen aanpassing meer vragen. Mail naar info@smog.vlaanderen, dan zoeken we samen een oplossing.",
       "noVideo": "De video is nog niet klaar.",
       "paid": "Deze betaling is al betaald en kan niet geannuleerd worden.",
       "notRefunded": "Mollie meldt nog geen terugbetaling. Betaal eerst terug in het Mollie-dashboard.",

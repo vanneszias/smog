@@ -373,7 +373,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     );
     expect(
       await screen.findByText(
-        "The payment could not be started. Nothing was charged. Please try again."
+        "We couldn’t start the payment. Nothing was charged. Try again."
       )
     ).toBeDefined();
   });
@@ -624,7 +624,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     );
     fireEvent.click(pay);
     expect(
-      await screen.findByText("The security check failed. Please try again.")
+      await screen.findByText("The security check failed. Try again.")
     ).toBeDefined();
     expect(
       headers
@@ -654,7 +654,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
       screen.getByRole("button", { name: "Continue to payment" })
     );
     await screen.findByText(
-      "The payment could not be started. Nothing was charged. Please try again."
+      "We couldn’t start the payment. Nothing was charged. Try again."
     );
     answer = {
       checkoutUrl: "https://mollie.test/checkout/tr_4",

@@ -92,7 +92,7 @@
       ]
     },
     "lessons": {
-      "gzip": 494000,
+      "gzip": 495000,
       "target": 300000,
       "note": "Target not reached: the shared closure (see home). The lesson list and the builder (phase 10c task 4); the gesture picker (cmdk) and the PDF export dialog (task 5b) load when they first open.",
       "routes": [

@@ -20,9 +20,9 @@ import {
 
 const STORE_KEY = "smog:guest:v1";
 const EXPORT_FILE = /^smog-export-\d{4}-\d{2}-\d{2}\.json$/;
-const BANNER = "Help SMOG verbeteren";
+const BANNER = "Help SMOG & Co beter maken";
 const ALLOW = "Statistieken toestaan";
-const DECLINE = "Geen statistieken";
+const DECLINE = "Liever niet";
 const LANGUAGE_URL = /\/account\?section=language$/;
 const PASSWORD = "e2e-password-1234";
 const HEADERS = { origin: ORIGIN };

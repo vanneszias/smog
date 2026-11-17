@@ -120,7 +120,7 @@ describe("maintenance mode", () => {
     );
     const nlHtml = await nl.text();
     expect(nlHtml).toContain('<html lang="nl"');
-    expect(nlHtml).toContain("SMOG is in onderhoud");
+    expect(nlHtml).toContain("SMOG\u00a0&amp;\u00a0Co is even in onderhoud");
     expect(nlHtml).not.toContain("<script");
 
     const en = await fetchSite("/", {
@@ -129,7 +129,7 @@ describe("maintenance mode", () => {
     expect(en.status).toBe(503);
     const enHtml = await en.text();
     expect(enHtml).toContain('<html lang="en"');
-    expect(enHtml).toContain("SMOG is under maintenance");
+    expect(enHtml).toContain("SMOG\u00a0&amp;\u00a0Co is down for maintenance");
 
     const fr = await fetchSite("/sign-up", {
       headers: { "accept-language": "fr-BE" },

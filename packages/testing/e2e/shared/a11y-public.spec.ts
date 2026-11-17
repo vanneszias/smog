@@ -38,8 +38,8 @@ const EMAIL = /^E-mail$/;
  */
 
 const IPHONE = devices["iPhone 15"].userAgent;
-const CONSENT = "Help SMOG verbeteren";
-const DECLINE = "Geen statistieken";
+const CONSENT = "Help SMOG & Co beter maken";
+const DECLINE = "Liever niet";
 /** The body of a test: the page, and where its findings go. */
 type Body = (page: Page, found: Finding[]) => Promise<void>;
 
@@ -283,7 +283,7 @@ test.describe("axe: the error boundary", () => {
             page.getByRole("link", { name: "Gebaren" }).first().click()
           );
         await expect(
-          page.getByRole("heading", { name: "Er ging iets mis" })
+          page.getByRole("heading", { name: "Dit laadt nu niet" })
         ).toBeVisible();
         const found = await scanThemes(page, "error-boundary");
         expect(byRule(found)).toEqual([]);

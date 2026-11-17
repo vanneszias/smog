@@ -500,7 +500,7 @@ describe("gesture", () => {
         player.emit("timeUpdate", { currentTime: 17 });
       });
     }
-    expect(await screen.findByText("Important notice")).toBeOnTheScreen();
+    expect(await screen.findByText("Good to know")).toBeOnTheScreen();
     expect(await AsyncStorage.getItem(COURSE_PROGRESS_KEY)).toBe("0");
     await AsyncStorage.removeItem(COURSE_PROGRESS_KEY);
   });
