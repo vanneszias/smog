@@ -140,6 +140,9 @@ describe("the sponsor end card on the gesture page (phase 10b ruling 9)", () => 
   };
   const card = (): Element | null =>
     document.querySelector('[data-slot="sponsor-end-card"]');
+  /** Mounted while there is a sponsor, so it can fade out: shown or hidden. */
+  const state = (): string | null | undefined =>
+    card()?.getAttribute("data-state");
   const at = (currentTime: number): void => {
     act(() => {
       timeUpdate?.({ target: { currentTime, duration: 20 } });
@@ -150,21 +153,22 @@ describe("the sponsor end card on the gesture page (phase 10b ruling 9)", () => 
     await renderSite(detailOf({ ...BASE, sponsor: SPONSOR }));
     await waitFor(() => expect(timeUpdate).toBeDefined());
     at(10);
-    expect(card()).toBeNull();
+    expect(state()).toBe("hidden");
     at(17);
+    expect(state()).toBe("shown");
     expect(card()?.textContent).toBe("Made possible byBakkerij JAN nv");
     expect(card()?.querySelector("img")?.getAttribute("src")).toBe(
       SPONSOR.logoPath
     );
     at(1);
-    expect(card()).toBeNull();
+    expect(state()).toBe("hidden");
   });
 
   test("shows it over a video that still has the gesture's name burned in too (needs re-cut): the card is the sponsor's, not the name's", async () => {
     await renderSite(detailOf({ ...BASE, needsRecut: true, sponsor: SPONSOR }));
     await waitFor(() => expect(timeUpdate).toBeDefined());
     at(18);
-    expect(card()).not.toBeNull();
+    expect(state()).toBe("shown");
   });
 
   test("shows none without a sponsor, or over a rendered video that carries the name", async () => {
