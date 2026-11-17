@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { type ReactElement, useEffect } from "react";
 import { AnalyticsBridge } from "@/analytics";
 import { ConsentSheet } from "@/components/consent-sheet";
+import { ConsentMomentProvider } from "@/consent-moment";
 import { GuestImportSheet } from "@/guest-import-sheet";
 import { sweepExportFiles } from "@/lib/export-file";
 import { type StackHeaderOptions, useStackHeaderOptions } from "@/lib/header";
@@ -25,8 +26,8 @@ function useCardOptions(): StackHeaderOptions & {
 
 /**
  * The root stack: the tabs, the sign-in modal, settings, and the gesture
- * and shared list cards, with the kit's providers and the guest import
- * sheet. `app/_layout.tsx` wraps it in `AppProviders`; tests pass fakes.
+ * and shared list cards, with the kit's providers, the guest import sheet
+ * and the consent sheet (asked once a gesture has been watched). `app/_layout.tsx` wraps it in `AppProviders`; tests pass fakes.
  */
 export function AppShell(): ReactElement {
   const card = useCardOptions();
@@ -38,15 +39,20 @@ export function AppShell(): ReactElement {
     <ThemeRoot>
       <KitProvider>
         <ToastProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ statusBarStyle: "light" }} />
-            <Stack.Screen name="(auth)" options={{ presentation: "modal" }} />
-            <Stack.Screen name="settings" />
-            <Stack.Screen name="gestures/[slug]" options={card} />
-            <Stack.Screen name="shared/[token]" options={card} />
-          </Stack>
-          <GuestImportSheet />
-          <ConsentSheet />
+          <ConsentMomentProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen
+                name="(tabs)"
+                options={{ statusBarStyle: "light" }}
+              />
+              <Stack.Screen name="(auth)" options={{ presentation: "modal" }} />
+              <Stack.Screen name="settings" />
+              <Stack.Screen name="gestures/[slug]" options={card} />
+              <Stack.Screen name="shared/[token]" options={card} />
+            </Stack>
+            <GuestImportSheet />
+            <ConsentSheet />
+          </ConsentMomentProvider>
           <AnalyticsBridge />
         </ToastProvider>
       </KitProvider>

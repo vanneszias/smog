@@ -87,6 +87,7 @@ const WEB_KIT = [
   "GestureCard",
   "GestureGrid",
   "GestureRow",
+  "HandIllustration",
   "Heading",
   "IconButton",
   "Input",
@@ -151,8 +152,6 @@ const WEB_ONLY: Record<string, string> = {
   EmptyHeader: "registry empty part (web composition of EmptyState)",
   EmptyMedia: "registry empty part (web composition of EmptyState)",
   EmptyTitle: "registry empty part (web composition of EmptyState)",
-  HandIllustration:
-    "web draws the brand hands inline; native EmptyState renders its own",
   KitLinkComponent: "router links: native navigates in onPress",
   OpenInAppBanner: "opens the app from the web",
   Pagination: "lists load more on scroll",

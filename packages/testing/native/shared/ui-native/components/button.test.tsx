@@ -52,7 +52,7 @@ describe("Button", () => {
     expect(button).toBeDisabled();
   });
 
-  it("plays the warning haptic when a danger action is pressed", async () => {
+  it("plays no warning haptic when a danger button is pressed (only a confirmed danger dialog does)", async () => {
     const onPress = jest.fn();
     await renderKit(
       <Button onPress={onPress} variant="danger">
@@ -61,7 +61,7 @@ describe("Button", () => {
     );
     await fireEvent.press(screen.getByRole("button", { name: "Delete" }));
     expect(onPress).toHaveBeenCalledTimes(1);
-    expect(notificationAsync).toHaveBeenCalledWith(
+    expect(notificationAsync).not.toHaveBeenCalledWith(
       NotificationFeedbackType.Warning
     );
   });

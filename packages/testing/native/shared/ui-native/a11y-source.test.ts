@@ -36,6 +36,8 @@ function sources(): { file: string; text: string }[] {
  * an image does not.
  */
 const FIXED_HEIGHT_ALLOWED: Record<string, string> = {
+  "components/error-state.tsx": "the disc behind the hand: no text",
+  "components/hand-illustration.tsx": "an image: the hand's own size",
   "components/logo.tsx": "an image: the logo's own size",
   "components/menu.tsx": "a hairline separator",
   "components/progress-bar.tsx": "the track and its fill: no text",
@@ -43,6 +45,7 @@ const FIXED_HEIGHT_ALLOWED: Record<string, string> = {
   "components/sheet-panel.tsx": "the drag handle: no text",
   "components/skeleton.tsx": "a placeholder: no text",
   "components/stepper.tsx": "the connector line between steps: no text",
+  "domain/gesture-parts.tsx": "the play disc on a still: no text",
   "domain/gesture-row.tsx": "the thumbnail: an image",
   "domain/sponsor-end-card.tsx": "the logo: an image, the text beside it wraps",
   "domain/video-player.tsx": "the video fills its aspect-ratio box",

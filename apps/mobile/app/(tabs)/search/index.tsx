@@ -281,6 +281,7 @@ export default function SearchScreen(): ReactElement {
                   onChange={pickMatching}
                   selected={category}
                   showAll={false}
+                  tone="action"
                 />
               </View>
             ) : null}

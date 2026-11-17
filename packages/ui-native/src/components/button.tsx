@@ -1,20 +1,8 @@
 import { type ColorRole, tokens } from "@smog/styles/tokens";
 import { cva, type VariantProps } from "class-variance-authority";
-import {
-  type ReactElement,
-  type ReactNode,
-  type Ref,
-  useCallback,
-} from "react";
-import {
-  type GestureResponderEvent,
-  Pressable,
-  type PressableProps,
-  Text,
-  type View,
-} from "react-native";
+import type { ReactElement, ReactNode, Ref } from "react";
+import { Pressable, type PressableProps, Text, type View } from "react-native";
 import { cn } from "../lib/cn";
-import { hapticDanger } from "../lib/haptics";
 import { ICON_SIZE, renderIcon } from "../lib/icon";
 import { hitSlopFor, useColor } from "../lib/theme";
 import { Spinner } from "./spinner";
@@ -153,15 +141,6 @@ export function Button({
   const labelRole = colours.role;
   const labelColor = useColor(labelRole);
   const inactive = disabled || loading;
-  const handlePress = useCallback(
-    (event: GestureResponderEvent): void => {
-      if (resolvedVariant === "danger") {
-        hapticDanger();
-      }
-      onPress?.(event);
-    },
-    [onPress, resolvedVariant]
-  );
   let leading: ReactNode = null;
   if (loading) {
     leading = (
@@ -186,7 +165,7 @@ export function Button({
       )}
       disabled={inactive}
       hitSlop={hitSlopFor(CONTROL_HEIGHT[resolvedSize])}
-      onPress={handlePress}
+      onPress={onPress}
       {...props}
     >
       {leading}

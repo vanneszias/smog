@@ -3,9 +3,11 @@ import type { ReactElement } from "react";
 import { EmptyState, type EmptyStateProps } from "../components/empty-state";
 
 /*
- * The learning flow's empty states, as `@smog/ui-web`: EmptyState with its
- * copy and a brand hand; `action` is the next action and any EmptyState
- * prop overrides the defaults.
+ * The learning flow's empty states: EmptyState with its copy and a brand
+ * hand, each hand with its one meaning (DESIGN.md, Hands): the open palm
+ * (2) where nothing is here yet, the hand pointing across (1) for finding
+ * and searching. `action` is the next action and any EmptyState prop
+ * overrides the defaults.
  */
 
 export type DomainEmptyStateProps = EmptyStateProps;
@@ -18,7 +20,7 @@ export function FavoritesEmptyState(
   return (
     <EmptyState
       description={t("favorites.empty.description")}
-      illustration={1}
+      illustration={2}
       title={t("favorites.empty.title")}
       {...props}
     />
@@ -61,6 +63,7 @@ export function NoResultsEmptyState(
   return (
     <EmptyState
       description={t("search.noResults.description")}
+      illustration={1}
       title={t("search.noResults.title")}
       {...props}
     />
@@ -75,7 +78,7 @@ export function SearchIdleEmptyState(
   return (
     <EmptyState
       description={t("search.idle.description")}
-      illustration={0}
+      illustration={1}
       title={t("search.idle.title")}
       {...props}
     />

@@ -85,6 +85,13 @@ const FIGTREE_FILES = Object.values(tokens.fontFamily.native).map(
 const EAS_PROJECT_ID = "9fa68b63-dfa5-498a-9196-5eba93ecac29";
 const BRAND_GREEN = tokens.color.brand.green;
 /**
+ * The splash is the header's deep green of each theme (`tokens.chrome`,
+ * DECISIONS "Brand identity: the browser bar follows the header"), so a
+ * launch flows into Home's hero in light and in dark. Changes the native
+ * fingerprint: it ships with a native (EAS) build, never an OTA update.
+ */
+const SPLASH = tokens.chrome.themeColor;
+/**
  * A build without `EXPO_PUBLIC_SITE_HOST` (a local `expo` run) links to
  * staging's host. `scripts/release-config-check.ts` keeps it equal to
  * staging's `SITE_URL` host; every EAS profile sets its own (`eas.json`).
@@ -178,7 +185,11 @@ export default function createConfig({ config }: ConfigContext): ExpoConfig {
       [
         "expo-splash-screen",
         {
-          backgroundColor: BRAND_GREEN,
+          backgroundColor: SPLASH.light,
+          dark: {
+            backgroundColor: SPLASH.dark,
+            image: "./assets/splash-icon.png",
+          },
           image: "./assets/splash-icon.png",
           imageWidth: 200,
           resizeMode: "contain",

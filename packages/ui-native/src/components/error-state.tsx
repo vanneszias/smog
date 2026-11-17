@@ -1,10 +1,11 @@
+import { handSvgs } from "@smog/brand/svg";
 import { useTranslation } from "@smog/i18n/react";
-import CircleAlert from "lucide-react-native/icons/circle-alert";
+import { tokens } from "@smog/styles/tokens";
 import RotateCw from "lucide-react-native/icons/rotate-cw";
 import type { ReactElement, ReactNode, Ref } from "react";
 import { View, type ViewProps } from "react-native";
+import { SvgXml } from "react-native-svg";
 import { cn } from "../lib/cn";
-import { ICON_SIZE } from "../lib/icon";
 import { useColor } from "../lib/theme";
 import { Button } from "./button";
 import { Heading, Text } from "./text";
@@ -21,7 +22,17 @@ export interface ErrorStateProps extends Omit<ViewProps, "children"> {
   title?: ReactNode;
 }
 
-/** A data view failed to load: title, description and retry (`states.error.*` by default). */
+/** The open palm, and the 96 pt disc around it (the web's `size-24`). */
+const HAND_SIZE = tokens.spacing["12"];
+const DISC = { height: 2 * HAND_SIZE, width: 2 * HAND_SIZE } as const;
+
+/**
+ * A data view failed to load: the brand's open palm in the brand green on
+ * a pale red disc (an error you did not cause; the same mark as the web
+ * kit, never a stock alert glyph), title, description and retry
+ * (`states.error.*` by default). The disc and the title say it is an
+ * error, so the state never relies on colour alone.
+ */
 export function ErrorState({
   className,
   description,
@@ -32,7 +43,7 @@ export function ErrorState({
   ...props
 }: ErrorStateProps): ReactElement {
   const { t } = useTranslation();
-  const iconColor = useColor("dangerStrong");
+  const handColor = useColor("primary");
   return (
     <View className={cn("items-center gap-3 px-4 py-10", className)} {...props}>
       <View
@@ -44,10 +55,17 @@ export function ErrorState({
       >
         <View
           accessibilityElementsHidden
-          className="mb-1 size-12 items-center justify-center rounded-full bg-danger-subtle"
+          className="mb-1 items-center justify-center rounded-full bg-danger-subtle"
           importantForAccessibility="no-hide-descendants"
+          style={DISC}
+          testID="error-illustration"
         >
-          <CircleAlert color={iconColor} size={ICON_SIZE.lg} />
+          <SvgXml
+            color={handColor}
+            height={HAND_SIZE}
+            width={HAND_SIZE}
+            xml={handSvgs[2]}
+          />
         </View>
         <Heading className="text-center" size="title-3">
           {title ?? t("states.error.title")}

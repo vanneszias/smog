@@ -53,7 +53,7 @@ describe("app shell", () => {
     // The stored language preference (en) applies once the store is read.
     expect(
       await screen.findByRole("header", {
-        name: "Gestures that support your speech",
+        name: "People naturally use gestures to support their speech",
       })
     ).toBeOnTheScreen();
     expect(

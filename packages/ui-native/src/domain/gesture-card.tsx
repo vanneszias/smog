@@ -23,7 +23,10 @@ export interface GestureCardProps extends Omit<ViewProps, "children"> {
   sponsored?: boolean;
 }
 
-/** A gesture in a grid: its still (3:4), name and categories, and the heart. */
+/**
+ * A gesture in a grid: its still (3:4) with the orange play glyph, name and
+ * categories, and the heart.
+ */
 export function GestureCard({
   className,
   favorite = false,
@@ -43,6 +46,7 @@ export function GestureCard({
       <GestureThumbnail
         className="w-full"
         playbackId={gesture.playbackId}
+        showPlay
         testID={testID ? `${testID}-thumbnail` : undefined}
         width={480}
       />

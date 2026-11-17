@@ -102,6 +102,7 @@ export const CASES: Record<string, ReactElement> = {
   GestureCard: <kit.GestureCard gesture={HELLO} testID={ID} />,
   GestureGrid: <kit.GestureGrid items={[HELLO]} testID={ID} />,
   GestureRow: <kit.GestureRow gesture={HELLO} testID={ID} />,
+  HandIllustration: <kit.HandIllustration hand={2} testID={ID} />,
   Heading: <kit.Heading testID={ID}>Title</kit.Heading>,
   IconButton: (
     <kit.IconButton icon={<RNText>x</RNText>} label="Close" testID={ID} />

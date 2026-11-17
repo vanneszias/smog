@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
 import { router } from "expo-router";
 import {
@@ -10,6 +11,7 @@ import {
 } from "expo-router/testing-library";
 import { shareAsync } from "expo-sharing";
 import { Alert, type AlertButton } from "react-native";
+import { GESTURE_WATCHED_KEY } from "../../../../../apps/mobile/src/consent-moment";
 import { renderApp } from "../../../support/mobile/harness";
 
 // The real auth client (Better Auth, SecureStore) is never built: tests pass fakes.
@@ -29,6 +31,12 @@ jest.mock("nativewind", () => {
 
 const { mockFiles } = jest.requireMock("expo-file-system") as {
   mockFiles: Map<string, string>;
+};
+const { mockVideoPlayers } = jest.requireMock("expo-video") as {
+  mockVideoPlayers: {
+    duration: number;
+    emit: (event: string, payload?: unknown) => void;
+  }[];
 };
 
 const EXPORT_URI = /^file:\/\/\/cache\/smog-export-\d{4}-\d{2}-\d{2}\.json$/;
@@ -91,9 +99,43 @@ async function inAccount(): Promise<ReturnType<typeof within>> {
 }
 
 describe("consent sheet", () => {
-  it("shows on first launch and Allow saves the decision on the device", async () => {
+  afterEach(async () => {
+    await AsyncStorage.clear();
+  });
+
+  it("does not ask on the first launch: Home comes first", async () => {
+    await renderApp({ guest: { consent: { analytics: null } } });
+    await screen.findByTestId("home-screen");
+    // Give the stored mark and the consent state time to load.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.queryByTestId("consent-banner")).not.toBeOnTheScreen();
+  });
+
+  it("asks once the first gesture is watched and left, and Allow saves the decision on the device", async () => {
     const { clients } = await renderApp({
       guest: { consent: { analytics: null } },
+      initialUrl: "/",
+    });
+    await screen.findByTestId("home-screen");
+    await act(() => {
+      router.push("/gestures/hond");
+    });
+    await screen.findByTestId("gesture-page");
+    const player = mockVideoPlayers.at(-1);
+    if (!player) {
+      throw new Error("No video player");
+    }
+    player.duration = 20;
+    await act(() => {
+      player.emit("timeUpdate", { currentTime: 17 });
+    });
+    // Not over the gesture being watched.
+    expect(screen.queryByTestId("consent-banner")).not.toBeOnTheScreen();
+    expect(await AsyncStorage.getItem(GESTURE_WATCHED_KEY)).toBe("1");
+    await act(() => {
+      router.back();
     });
     const sheet = within(await screen.findByTestId("consent-banner"));
     expect(
@@ -110,7 +152,14 @@ describe("consent sheet", () => {
     expect(clients.store.getSnapshot().consent.analytics).toBe(true);
   });
 
+  it("asks at launch once a gesture was watched before", async () => {
+    await AsyncStorage.setItem(GESTURE_WATCHED_KEY, "1");
+    await renderApp({ guest: { consent: { analytics: null } } });
+    expect(await screen.findByTestId("consent-banner")).toBeOnTheScreen();
+  });
+
   it("waits for the guest import sheet (review I1)", async () => {
+    await AsyncStorage.setItem(GESTURE_WATCHED_KEY, "1");
     await renderApp({
       guest: {
         consent: { analytics: null },
@@ -147,6 +196,7 @@ describe("consent sheet", () => {
   });
 
   it("stays closed once decided", async () => {
+    await AsyncStorage.setItem(GESTURE_WATCHED_KEY, "1");
     await renderApp();
     await screen.findByTestId("home-screen");
     expect(screen.queryByTestId("consent-banner")).not.toBeOnTheScreen();

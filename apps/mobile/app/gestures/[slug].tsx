@@ -49,6 +49,7 @@ import {
 import { HeaderActions } from "@/components/header-actions";
 import { SaveToList } from "@/components/save-to-list";
 import { ScreenScrollView } from "@/components/screen";
+import { useConsentMoment } from "@/consent-moment";
 import { usePreferences } from "@/lib/preferences";
 import { apiUrl, gestureUrl, shareUrl } from "@/lib/site";
 import { SponsorCta } from "@/sponsor-cta";
@@ -153,11 +154,18 @@ function GestureDetail({
   // "Continue where you left off" on Home.
   useRememberGesture(gesture.id);
   // video_playback_completed and the course banner, once per visit.
-  const { banner: course, onNearEnd } = useVideoEnd<CourseMessageIndex>({
-    gestureId: gesture.id,
-    messageCount: COURSE_MESSAGE_COUNT,
-    storage: AsyncStorage,
-  });
+  const { banner: course, onNearEnd: onCourseNearEnd } =
+    useVideoEnd<CourseMessageIndex>({
+      gestureId: gesture.id,
+      messageCount: COURSE_MESSAGE_COUNT,
+      storage: AsyncStorage,
+    });
+  // The first gesture watched is when the app may ask about statistics.
+  const { markGestureWatched } = useConsentMoment();
+  const onNearEnd = useCallback(() => {
+    onCourseNearEnd();
+    markGestureWatched();
+  }, [markGestureWatched, onCourseNearEnd]);
   const openCategory = useCallback(
     (category: string) =>
       router.navigate({ params: { category }, pathname: "/search" }),
@@ -323,6 +331,7 @@ export default function GestureScreen(): ReactElement {
           </Button>
         }
         description={t("gesture.notFound.description")}
+        illustration={2}
         title={t("gesture.notFound.title")}
       />
     );

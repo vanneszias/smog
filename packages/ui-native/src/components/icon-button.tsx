@@ -1,18 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import {
-  type ReactElement,
-  type ReactNode,
-  type Ref,
-  useCallback,
-} from "react";
-import {
-  type GestureResponderEvent,
-  Pressable,
-  type PressableProps,
-  type View,
-} from "react-native";
+import type { ReactElement, ReactNode, Ref } from "react";
+import { Pressable, type PressableProps, type View } from "react-native";
 import { cn } from "../lib/cn";
-import { hapticDanger } from "../lib/haptics";
 import { ICON_SIZE, renderIcon } from "../lib/icon";
 import { hitSlopFor, useColor } from "../lib/theme";
 import { buttonVariants, CONTROL_HEIGHT, useButtonColours } from "./button";
@@ -59,15 +48,6 @@ export function IconButton({
   const colours = useButtonColours(variant);
   const color = useColor(colours.role);
   const inactive = disabled || loading;
-  const handlePress = useCallback(
-    (event: GestureResponderEvent): void => {
-      if (variant === "danger") {
-        hapticDanger();
-      }
-      onPress?.(event);
-    },
-    [onPress, variant]
-  );
   return (
     <Pressable
       accessibilityLabel={label}
@@ -87,7 +67,7 @@ export function IconButton({
       )}
       disabled={inactive}
       hitSlop={hitSlopFor(CONTROL_HEIGHT[resolvedSize])}
-      onPress={handlePress}
+      onPress={onPress}
       {...props}
     >
       {loading ? (
