@@ -160,10 +160,14 @@ const preset = {
       },
       "transitionDuration": {
         "fast": "120ms",
+        "gesture": "640ms",
         "normal": "200ms",
         "slow": "320ms"
       },
       "transitionTimingFunction": {
+        "drawer": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "enter": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "move": "cubic-bezier(0.77, 0, 0.175, 1)",
         "standard": "cubic-bezier(0.2, 0, 0, 1)"
       }
     }

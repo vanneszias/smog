@@ -9,12 +9,14 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withSequence,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { surfaceRoles, useSurface } from "../components/surface";
 import { cn } from "../lib/cn";
 import { hapticToggle } from "../lib/haptics";
 import { ICON_SIZE } from "../lib/icon";
+import { easeEnter, MOTION_MS, popSpring } from "../lib/motion";
 import { hitSlopFor, useColor } from "../lib/theme";
 
 const favoriteVariants = cva(
@@ -75,10 +77,14 @@ export function FavoriteButton({
   const press = useCallback((): void => {
     hapticToggle();
     if (!(active || reducedMotion)) {
-      const half = tokens.motion.duration.slow / 2;
+      // Out quickly on the enter curve, then the pop spring settles it (the
+      // one bounce in the kit); a second tap re-targets from where it is.
       scale.value = withSequence(
-        withTiming(tokens.motion.popScale, { duration: half }),
-        withTiming(1, { duration: half })
+        withTiming(tokens.motion.popScale, {
+          duration: MOTION_MS.fast,
+          easing: easeEnter,
+        }),
+        withSpring(1, popSpring)
       );
     }
     onToggle(!active);

@@ -103,9 +103,10 @@ export function renderNativeTailwindConfig(): string {
         ),
         spacing: mapValues(spacing, px),
         transitionDuration: mapValues(motion.duration, (ms) => `${ms}ms`),
-        transitionTimingFunction: {
-          standard: `cubic-bezier(${motion.easing.standard.join(", ")})`,
-        },
+        transitionTimingFunction: mapValues(
+          motion.easing,
+          (curve) => `cubic-bezier(${(curve as readonly number[]).join(", ")})`
+        ),
       },
     },
   };

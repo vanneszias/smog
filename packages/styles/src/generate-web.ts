@@ -56,7 +56,6 @@ function durations(): [string, string][] {
  */
 function themeBlock(): string[] {
   const { fontSize, fontWeight, spacing, radius, breakpoint, layout } = tokens;
-  const easing = tokens.motion.easing.standard.join(", ");
   return [
     "@theme {",
     "  --color-*: initial;",
@@ -88,9 +87,15 @@ function themeBlock(): string[] {
     "",
     ...declarations(shadows("light")),
     "",
-    `  --ease-standard: cubic-bezier(${easing});`,
+    ...declarations(
+      Object.entries(tokens.motion.easing).map(([name, curve]) => [
+        `ease-${name}`,
+        `cubic-bezier(${curve.join(", ")})`,
+      ])
+    ),
     ...declarations(durations()),
     `  --motion-pop-scale: ${tokens.motion.popScale};`,
+    `  --motion-press-scale: ${tokens.motion.pressScale};`,
     "  --default-transition-duration: var(--duration-normal);",
     "  --default-transition-timing-function: var(--ease-standard);",
     "",
@@ -141,6 +146,12 @@ function darkBlock(): string[] {
   ];
 }
 
+/**
+ * Reduced motion is no motion at all. Zeroing the durations alone is a
+ * trap: a delayed animation would still wait out its delay in its first
+ * keyframe (an element held invisible, then snapping in), so every delay
+ * goes to zero too.
+ */
 function reducedMotion(): string[] {
   return [
     "@media (prefers-reduced-motion: reduce) {",
@@ -149,6 +160,12 @@ function reducedMotion(): string[] {
       durations().map(([name]) => [name, "0ms"]),
       "    "
     ),
+    "  }",
+    "  *,",
+    "  ::before,",
+    "  ::after {",
+    "    animation-delay: 0ms !important;",
+    "    transition-delay: 0ms !important;",
     "  }",
     "}",
   ];

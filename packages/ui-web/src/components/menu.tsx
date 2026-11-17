@@ -23,7 +23,7 @@ export function MenuContent({
         align={align}
         className={cn(
           "z-50 max-w-reading overflow-hidden rounded-2xl bg-popover p-1.5 text-popover-foreground shadow-2 ring-1 ring-foreground/10",
-          "data-closed:animate-fade-out data-open:animate-fade-in motion-reduce:animate-none",
+          "origin-(--radix-dropdown-menu-content-transform-origin) data-closed:animate-grow-out data-open:animate-grow-in motion-reduce:animate-none",
           className
         )}
         data-slot="dropdown-menu-content"

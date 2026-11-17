@@ -80,4 +80,23 @@ describe("Command", () => {
     );
     expect(screen.getByRole("dialog", { name: "Search" })).toBeDefined();
   });
+
+  test("the palette opens and closes with no animation (a tool, not a moment)", () => {
+    renderKit(
+      <CommandDialog open>
+        <Command>
+          <CommandInput />
+          <CommandList />
+        </Command>
+      </CommandDialog>
+    );
+    for (const slot of ["dialog-content", "dialog-overlay"]) {
+      const classes =
+        document.querySelector(`[data-slot="${slot}"]`)?.className ?? "";
+      expect(classes).toContain("data-open:animate-none");
+      expect(classes).toContain("data-closed:animate-none");
+      expect(classes).not.toContain("data-open:animate-pop-in");
+      expect(classes).not.toContain("data-open:animate-fade-in");
+    }
+  });
 });

@@ -5,6 +5,7 @@ import Animated, { FadeIn, useReducedMotion } from "react-native-reanimated";
 import { Card } from "../components/card";
 import { Text } from "../components/text";
 import { cn } from "../lib/cn";
+import { easeEnter, MOTION_MS } from "../lib/motion";
 
 export interface SponsorEndCardProps extends Omit<ViewProps, "children"> {
   className?: string;
@@ -13,9 +14,6 @@ export interface SponsorEndCardProps extends Omit<ViewProps, "children"> {
   /** The sponsor's name, as typed (never translated or reformatted). */
   name: string;
 }
-
-/** The card's fade-in, in ms. */
-const FADE_MS = 250;
 
 /**
  * The sponsor message over the last seconds of a gesture video (phase 10b
@@ -37,7 +35,11 @@ export function SponsorEndCard({
     <Animated.View
       accessibilityElementsHidden
       className={cn("items-center", className)}
-      entering={reducedMotion ? undefined : FadeIn.duration(FADE_MS)}
+      entering={
+        reducedMotion
+          ? undefined
+          : FadeIn.duration(MOTION_MS.normal).easing(easeEnter)
+      }
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
       testID="sponsor-end-card"

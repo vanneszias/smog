@@ -22,6 +22,16 @@ export const transition =
   "transition duration-fast ease-standard motion-reduce:transition-none";
 
 /**
+ * Press feedback, a kit contract like `focusRing`: a pressed compact control
+ * (button, icon button, chip, toggle, the heart) shrinks to
+ * `--motion-press-scale` (0.97) over the `transition` fragment's 120 ms and
+ * springs back on release, so a tap on a phone (where `hover:` never fires)
+ * is felt at once. Only with motion allowed; never on cards, rows or links in
+ * text (large surfaces look like they jump).
+ */
+export const press = "motion-safe:active:scale-(--motion-press-scale)";
+
+/**
  * Grows the hit area of a small control to 44 × 44 px without changing its
  * box: an invisible, centred pseudo-element takes the pointer. The element
  * needs `relative`; Tailwind v4 sets `content` for `after:` itself.

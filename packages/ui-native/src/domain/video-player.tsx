@@ -11,6 +11,7 @@ import Animated, { FadeIn, useReducedMotion } from "react-native-reanimated";
 import { Surface } from "../components/surface";
 import { Text } from "../components/text";
 import { cn } from "../lib/cn";
+import { easeEnter, MOTION_MS } from "../lib/motion";
 import { SponsorEndCard } from "./sponsor-end-card";
 
 export type VideoAspect = "3:4" | "16:9";
@@ -168,7 +169,9 @@ export function VideoPlayer({
           accessibilityElementsHidden
           className="absolute inset-x-0 top-0 items-center p-3"
           entering={
-            reducedMotion ? undefined : FadeIn.duration(OVERLAY_FADE_MS)
+            reducedMotion
+              ? undefined
+              : FadeIn.duration(MOTION_MS.normal).easing(easeEnter)
           }
           importantForAccessibility="no-hide-descendants"
           pointerEvents="none"
@@ -195,8 +198,5 @@ export function VideoPlayer({
     </View>
   );
 }
-
-/** The name's fade-in, in ms. */
-const OVERLAY_FADE_MS = 250;
 
 const FILL = { height: "100%", width: "100%" } as const;

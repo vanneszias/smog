@@ -6,8 +6,9 @@
  *   @import "@smog/ui-web/styles.css";
  *
  * `@source` makes Tailwind scan the kit's components for classes. The
- * animations below only use the motion tokens (durations are 0 ms under
- * `prefers-reduced-motion`, and the components add `motion-reduce:animate-none`).
+ * animations below only use the motion tokens (durations and delays are 0 ms
+ * under `prefers-reduced-motion`, and the components add
+ * `motion-reduce:animate-none`).
  */
 
 @source "./components";
@@ -73,31 +74,46 @@
 }
 
 @theme {
-  --animate-fade-in: fade-in var(--duration-normal) var(--ease-standard);
-  --animate-fade-out: fade-out var(--duration-fast) var(--ease-standard);
-  --animate-pop-in: pop-in var(--duration-normal) var(--ease-standard);
-  --animate-pop-out: pop-out var(--duration-fast) var(--ease-standard);
-  --animate-slide-up: slide-up var(--duration-slow) var(--ease-standard);
-  --animate-slide-down: slide-down var(--duration-normal) var(--ease-standard);
+  /*
+   * The motion language (DECISIONS, "Brand identity: motion"): arrives
+   * quickly, settles slowly, grows from where you pointed, never bounces.
+   * Appearing and leaving use `--ease-enter`, sheets `--ease-drawer`,
+   * on-screen movement `--ease-move`; hover and colour stay on
+   * `--ease-standard` (the `transition` fragment).
+   */
+  --animate-fade-in: fade-in var(--duration-normal) var(--ease-enter);
+  --animate-fade-out: fade-out var(--duration-fast) var(--ease-enter);
+  /* Centred dialogs. */
+  --animate-pop-in: pop-in var(--duration-normal) var(--ease-enter);
+  --animate-pop-out: pop-out var(--duration-fast) var(--ease-enter);
+  /*
+   * Menus, selects, hover cards, tooltips: grow from the trigger (the element
+   * sets `origin-(--radix-…-transform-origin)`).
+   */
+  --animate-grow-in: grow-in var(--duration-normal) var(--ease-enter);
+  --animate-grow-out: grow-out var(--duration-fast) var(--ease-enter);
+  --animate-slide-up: slide-up var(--duration-slow) var(--ease-drawer);
+  --animate-slide-down: slide-down var(--duration-normal) var(--ease-drawer);
   --animate-slide-in-right: slide-in-right var(--duration-slow)
-    var(--ease-standard);
+    var(--ease-drawer);
   --animate-slide-out-right: slide-out-right var(--duration-normal)
-    var(--ease-standard);
-  --animate-slide-in-left: slide-in-left var(--duration-slow)
-    var(--ease-standard);
+    var(--ease-drawer);
+  --animate-slide-in-left: slide-in-left var(--duration-slow) var(--ease-drawer);
   --animate-slide-out-left: slide-out-left var(--duration-normal)
-    var(--ease-standard);
-  /* FavoriteButton: the heart pops once when it is switched on. */
-  --animate-favorite-pop: favorite-pop var(--duration-slow) var(--ease-standard);
+    var(--ease-drawer);
+  /*
+   * FavoriteButton: the heart pops once when it is switched on, the one
+   * motion allowed a small bounce (it overshoots, dips, settles).
+   */
+  --animate-favorite-pop: favorite-pop var(--duration-slow) var(--ease-enter);
   /* Indeterminate ProgressBar: four slow steps per sweep. */
-  --animate-progress: progress calc(var(--duration-slow) * 4)
-    var(--ease-standard) infinite;
+  --animate-progress: progress calc(var(--duration-slow) * 4) var(--ease-move)
+    infinite;
 
   /* Accordion: the content height is measured by Radix. */
   --animate-accordion-down: accordion-down var(--duration-normal)
-    var(--ease-standard);
-  --animate-accordion-up: accordion-up var(--duration-normal)
-    var(--ease-standard);
+    var(--ease-enter);
+  --animate-accordion-up: accordion-up var(--duration-normal) var(--ease-enter);
   /* InputOTP caret. */
   --animate-caret-blink: caret-blink 1.25s ease-out infinite;
 
@@ -150,6 +166,19 @@
       scale: 0.96;
     }
   }
+  /* Never from a dot: from 96 %, so the panel is there at once and settles. */
+  @keyframes grow-in {
+    from {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+  @keyframes grow-out {
+    to {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
   @keyframes slide-up {
     from {
       transform: translateY(100%);
@@ -181,8 +210,14 @@
     }
   }
   @keyframes favorite-pop {
-    50% {
+    0% {
+      scale: 0.9;
+    }
+    40% {
       scale: var(--motion-pop-scale);
+    }
+    70% {
+      scale: 0.97;
     }
   }
   @keyframes progress {

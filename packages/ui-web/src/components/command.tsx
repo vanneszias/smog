@@ -55,6 +55,7 @@ export function CommandDialog({
         )}
         description={description}
         hideClose
+        instant
         title={title ?? t("common.search")}
       >
         {children}

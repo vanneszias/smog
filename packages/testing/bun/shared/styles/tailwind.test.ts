@@ -24,6 +24,25 @@ function rule(css: string, selector: string): string {
   return start < 0 ? "" : css.slice(start, css.indexOf("}", start) + 1);
 }
 
+describe("the motion language under Tailwind v4", () => {
+  it("builds the enter, move and drawer curves and the gesture duration", async () => {
+    const css = await build([
+      "ease-enter",
+      "ease-move",
+      "ease-drawer",
+      "duration-gesture",
+      "rounded-pill",
+      "rounded-card",
+    ]);
+    expect(rule(css, ".ease-enter")).toContain("var(--ease-enter)");
+    expect(rule(css, ".ease-move")).toContain("var(--ease-move)");
+    expect(rule(css, ".ease-drawer")).toContain("var(--ease-drawer)");
+    expect(rule(css, ".duration-gesture")).toContain("var(--duration-gesture)");
+    expect(rule(css, ".rounded-pill")).toContain("var(--radius-pill)");
+    expect(rule(css, ".rounded-card")).toContain("var(--radius-card)");
+  });
+});
+
 describe("generated theme under Tailwind v4", () => {
   it("builds token utilities", async () => {
     const css = await build([

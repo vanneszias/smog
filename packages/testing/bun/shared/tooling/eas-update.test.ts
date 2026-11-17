@@ -89,9 +89,7 @@ describe("planUpdate", () => {
       "--environment",
       "preview",
     ]);
-    expect(plan.env.EXPO_PUBLIC_API_URL).toBe(
-      "https://smog.zias.be"
-    );
+    expect(plan.env.EXPO_PUBLIC_API_URL).toBe("https://smog.zias.be");
     // The variant is part of the runtime fingerprint (phase 9 ruling 9).
     expect(plan.env.APP_VARIANT).toBe("staging");
     expect(

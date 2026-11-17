@@ -5,6 +5,7 @@ import {
   disabled,
   focusRing,
   hitArea,
+  press,
   stateLayer,
   transition,
 } from "../lib/variants";
@@ -16,6 +17,7 @@ const iconButtonVariants = cva(
     stateLayer.full,
     focusRing,
     transition,
+    press,
     disabled,
   ],
   {

@@ -15,6 +15,15 @@ describe("Button", () => {
     expect(button.getAttribute("type")).toBe("button");
   });
 
+  test("is a pill that answers a press (with motion allowed)", () => {
+    renderKit(<Button>Save</Button>);
+    const classes = classesOf(screen.getByRole("button", { name: "Save" }));
+    expect(classes).toContain("rounded-pill");
+    expect(classes).toContain(
+      "motion-safe:active:scale-(--motion-press-scale)"
+    );
+  });
+
   test("variants and sizes", () => {
     renderKit(
       <>

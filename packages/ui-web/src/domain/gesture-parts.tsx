@@ -69,7 +69,7 @@ export function GestureThumbnail({
     >
       <img
         alt=""
-        className="size-full object-cover transition-transform duration-300 group-hover/card:scale-105 motion-reduce:transition-none motion-reduce:group-hover/card:scale-100"
+        className="size-full object-cover transition-transform duration-slow ease-enter group-hover/card:scale-105 motion-reduce:transition-none motion-reduce:group-hover/card:scale-100"
         decoding="async"
         height={Math.round((width * 4) / 3)}
         loading="lazy"

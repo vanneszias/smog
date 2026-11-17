@@ -10,6 +10,30 @@ import { extendTailwindMerge } from "tailwind-merge";
  * `shadow-md`) are back, so registry code and kit code merge in one group.
  * This is the `utils` alias of `components.json` (`@/lib/cn`).
  */
+/**
+ * The kit's own `--animate-*` names (`styles.css`), so a later
+ * `data-open:animate-none` replaces `data-open:animate-pop-in`.
+ */
+const KIT_ANIMATIONS = [
+  "accordion-down",
+  "accordion-up",
+  "caret-blink",
+  "fade-in",
+  "fade-out",
+  "favorite-pop",
+  "grow-in",
+  "grow-out",
+  "pop-in",
+  "pop-out",
+  "progress",
+  "slide-down",
+  "slide-in-left",
+  "slide-in-right",
+  "slide-out-left",
+  "slide-out-right",
+  "slide-up",
+];
+
 const merge = extendTailwindMerge({
   extend: {
     classGroups: {
@@ -17,6 +41,7 @@ const merge = extendTailwindMerge({
       ease: [{ ease: Object.keys(tokens.motion.easing) }],
     },
     theme: {
+      animate: KIT_ANIMATIONS,
       "font-weight": Object.keys(tokens.fontWeight),
       radius: Object.keys(tokens.radius),
       shadow: Object.keys(tokens.elevation),

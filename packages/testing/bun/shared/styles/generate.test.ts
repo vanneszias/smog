@@ -97,6 +97,11 @@ describe("renderWebThemeCss", () => {
     expect(css).toContain("--font-weight-semibold: 600;");
     expect(css).toMatch(SHADOW_1);
     expect(css).toContain("--ease-standard: cubic-bezier(0.2, 0, 0, 1);");
+    expect(css).toContain("--ease-enter: cubic-bezier(0.23, 1, 0.32, 1);");
+    expect(css).toContain("--ease-move: cubic-bezier(0.77, 0, 0.175, 1);");
+    expect(css).toContain("--ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);");
+    expect(css).toContain("--duration-gesture: 640ms;");
+    expect(css).toContain("--motion-press-scale: 0.97;");
     expect(css).toContain("--duration-fast: 120ms;");
     expect(css).toContain("--duration-slow: 320ms;");
     expect(css).toContain("--motion-pop-scale: 1.25;");
@@ -109,8 +114,16 @@ describe("renderWebThemeCss", () => {
     expect(css).toContain("--text-display: 3.5rem;");
   });
 
-  it("turns durations off for reduced motion", () => {
-    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+  it("turns durations and delays off for reduced motion", () => {
+    const reduced = css.slice(
+      css.indexOf("@media (prefers-reduced-motion: reduce)")
+    );
+    expect(reduced).toContain("--duration-gesture: 0ms;");
+    expect(reduced).toContain("--duration-slow: 0ms;");
+    // A zeroed duration with a delay still holds the first keyframe: the
+    // delays go too, so nothing waits invisible and then snaps in.
+    expect(reduced).toContain("animation-delay: 0ms !important;");
+    expect(reduced).toContain("transition-delay: 0ms !important;");
   });
 
   it("writes no value that is not a token", () => {

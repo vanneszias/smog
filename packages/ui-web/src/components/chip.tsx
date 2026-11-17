@@ -12,6 +12,7 @@ import {
   disabled,
   focusRing,
   hitArea,
+  press,
   stateLayer,
   transition,
 } from "../lib/variants";
@@ -22,6 +23,7 @@ const chipVariants = cva(
     stateLayer.full,
     focusRing,
     transition,
+    press,
     disabled,
   ],
   {

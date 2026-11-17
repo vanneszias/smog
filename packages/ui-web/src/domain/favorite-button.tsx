@@ -9,7 +9,13 @@ import {
   useState,
 } from "react";
 import { cn } from "../lib/cn";
-import { focusRing, hitArea, stateLayer, transition } from "../lib/variants";
+import {
+  focusRing,
+  hitArea,
+  press,
+  stateLayer,
+  transition,
+} from "../lib/variants";
 
 const favoriteVariants = cva(
   [
@@ -17,6 +23,7 @@ const favoriteVariants = cva(
     stateLayer.full,
     focusRing,
     transition,
+    press,
   ],
   {
     defaultVariants: { size: "md", variant: "ghost" },

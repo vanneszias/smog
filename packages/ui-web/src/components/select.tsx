@@ -88,7 +88,7 @@ export function Select({
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal container={container}>
         <SelectPrimitive.Content
-          className="relative z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-2xl bg-popover text-popover-foreground shadow-2 ring-1 ring-foreground/10 data-open:animate-fade-in motion-reduce:animate-none"
+          className="relative z-50 max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-2xl bg-popover text-popover-foreground shadow-2 ring-1 ring-foreground/10 origin-(--radix-select-content-transform-origin) data-closed:animate-grow-out data-open:animate-grow-in motion-reduce:animate-none"
           data-slot="select-content"
           position="popper"
           sideOffset={tokens.spacing["1"]}

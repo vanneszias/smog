@@ -2,7 +2,13 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../lib/cn";
-import { disabled, focusRing, hitArea, transition } from "../lib/variants";
+import {
+  disabled,
+  focusRing,
+  hitArea,
+  press,
+  transition,
+} from "../lib/variants";
 import { Spinner } from "./spinner";
 
 /**
@@ -18,6 +24,7 @@ export const buttonVariants = cva(
     "[&_svg]:pointer-events-none [&_svg]:shrink-0",
     focusRing,
     transition,
+    press,
     disabled,
   ],
   {

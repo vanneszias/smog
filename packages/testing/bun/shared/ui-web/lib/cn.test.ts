@@ -27,6 +27,11 @@ describe("cn", () => {
     expect(cn("size-9", "size-touch")).toBe("size-touch");
     expect(cn("font-bold", "font-regular")).toBe("font-regular");
     expect(cn("ease-in-out", "ease-standard")).toBe("ease-standard");
+    expect(cn("ease-standard", "ease-enter")).toBe("ease-enter");
+    expect(cn("duration-fast", "duration-gesture")).toBe("duration-gesture");
+    expect(cn("data-open:animate-pop-in", "data-open:animate-none")).toBe(
+      "data-open:animate-none"
+    );
   });
 
   test("keeps a font size next to the shadcn colour roles", () => {

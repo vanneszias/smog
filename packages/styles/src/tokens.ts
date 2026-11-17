@@ -387,11 +387,42 @@ export function boxShadow(
     .join(", ");
 }
 
+/**
+ * The motion language: SMOG moves like a calm hand. It arrives quickly,
+ * settles slowly, grows from where you pointed and never bounces (the
+ * favourite heart is the one exception). Under `prefers-reduced-motion`
+ * nothing moves: the web zeroes every duration and every delay, native
+ * skips the animation (DECISIONS, "Brand identity: motion").
+ */
 const motion = {
-  duration: { fast: 120, normal: 200, slow: 320 },
-  easing: { standard: [0.2, 0, 0, 1] },
+  duration: {
+    /** Exits, press, hover colour. */
+    fast: 120,
+    /** The hand drawing itself once (the home hero): a gesture, not a UI step. */
+    gesture: 640,
+    /** Fades, pops, menus, accordions. */
+    normal: 200,
+    /** Sheets in, the heart pop, the still zoom. */
+    slow: 320,
+  },
+  easing: {
+    /** Something on screen sliding from an edge: sheets, drawers (iOS-like). */
+    drawer: [0.32, 0.72, 0, 1],
+    /** Anything that appears or leaves: starts fast, settles softly. */
+    enter: [0.23, 1, 0.32, 1],
+    /** Something already on screen moving to a new place: the switch thumb, the sidebar. */
+    move: [0.77, 0, 0.175, 1],
+    /** Hover, colour, focus: gentle both ways. */
+    standard: [0.2, 0, 0, 1],
+  },
   /** The favorite heart's pop peaks at this scale (web keyframes, native Reanimated). */
   popScale: 1.25,
+  /** The heart's settle (native): the one spring allowed a small bounce. */
+  popSpring: { dampingRatio: 0.5, duration: 450 },
+  /** Pressed compact controls shrink to this scale (web `:active`). */
+  pressScale: 0.97,
+  /** The one spring for everything else (native): calm, no visible bounce. */
+  spring: { dampingRatio: 0.85, duration: 450 },
 } as const;
 
 export const tokens = {
