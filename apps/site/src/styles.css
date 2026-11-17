@@ -61,6 +61,11 @@
  * otherwise the hand is simply there.
  */
 @layer components {
+  /* The hero weight of the line (the art's own is the inline 2 px). */
+  .hero-hand > svg[fill="none"] {
+    stroke-width: 2.5;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .hero-hand > svg:not([fill="none"]) {
       animation: hero-hand-wipe var(--duration-gesture) var(--ease-enter) 160ms
