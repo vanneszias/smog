@@ -46,6 +46,8 @@ const API = {
   },
 };
 
+const HOND_NAME = /Hond/;
+
 function viewed(events: AnalyticsEvent[]): AnalyticsEvent[] {
   return events.filter((event) => event.name === "gesture_viewed");
 }
@@ -136,14 +138,14 @@ describe("/gestures (search sources)", () => {
     const clear = await screen.findAllByRole("button", {
       name: "Clear the search",
     });
-    await act(async () => {
+    act(() => {
       fireEvent.click(clear[0] as HTMLElement);
     });
     await waitFor(() =>
       expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("")
     );
     expect(
-      (await screen.findAllByRole("link", { name: /Hond/ })).length
+      (await screen.findAllByRole("link", { name: HOND_NAME })).length
     ).toBeGreaterThan(0);
     expect(
       screen.queryAllByRole("button", { name: "Clear the search" })
