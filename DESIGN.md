@@ -362,7 +362,7 @@ The real clips end on the white SMOG slate, so during its four seconds the band 
 
 ## Voice and words
 
-The copy is part of the identity. AGENTS.md ("Product terminology", "Brand voice and copy workflow") holds the rules that are never broken; this section is how they are applied, string by string. A guard test (`packages/testing/bun/shared/i18n/brand-naming.test.ts`) keeps the names and the word for a gesture; a second one (`typography.test.ts` beside it) holds the typography rules below and is switched on after the catalogue-wide sweep.
+The copy is part of the identity. AGENTS.md ("Product terminology", "Brand voice and copy workflow") holds the rules that are never broken; this section is how they are applied, string by string. A guard test (`packages/testing/bun/shared/i18n/brand-naming.test.ts`) keeps the names and the word for a gesture; a second one (`typography.test.ts` beside it) holds the typography rules below.
 
 ### Voice
 
@@ -409,7 +409,7 @@ Translators find the short form of this list on the strings screen of the transl
 - **Full stops** end sentences, not buttons, labels, titles or list items.
 - **Exclamation marks**: none in the interface. At most one per payment or thank-you moment ("Bedankt om SMOG & Co te steunen!").
 - **No em dash** anywhere. A colon introduces what follows, parentheses hold an aside, a hyphen is an empty value.
-- **Typography** (enforced after the sweep): the curly apostrophe `’` (`video’s`, `don’t`, `l’appareil`); quotes `“ ”` in Dutch and English, `« »` with a narrow no-break space inside in French; the ellipsis character `…`, never three dots; a no-break space between a number and its unit (`2 MB`, `4 s`); in French a no-break space before `: ; ? !`.
+- **Typography** (enforced by `typography.test.ts`): the curly apostrophe `’` (`video’s`, `don’t`, `l’appareil`); quotes `“ ”` in Dutch and English, `« »` with a narrow no-break space inside in French; the ellipsis character `…`, never three dots; a no-break space between a number and its unit (`2 MB`, `4 s`); in French a no-break space before `: ; ? !`.
 
 ### Buttons and links
 

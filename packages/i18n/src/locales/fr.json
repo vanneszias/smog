@@ -32,10 +32,10 @@
     "mainNavigation": "Navigation principale",
     "openMenu": "Ouvrir le menu",
     "closeMenu": "Fermer le menu",
-    "moreActions": "Plus d'actions",
+    "moreActions": "Plus d’actions",
     "close": "Fermer",
     "dismiss": "Fermer la notification",
-    "breadcrumb": "Fil d'Ariane",
+    "breadcrumb": "Fil d’Ariane",
     "more": "Plus",
     "carousel": "Carrousel",
     "slide": "Diapositive",
@@ -45,7 +45,7 @@
     "sidebar": "Barre latérale",
     "loading": "Chargement en cours",
     "logo": "SMOG & Co",
-    "homeLink": "SMOG & Co, page d'accueil",
+    "homeLink": "SMOG\u00a0&\u00a0Co, page d’accueil",
     "clearSearch": "Effacer la recherche",
     "showPassword": "Afficher le mot de passe",
     "hidePassword": "Masquer le mot de passe",
@@ -109,14 +109,14 @@
     "nl": "Nederlands",
     "en": "English",
     "fr": "Français",
-    "device": "Langue de l'appareil"
+    "device": "Langue de l’appareil"
   },
   "auth": {
-    "title": "Se connecter ou s'inscrire",
+    "title": "Se connecter ou s’inscrire",
     "subtitle": "Avec un compte, vos favoris et vos listes vous suivent sur tous vos appareils.",
     "signInTitle": "Bon retour parmi nous",
     "signUpTitle": "Créer un compte",
-    "signUpSubtitle": "Il n'existe pas encore de compte pour {{email}}. Créez-en un en quelques étapes.",
+    "signUpSubtitle": "Il n’existe pas encore de compte pour {{email}}. Créez-en un en quelques étapes.",
     "continueAsGuest": "Continuer sans compte",
     "legal": "En continuant, vous acceptez nos conditions et notre politique de confidentialité.",
     "email": {
@@ -136,7 +136,7 @@
       "magicLink": "Avec un lien de connexion par e-mail",
       "google": "Continuer avec Google",
       "apple": "Continuer avec Apple",
-      "passkey": "Se connecter avec une clé d'accès",
+      "passkey": "Se connecter avec une clé d’accès",
       "more": "Choisir une autre méthode"
     },
     "password": {
@@ -166,7 +166,7 @@
       "description": "Nous avons envoyé un lien de connexion à {{email}}. Ouvrez-le pour vous connecter.",
       "resend": "Renvoyer le lien",
       "resent": "Nous vous avons envoyé un nouveau lien.",
-      "appTitle": "Se connecter dans l'app",
+      "appTitle": "Se connecter dans l’app",
       "appDescription": "Ce lien vous connecte à l’application SMOG\u00a0&\u00a0Co. Ouvrez-le sur le téléphone où l’application est installée.",
       "continueInBrowser": "Se connecter dans ce navigateur",
       "confirmTitle": "Se connecter avec le lien de votre e-mail\u202f?",
@@ -185,16 +185,16 @@
     "verifyEmail": {
       "title": "Confirmez votre adresse e-mail",
       "description": "Nous avons envoyé un lien de confirmation à {{email}}. Ouvrez-le pour confirmer votre adresse e-mail.",
-      "resend": "Renvoyer l'e-mail de confirmation",
-      "resent": "Nous avons renvoyé l'e-mail de confirmation.",
+      "resend": "Renvoyer l’e-mail de confirmation",
+      "resent": "Nous avons renvoyé l’e-mail de confirmation.",
       "verifying": "Confirmation en cours…",
       "success": "Votre adresse e-mail est confirmée.",
-      "invalid": "Ce lien a expiré ou n'est plus valide. Demandez-en un nouveau."
+      "invalid": "Ce lien a expiré ou n’est plus valide. Demandez-en un nouveau."
     },
     "forgotPassword": {
       "title": "Mot de passe oublié",
       "description": "Saisissez votre adresse e-mail. Nous vous enverrons un lien pour choisir un nouveau mot de passe.",
-      "submit": "M'envoyer un lien",
+      "submit": "M’envoyer un lien",
       "sent": "Si un compte existe pour {{email}}, vous recevrez un e-mail sous peu.",
       "backToSignIn": "Retour à la connexion"
     },
@@ -202,16 +202,16 @@
       "title": "Choisissez un nouveau mot de passe",
       "submit": "Enregistrer le mot de passe",
       "success": "Votre mot de passe a été modifié. Vous pouvez maintenant vous connecter.",
-      "invalid": "Ce lien a expiré ou n'est plus valide. Demandez-en un nouveau."
+      "invalid": "Ce lien a expiré ou n’est plus valide. Demandez-en un nouveau."
     },
     "passkey": {
-      "add": "Ajouter une clé d'accès",
-      "added": "Votre clé d'accès a été ajoutée.",
-      "unsupported": "Votre appareil ou votre navigateur ne prend pas en charge les clés d'accès."
+      "add": "Ajouter une clé d’accès",
+      "added": "Votre clé d’accès a été ajoutée.",
+      "unsupported": "Votre appareil ou votre navigateur ne prend pas en charge les clés d’accès."
     },
     "captcha": {
       "label": "Contrôle de sécurité",
-      "description": "Nous vérifions que vous n'êtes pas un robot. Cela prend quelques secondes.",
+      "description": "Nous vérifions que vous n’êtes pas un robot. Cela prend quelques secondes.",
       "appOnly": "Cette page ne fonctionne que dans l’application SMOG\u00a0&\u00a0Co.",
       "failed": "Le contrôle de sécurité a échoué. Réessayez.",
       "retry": "Réessayer"
@@ -229,16 +229,16 @@
       "passwordTooLong": "Votre mot de passe peut compter au plus {{max}} caractères.",
       "passwordMismatch": "Les mots de passe ne sont pas identiques.",
       "invalidCredentials": "Cette adresse e-mail ou ce mot de passe est incorrect.",
-      "emailNotVerified": "Votre adresse e-mail n'est pas encore confirmée. Consultez votre boîte mail ou demandez un nouvel e-mail de confirmation.",
-      "emailNotSent": "L'e-mail n'a pas pu être envoyé. Réessayez dans un instant.",
+      "emailNotVerified": "Votre adresse e-mail n’est pas encore confirmée. Consultez votre boîte mail ou demandez un nouvel e-mail de confirmation.",
+      "emailNotSent": "L’e-mail n’a pas pu être envoyé. Réessayez dans un instant.",
       "userExists": "Un compte existe déjà avec cette adresse e-mail. Connectez-vous.",
       "codeRequired": "Saisissez le code.",
       "codeInvalid": "Ce code est incorrect ou a expiré. Vérifiez-le ou demandez-en un nouveau.",
-      "linkInvalid": "Ce lien a expiré ou n'est plus valide.",
+      "linkInvalid": "Ce lien a expiré ou n’est plus valide.",
       "rateLimited": "Trop de tentatives. Patientez un instant, puis réessayez.",
       "captchaFailed": "Le contrôle de sécurité a échoué. Réessayez.",
       "socialFailed": "La connexion avec {{provider}} a échoué. Réessayez.",
-      "passkeyFailed": "La connexion avec votre clé d'accès a échoué. Réessayez ou choisissez une autre méthode de connexion.",
+      "passkeyFailed": "La connexion avec votre clé d’accès a échoué. Réessayez ou choisissez une autre méthode de connexion.",
       "generic": "Cela n’a pas fonctionné. Réessayez. Si le problème persiste, écrivez à info@smog.vlaanderen."
     },
     "import": {
@@ -255,11 +255,11 @@
       "skip": "Pas maintenant",
       "importing": "Importation en cours…",
       "success": "Vos favoris et vos listes sont maintenant dans votre compte.",
-      "failed": "L'importation a échoué. Vos données restent sur cet appareil.",
-      "skipped_one": "{{count}} geste n'est plus disponible et a été ignoré.",
+      "failed": "L’importation a échoué. Vos données restent sur cet appareil.",
+      "skipped_one": "{{count}} geste n’est plus disponible et a été ignoré.",
       "skipped_many": "{{count}} gestes ne sont plus disponibles et ont été ignorés.",
       "skipped_other": "{{count}} gestes ne sont plus disponibles et ont été ignorés.",
-      "overLimit": "Tout n'a pas pu être ajouté à votre compte\u00a0: il contient jusqu'à {{maxLists}} listes de {{maxItems}} gestes chacune.",
+      "overLimit": "Tout n’a pas pu être ajouté à votre compte\u00a0: il contient jusqu’à {{maxLists}} listes de {{maxItems}} gestes chacune.",
       "untitledList": "Liste sans nom"
     },
     "noAccount": "Pas encore de compte\u202f?",
@@ -270,8 +270,8 @@
     "loading": "Chargement…",
     "retry": "Réessayer",
     "empty": {
-      "title": "Rien pour l'instant",
-      "description": "Dès qu'il y aura quelque chose, vous le trouverez ici."
+      "title": "Rien pour l’instant",
+      "description": "Dès qu’il y aura quelque chose, vous le trouverez ici."
     },
     "error": {
       "title": "Ce contenu ne se charge pas pour l’instant",
@@ -285,7 +285,7 @@
     "notFound": {
       "title": "Page introuvable",
       "description": "Nous ne trouvons pas cette page. Le lien est peut-être ancien, ou l’adresse contient une faute.",
-      "action": "Aller à l'accueil",
+      "action": "Aller à l’accueil",
       "browse": "Chercher un geste"
     },
     "pageError": {
@@ -294,12 +294,12 @@
       "stillFailingTitle": "Cela ne fonctionne toujours pas",
       "stillFailingDescription": "Réessayez dans quelques minutes, ou continuez depuis l’accueil. Si le problème persiste, écrivez à info@smog.vlaanderen."
     },
-    "actionFailed": "Cela n'a pas fonctionné. Réessayez."
+    "actionFailed": "Cela n’a pas fonctionné. Réessayez."
   },
   "lists": {
     "ownerFallback": "une personne qui utilise SMOG\u00a0&\u00a0Co",
     "addToList": "Enregistrer dans une liste",
-    "noLists": "Vous n'avez pas encore de listes.",
+    "noLists": "Vous n’avez pas encore de listes.",
     "newList": "Nouvelle liste",
     "newListPlaceholder": "Nom de la liste",
     "create": "Créer",
@@ -309,29 +309,29 @@
     },
     "emptyList": {
       "title": "Cette liste est vide",
-      "description": "Ajoutez des gestes depuis leur page avec « Enregistrer dans une liste »."
+      "description": "Ajoutez des gestes depuis leur page avec «\u202fEnregistrer dans une liste\u202f»."
     },
     "share": {
       "viewTitle": "Lien de consultation",
       "viewDescription": "Toute personne ayant ce lien peut consulter la liste.",
       "editTitle": "Lien de modification",
-      "editDescription": "Toute personne ayant ce lien peut modifier la liste après s'être connectée.",
+      "editDescription": "Toute personne ayant ce lien peut modifier la liste après s’être connectée.",
       "linkLabel": "Lien",
       "copyLink": "Copier le lien",
       "revoke": "Révoquer le lien",
       "revokeTitle": "Révoquer ce lien\u00a0?",
-      "revokeDescription": "Les personnes qui ont le lien perdent l'accès immédiatement. Vous pourrez créer un nouveau lien plus tard.",
+      "revokeDescription": "Les personnes qui ont le lien perdent l’accès immédiatement. Vous pourrez créer un nouveau lien plus tard.",
       "revokeConfirm": "Révoquer",
       "title": "Partager la liste",
-      "description": "Créez un lien pour envoyer cette liste à d'autres.",
+      "description": "Créez un lien pour envoyer cette liste à d’autres.",
       "createView": "Créer un lien de consultation",
       "createEdit": "Créer un lien de modification",
       "send": "Envoyer le lien",
       "message": "{{name}}\u00a0: {{url}}",
       "signInTitle": "Connectez-vous pour partager",
-      "signInDescription": "Connectez-vous pour créer un lien de partage. Vous pourrez ensuite choisir d'ajouter les listes de cet appareil à votre compte.",
+      "signInDescription": "Connectez-vous pour créer un lien de partage. Vous pourrez ensuite choisir d’ajouter les listes de cet appareil à votre compte.",
       "copied": "Lien copié",
-      "copyFailed": "La copie n'a pas fonctionné. Le lien est {{url}}"
+      "copyFailed": "La copie n’a pas fonctionné. Le lien est {{url}}"
     },
     "itemCount_one": "{{count}} geste",
     "itemCount_other": "{{count}} gestes",
@@ -342,15 +342,15 @@
     "nameLabel": "Nom",
     "delete": "Supprimer la liste",
     "deleteTitle": "Supprimer cette liste\u202f?",
-    "deleteDescription": "«\u00a0{{name}}\u00a0» sera supprimée définitivement. Les liens de partage de cette liste ne fonctionneront plus. Les gestes restent disponibles.",
+    "deleteDescription": "«\u202f{{name}}\u202f» sera supprimée définitivement. Les liens de partage de cette liste ne fonctionneront plus. Les gestes restent disponibles.",
     "deleted": "Liste supprimée",
-    "addedTo": "Ajouté à « {{name}} »",
-    "removedFrom": "Retiré de « {{name}} »",
+    "addedTo": "Ajouté à «\u202f{{name}}\u202f»",
+    "removedFrom": "Retiré de «\u202f{{name}}\u202f»",
     "itemActions": "Actions pour {{name}}",
     "moveUp": "Monter",
     "moveDown": "Descendre",
     "removeItem": "Retirer de la liste",
-    "reorderFailed": "L'ordre n'a pas pu être enregistré.",
+    "reorderFailed": "L’ordre n’a pas pu être enregistré.",
     "notFound": {
       "title": "Liste introuvable",
       "description": "Nous ne trouvons pas cette liste. Le lien est peut-être ancien, ou la liste est privée."
@@ -370,7 +370,7 @@
       "moved": "{{name}} déplacé en position {{position}} sur {{total}}.",
       "dropped": "{{name}} déposé en position {{position}} sur {{total}}.",
       "cancelled": "Déplacement annulé. {{name}} est revenu en position {{position}}.",
-      "failed": "Le nouvel ordre n'a pas pu être enregistré."
+      "failed": "Le nouvel ordre n’a pas pu être enregistré."
     },
     "sharedView": {
       "by": "Partagée par {{owner}}",
@@ -378,7 +378,7 @@
       "editable": "Modifiable",
       "signInToEdit": "Connectez-vous pour ajouter ou retirer des gestes.",
       "add": "Ajouter des gestes",
-      "addTitle": "Ajouter des gestes à « {{name}} »",
+      "addTitle": "Ajouter des gestes à «\u202f{{name}}\u202f»",
       "addOne": "Ajouter {{name}}",
       "inList": "Dans la liste"
     }
@@ -397,36 +397,36 @@
     "admin": {
       "audio": {
         "title": "Prononciation (audio)",
-        "description": "Un extrait par langue, le nom du geste prononcé. MP3 ou M4A, 1 Mo et 10 secondes au maximum.",
-        "none": "Pas encore d'audio",
+        "description": "Un extrait par langue, le nom du geste prononcé. MP3 ou M4A, 1\u00a0Mo et 10\u00a0secondes au maximum.",
+        "none": "Pas encore d’audio",
         "choose": "Choisir un audio",
-        "replace": "Remplacer l'audio",
-        "remove": "Supprimer l'audio",
+        "replace": "Remplacer l’audio",
+        "remove": "Supprimer l’audio",
         "saved": "Audio enregistré",
         "removed": "Audio supprimé",
         "duration": "{{seconds}} s",
         "errors": {
-          "format": "Ce fichier n'est pas un MP3 ou un M4A valide.",
-          "duration": "L'extrait dépasse 10 secondes.",
-          "tooLarge": "Le fichier dépasse 1 Mo.",
-          "missing": "L'envoi n'est pas arrivé. Réessayez.",
-          "key": "Cet envoi n'appartient pas à ce geste.",
-          "network": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
-          "generic": "L'enregistrement a échoué. Réessayez.",
+          "format": "Ce fichier n’est pas un MP3 ou un M4A valide.",
+          "duration": "L’extrait dépasse 10\u00a0secondes.",
+          "tooLarge": "Le fichier dépasse 1\u00a0Mo.",
+          "missing": "L’envoi n’est pas arrivé. Réessayez.",
+          "key": "Cet envoi n’appartient pas à ce geste.",
+          "network": "L’envoi a échoué. Vérifiez votre connexion et réessayez.",
+          "generic": "L’enregistrement a échoué. Réessayez.",
           "removeFailed": "La suppression a échoué. Réessayez."
         }
       },
       "recut": {
         "title": "Vidéo sans texte",
-        "description": "La vidéo de ce geste porte encore le nom dans l'image. Envoyez la vidéo sans texte et confirmez-le ici, le lecteur affichera alors le nom dans la langue du spectateur.",
+        "description": "La vidéo de ce geste porte encore le nom dans l’image. Envoyez la vidéo sans texte et confirmez-le ici, le lecteur affichera alors le nom dans la langue du spectateur.",
         "needed": "Le nom est encore dans la vidéo",
         "done": "Vidéo sans texte envoyée",
         "doneSaved": "Marqué comme vidéo sans texte",
         "doneFailed": "Le marquage a échoué. Réessayez.",
-        "ok": "La vidéo n'a pas de texte dans l'image",
+        "ok": "La vidéo n’a pas de texte dans l’image",
         "filter": "À remonter",
         "badge": "Nom dans la vidéo",
-        "textless": "La vidéo n'a pas de texte dans l'image",
+        "textless": "La vidéo n’a pas de texte dans l’image",
         "textlessHint": "Sans la coche, le geste reste dans la liste des vidéos à remonter."
       }
     }
@@ -445,12 +445,12 @@
     "author": "Par {{name}}",
     "titleIn": "Titre en {{language}}",
     "empty": {
-      "title": "Aucune leçon pour l'instant",
-      "description": "Les leçons se créent sur le site web. Elles apparaissent ici dès qu'un enseignant en crée une."
+      "title": "Aucune leçon pour l’instant",
+      "description": "Les leçons se créent sur le site web. Elles apparaissent ici dès qu’un enseignant en crée une."
     },
     "forbidden": {
       "title": "Réservé aux enseignants et aux administrateurs",
-      "description": "Un rôle d'enseignant ou d'administrateur est nécessaire pour consulter les leçons. Demandez l'accès à un administrateur."
+      "description": "Un rôle d’enseignant ou d’administrateur est nécessaire pour consulter les leçons. Demandez l’accès à un administrateur."
     },
     "notFound": {
       "title": "Leçon introuvable",
@@ -461,18 +461,18 @@
     "section": "Section",
     "emptyLesson": "Cette leçon ne contient pas encore de gestes.",
     "unpublished": "Non publié",
-    "unpublishedHint": "Ce geste n'est pas publié et ne peut pas être ouvert.",
+    "unpublishedHint": "Ce geste n’est pas publié et ne peut pas être ouvert.",
     "export": {
       "open": "Exporter en PDF",
       "title": "Leçon en PDF",
-      "description": "Choisissez à qui s'adresse le PDF et dans quelle langue, puis partagez-le ou enregistrez-le.",
+      "description": "Choisissez à qui s’adresse le PDF et dans quelle langue, puis partagez-le ou enregistrez-le.",
       "download": "Télécharger et partager",
       "downloading": "Création du PDF…",
       "shareTitle": "Partager le PDF de la leçon",
       "errors": {
         "unauthorized": "Reconnectez-vous pour créer le PDF.",
-        "forbidden": "Un rôle d'enseignant ou d'administrateur est nécessaire pour créer ce PDF. Demandez l'accès à un administrateur.",
-        "notFound": "Cette leçon n'existe plus.",
+        "forbidden": "Un rôle d’enseignant ou d’administrateur est nécessaire pour créer ce PDF. Demandez l’accès à un administrateur.",
+        "notFound": "Cette leçon n’existe plus.",
         "offline": "Pas de connexion. Connectez-vous à Internet et réessayez.",
         "sharingUnavailable": "Cet appareil ne peut pas partager de fichiers."
       }
@@ -484,8 +484,8 @@
     "step": "Étape {{step}}",
     "stepOptional": "Étape {{step}} (facultative)",
     "none": "Pas encore de dessin",
-    "needFirst": "Ajoutez d'abord l'étape 1.",
-    "removeStep2First": "Supprimez d'abord l'étape 2.",
+    "needFirst": "Ajoutez d’abord l’étape 1.",
+    "removeStep2First": "Supprimez d’abord l’étape 2.",
     "choose": "Choisir un dessin",
     "replace": "Remplacer le dessin",
     "remove": "Supprimer le dessin",
@@ -499,16 +499,16 @@
     "saved": "Dessin enregistré",
     "removed": "Dessin supprimé",
     "removeTitle": "Supprimer ce dessin\u202f?",
-    "removeDescription": "Le dessin de l'étape {{step}} est supprimé. Les leçons qui utilisent ce geste sont imprimées sans dessin.",
+    "removeDescription": "Le dessin de l’étape {{step}} est supprimé. Les leçons qui utilisent ce geste sont imprimées sans dessin.",
     "removeConfirm": "Supprimer",
     "errors": {
-      "format": "Ce fichier n'est pas une image PNG ou JPEG valide (un WebP ne peut pas aller dans le PDF).",
-      "dimensions": "L'image dépasse 1200 pixels de côté.",
+      "format": "Ce fichier n’est pas une image PNG ou JPEG valide (un WebP ne peut pas aller dans le PDF).",
+      "dimensions": "L’image dépasse 1200 pixels de côté.",
       "tooLarge": "Le fichier dépasse 512 ko.",
-      "missing": "L'envoi n'est pas arrivé. Réessayez.",
-      "key": "Cet envoi n'appartient pas à ce geste.",
-      "network": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
-      "generic": "L'enregistrement a échoué. Réessayez.",
+      "missing": "L’envoi n’est pas arrivé. Réessayez.",
+      "key": "Cet envoi n’appartient pas à ce geste.",
+      "network": "L’envoi a échoué. Vérifiez votre connexion et réessayez.",
+      "generic": "L’enregistrement a échoué. Réessayez.",
       "removeFailed": "La suppression a échoué. Réessayez."
     }
   },
@@ -530,22 +530,22 @@
     "keywords": "Concepts liés",
     "related": "Gestes liés",
     "share": "Partager le geste",
-    "shareMessage": "Le geste SMOG pour «\u00a0{{name}}\u00a0»\u00a0: {{url}}",
+    "shareMessage": "Le geste SMOG pour «\u202f{{name}}\u202f»\u00a0: {{url}}",
     "notFound": {
       "title": "Geste introuvable",
       "description": "Nous ne trouvons pas ce geste. Il a peut-être été retiré, ou le lien est ancien."
     },
     "screenshot": {
       "title": "Partager ce geste\u202f?",
-      "message": "Vous souhaitez envoyer ce geste à quelqu'un\u202f? Partagez un lien pour lui permettre de regarder la vidéo.",
+      "message": "Vous souhaitez envoyer ce geste à quelqu’un\u202f? Partagez un lien pour lui permettre de regarder la vidéo.",
       "share": "Partager le lien",
       "dismiss": "Pas maintenant"
     },
-    "metaDescription": "Comment faire le geste SMOG pour « {{name}} ». Regardez la vidéo comme aide-mémoire pour votre cours ou votre initiation SMOG.",
+    "metaDescription": "Comment faire le geste SMOG pour «\u202f{{name}}\u202f». Regardez la vidéo comme aide-mémoire pour votre cours ou votre initiation SMOG.",
     "description": "Description",
     "actions": "Actions pour {{name}}",
     "linkCopied": "Lien copié",
-    "copyFailed": "La copie n'a pas fonctionné. Le lien est {{url}}",
+    "copyFailed": "La copie n’a pas fonctionné. Le lien est {{url}}",
     "qr": {
       "open": "Code QR",
       "title": "Code QR pour {{name}}",
@@ -560,7 +560,7 @@
       },
       "pending": {
         "title": "Parrainage en cours de traitement",
-        "description": "Quelqu'un parraine déjà ce geste. Choisissez-en un autre si vous le souhaitez."
+        "description": "Quelqu’un parraine déjà ce geste. Choisissez-en un autre si vous le souhaitez."
       },
       "sponsored": {
         "title": "Actuellement parrainé",
@@ -607,7 +607,7 @@
   "searchPalette": {
     "placeholder": "Rechercher des gestes et des catégories",
     "description": "Saisissez pour trouver un geste. Utilisez les flèches et Entrée.",
-    "seeAll": "Afficher tous les résultats pour « {{query}} »",
+    "seeAll": "Afficher tous les résultats pour «\u202f{{query}}\u202f»",
     "loadFailed": "La recherche n’a pas pu s’ouvrir. Vérifiez votre connexion et réessayez.",
     "error": "La recherche a échoué. Réessayez."
   },
@@ -674,16 +674,16 @@
     "auth": {
       "greeting": "Bonjour,",
       "greetingName": "Bonjour {{name}},",
-      "signature": "L'équipe SMOG & Co",
+      "signature": "L’équipe SMOG & Co",
       "linkFallback": "Le bouton ne fonctionne pas\u202f? Copiez ce lien dans votre navigateur\u00a0:",
       "verifyEmail": {
         "subject": "Confirmez votre adresse e-mail",
         "preheader": "Encore un clic et votre compte est prêt.",
         "heading": "Confirmez votre adresse e-mail",
-        "body": "Merci d'avoir créé un compte SMOG\u00a0&\u00a0Co. Cliquez sur le bouton ci-dessous pour confirmer votre adresse e-mail.",
-        "button": "Confirmer l'adresse e-mail",
+        "body": "Merci d’avoir créé un compte SMOG\u00a0&\u00a0Co. Cliquez sur le bouton ci-dessous pour confirmer votre adresse e-mail.",
+        "button": "Confirmer l’adresse e-mail",
         "expiry": "Le lien est valable {{minutes}} minutes.",
-        "footer": "Vous n'avez pas créé de compte\u202f? Vous pouvez ignorer cet e-mail."
+        "footer": "Vous n’avez pas créé de compte\u202f? Vous pouvez ignorer cet e-mail."
       },
       "otp": {
         "subject": "{{code}} est votre code SMOG & Co",
@@ -691,16 +691,16 @@
         "heading": "Votre code",
         "body": "Saisissez ce code pour continuer\u00a0:",
         "expiry": "Le code est valable {{minutes}} minutes. Ne le communiquez à personne.",
-        "footer": "Vous n'avez pas demandé de code\u202f? Vous pouvez ignorer cet e-mail."
+        "footer": "Vous n’avez pas demandé de code\u202f? Vous pouvez ignorer cet e-mail."
       },
       "magicLink": {
         "subject": "Votre lien de connexion SMOG & Co",
         "preheader": "Cliquez sur le lien pour vous connecter.",
         "heading": "Connexion à SMOG\u00a0&\u00a0Co",
-        "body": "Cliquez sur le bouton ci-dessous pour vous connecter. Aucun mot de passe n'est nécessaire.",
+        "body": "Cliquez sur le bouton ci-dessous pour vous connecter. Aucun mot de passe n’est nécessaire.",
         "button": "Se connecter",
-        "expiry": "Le lien est valable {{minutes}} minutes et ne fonctionne qu'une seule fois.",
-        "footer": "Vous n'avez pas essayé de vous connecter\u202f? Vous pouvez ignorer cet e-mail."
+        "expiry": "Le lien est valable {{minutes}} minutes et ne fonctionne qu’une seule fois.",
+        "footer": "Vous n’avez pas essayé de vous connecter\u202f? Vous pouvez ignorer cet e-mail."
       },
       "resetPassword": {
         "subject": "Choisissez un nouveau mot de passe",
@@ -709,12 +709,12 @@
         "body": "Nous avons reçu une demande de modification du mot de passe de votre compte. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.",
         "button": "Choisir un nouveau mot de passe",
         "expiry": "Le lien est valable {{minutes}} minutes.",
-        "footer": "Vous n'avez rien demandé\u202f? Vous pouvez ignorer cet e-mail. Votre mot de passe reste inchangé."
+        "footer": "Vous n’avez rien demandé\u202f? Vous pouvez ignorer cet e-mail. Votre mot de passe reste inchangé."
       }
     },
     "common": {
       "yourGesture": "votre geste",
-      "gestureNamed": "le geste «\u00a0{{name}}\u00a0»",
+      "gestureNamed": "le geste «\u202f{{name}}\u202f»",
       "logoAlt": "SMOG & Co",
       "copyright": "© {{year}} SMOG\u00a0&\u00a0Co asbl · Belgique",
       "tagline": "Les gens accompagnent naturellement leur parole de gestes",
@@ -732,8 +732,8 @@
         "amount": "Montant",
         "total": "Total",
         "activeFrom": "En ligne depuis le",
-        "activeUntil": "En ligne jusqu'au",
-        "renewedUntil": "Prolongé jusqu'au",
+        "activeUntil": "En ligne jusqu’au",
+        "renewedUntil": "Prolongé jusqu’au",
         "payment": "Paiement",
         "email": "E-mail",
         "contact": "Personne de contact",
@@ -756,7 +756,7 @@
         "favorites": "Enregistrer vos gestes favoris et créer vos propres listes",
         "sponsor": "Devenir parrain ou marraine d’un geste et soutenir SMOG\u00a0&\u00a0Co",
         "button": "Découvrir les gestes",
-        "footer": "Vous n'avez pas créé ce compte\u00a0? Vous pouvez ignorer cet e-mail."
+        "footer": "Vous n’avez pas créé ce compte\u00a0? Vous pouvez ignorer cet e-mail."
       },
       "sponsorshipReceived": {
         "subject": "Nous avons bien reçu votre parrainage",
@@ -773,8 +773,8 @@
         "preheader": "Nous avons bien reçu votre paiement de {{amount}}.",
         "heading": "Paiement confirmé",
         "body": "Merci, nous avons bien reçu votre paiement.",
-        "initialNext": "Nous vérifions votre parrainage avant sa mise en ligne. Vous recevrez un e-mail dès qu'il sera en ligne.",
-        "renewalNext": "Votre parrainage a été prolongé et court désormais jusqu'au {{date}}.",
+        "initialNext": "Nous vérifions votre parrainage avant sa mise en ligne. Vous recevrez un e-mail dès qu’il sera en ligne.",
+        "renewalNext": "Votre parrainage a été prolongé et court désormais jusqu’au {{date}}.",
         "footer": "Conservez cet e-mail comme preuve de paiement. Besoin d’une facture\u00a0? Répondez à cet e-mail."
       },
       "sponsorshipLive": {
@@ -790,10 +790,10 @@
         "subject": "Votre parrainage chez SMOG & Co se termine bientôt",
         "preheader": "Votre parrainage se termine le {{date}}.",
         "heading": "Votre parrainage se termine bientôt",
-        "body": "Votre parrainage pour {{gesture}} se termine le {{date}}, dans moins de 30 jours. Votre nom et votre éventuel logo n'apparaîtront alors plus sur la vidéo. Le geste restera disponible.",
+        "body": "Votre parrainage pour {{gesture}} se termine le {{date}}, dans moins de 30 jours. Votre nom et votre éventuel logo n’apparaîtront alors plus sur la vidéo. Le geste restera disponible.",
         "renew": "Vous souhaitez parrainer une année de plus\u00a0? Prolongez avec le bouton ci-dessous. Un renouvellement est un nouveau paiement pour une année supplémentaire, au prix alors indiqué.",
         "button": "Prolonger le parrainage",
-        "footer": "Le lien fonctionne jusqu'à la fin de votre parrainage. Vous ne souhaitez pas prolonger\u00a0? Vous n'avez rien à faire."
+        "footer": "Le lien fonctionne jusqu’à la fin de votre parrainage. Vous ne souhaitez pas prolonger\u00a0? Vous n’avez rien à faire."
       },
       "adminNewSponsorship": {
         "subject": "Nouveau parrainage\u00a0: {{name}}",
@@ -805,18 +805,18 @@
         "bodyRenewal": "Un parrainage a été prolongé d’un an. Aucune approbation n’est nécessaire.",
         "detailsTitle": "Parrainage",
         "invoiceTitle": "Facturation",
-        "button": "Voir dans l'administration"
+        "button": "Voir dans l’administration"
       },
       "adminRefundNeeded": {
         "subject": "Remboursement nécessaire pour le paiement {{paymentId}}",
         "preheader": "Remboursez {{amount}} dans le tableau de bord Mollie.",
         "heading": "Remboursement nécessaire",
         "body": "Ce paiement doit être remboursé manuellement.",
-        "reasonLate": "Payé trop tard\u00a0: quelqu'un d'autre a parrainé le geste entre-temps.",
+        "reasonLate": "Payé trop tard\u00a0: quelqu’un d’autre a parrainé le geste entre-temps.",
         "reasonMismatch": "Le montant ou la devise du paiement ne correspond pas à la commande.",
         "reasonDouble": "Payé deux fois\u00a0: le paiement avait déjà été marqué comme payé manuellement.",
         "reasonChargeback": "Rétrofacturé\u00a0: la banque a annulé le paiement. Vérifiez le parrainage et contactez le parrain si nécessaire.",
-        "steps": "Remboursez le montant dans le tableau de bord Mollie. Si le remboursement n'apparaît pas ensuite dans l'administration, enregistrez-le sur le paiement.",
+        "steps": "Remboursez le montant dans le tableau de bord Mollie. Si le remboursement n’apparaît pas ensuite dans l’administration, enregistrez-le sur le paiement.",
         "button": "Ouvrir dans Mollie"
       },
       "weMoved": {
@@ -831,8 +831,8 @@
         "signInGoogleApple": "Google ou Apple, si vous y utilisez la même adresse e-mail",
         "signInGoogle": "Google, si vous y utilisez la même adresse e-mail",
         "signInApple": "Apple, si vous y utilisez la même adresse e-mail",
-        "signInReset": "ou choisissez « Mot de passe oublié » et définissez un nouveau mot de passe",
-        "app": "Vous utilisez l'application\u00a0? Alors mettez l'application à jour vers la dernière version\u00a0: l'ancienne version ne fonctionne plus.",
+        "signInReset": "ou choisissez «\u202fMot de passe oublié\u202f» et définissez un nouveau mot de passe",
+        "app": "Vous utilisez l’application\u00a0? Alors mettez l’application à jour vers la dernière version\u00a0: l’ancienne version ne fonctionne plus.",
         "button": "Se connecter",
         "footer": "Vous recevez cet e-mail une seule fois, parce que vous avez un compte chez SMOG\u00a0&\u00a0Co."
       },
@@ -858,7 +858,7 @@
     "logs": "Journaux",
     "clearLogs": "Effacer les journaux",
     "exportLogs": "Exporter les journaux",
-    "noLogs": "Il n'y a pas encore de journaux.",
+    "noLogs": "Il n’y a pas encore de journaux.",
     "environment": "Environnement",
     "version": "Version",
     "resetLocalData": "Effacer les données locales",
@@ -887,7 +887,7 @@
       "gestureDrink": "Boire",
       "gestureHappy": "Content",
       "gestureSad": "Triste",
-      "listSchool": "À l'école",
+      "listSchool": "À l’école",
       "listHome": "À la maison"
     },
     "unlockHint_one": "Encore {{count}} appui pour ouvrir les outils de développement.",
@@ -918,19 +918,19 @@
   },
   "footer": {
     "about": "SMOG signifie Spreken Met Ondersteuning van Gebaren : parler avec le soutien de gestes.",
-    "nav": "Plus de SMOG & Co",
+    "nav": "Plus de SMOG\u00a0&\u00a0Co",
     "credit": "Réalisé par zias.be"
   },
   "account": {
     "title": "Votre compte",
     "signedInAs": "Connecté en tant que {{email}}",
     "export": {
-      "sensitive": "Ce fichier contient vos données personnelles et les liens de partage actifs de vos listes\u00a0: toute personne disposant d'un lien peut ouvrir la liste. Conservez-le en lieu sûr et ne le partagez pas."
+      "sensitive": "Ce fichier contient vos données personnelles et les liens de partage actifs de vos listes\u00a0: toute personne disposant d’un lien peut ouvrir la liste. Conservez-le en lieu sûr et ne le partagez pas."
     },
     "errors": {
       "passwordRequired": "Saisissez votre mot de passe pour supprimer votre compte.",
       "sessionNotFresh": "Reconnectez-vous pour supprimer votre compte.",
-      "invalidPassword": "Ce mot de passe n'est pas correct.",
+      "invalidPassword": "Ce mot de passe n’est pas correct.",
       "deleteFailed": "La suppression de votre compte a échoué. Réessayez.",
       "lastAdmin": "Vous êtes le seul administrateur. Nommez d’abord un autre compte administrateur avant de supprimer le vôtre.",
       "signInAgain": "Pour votre sécurité, reconnectez-vous pour effectuer cette action."
@@ -951,37 +951,37 @@
       "description": "Vous pouvez toujours vous connecter avec un code ou un lien envoyé par e-mail.",
       "password": "Mot de passe",
       "passwordSet": "Vous vous connectez avec votre adresse e-mail et votre mot de passe.",
-      "passwordNone": "Vous n'avez pas encore de mot de passe.",
+      "passwordNone": "Vous n’avez pas encore de mot de passe.",
       "changePassword": "Modifier le mot de passe",
       "setPassword": "Définir un mot de passe",
       "setPasswordHint": "Nous vous enverrons un lien par e-mail pour choisir un mot de passe. Vous vous reconnecterez ensuite partout.",
       "currentPassword": "Mot de passe actuel",
       "passwordChanged": "Votre mot de passe a été modifié. Vos autres appareils ont été déconnectés.",
-      "passkeys": "Clés d'accès",
+      "passkeys": "Clés d’accès",
       "passkeysDescription": "Connectez-vous avec votre empreinte, votre visage ou le code de votre appareil.",
-      "noPasskeys": "Vous n'avez pas encore ajouté de clé d'accès.",
-      "passkeyName": "Clé d'accès",
+      "noPasskeys": "Vous n’avez pas encore ajouté de clé d’accès.",
+      "passkeyName": "Clé d’accès",
       "addedOn": "Ajoutée le {{date}}",
-      "removePasskey": "Supprimer la clé d'accès",
-      "removePasskeyTitle": "Supprimer cette clé d'accès\u202f?",
+      "removePasskey": "Supprimer la clé d’accès",
+      "removePasskeyTitle": "Supprimer cette clé d’accès\u202f?",
       "removePasskeyDescription": "Vous ne pourrez plus vous connecter avec elle.",
-      "passkeyRemoved": "La clé d'accès a été supprimée.",
+      "passkeyRemoved": "La clé d’accès a été supprimée.",
       "linked": "Associé",
       "notLinked": "Non associé",
       "link": "Associer",
       "unlink": "Dissocier",
       "linkedToast": "{{provider}} a été associé.",
       "unlinkTitle": "Dissocier {{provider}}\u202f?",
-      "unlinkDescription": "Vous ne pourrez plus vous connecter avec {{provider}}. Vous pourrez l'associer à nouveau plus tard.",
+      "unlinkDescription": "Vous ne pourrez plus vous connecter avec {{provider}}. Vous pourrez l’associer à nouveau plus tard.",
       "unlinked": "{{provider}} a été dissocié.",
-      "lastMethod": "C'est votre seule méthode de connexion. Ajoutez-en d'abord une autre.",
+      "lastMethod": "C’est votre seule méthode de connexion. Ajoutez-en d’abord une autre.",
       "google": "Google",
       "apple": "Apple"
     },
     "privacy": {
       "title": "Confidentialité",
       "export": "Télécharger mes données",
-      "exportDescription": "Un fichier JSON avec votre profil, vos favoris, vos listes, l'historique de vos consentements et vos parrainages.",
+      "exportDescription": "Un fichier JSON avec votre profil, vos favoris, vos listes, l’historique de vos consentements et vos parrainages.",
       "exported": "Vos données ont été téléchargées.",
       "exportFailed": "Vos données n’ont pas pu être téléchargées. Réessayez.",
       "shareTitle": "Vos données SMOG & Co",
@@ -989,7 +989,7 @@
     },
     "delete": {
       "title": "Supprimer le compte",
-      "description": "Cela supprime définitivement votre compte, vos favoris, vos listes et vos liens de partage. Les parrainages sont conservés, comme la loi l'exige.",
+      "description": "Cela supprime définitivement votre compte, vos favoris, vos listes et vos liens de partage. Les parrainages sont conservés, comme la loi l’exige.",
       "action": "Supprimer mon compte",
       "dialogTitle": "Supprimer définitivement votre compte\u202f?",
       "dialogDescription": "Votre compte, vos favoris, vos listes et vos liens de partage seront supprimés définitivement. Vous serez déconnecté sur tous vos appareils. Cette action est irréversible.",
@@ -999,7 +999,7 @@
       "signInAgain": "Se reconnecter"
     },
     "preferences": {
-      "languageHint": "Si vous êtes connecté, c'est aussi la langue des e-mails que nous vous envoyons."
+      "languageHint": "Si vous êtes connecté, c’est aussi la langue des e-mails que nous vous envoyons."
     },
     "nav": {
       "label": "Paramètres du compte",
@@ -1013,7 +1013,7 @@
   "settings": {
     "title": "Paramètres",
     "preferences": "Préférences",
-    "about": "À propos de l'app"
+    "about": "À propos de l’app"
   },
   "consent": {
     "title": "Aidez-nous à améliorer SMOG\u00a0&\u00a0Co",
@@ -1021,43 +1021,43 @@
     "privacyLink": "Lire la politique de confidentialité",
     "allow": "Autoriser les statistiques",
     "decline": "Non merci",
-    "toggle": "Statistiques d'utilisation",
+    "toggle": "Statistiques d’utilisation",
     "toggleDescription": "Partagez des statistiques d’utilisation limitées pour aider à améliorer SMOG\u00a0&\u00a0Co.",
     "saved": "Votre choix a été enregistré.",
     "saveFailed": "Votre choix n’a pas pu être enregistré. Réessayez."
   },
   "appBanner": {
-    "badge": "L'application",
+    "badge": "L’application",
     "title": "Vos gestes SMOG à portée de main",
     "description": "Recherchez un geste et retrouvez vos favoris et vos listes sur votre téléphone.",
     "appStorePrefix": "Télécharger dans l'",
     "googlePlayPrefix": "Disponible sur",
-    "dismiss": "Fermer la bannière de l'application"
+    "dismiss": "Fermer la bannière de l’application"
   },
   "openInApp": {
     "title": "Vous avez l’application SMOG\u00a0&\u00a0Co\u202f?",
-    "description": "Regardez ce geste dans l'application.",
-    "action": "Ouvrir dans l'application",
-    "getApp": "Obtenir l'application"
+    "description": "Regardez ce geste dans l’application.",
+    "action": "Ouvrir dans l’application",
+    "getApp": "Obtenir l’application"
   },
   "meta": {
     "home": {
       "title": "Gestes SMOG en vidéo",
       "description": "Les gestes SMOG en vidéo, un aide-mémoire pour votre cours ou votre initiation SMOG. Cherchez un geste, voyez comment le faire et gardez-le dans une liste."
     },
-    "shareImageAlt": "SMOG & Co : Les gens accompagnent naturellement leur parole de gestes",
+    "shareImageAlt": "SMOG\u00a0&\u00a0Co : Les gens accompagnent naturellement leur parole de gestes",
     "gesture": {
       "title": "{{name}} · Geste SMOG",
-      "imageAlt": "Image tirée de la vidéo du geste SMOG pour « {{name}} »"
+      "imageAlt": "Image tirée de la vidéo du geste SMOG pour «\u202f{{name}}\u202f»"
     },
     "list": {
-      "description": "Une liste de gestes SMOG, partagée via SMOG & Co."
+      "description": "Une liste de gestes SMOG, partagée via SMOG\u00a0&\u00a0Co."
     },
     "privacy": {
-      "description": "Comment SMOG & Co traite vos données sur le site et dans l'app, et les choix dont vous disposez."
+      "description": "Comment SMOG\u00a0&\u00a0Co traite vos données sur le site et dans l’app, et les choix dont vous disposez."
     },
     "terms": {
-      "description": "Les conditions d'utilisation du site et de l'app SMOG & Co."
+      "description": "Les conditions d’utilisation du site et de l’app SMOG\u00a0&\u00a0Co."
     },
     "shortcuts": {
       "gestures": "Chercher un geste",
@@ -1086,7 +1086,7 @@
     "badge": "Maintenance en cours",
     "title": "SMOG\u00a0&\u00a0Co est en maintenance",
     "description": "Nous faisons quelques travaux sur le site et l’application. Dès que ce sera terminé, vous pourrez de nouveau chercher des gestes.",
-    "until": "Nous prévoyons d'être de retour le {{time}}."
+    "until": "Nous prévoyons d’être de retour le {{time}}."
   },
   "admin": {
     "title": "Administration",
@@ -1190,7 +1190,7 @@
     },
     "audit": {
       "title": "Journal",
-      "description": "Les modifications du contenu, des comptes et des paramètres, avec l'action la plus récente en premier.",
+      "description": "Les modifications du contenu, des comptes et des paramètres, avec l’action la plus récente en premier.",
       "filters": {
         "label": "Filtres",
         "action": "Action",
@@ -1447,7 +1447,7 @@
         "list_many": "{{count}} mots-clés",
         "list_other": "{{count}} mots-clés",
         "none": "Pas encore de mots-clés.",
-        "duplicate": "«\u00a0{{keyword}}\u00a0» est déjà un mot-clé.",
+        "duplicate": "«\u202f{{keyword}}\u202f» est déjà un mot-clé.",
         "tooLong": "Un mot-clé compte au plus {{max}} caractères.",
         "max": "Au plus {{max}} mots-clés."
       },
@@ -1504,7 +1504,7 @@
         "publishedNote": "Masquez d’abord le geste pour le supprimer.",
         "delete": "Supprimer le geste",
         "confirmTitle": "Supprimer {{name}}\u00a0?",
-        "confirmDescription": "Cette action est irréversible. Tapez «\u00a0{{name}}\u00a0» pour confirmer.",
+        "confirmDescription": "Cette action est irréversible. Tapez «\u202f{{name}}\u202f» pour confirmer.",
         "confirmLabel": "Nom du geste",
         "confirm": "Supprimer",
         "deleted": "{{name}} est supprimé.",
@@ -1600,7 +1600,7 @@
       "noAuthor": "son auteur",
       "numbered": "Leçon {{number}}",
       "numberLabel": "Numéro de la leçon",
-      "numberHint": "Facultatif. Imprimé comme «\u00a0Leçon 3\u00a0».",
+      "numberHint": "Facultatif. Imprimé comme «\u202fLeçon 3\u202f».",
       "numberInvalid": "Utilisez un nombre entier de 0 à 9999.",
       "loadMore": "Afficher plus de leçons",
       "backToList": "Toutes les leçons",
@@ -1620,7 +1620,7 @@
       },
       "noResults": {
         "title": "Aucune leçon trouvée",
-        "description": "Aucune leçon ne correspond à cette recherche. Essayez un autre titre ou désactivez «\u00a0Mes leçons\u00a0»."
+        "description": "Aucune leçon ne correspond à cette recherche. Essayez un autre titre ou désactivez «\u202fMes leçons\u202f»."
       },
       "notFound": {
         "title": "Leçon introuvable",
@@ -1642,7 +1642,7 @@
       },
       "delete": {
         "title": "Supprimer cette leçon\u202f?",
-        "description": "«\u00a0{{title}}\u00a0» et ses sections sont supprimées pour tout le monde. Les gestes eux-mêmes restent.",
+        "description": "«\u202f{{title}}\u202f» et ses sections sont supprimées pour tout le monde. Les gestes eux-mêmes restent.",
         "confirm": "Supprimer la leçon",
         "done": "Leçon supprimée.",
         "failed": "La leçon n’a pas pu être supprimée. Réessayez."
@@ -2067,7 +2067,7 @@
         "untilHint": "Facultatif, 7 jours à l’avance au plus. Affichée sur la page et envoyée comme Retry-After.",
         "noUntil": "Non définie",
         "untilInvalid": "Choisissez un moment futur, 7 jours à l’avance au plus.",
-        "propagation": "Les autres visiteurs suivent en 2 minutes environ\u00a0: chaque serveur et chaque site Cloudflare garde le réglage jusqu’à 30 secondes, et KV met jusqu’à une minute pour atteindre chaque région.",
+        "propagation": "Les autres visiteurs suivent en 2 minutes environ\u00a0: chaque serveur et chaque site Cloudflare garde le réglage jusqu’à 30\u00a0secondes, et KV met jusqu’à une minute pour atteindre chaque région.",
         "enable": "Activer la maintenance",
         "enableNote": "Vous recevez d’abord un cookie de contournement pour ce navigateur, pour garder l’accès.",
         "enabled": "La maintenance est active",
@@ -2078,7 +2078,7 @@
         "bypassFailed": "Pas de cookie de contournement pour ce navigateur\u00a0: la maintenance reste inactive.",
         "failed": "Le réglage n’a pas été modifié.",
         "loadError": "Le réglage de maintenance n’a pas pu être chargé.",
-        "staleCookie": "La maintenance est active, mais votre cookie de contournement date d’une maintenance précédente. Appuyez sur «\u00a0Contourner pour ce navigateur\u00a0» dans une minute."
+        "staleCookie": "La maintenance est active, mais votre cookie de contournement date d’une maintenance précédente. Appuyez sur «\u202fContourner pour ce navigateur\u202f» dans une minute."
       },
       "bypass": {
         "title": "Contournement pour ce navigateur",
@@ -2113,8 +2113,8 @@
       },
       "locale": "Langue",
       "width": "Largeur",
-      "desktop": "Ordinateur (780 px)",
-      "mobile": "Mobile (390 px)",
+      "desktop": "Ordinateur (780\u00a0px)",
+      "mobile": "Mobile (390\u00a0px)",
       "subject": "Objet",
       "view": "Affichage",
       "html": "E-mail",
@@ -2164,7 +2164,7 @@
       "queue": {
         "label": "À examiner",
         "empty": "Tout est à jour",
-        "emptyDescription": "Aucun parrainage n'attend d'examen. Les nouveaux parrainages payés apparaissent ici."
+        "emptyDescription": "Aucun parrainage n’attend d’examen. Les nouveaux parrainages payés apparaissent ici."
       },
       "invoice": {
         "requested": "Facture demandée",
@@ -2263,7 +2263,7 @@
       "forceExpire": {
         "action": "Terminer maintenant",
         "title": "Terminer {{name}} sur {{gesture}} maintenant\u00a0?",
-        "description": "Le parrainage prend fin immédiatement. Le nom et l'éventuel logo n'apparaissent plus sur la vidéo, mais le geste reste disponible. Payé\u00a0: {{amount}}. Aucun remboursement automatique ni e-mail n'est envoyé.",
+        "description": "Le parrainage prend fin immédiatement. Le nom et l’éventuel logo n’apparaissent plus sur la vidéo, mais le geste reste disponible. Payé\u00a0: {{amount}}. Aucun remboursement automatique ni e-mail n’est envoyé.",
         "confirmLabel": "Tapez {{gesture}} pour confirmer",
         "done": "{{name}} est terminé."
       },
@@ -2329,7 +2329,7 @@
         "gestures_one": "Couvre {{count}} geste",
         "gestures_other": "Couvre {{count}} gestes",
         "gestures_many": "Couvre {{count}} gestes",
-        "refundNeededNoMollie": "Ce paiement doit être remboursé. Il n’a pas de paiement Mollie\u00a0: remboursez-le par virement. Il ne peut pas être enregistré ici et reste dans «\u00a0À rembourser\u00a0»."
+        "refundNeededNoMollie": "Ce paiement doit être remboursé. Il n’a pas de paiement Mollie\u00a0: remboursez-le par virement. Il ne peut pas être enregistré ici et reste dans «\u202fÀ rembourser\u202f»."
       },
       "events": {
         "title": "Historique",
@@ -2402,7 +2402,7 @@
     "export": {
       "action": "Exporter en CSV",
       "title": "Exporter en CSV",
-      "description": "Téléchargez une ligne par parrainage. Laissez les filtres vides pour tout exporter. L'export est consigné dans le journal.",
+      "description": "Téléchargez une ligne par parrainage. Laissez les filtres vides pour tout exporter. L’export est consigné dans le journal.",
       "status": "Statut",
       "allStatuses": "Tous les statuts",
       "from": "Créé à partir du",
@@ -2448,7 +2448,7 @@
         "action": "Rejouer",
         "label": "Rejouer {{type}}",
         "title": "Rejouer ce message\u202f?",
-        "description": "«\u00a0{{type}}\u00a0» retourne dans la file {{queue}} et est traité à nouveau. Un e-mail déjà envoyé est ignoré.",
+        "description": "«\u202f{{type}}\u202f» retourne dans la file {{queue}} et est traité à nouveau. Un e-mail déjà envoyé est ignoré.",
         "confirm": "Rejouer",
         "done": "Le message est de nouveau dans la file.",
         "old": "Ce message a plus de 7\u00a0jours. Si l’e-mail d’origine a bien été distribué, le marqueur d’envoi a expiré et le destinataire peut le recevoir deux fois."
@@ -2457,7 +2457,7 @@
         "action": "Supprimer",
         "label": "Supprimer {{type}}",
         "title": "Supprimer ce message\u202f?",
-        "description": "«\u00a0{{type}}\u00a0» est marqué comme supprimé et n’est jamais traité. Cette action est irréversible.",
+        "description": "«\u202f{{type}}\u202f» est marqué comme supprimé et n’est jamais traité. Cette action est irréversible.",
         "confirm": "Supprimer",
         "done": "Le message a été supprimé."
       },
@@ -2483,7 +2483,7 @@
       "actions": "Actions"
     },
     "translation": {
-      "loadError": "Les données de traduction n'ont pas pu être chargées.",
+      "loadError": "Les données de traduction n’ont pas pu être chargées.",
       "legal": {
         "title": "Textes juridiques",
         "description": "La politique de confidentialité et les conditions d’utilisation, par langue. Publier modifie aussitôt la page publique.",
@@ -2604,7 +2604,7 @@
         }
       },
       "table": {
-        "label": "Textes de l'interface",
+        "label": "Textes de l’interface",
         "key": "Clé",
         "sourceHeader": "{{language}} (source)",
         "total": "Nombre de textes\u00a0: {{n}}",
@@ -2627,8 +2627,8 @@
         "save": "Enregistrer",
         "cancel": "Annuler",
         "revert": "Revenir au texte par défaut",
-        "conflictTitle": "Quelqu'un a été plus rapide",
-        "conflictBody": "Ce texte a été enregistré entre-temps par quelqu'un d'autre. Sa version figure ci-dessous.",
+        "conflictTitle": "Quelqu’un a été plus rapide",
+        "conflictBody": "Ce texte a été enregistré entre-temps par quelqu’un d’autre. Sa version figure ci-dessous.",
         "useTheirs": "Reprendre sa version",
         "keepMine": "Enregistrer quand même la mienne"
       },
@@ -2636,23 +2636,23 @@
         "empty": "Saisissez un texte.",
         "tooLong": "Ce texte est trop long.",
         "placeholders": "Les variables doivent correspondre à la source\u00a0: {{placeholders}}.",
-        "generic": "L'enregistrement a échoué. Réessayez.",
-        "notFound": "Ce texte n'existe plus.",
-        "saveFailed": "Le texte n'a pas pu être enregistré."
+        "generic": "L’enregistrement a échoué. Réessayez.",
+        "notFound": "Ce texte n’existe plus.",
+        "saveFailed": "Le texte n’a pas pu être enregistré."
       },
       "export": {
         "button": "Exporter",
         "all": "Toutes les langues",
         "item": "{{language}} ({{format}})",
         "allItem": "Toutes les langues ({{format}})",
-        "failed": "L'exportation a échoué."
+        "failed": "L’exportation a échoué."
       },
       "import": {
         "button": "Importer",
         "title": "Importer des textes",
-        "description": "Choisissez un fichier JSON ou CSV. Vous voyez d'abord ce qui changerait, les textes ne sont enregistrés qu'ensuite.",
+        "description": "Choisissez un fichier JSON ou CSV. Vous voyez d’abord ce qui changerait, les textes ne sont enregistrés qu’ensuite.",
         "file": "Fichier",
-        "fileHint": "JSON ou CSV, par exemple un fichier issu de l'exportation.",
+        "fileHint": "JSON ou CSV, par exemple un fichier issu de l’exportation.",
         "language": "Langue du fichier",
         "fromFile": "Comme dans le fichier",
         "added": "Nouveaux\u00a0: {{n}}",
@@ -2664,7 +2664,7 @@
         "problem": {
           "unknownKey": "clé inconnue",
           "unknownLanguage": "langue inconnue",
-          "notApplicable": "forme de pluriel que cette langue n'utilise pas",
+          "notApplicable": "forme de pluriel que cette langue n’utilise pas",
           "placeholders": "les variables ne correspondent pas",
           "tooLong": "trop long",
           "duplicate": "apparaît plusieurs fois"
@@ -2674,23 +2674,23 @@
         "errors": {
           "title": "Le fichier est inutilisable",
           "tooLarge": "Le fichier est trop volumineux.",
-          "applyFailed": "L'importation a échoué.",
-          "staleImport": "Certains textes ont changé pendant la lecture du fichier. Rien n'a été importé : prévisualisez à nouveau le fichier.",
+          "applyFailed": "L’importation a échoué.",
+          "staleImport": "Certains textes ont changé pendant la lecture du fichier. Rien n’a été importé : prévisualisez à nouveau le fichier.",
           "file": {
-            "invalidJson": "Ce n'est pas un fichier JSON valide.",
-            "invalidCsv": "Ce n'est pas un fichier CSV valide.",
+            "invalidJson": "Ce n’est pas un fichier JSON valide.",
+            "invalidCsv": "Ce n’est pas un fichier CSV valide.",
             "noKeyColumn": "La colonne key est absente.",
-            "noLanguageColumn": "Il n'y a pas de colonne pour la langue choisie.",
-            "unknownLanguage": "Le fichier nomme une langue qui n'existe pas ou n'est pas activée.",
+            "noLanguageColumn": "Il n’y a pas de colonne pour la langue choisie.",
+            "unknownLanguage": "Le fichier nomme une langue qui n’existe pas ou n’est pas activée.",
             "unsupportedShape": "Les valeurs du fichier doivent être des textes.",
             "needsLanguage": "Choisissez la langue de ce fichier.",
-            "generic": "Le fichier n'a pas pu être lu."
+            "generic": "Le fichier n’a pas pu être lu."
           }
         }
       },
       "languages": {
         "title": "Langues",
-        "description": "Les langues qui existent, leur nom et leur ordre dans le menu des langues. Une nouvelle langue affiche le texte néerlandais tant qu'elle n'est pas traduite.",
+        "description": "Les langues qui existent, leur nom et leur ordre dans le menu des langues. Une nouvelle langue affiche le texte néerlandais tant qu’elle n’est pas traduite.",
         "label": "Langues",
         "add": "Ajouter une langue",
         "addTitle": "Ajouter une langue",
@@ -2713,11 +2713,11 @@
         "saved": "La langue a été enregistrée.",
         "errors": {
           "code": "Utilisez un code de langue valide.",
-          "intlTag": "Ce n'est pas une balise Intl valide.",
+          "intlTag": "Ce n’est pas une balise Intl valide.",
           "exists": "Ce code de langue existe déjà.",
           "order": "Saisissez un nombre entier.",
           "default": "La langue par défaut reste activée.",
-          "failed": "L'enregistrement a échoué. Réessayez."
+          "failed": "L’enregistrement a échoué. Réessayez."
         }
       },
       "coverage": {
@@ -2769,8 +2769,8 @@
   },
   "sponsor": {
     "meta": {
-      "title": "Devenez parrain ou marraine d'un geste",
-      "description": "Devenez parrain ou marraine d'un geste SMOG. Après vérification, votre nom (et votre logo, si vous le souhaitez) apparaît pendant un an à la fin de la vidéo du geste."
+      "title": "Devenez parrain ou marraine d’un geste",
+      "description": "Devenez parrain ou marraine d’un geste SMOG. Après vérification, votre nom (et votre logo, si vous le souhaitez) apparaît pendant un an à la fin de la vidéo du geste."
     },
     "steps": {
       "select": "Choisir des gestes",
@@ -2784,18 +2784,18 @@
     "story": {
       "howTitle": "Comment ça marche",
       "priceTitle": "Ce que ça coûte",
-      "where": "Votre nom s'affiche à la fin de la vidéo pendant {{duration}}, sur le geste lui-même.",
-      "review": "Nous vérifions votre parrainage avant sa mise en ligne. Vous recevez un e-mail dès qu'il est en ligne.",
+      "where": "Votre nom s’affiche à la fin de la vidéo pendant {{duration}}, sur le geste lui-même.",
+      "review": "Nous vérifions votre parrainage avant sa mise en ligne. Vous recevez un e-mail dès qu’il est en ligne.",
       "expiry": "Après un an, votre nom disparaît. Le geste et sa vidéo restent.",
       "sampleName": "Votre nom",
-      "sampleLabel": "Exemple\u00a0: votre nom à la fin de la vidéo d'un geste"
+      "sampleLabel": "Exemple\u00a0: votre nom à la fin de la vidéo d’un geste"
     },
     "select": {
-      "title": "Devenez parrain ou marraine d'un geste",
+      "title": "Devenez parrain ou marraine d’un geste",
       "description": "Pendant un an, votre nom apparaît à la fin de la vidéo du geste. Vous pouvez aussi ajouter votre logo.",
       "value": {
         "perGesture": "Par geste, par an",
-        "nameInVideo": "À l'écran à la fin de chaque vidéo",
+        "nameInVideo": "À l’écran à la fin de chaque vidéo",
         "logoPrice": "+{{price}}",
         "optionalLogo": "Avec votre logo, par geste"
       },
@@ -2815,13 +2815,13 @@
       "badge": {
         "sponsored": "Parrainé",
         "pending": "En cours",
-        "taken": "Vient d'être pris"
+        "taken": "Vient d’être pris"
       },
-      "limit": "Vous pouvez parrainer jusqu'à {{max}} gestes par paiement. Retirez-en un pour en choisir un autre.",
-      "taken": "Quelqu'un d'autre a été plus rapide. Ces gestes sont signalés\u00a0; choisissez-en d'autres si vous le souhaitez.",
+      "limit": "Vous pouvez parrainer jusqu’à {{max}} gestes par paiement. Retirez-en un pour en choisir un autre.",
+      "taken": "Quelqu’un d’autre a été plus rapide. Ces gestes sont signalés\u00a0; choisissez-en d’autres si vous le souhaitez.",
       "availabilityError": {
         "title": "Disponibilité non vérifiée",
-        "description": "Nous n'avons pas pu vérifier quels gestes sont encore libres. Réessayez."
+        "description": "Nous n’avons pas pu vérifier quels gestes sont encore libres. Réessayez."
       },
       "empty": {
         "title": "Aucun geste trouvé",
@@ -2840,22 +2840,22 @@
       "videoSection": "Dans la vidéo",
       "displayName": "Nom dans la vidéo",
       "displayNamePlaceholder": "Votre nom ou celui de votre organisation",
-      "displayNameHint": "Exemple\u00a0: «\u00a0{{intro}} {{name}}\u00a0»",
+      "displayNameHint": "Exemple\u00a0: «\u202f{{intro}} {{name}}\u202f»",
       "logo": {
         "include": "Ajouter un logo (+{{price}} par geste)",
         "label": "Logo",
         "drop": "Glissez votre logo ici ou",
         "browse": "parcourez",
-        "formats": "PNG, JPEG ou WebP · 2 Mo max.",
+        "formats": "PNG, JPEG ou WebP · 2\u00a0Mo max.",
         "previewAlt": "Aperçu du logo",
         "remove": "Supprimer le logo",
         "replace": "Choisir un autre logo",
         "guidelines": {
           "title": "Conseils pour le logo",
           "format": "Format\u00a0: PNG à fond transparent (recommandé), JPEG ou WebP",
-          "dimensions": "Dimensions\u00a0: au moins 800 × 800 px pour une qualité optimale",
+          "dimensions": "Dimensions\u00a0: au moins 800 × 800\u00a0px pour une qualité optimale",
           "aspectRatio": "Proportions\u00a0: format carré recommandé",
-          "fileSize": "Taille\u00a0: 2 Mo maximum",
+          "fileSize": "Taille\u00a0: 2\u00a0Mo maximum",
           "style": "Style\u00a0: les logos simples et contrastés fonctionnent le mieux",
           "avoid": "À éviter\u00a0: logos très détaillés ou traits fins"
         },
@@ -2873,7 +2873,7 @@
         "checkbox": "Je souhaite une facture",
         "name": "Nom sur la facture",
         "namePlaceholder": "Nom ou raison sociale",
-        "vat": "Numéro d'entreprise",
+        "vat": "Numéro d’entreprise",
         "vatHint": "10 chiffres, p. ex. 0123.456.749",
         "email": "Adresse e-mail pour la facture"
       },
@@ -2881,17 +2881,17 @@
         "displayNameRequired": "Le nom dans la vidéo est obligatoire.",
         "displayNameTooLong": "Utilisez {{max}} caractères au maximum.",
         "displayNameInvalid": "Utilisez une seule ligne de texte. Retirez les sauts de ligne et les caractères invisibles.",
-        "logoRequired": "Ajoutez un logo ou décochez l'option.",
-        "logoTooLarge": "Choisissez un logo de 2 Mo maximum.",
+        "logoRequired": "Ajoutez un logo ou décochez l’option.",
+        "logoTooLarge": "Choisissez un logo de 2\u00a0Mo maximum.",
         "logoType": "Utilisez une image PNG, JPEG ou WebP.",
         "required": "Ce champ est obligatoire.",
         "tooLong": "Ce texte est trop long.",
         "emailInvalid": "Saisissez une adresse e-mail valide.",
-        "vatInvalid": "Vérifiez le numéro d'entreprise. Saisissez 10 chiffres, éventuellement précédés de BE.",
+        "vatInvalid": "Vérifiez le numéro d’entreprise. Saisissez 10 chiffres, éventuellement précédés de BE.",
         "summary": "Vérifiez les champs signalés."
       },
       "back": "Retour à la sélection",
-      "continue": "Continuer vers l'aperçu"
+      "continue": "Continuer vers l’aperçu"
     },
     "price": {
       "title": "Récapitulatif du prix",
@@ -2917,7 +2917,7 @@
       "total": "Montant total",
       "pay": "Continuer vers le paiement",
       "redirectNote": "Vous serez redirigé vers Mollie pour un paiement sécurisé.",
-      "captchaHint": "Confirmez d'abord que vous n'êtes pas un robot.",
+      "captchaHint": "Confirmez d’abord que vous n’êtes pas un robot.",
       "back": "Retour aux coordonnées",
       "failed": "Le passage au paiement a échoué. Réessayez."
     },
@@ -2935,22 +2935,22 @@
       },
       "timeout": {
         "title": "Cela prend plus de temps que prévu",
-        "description": "Mollie n'a pas encore confirmé le paiement. Un virement peut prendre plus de temps\u00a0; vous recevrez un e-mail dès sa réception.",
+        "description": "Mollie n’a pas encore confirmé le paiement. Un virement peut prendre plus de temps\u00a0; vous recevrez un e-mail dès sa réception.",
         "checkAgain": "Vérifier à nouveau"
       },
       "paid": {
         "title": "Paiement réussi\u00a0!",
-        "description": "Merci de soutenir SMOG & Co."
+        "description": "Merci de soutenir SMOG\u00a0&\u00a0Co."
       },
       "renewed": {
         "title": "Votre parrainage est prolongé\u00a0!",
-        "description": "Votre nom reste à la fin de la vidéo jusqu'au {{date}}."
+        "description": "Votre nom reste à la fin de la vidéo jusqu’au {{date}}."
       },
       "failed": {
-        "title": "Le paiement n'a pas abouti",
-        "description": "Rien n'a été débité et les gestes sont à nouveau libres. Vous pouvez réessayer.",
-        "renewalDescription": "Rien n'a été débité et votre parrainage continue jusqu'au {{date}}. Utilisez le lien de votre e-mail pour réessayer.",
-        "renewalDescriptionUndated": "Rien n'a été débité et votre parrainage continue jusqu'à sa date de fin actuelle. Utilisez le lien de votre e-mail pour réessayer."
+        "title": "Le paiement n’a pas abouti",
+        "description": "Rien n’a été débité et les gestes sont à nouveau libres. Vous pouvez réessayer.",
+        "renewalDescription": "Rien n’a été débité et votre parrainage continue jusqu’au {{date}}. Utilisez le lien de votre e-mail pour réessayer.",
+        "renewalDescriptionUndated": "Rien n’a été débité et votre parrainage continue jusqu’à sa date de fin actuelle. Utilisez le lien de votre e-mail pour réessayer."
       },
       "canceled": {
         "title": "Le paiement a été annulé"
@@ -2961,7 +2961,7 @@
       "retry": "Réessayer",
       "refund": {
         "title": "Nous vous contacterons",
-        "description": "Votre paiement est arrivé, mais nous n'avons pas pu traiter votre parrainage tel quel (par exemple parce que le geste a été parrainé entre-temps). Nous vous contacterons et vous rembourserons si nécessaire."
+        "description": "Votre paiement est arrivé, mais nous n’avons pas pu traiter votre parrainage tel quel (par exemple parce que le geste a été parrainé entre-temps). Nous vous contacterons et vous rembourserons si nécessaire."
       },
       "summary": {
         "title": "Récapitulatif",
@@ -2977,7 +2977,7 @@
         "review": "Nous vérifions votre parrainage avant sa mise en ligne.",
         "live": "Vous recevez un e-mail dès sa mise en ligne."
       },
-      "home": "Retour à l'accueil"
+      "home": "Retour à l’accueil"
     },
     "link": {
       "invalid": {
@@ -3007,25 +3007,25 @@
       "expires_many": "Le lien expire dans {{count}} jours",
       "expires_other": "Le lien expire dans {{count}} jours",
       "logoHint": "Laissez vide pour garder votre logo actuel.",
-      "noPayment": "Vous n'avez pas à payer à nouveau. Nous vérifions la modification avant sa mise en ligne.",
+      "noPayment": "Vous n’avez pas à payer à nouveau. Nous vérifions la modification avant sa mise en ligne.",
       "submit": "Envoyer pour vérification",
       "submitted": {
         "title": "Envoyé\u00a0!",
         "description": "Nous vérifions vos modifications avant leur mise en ligne. Vous n’avez pas à payer à nouveau."
       },
-      "failed": "Nous n'avons pas pu envoyer votre modification. Réessayez."
+      "failed": "Nous n’avons pas pu envoyer votre modification. Réessayez."
     },
     "renew": {
       "eyebrow": "Prolonger votre parrainage",
       "title": "Une année de plus dans la vidéo",
-      "description": "Prolongez votre parrainage d'un an. Votre nom et votre éventuel logo restent les mêmes.",
+      "description": "Prolongez votre parrainage d’un an. Votre nom et votre éventuel logo restent les mêmes.",
       "gesture": "Geste",
       "name": "Nom dans la vidéo",
-      "currentEnd": "En cours jusqu'au",
-      "newEnd": "Après prolongation jusqu'au",
+      "currentEnd": "En cours jusqu’au",
+      "newEnd": "Après prolongation jusqu’au",
       "amount": "Montant",
       "pay": "Prolonger et payer",
-      "failed": "Le paiement n'a pas pu démarrer. Réessayez."
+      "failed": "Le paiement n’a pas pu démarrer. Réessayez."
     },
     "preview": {
       "label": "Aperçu pour {{name}}",
@@ -3041,7 +3041,7 @@
   "stateActions": {
     "noResults": {
       "clear": "Effacer la recherche",
-      "suggestions": "Vouliez-vous dire l'un de ces gestes\u202f?"
+      "suggestions": "Vouliez-vous dire l’un de ces gestes\u202f?"
     },
     "offline": {
       "web": "Ce qui est déjà affiché reste ici. Les autres pages, la recherche et les vidéos reviennent dès que la connexion est rétablie."

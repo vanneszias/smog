@@ -45,7 +45,7 @@
     "sidebar": "Zijbalk",
     "loading": "Bezig met laden",
     "logo": "SMOG & Co",
-    "homeLink": "SMOG & Co, naar de startpagina",
+    "homeLink": "SMOG\u00a0&\u00a0Co, naar de startpagina",
     "clearSearch": "Zoekopdracht wissen",
     "showPassword": "Wachtwoord tonen",
     "hidePassword": "Wachtwoord verbergen",
@@ -58,7 +58,7 @@
     "nextPage": "Volgende pagina",
     "goToPage": "Naar pagina {{page}}",
     "currentPage": "Pagina {{page}}, huidige pagina",
-    "morePages": "Meer pagina's",
+    "morePages": "Meer pagina’s",
     "steps": "Stappen",
     "stepCompleted": "voltooid",
     "sortAscending": "Oplopend sorteren",
@@ -276,7 +276,7 @@
     },
     "offline": {
       "title": "Je bent offline",
-      "description": "Je favorieten en lijsten blijven hier. Zoeken en video's werken weer zodra je verbinding hebt.",
+      "description": "Je favorieten en lijsten blijven hier. Zoeken en video’s werken weer zodra je verbinding hebt.",
       "backOnline": "Je bent weer online."
     },
     "notFound": {
@@ -393,7 +393,7 @@
     "admin": {
       "audio": {
         "title": "Uitspraak (audio)",
-        "description": "Eén fragment per taal: de gesproken naam van het gebaar. MP3 of M4A, hoogstens 1 MB en 10 seconden.",
+        "description": "Eén fragment per taal: de gesproken naam van het gebaar. MP3 of M4A, hoogstens 1\u00a0MB en 10\u00a0seconden.",
         "none": "Nog geen audio",
         "choose": "Audio kiezen",
         "replace": "Audio vervangen",
@@ -403,8 +403,8 @@
         "duration": "{{seconds}} s",
         "errors": {
           "format": "Dit is geen geldig MP3- of M4A-bestand.",
-          "duration": "Het fragment is langer dan 10 seconden.",
-          "tooLarge": "Het bestand is groter dan 1 MB.",
+          "duration": "Het fragment is langer dan 10\u00a0seconden.",
+          "tooLarge": "Het bestand is groter dan 1\u00a0MB.",
           "missing": "De upload is niet aangekomen. Probeer het opnieuw.",
           "key": "Deze upload hoort niet bij dit gebaar.",
           "network": "De upload is mislukt. Controleer je verbinding en probeer het opnieuw.",
@@ -423,7 +423,7 @@
         "filter": "Opnieuw knippen nodig",
         "badge": "Naam in video",
         "textless": "De video heeft geen tekst in beeld",
-        "textlessHint": "Zonder vinkje blijft het gebaar op de lijst van opnieuw te knippen video's staan."
+        "textlessHint": "Zonder vinkje blijft het gebaar op de lijst van opnieuw te knippen video’s staan."
       }
     }
   },
@@ -475,7 +475,7 @@
   },
   "drawings": {
     "title": "Tekeningen",
-    "description": "Lijntekeningen voor het blad van de cursisten: één afbeelding per stap, een tweede stap is optioneel. PNG of JPEG, hoogstens 512 kB en 1200 pixels per zijde. Alleen lesgevers, vertalers en beheerders zien ze.",
+    "description": "Lijntekeningen voor het blad van de cursisten: één afbeelding per stap, een tweede stap is optioneel. PNG of JPEG, hoogstens 512\u00a0kB en 1200 pixels per zijde. Alleen lesgevers, vertalers en beheerders zien ze.",
     "step": "Stap {{step}}",
     "stepOptional": "Stap {{step}} (optioneel)",
     "none": "Nog geen tekening",
@@ -499,7 +499,7 @@
     "errors": {
       "format": "Dit is geen geldige PNG- of JPEG-afbeelding (WebP kan niet in de pdf).",
       "dimensions": "De afbeelding is groter dan 1200 pixels per zijde.",
-      "tooLarge": "Het bestand is groter dan 512 kB.",
+      "tooLarge": "Het bestand is groter dan 512\u00a0kB.",
       "missing": "De upload is niet aangekomen. Probeer het opnieuw.",
       "key": "Deze upload hoort niet bij dit gebaar.",
       "network": "De upload is mislukt. Controleer je verbinding en probeer opnieuw.",
@@ -513,11 +513,11 @@
       "title": "Goed om te weten"
     },
     "videoComplete": {
-      "1": "Deze video's ondersteunen wat je in een SMOG-cursus of initiatie leert. Ze vervangen die niet. <course>Bekijk het cursusaanbod</course>.",
+      "1": "Deze video’s ondersteunen wat je in een SMOG-cursus of initiatie leert. Ze vervangen die niet. <course>Bekijk het cursusaanbod</course>.",
       "2": "Wil je een SMOG-cursus of initiatie volgen? <course>Bekijk het cursusaanbod</course>.",
       "3": "In een SMOG-cursus leer je ook de theorie achter de gebaren. <course>Meer over de cursussen</course>.",
       "4": "De SMOG-gebaren liggen vast en zijn beschermd. Maak ze zoals in de video, dan begrijpt iedereen die SMOG kent je.",
-      "5": "Volg een SMOG-cursus of initiatie om de gebaren te leren. Gebruik deze video's daarna als geheugensteun.",
+      "5": "Volg een SMOG-cursus of initiatie om de gebaren te leren. Gebruik deze video’s daarna als geheugensteun.",
       "6": "In een SMOG-cursus hoor je ook hoe SMOG is ontstaan. <course>Bekijk het cursusaanbod</course>.",
       "7": "Heb je een vraag over SMOG? Mail ons op info@smog.vlaanderen."
     },
@@ -743,7 +743,7 @@
         "subject": "Welkom bij SMOG & Co",
         "preheader": "Zoek de gebaren op die je leerde en bewaar je favorieten.",
         "heading": "Welkom bij SMOG\u00a0&\u00a0Co",
-        "body": "Je account is klaar. Met de video's herhaal je wat je in je SMOG-cursus of initiatie leerde. Dit kun je nu doen:",
+        "body": "Je account is klaar. Met de video’s herhaal je wat je in je SMOG-cursus of initiatie leerde. Dit kun je nu doen:",
         "explore": "Gebaren opzoeken en bekijken hoe je ze maakt",
         "favorites": "Je favoriete gebaren bewaren en eigen lijsten maken",
         "sponsor": "Peter of meter worden van een gebaar en zo SMOG\u00a0&\u00a0Co steunen",
@@ -892,7 +892,7 @@
     "browseAll": "Alle gebaren",
     "title": "Gebaren die je spraak ondersteunen",
     "intro": "Een geheugensteun bij je SMOG-cursus of initiatie.",
-    "description": "SMOG staat voor Spreken Met Ondersteuning van Gebaren. Fris met de video's op wat je in een SMOG-cursus of initiatie leerde. Bewaar gebaren in je favorieten en lijsten.",
+    "description": "SMOG staat voor Spreken Met Ondersteuning van Gebaren. Fris met de video’s op wat je in een SMOG-cursus of initiatie leerde. Bewaar gebaren in je favorieten en lijsten.",
     "searchLabel": "Zoek een gebaar",
     "searchPlaceholder": "Zoek een gebaar, bijvoorbeeld hond",
     "eyebrow": "Spreken Met Ondersteuning van Gebaren",
@@ -901,7 +901,7 @@
     "picksTitle": "Om mee te beginnen",
     "aboutTitle": "Wat is SMOG?",
     "aboutBody": "SMOG staat voor Spreken Met Ondersteuning van Gebaren. Je praat zoals altijd en maakt bij de belangrijkste woorden een gebaar. Zo ondersteunen je handen wat je zegt.",
-    "aboutMemory": "De video's zijn een geheugensteun. Je leert de gebaren in een SMOG-cursus of initiatie en kijkt ze hier na als je er een vergeten bent.",
+    "aboutMemory": "De video’s zijn een geheugensteun. Je leert de gebaren in een SMOG-cursus of initiatie en kijkt ze hier na als je er een vergeten bent.",
     "aboutCourse": "Bekijk waar je een SMOG-cursus kunt volgen",
     "sponsorTitle": "Word peter of meter van een gebaar",
     "sponsorBody": "Je naam, en als je wilt je logo, staat een jaar lang aan het einde van de video van je gebaar. We bekijken elke sponsoring voor ze online komt en mailen je zodra ze er staat.",
@@ -909,7 +909,7 @@
   },
   "footer": {
     "about": "SMOG staat voor Spreken Met Ondersteuning van Gebaren.",
-    "nav": "Meer van SMOG & Co",
+    "nav": "Meer van SMOG\u00a0&\u00a0Co",
     "credit": "Gemaakt door zias.be"
   },
   "account": {
@@ -1036,19 +1036,19 @@
       "title": "SMOG-gebaren in video",
       "description": "SMOG-gebaren in video, als geheugensteun bij je SMOG-cursus of initiatie. Zoek een gebaar op, kijk hoe je het maakt en bewaar het in een lijst."
     },
-    "shareImageAlt": "SMOG & Co: Mensen gaan van nature hun spraak ondersteunen met gebaren",
+    "shareImageAlt": "SMOG\u00a0&\u00a0Co: Mensen gaan van nature hun spraak ondersteunen met gebaren",
     "gesture": {
       "title": "{{name}} · SMOG-gebaar",
       "imageAlt": "Beeld uit de video van het SMOG-gebaar voor “{{name}}”"
     },
     "list": {
-      "description": "Een lijst met SMOG-gebaren, gedeeld via SMOG & Co."
+      "description": "Een lijst met SMOG-gebaren, gedeeld via SMOG\u00a0&\u00a0Co."
     },
     "privacy": {
-      "description": "Hoe SMOG & Co met je gegevens omgaat op de website en in de app, en welke keuzes je hebt."
+      "description": "Hoe SMOG\u00a0&\u00a0Co met je gegevens omgaat op de website en in de app, en welke keuzes je hebt."
     },
     "terms": {
-      "description": "De afspraken voor het gebruik van de website en de app van SMOG & Co."
+      "description": "De afspraken voor het gebruik van de website en de app van SMOG\u00a0&\u00a0Co."
     },
     "shortcuts": {
       "gestures": "Gebaar opzoeken",
@@ -1066,7 +1066,7 @@
   },
   "gestures": {
     "description": "Zoek SMOG-gebaren op woord of categorie en bekijk ze in video.",
-    "allThemes": "Alle thema's",
+    "allThemes": "Alle thema’s",
     "select": {
       "title": "Kies een gebaar",
       "description": "Kies een gebaar in de lijst. De video verschijnt hier."
@@ -1863,10 +1863,10 @@
         "checkAgain": "Opnieuw controleren"
       },
       "picker": {
-        "loading": "Video's laden",
-        "empty": "Nog geen video's in Mux",
+        "loading": "Video’s laden",
+        "empty": "Nog geen video’s in Mux",
         "emptyDescription": "Upload een video in het tabblad Uploaden.",
-        "error": "De video's konden niet geladen worden.",
+        "error": "De video’s konden niet geladen worden.",
         "choose": "Kiezen",
         "chosen": "Gekozen",
         "notReady": "Kan pas gekozen worden als Mux klaar is.",
@@ -1960,7 +1960,7 @@
         "none": "Geen extra rol. Dit account kan gebaren bekijken, favorieten bewaren en lijsten maken.",
         "help": {
           "translator": "Vertaalt namen, trefwoorden, schermen en juridische teksten.",
-          "teacher": "Beheert lesgeversinfo en tekeningen, stelt lessen samen en maakt lespdf's.",
+          "teacher": "Beheert lesgeversinfo en tekeningen, stelt lessen samen en maakt lespdf’s.",
           "admin": "Beheert de catalogus, de accounts, de sponsoringen en de instellingen."
         }
       },
@@ -2029,7 +2029,7 @@
         "untilHint": "Optioneel, hoogstens 7 dagen vooruit. Staat op de pagina en gaat mee als Retry-After.",
         "noUntil": "Niet ingesteld",
         "untilInvalid": "Kies een moment in de toekomst, hoogstens 7 dagen vooruit.",
-        "propagation": "Andere bezoekers volgen binnen ongeveer 2 minuten: elke server en elke Cloudflare-locatie onthoudt de instelling tot 30 seconden, en KV heeft tot een minuut nodig om elke regio te bereiken.",
+        "propagation": "Andere bezoekers volgen binnen ongeveer 2 minuten: elke server en elke Cloudflare-locatie onthoudt de instelling tot 30\u00a0seconden, en KV heeft tot een minuut nodig om elke regio te bereiken.",
         "enable": "Onderhoud aanzetten",
         "enableNote": "Je krijgt eerst een omzeilcookie voor deze browser, zodat je toegang houdt.",
         "enabled": "Onderhoud staat aan",
@@ -2075,8 +2075,8 @@
       },
       "locale": "Taal",
       "width": "Breedte",
-      "desktop": "Desktop (780 px)",
-      "mobile": "Mobiel (390 px)",
+      "desktop": "Desktop (780\u00a0px)",
+      "mobile": "Mobiel (390\u00a0px)",
       "subject": "Onderwerp",
       "view": "Weergave",
       "html": "E-mail",
@@ -2709,7 +2709,7 @@
       "paymentProvider": "De betaling kon niet gestart worden. Er is niets aangerekend. Probeer het opnieuw.",
       "alreadySettled": "Deze betaling is al afgerond.",
       "logoExpired": "Je geüploade logo is verlopen. Upload het opnieuw en verstuur dan.",
-      "logoInvalid": "Het logo kon niet gelezen worden. Kies een PNG-, JPEG- of WebP-bestand van maximaal 2 MB.",
+      "logoInvalid": "Het logo kon niet gelezen worden. Kies een PNG-, JPEG- of WebP-bestand van maximaal 2\u00a0MB.",
       "noLogo": "Deze sponsoring heeft geen logo, dus je kunt er geen toevoegen.",
       "notRenewable": "Deze sponsoring kan niet meer verlengd worden.",
       "gestureTaken": "Dit gebaar wordt intussen door iemand anders gesponsord.",
@@ -2801,18 +2801,18 @@
         "label": "Logo",
         "drop": "Sleep je logo hierheen of",
         "browse": "kies een bestand",
-        "formats": "PNG, JPEG of WebP · max. 2 MB",
+        "formats": "PNG, JPEG of WebP · max. 2\u00a0MB",
         "previewAlt": "Voorbeeld van het logo",
         "remove": "Logo verwijderen",
         "replace": "Ander logo kiezen",
         "guidelines": {
           "title": "Logo-richtlijnen",
           "format": "Formaat: PNG met transparante achtergrond (aanbevolen), JPEG of WebP",
-          "dimensions": "Afmetingen: minimaal 800 × 800 px voor de beste kwaliteit",
+          "dimensions": "Afmetingen: minimaal 800 × 800\u00a0px voor de beste kwaliteit",
           "aspectRatio": "Verhouding: vierkant (1:1) aanbevolen",
-          "fileSize": "Bestandsgrootte: maximaal 2 MB",
-          "style": "Stijl: eenvoudige, contrastrijke logo's werken het best",
-          "avoid": "Vermijd: zeer gedetailleerde logo's of dunne lijnen"
+          "fileSize": "Bestandsgrootte: maximaal 2\u00a0MB",
+          "style": "Stijl: eenvoudige, contrastrijke logo’s werken het best",
+          "avoid": "Vermijd: zeer gedetailleerde logo’s of dunne lijnen"
         },
         "choice": "Logo in de video",
         "without": "Zonder logo"
@@ -2837,7 +2837,7 @@
         "displayNameTooLong": "Gebruik maximaal {{max}} tekens.",
         "displayNameInvalid": "Gebruik één regel tekst. Verwijder regeleinden en onzichtbare tekens.",
         "logoRequired": "Upload een logo of vink de optie uit.",
-        "logoTooLarge": "Kies een logo van maximaal 2 MB.",
+        "logoTooLarge": "Kies een logo van maximaal 2\u00a0MB.",
         "logoType": "Gebruik een PNG-, JPEG- of WebP-afbeelding.",
         "required": "Dit veld is verplicht.",
         "tooLong": "Deze tekst is te lang.",
@@ -2894,7 +2894,7 @@
       },
       "paid": {
         "title": "Betaling geslaagd!",
-        "description": "Bedankt voor je steun aan SMOG & Co."
+        "description": "Bedankt voor je steun aan SMOG\u00a0&\u00a0Co."
       },
       "renewed": {
         "title": "Je sponsoring is verlengd!",
@@ -2997,7 +2997,7 @@
       "suggestions": "Bedoelde je een van deze gebaren?"
     },
     "offline": {
-      "web": "Wat al op je scherm staat, blijft hier. Andere pagina's, zoeken en video's werken weer zodra je verbinding hebt."
+      "web": "Wat al op je scherm staat, blijft hier. Andere pagina’s, zoeken en video’s werken weer zodra je verbinding hebt."
     }
   }
 }

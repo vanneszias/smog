@@ -4,20 +4,15 @@ import { LOCALES, resources } from "../../../../i18n/src/index";
 /**
  * The typography contract of the copy (DESIGN.md, "Voice and words").
  *
- * NOT ENFORCED YET. The shipped catalogues still mix straight and curly
- * apostrophes, space French guillemets two ways and end a few placeholders
- * with "...". Sweeping them now would conflict with every parallel
- * workstream of the identity overhaul, so the sweep runs once after those
- * branches are merged. The integration step then:
- *   1. replaces every rule's offenders in nl.json, en.json and fr.json with
- *      targeted edits (never a JSON rewriter that re-encodes the escapes),
- *   2. sets `SWEEP_DONE` to true, so these tests run in `bun run test`,
- *   3. reviews the D1 `ui_string` overrides on staging and production, which
- *      bypass the shipped files.
- * Run them before that with `SMOG_TYPOGRAPHY=1 bun test <this file>` to see
- * what the sweep has to change.
+ * Enforced since the post-merge sweep of the identity overhaul (2026-11-17,
+ * DECISIONS "Brand identity: the integration"): curly apostrophes, "…",
+ * French guillemets held by U+202F, a no-break space between a number and
+ * its unit, and "SMOG & Co" held by U+00A0 in running text. Edit the
+ * catalogues with targeted edits, never a JSON rewriter that re-encodes the
+ * escapes. The D1 `ui_string` overrides on staging and production bypass
+ * the shipped files: review them when correcting deployed copy.
  */
-const SWEEP_DONE = false;
+const SWEEP_DONE = true;
 const RUN = SWEEP_DONE || process.env.SMOG_TYPOGRAPHY === "1";
 
 interface Tree {
@@ -73,7 +68,7 @@ const RULES: [string, RegExp, (locale: string, key: string) => boolean][] = [
   ],
 ];
 
-describe("copy typography (enabled after the post-merge sweep)", () => {
+describe("copy typography", () => {
   for (const locale of LOCALES) {
     const entries = flatten(resources[locale].translation as unknown as Tree);
     for (const [name, pattern, applies] of RULES) {
