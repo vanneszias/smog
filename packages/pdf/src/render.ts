@@ -14,8 +14,9 @@ import {
   type PDFFont,
   type PDFImage,
   type PDFPage,
-  rgb,
+  type rgb,
 } from "pdf-lib";
+import { PDF_COLOURS } from "./colours";
 import { pngInflatesWithin } from "./png-guard";
 import {
   type LessonPdfDocument,
@@ -52,11 +53,13 @@ const LABEL_W = 24;
 const DRAWING_MAX_H = 80;
 const DRAWING_GAP = 10;
 
-const GREEN = rgb(0, 0.502, 0.373);
-const INK = rgb(0.1, 0.1, 0.1);
-const GREY = rgb(0.45, 0.45, 0.45);
-const RULE = rgb(0.35, 0.35, 0.35);
-const SHADE = rgb(0.86, 0.93, 0.9);
+const {
+  green: GREEN,
+  ink: INK,
+  muted: GREY,
+  rule: RULE,
+  shade: SHADE,
+} = PDF_COLOURS;
 
 // ------------------------------------------------------------------- types
 

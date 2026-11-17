@@ -49,7 +49,7 @@ export const styles = {
     margin: `0 0 ${px(spacing["2"])}`,
   },
   brand: {
-    color: color.primaryForeground,
+    color: color.sidebarForeground,
     fontSize: px(fontSize["title-3"].size),
     fontWeight: fontWeight.semibold,
     margin: "0",
@@ -95,8 +95,9 @@ export const styles = {
     lineHeight: px(fontSize["body-sm"].lineHeight),
     margin: `${px(spacing["3"])} 0`,
   },
+  /** The deep green band of the site's header, with the white logo. */
   header: {
-    backgroundColor: color.primary,
+    backgroundColor: color.sidebar,
     padding: `${px(spacing["6"])} ${px(spacing["8"])}`,
     textAlign: "center",
   },
@@ -134,7 +135,7 @@ export const styles = {
    */
   logo: {
     border: "0",
-    color: color.primaryForeground,
+    color: color.sidebarForeground,
     display: "block",
     fontSize: px(fontSize["title-3"].size),
     fontWeight: fontWeight.semibold,

@@ -179,8 +179,9 @@ export const BOUNDARIES: Record<string, readonly string[]> = {
   ],
   "@smog/payments": ["@smog/config", "@smog/utils"],
   // Pure: a validated document description in, bytes out (phase 10c ruling 1);
-  // `@smog/config` is for the test configs only.
-  "@smog/pdf": ["@smog/config"],
+  // `@smog/config` is for the test configs only, `@smog/styles` gives the
+  // print its colours (its `./tokens` is plain data).
+  "@smog/pdf": ["@smog/config", "@smog/styles"],
   "@smog/rpc": ["@smog/auth", "@smog/db", "@smog/config", "@smog/utils"],
   "@smog/styles": ["@smog/config"],
   "@smog/ui-native": [
