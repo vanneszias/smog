@@ -15,6 +15,13 @@ describe("Button", () => {
     expect(button.getAttribute("type")).toBe("button");
   });
 
+  test("the action variant is the orange do-it under dark ink", () => {
+    renderKit(<Button variant="action">Play</Button>);
+    const classes = classesOf(screen.getByRole("button", { name: "Play" }));
+    expect(classes).toContain("bg-highlight");
+    expect(classes).toContain("text-highlight-foreground");
+  });
+
   test("is a pill that answers a press (with motion allowed)", () => {
     renderKit(<Button>Save</Button>);
     const classes = classesOf(screen.getByRole("button", { name: "Save" }));

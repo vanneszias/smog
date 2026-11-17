@@ -39,7 +39,7 @@ export interface IconButtonProps
   label: string;
   loading?: boolean;
   ref?: Ref<View>;
-  variant?: "primary" | "secondary" | "ghost" | "danger";
+  variant?: "primary" | "action" | "secondary" | "ghost" | "danger";
 }
 
 /** A round, icon-only button; `label` is its accessible name. */

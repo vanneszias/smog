@@ -11,6 +11,21 @@ export interface StepperProps extends Omit<ComponentProps<"nav">, "children"> {
   /** Zero-based index of the current step. */
   current: number;
   steps: readonly StepperStep[];
+  /** `action`: the current step is the orange "do it" (the sponsor flow). */
+  tone?: "action" | "default";
+}
+
+function stepMarker(
+  done: boolean,
+  active: boolean,
+  tone: "action" | "default"
+): string {
+  if (active && tone === "action") {
+    return "border-highlight-strong bg-highlight text-highlight-foreground";
+  }
+  return done || active
+    ? "border-primary bg-primary text-primary-foreground"
+    : "border-muted-foreground bg-card text-muted-foreground";
 }
 
 /**
@@ -21,6 +36,7 @@ export function Stepper({
   className,
   current,
   steps,
+  tone = "default",
   ...props
 }: StepperProps): ReactNode {
   const { t } = useTranslation();
@@ -58,9 +74,7 @@ export function Stepper({
               <span
                 className={cn(
                   "inline-flex size-8 shrink-0 items-center justify-center rounded-full border-2 font-semibold text-body-sm",
-                  done || active
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-muted-foreground bg-card text-muted-foreground"
+                  stepMarker(done, active, tone)
                 )}
                 data-slot="step-marker"
               >

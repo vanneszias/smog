@@ -44,6 +44,9 @@ describe("Sidebar", () => {
     const { container } = renderKit(<Shell />);
     const link = screen.getByRole("link", { name: "Dashboard" });
     expect(link.getAttribute("aria-current")).toBe("page");
+    // The orange mark on the plain green, not the hover wash.
+    expect(link.className).toContain("data-active:before:bg-sidebar-primary");
+    expect(link.className).not.toContain("data-active:bg-sidebar-accent");
     const panel = container.querySelector('[data-slot="sidebar"]');
     expect(panel?.getAttribute("data-state")).toBe("expanded");
     await userEvent.click(

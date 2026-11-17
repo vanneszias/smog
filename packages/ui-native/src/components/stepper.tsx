@@ -15,6 +15,26 @@ export interface StepperProps extends Omit<ViewProps, "children"> {
   current: number;
   ref?: Ref<View>;
   steps: readonly StepperStep[];
+  /** `action`: the current step is the orange "do it" (the sponsor flow). */
+  tone?: "action" | "default";
+}
+
+function markerClass(filled: boolean, action: boolean): string {
+  if (action) {
+    return "border-highlight-strong bg-highlight";
+  }
+  return filled
+    ? "border-primary bg-primary"
+    : "border-muted-foreground bg-card";
+}
+
+function markerTextClass(active: boolean, tone: "action" | "default"): string {
+  if (!active) {
+    return "text-muted-foreground";
+  }
+  return tone === "action"
+    ? "text-highlight-foreground"
+    : "text-primary-foreground";
 }
 
 /**
@@ -26,6 +46,7 @@ export function Stepper({
   className,
   current,
   steps,
+  tone = "default",
   ...props
 }: StepperProps): ReactElement {
   const { t } = useTranslation();
@@ -71,9 +92,7 @@ export function Stepper({
                 accessible
                 className={cn(
                   "size-8 items-center justify-center rounded-full border-2",
-                  done || active
-                    ? "border-primary bg-primary"
-                    : "border-muted-foreground bg-card"
+                  markerClass(done || active, active && tone === "action")
                 )}
               >
                 {done ? (
@@ -86,9 +105,7 @@ export function Stepper({
                   <Text
                     className={cn(
                       "font-semibold text-body-sm",
-                      active
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground"
+                      markerTextClass(active, tone)
                     )}
                   >
                     {index + 1}

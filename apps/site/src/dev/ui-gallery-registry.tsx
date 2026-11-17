@@ -25,6 +25,7 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+  cn,
   Form,
   FormControl,
   FormDescription,
@@ -87,6 +88,10 @@ import {
   useState,
 } from "react";
 import { z } from "zod";
+import {
+  GREEN_BUTTON,
+  GREEN_PRIMARY_BUTTON,
+} from "@/components/app-shell/on-green";
 
 /*
  * `/dev/ui`: the registry components (shadcn, ported into `@smog/ui-web`),
@@ -162,7 +167,7 @@ function GreenSurfaces(): ReactNode {
           {t("devTools.gallery.sampleText")}
         </p>
         <Row>
-          <Button className="bg-highlight text-highlight-foreground hover:bg-highlight/85 focus-visible:ring-sidebar-ring focus-visible:ring-offset-sidebar">
+          <Button className={GREEN_PRIMARY_BUTTON} variant="action">
             {t("common.continue")}
           </Button>
           <Button
@@ -173,6 +178,24 @@ function GreenSurfaces(): ReactNode {
           </Button>
         </Row>
       </div>
+      {/* The header's section links: the current one carries the orange mark. */}
+      <nav
+        aria-label={t("devTools.gallery.sampleTitle")}
+        className="flex flex-wrap items-center gap-1 rounded-card bg-sidebar p-3"
+      >
+        <Button aria-current="page" className={GREEN_BUTTON} variant="ghost">
+          {t("nav.gestures")}
+        </Button>
+        <Button className={GREEN_BUTTON} variant="ghost">
+          {t("nav.favorites")}
+        </Button>
+        <Button
+          className={cn("ml-auto", GREEN_PRIMARY_BUTTON)}
+          variant="action"
+        >
+          {t("nav.signIn")}
+        </Button>
+      </nav>
       <div className="flex flex-col gap-2 rounded-2xl bg-sidebar p-6 text-sidebar-foreground">
         <p className="font-medium text-body">{t("nav.favorites")}</p>
         <p className="text-body-sm text-sidebar-foreground-muted">

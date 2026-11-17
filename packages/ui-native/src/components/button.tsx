@@ -32,6 +32,8 @@ export const buttonVariants = cva(
         sm: "min-h-8 px-3",
       },
       variant: {
+        // The orange "do it": a fill under dark ink, on any surface.
+        action: "border-transparent bg-highlight",
         danger: "border-transparent bg-destructive",
         ghost: "border-transparent bg-transparent",
         primary: "border-transparent bg-primary",
@@ -46,6 +48,7 @@ const buttonLabelVariants = cva("font-medium", {
   variants: {
     size: { lg: "text-body", md: "text-body", sm: "text-body-sm" },
     variant: {
+      action: "text-highlight-foreground",
       danger: "text-primary-foreground",
       ghost: "text-foreground",
       primary: "text-primary-foreground",
@@ -60,6 +63,7 @@ export type ButtonSize = NonNullable<ButtonVariantProps["size"]>;
 
 /** The colour of the label, for the icon and spinner next to it. */
 const LABEL_ROLE: Record<ButtonVariant, ColorRole> = {
+  action: "highlightForeground",
   danger: "primaryForeground",
   ghost: "foreground",
   primary: "primaryForeground",
@@ -77,14 +81,14 @@ interface ButtonColours {
 
 /**
  * Buttons on a green `Surface`: the primary action is the orange highlight
- * (green on green would vanish), the others are white. The danger variant
- * keeps its own colours.
+ * (green on green would vanish), the others are white. The danger and action
+ * variants keep their own colours (orange already reads on the deep green).
  */
 function onSurface(
   tone: SurfaceTone,
   variant: ButtonVariant
 ): ButtonColours | undefined {
-  if (tone === "default" || variant === "danger") {
+  if (tone === "default" || variant === "danger" || variant === "action") {
     return;
   }
   if (variant === "primary") {
@@ -130,7 +134,7 @@ export interface ButtonProps
   ref?: Ref<View>;
 }
 
-/** The one button: `primary | secondary | ghost | danger` × `sm | md | lg`. */
+/** The one button: `primary | action | secondary | ghost | danger` × `sm | md | lg`. */
 export function Button({
   accessibilityState,
   children,

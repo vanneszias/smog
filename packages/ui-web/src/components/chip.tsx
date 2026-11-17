@@ -27,7 +27,15 @@ const chipVariants = cva(
     disabled,
   ],
   {
-    defaultVariants: { selected: false, size: "md" },
+    compoundVariants: [
+      {
+        className:
+          "border-highlight-strong bg-highlight text-highlight-foreground",
+        selected: true,
+        tone: "action",
+      },
+    ],
+    defaultVariants: { selected: false, size: "md", tone: "default" },
     variants: {
       selected: {
         false: "border-muted-foreground bg-card text-foreground",
@@ -38,6 +46,11 @@ const chipVariants = cva(
         // Dense filters; the pseudo-element keeps a 44 px target.
         sm: cn("min-h-8 px-3 text-caption", hitArea),
       },
+      /**
+       * `action`: a selected chip is the orange "do it" (the active filter),
+       * an orange fill under dark ink with a darker orange edge.
+       */
+      tone: { action: "", default: "" },
     },
   }
 );
@@ -66,6 +79,7 @@ export function Chip({
   onSelectedChange,
   selected,
   size,
+  tone,
   type,
   ...props
 }: ChipProps): ReactNode {
@@ -88,7 +102,7 @@ export function Chip({
     <button
       aria-pressed={isToggle ? selected : undefined}
       className={cn(
-        chipVariants({ selected: selected ?? false, size }),
+        chipVariants({ selected: selected ?? false, size, tone }),
         onRemove && "pr-10",
         className
       )}

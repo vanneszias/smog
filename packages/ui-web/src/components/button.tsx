@@ -15,7 +15,9 @@ import { Spinner } from "./spinner";
  * The registry button (shadcn maia: a pill, `rounded-pill`, `bg-primary`, a soft hover) with
  * the kit's sizes: 44 px at `md`, 48 at `lg`, 32 + a 44 px hit area at `sm`.
  * `primary | secondary | ghost | danger` are the registry's
- * `default | outline | ghost | destructive`.
+ * `default | outline | ghost | destructive`; `action` is SMOG's orange "do
+ * it" (play, the search action, the primary action on the deep green): an
+ * orange fill under dark ink, on any surface.
  */
 export const buttonVariants = cva(
   [
@@ -37,6 +39,8 @@ export const buttonVariants = cva(
         sm: cn("min-h-8 px-3 text-body-sm", hitArea),
       },
       variant: {
+        action:
+          "border-transparent bg-highlight text-highlight-foreground hover:bg-highlight/85",
         danger:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-danger-strong dark:hover:bg-destructive/90",
         ghost:
@@ -63,7 +67,7 @@ export interface ButtonProps
   loading?: boolean;
 }
 
-/** The one button: `primary | secondary | ghost | danger` × `sm | md | lg`. */
+/** The one button: `primary | action | secondary | ghost | danger` × `sm | md | lg`. */
 export function Button({
   asChild = false,
   children,

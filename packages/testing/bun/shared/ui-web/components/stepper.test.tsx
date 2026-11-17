@@ -24,4 +24,17 @@ describe("Stepper", () => {
     const marker = items[1]?.querySelector("[data-slot=step-marker]") ?? null;
     expect(classesOf(marker)).toContain("bg-primary");
   });
+
+  test("the action tone makes the current step orange, done steps stay green", () => {
+    renderKit(
+      <Stepper
+        current={1}
+        steps={[{ label: "Choose" }, { label: "Pay" }]}
+        tone="action"
+      />
+    );
+    const markers = document.querySelectorAll("[data-slot=step-marker]");
+    expect(classesOf(markers[0] ?? null)).toContain("bg-primary");
+    expect(classesOf(markers[1] ?? null)).toContain("bg-highlight");
+  });
 });

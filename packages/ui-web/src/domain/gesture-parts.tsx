@@ -79,7 +79,7 @@ export function GestureThumbnail({
       {showPlay ? (
         <span
           aria-hidden="true"
-          className="absolute bottom-2 left-2 grid size-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-1"
+          className="absolute bottom-2 left-2 grid size-9 place-items-center rounded-full bg-highlight text-highlight-foreground shadow-1"
           data-slot="gesture-play"
         >
           <Play className="size-4 fill-current" />
