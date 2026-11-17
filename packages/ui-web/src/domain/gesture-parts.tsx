@@ -100,10 +100,11 @@ export function GestureThumbnail({
   // error, the image is dropped.
   const [failed, setFailed] = useState(false);
   const onError = useCallback(() => setFailed(true), []);
+  // A span (phrasing content), so a still can sit inside a button.
   return (
-    <div
+    <span
       className={cn(
-        "relative aspect-3/4 shrink-0 overflow-hidden bg-sidebar",
+        "relative block aspect-3/4 shrink-0 overflow-hidden bg-sidebar",
         className
       )}
     >
@@ -133,7 +134,7 @@ export function GestureThumbnail({
           <Play className="size-4 fill-current" />
         </span>
       ) : null}
-    </div>
+    </span>
   );
 }
 
