@@ -423,7 +423,7 @@ const sidebarMenuButtonVariants = cva(
     // The current item: the orange `sidebar-primary` bar at its start edge on
     // the plain `sidebar`, no wash (the orange reaches 3:1 only on `sidebar`;
     // the wash is hover's).
-    "peer/menu-button group/menu-button relative flex min-h-touch w-full items-center gap-2 overflow-hidden rounded-xl px-3 py-2 text-left text-body-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-active:font-medium data-active:before:absolute data-active:before:inset-y-2 data-active:before:left-0 data-active:before:w-1 data-active:before:rounded-full data-active:before:bg-sidebar-primary data-active:hover:bg-transparent [&>span:last-child]:truncate [&_svg]:size-5 [&_svg]:shrink-0",
+    "peer/menu-button group/menu-button relative flex min-h-touch w-full items-center gap-2 overflow-hidden rounded-xl px-3 py-2 text-left text-body-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-active:font-medium data-active:before:absolute data-active:before:inset-y-2 data-active:before:left-1 data-active:before:w-1 data-active:before:rounded-full data-active:before:bg-sidebar-primary data-active:hover:bg-transparent [&>span:last-child]:truncate [&_svg]:size-5 [&_svg]:shrink-0",
     "aria-disabled:pointer-events-none aria-disabled:opacity-50 group-data-[collapsible=icon]:size-touch! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!",
     "outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
     transition,
