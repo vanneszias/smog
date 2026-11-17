@@ -1,10 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ReactElement, ReactNode, Ref } from "react";
-import {
-  Pressable,
-  type PressableProps,
-  type View,
-} from "react-native";
+import { Pressable, type PressableProps, type View } from "react-native";
 import { cn } from "../lib/cn";
 import { ICON_SIZE, renderIcon } from "../lib/icon";
 import { hitSlopFor, useColor } from "../lib/theme";

@@ -136,6 +136,7 @@ function LessonList(): ReactElement {
       ListEmptyComponent={
         <EmptyState
           description={t("teacherLessons.empty.description")}
+          illustration={2}
           title={t("teacherLessons.empty.title")}
         />
       }

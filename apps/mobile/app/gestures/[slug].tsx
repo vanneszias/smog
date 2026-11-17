@@ -323,6 +323,7 @@ export default function GestureScreen(): ReactElement {
           </Button>
         }
         description={t("gesture.notFound.description")}
+        illustration={2}
         title={t("gesture.notFound.title")}
       />
     );
