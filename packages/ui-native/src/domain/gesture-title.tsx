@@ -14,28 +14,31 @@ import { cn } from "../lib/cn";
  * "The hand points at the word": the title every gesture video opens with,
  * drawn by the kit so a textless video and the burned-in title look the
  * same. The numbers are the web kit's (`GestureTitle` in `@smog/ui-web`,
- * DESIGN.md "Video player"), relative to the frame's width: the pointing
- * hand starts 6 % in and is 22 % wide, the name follows in Figtree
- * Regular, white, at 12 % of the width, the row centred 22 % down the
- * frame. A long word steps the size down so it never leaves the frame.
+ * DESIGN.md "Video player"), shares of the frame's width unless said: the
+ * pointing hand starts 6 % in and is 23 % wide, its centre 3.5 % lower
+ * than the name's; the name follows 0.5 % after it in Figtree Regular,
+ * white, at 10.7 % of the width (less for a long word, so the longest word
+ * fits in 64 %), the row centred 20.7 % down the frame (of its height).
  */
 
-/** The side inset, as a share of the frame's width. */
+/** The side inset. */
 const INSET = 0.06;
-/** The hand's width, as a share of the frame's width. */
-const HAND_WIDTH = 0.22;
+/** The hand's width. */
+const HAND_WIDTH = 0.23;
 /** The hand's height over its width (`hand-2.svg` is 400 by 200). */
 const HAND_ASPECT = 0.5;
-/** The gap between the hand and the name, as a share of the frame's width. */
-const GAP = 0.015;
-/** The name's largest size, as a share of the frame's width. */
-const MAX_SIZE = 0.12;
-/** Share of the frame's width the name may take. */
-const NAME_WIDTH = 0.62;
+/** How far the hand sits below the name in the centred row (its top margin). */
+const HAND_DROP = 0.07;
+/** The gap between the hand and the name. */
+const GAP = 0.005;
+/** The name's largest size. */
+const MAX_SIZE = 0.107;
+/** The share of the width the name may take. */
+const NAME_WIDTH = 0.64;
 /** Figtree's average advance per character, in em (measured on Dutch names). */
 const CHAR_EM = 0.55;
 /** Where the row's centre sits, as a share of the frame's height. */
-const ROW_CENTRE = 0.22;
+const ROW_CENTRE = 0.207;
 
 /** Splits a name into its words. */
 const WORDS = /\s+/u;
@@ -43,7 +46,7 @@ const WORDS = /\s+/u;
 /** White over the studio set in both themes, as the burned-in title. */
 const WHITE = tokens.color.light.sidebarForeground;
 
-/** The name's size in pt: 12 % of the width, or less so its longest word fits. */
+/** The name's size in pt: 10.7 % of the width, or less so its longest word fits. */
 function titleFontSize(name: string, frameWidth: number): number {
   const longest = Math.max(
     1,
@@ -89,7 +92,7 @@ export function GestureTitle({
       {...props}
     >
       {width > 0 ? (
-        // A band from the top to 44 % of the frame centres the row 22 % down;
+        // A band from the top to 41.4 % of the frame centres the row 20.7 % down;
         // the row may outgrow it at large text sizes (nothing is clipped).
         <View
           className="absolute inset-x-0 top-0 flex-row items-center justify-center"
@@ -99,13 +102,15 @@ export function GestureTitle({
             paddingHorizontal: INSET * width,
           }}
         >
-          <SvgXml
-            color={WHITE}
-            height={handWidth * HAND_ASPECT}
-            testID="gesture-title-hand"
-            width={handWidth}
-            xml={handSvgs[1]}
-          />
+          <View style={{ marginTop: HAND_DROP * width }}>
+            <SvgXml
+              color={WHITE}
+              height={handWidth * HAND_ASPECT}
+              testID="gesture-title-hand"
+              width={handWidth}
+              xml={handSvgs[1]}
+            />
+          </View>
           <Text
             className="min-w-0 flex-1 font-regular"
             style={{

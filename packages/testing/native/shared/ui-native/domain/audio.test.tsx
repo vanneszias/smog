@@ -193,12 +193,17 @@ describe("the name over the video", () => {
     await fireEvent(title, "layout", {
       nativeEvent: { layout: { height: 400, width: 300 } },
     });
-    // The hand starts 6 % in and is 22 % of the frame wide.
+    // The hand starts 6 % in and is 23 % of the frame wide.
     const hand = screen.getByTestId("gesture-title-hand", HIDDEN_TOO);
-    expect(hand.props.width).toBeCloseTo(66);
+    expect(hand.props.width).toBeCloseTo(69);
     const name = screen.getByText("Hond", HIDDEN_TOO);
-    // 12 % of the width, Figtree Regular, white.
-    expect(name).toHaveStyle({ color: "#FFFFFF", fontSize: 36 });
+    // 10.7 % of the width, Figtree Regular, white.
+    const nameStyle = StyleSheet.flatten(name.props.style) as {
+      color: string;
+      fontSize: number;
+    };
+    expect(nameStyle.color).toBe("#FFFFFF");
+    expect(nameStyle.fontSize).toBeCloseTo(32.1, 1);
   });
 
   it("steps a long word down so it stays inside the frame", async () => {
@@ -211,9 +216,9 @@ describe("the name over the video", () => {
     const { fontSize } = StyleSheet.flatten(
       screen.getByText("Verjaardagstaart", HIDDEN_TOO).props.style
     ) as { fontSize: number };
-    // 16 characters at 0.55 em fit in 62 % of 300 pt.
-    expect(fontSize).toBeCloseTo((0.62 * 300) / (16 * 0.55), 1);
-    expect(fontSize).toBeLessThan(36);
+    // 16 characters at 0.55 em fit in 64 % of 300 pt.
+    expect(fontSize).toBeCloseTo((0.64 * 300) / (16 * 0.55), 1);
+    expect(fontSize).toBeLessThan(32.1);
   });
 
   it("shows no overlay without a name", async () => {
