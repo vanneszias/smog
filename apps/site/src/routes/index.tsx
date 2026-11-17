@@ -5,6 +5,7 @@ import {
   useCategories,
   useFeaturedGestures,
 } from "@smog/gestures/client";
+import { intlTag } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import {
   Button,
@@ -26,30 +27,43 @@ import { Page } from "@/components/learning/page";
 import { RecentGestures } from "@/components/learning/recent-gestures";
 import { SearchBox } from "@/components/learning/search-box";
 import { useHearts } from "@/components/learning/use-hearts";
-import { seoHead, shellHead } from "@/lib/head";
+import { graphIds, organizationLd, seoHead, shellHead } from "@/lib/head";
 
 export const Route = createFileRoute("/")({
   component: Home,
   head: ({ matches }) => {
-    const { siteUrl, t } = shellHead(matches);
-    const description = t("home.description");
+    const { locale, siteUrl, t } = shellHead(matches);
+    const description = t("meta.home.description");
+    const ids = graphIds(siteUrl);
     return seoHead(matches, {
       description,
-      // The site search, for search engines (inventory P-13).
+      // The organisation and the website, linked by `@id`; the site search
+      // for search engines (inventory P-13). The language is the page's.
       jsonLd: {
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        description,
-        inLanguage: ["nl", "en", "fr"],
-        name: t("common.appName"),
-        potentialAction: {
-          "@type": "SearchAction",
-          "query-input": "required name=search_term_string",
-          target: `${siteUrl}/gestures?q={search_term_string}`,
-        },
-        url: `${siteUrl}/`,
+        "@graph": [
+          organizationLd(siteUrl, t),
+          {
+            "@id": ids.site,
+            "@type": "WebSite",
+            alternateName: "Spreken Met Ondersteuning van Gebaren",
+            description,
+            inLanguage: intlTag(locale),
+            name: t("common.appName"),
+            potentialAction: {
+              "@type": "SearchAction",
+              "query-input": "required name=search_term_string",
+              target: `${siteUrl}/gestures?q={search_term_string}`,
+            },
+            publisher: { "@id": ids.org },
+            url: `${siteUrl}/`,
+          },
+        ],
       },
+      // The approved tagline is the share card's title.
+      ogTitle: t("home.tagline"),
       path: "/",
+      title: t("meta.home.title"),
     });
   },
   loader: async ({ context }) => {

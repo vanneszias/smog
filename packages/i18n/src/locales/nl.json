@@ -44,7 +44,8 @@
     "toggleSidebar": "Zijbalk in- of uitklappen",
     "sidebar": "Zijbalk",
     "loading": "Bezig met laden",
-    "logo": "Logo van SMOG & Co",
+    "logo": "SMOG & Co",
+    "homeLink": "SMOG & Co, naar de startpagina",
     "clearSearch": "Zoekopdracht wissen",
     "showPassword": "Wachtwoord tonen",
     "hidePassword": "Wachtwoord verbergen",
@@ -535,7 +536,7 @@
       "share": "Link delen",
       "dismiss": "Niet nu"
     },
-    "metaDescription": "Bekijk het SMOG-gebaar voor “{{name}}” in video.",
+    "metaDescription": "Zo maak je het SMOG-gebaar voor “{{name}}”. Bekijk de video als geheugensteun bij je SMOG-cursus of initiatie.",
     "description": "Beschrijving",
     "actions": "Acties voor {{name}}",
     "linkCopied": "Link gekopieerd",
@@ -1017,6 +1018,30 @@
     "description": "Bekijk dit gebaar in de app.",
     "action": "Open in de app",
     "getApp": "Nog geen app? Download hem"
+  },
+  "meta": {
+    "home": {
+      "title": "SMOG-gebaren in video",
+      "description": "SMOG-gebaren in video, als geheugensteun bij je SMOG-cursus of initiatie. Zoek een gebaar op, kijk hoe je het maakt en bewaar het in een lijst."
+    },
+    "shareImageAlt": "SMOG & Co: Mensen gaan van nature hun spraak ondersteunen met gebaren",
+    "gesture": {
+      "title": "{{name}} · SMOG-gebaar",
+      "imageAlt": "Beeld uit de video van het SMOG-gebaar voor “{{name}}”"
+    },
+    "list": {
+      "description": "Een lijst met SMOG-gebaren, gedeeld via SMOG & Co."
+    },
+    "privacy": {
+      "description": "Hoe SMOG & Co met je gegevens omgaat op de website en in de app, en welke keuzes je hebt."
+    },
+    "terms": {
+      "description": "De afspraken voor het gebruik van de website en de app van SMOG & Co."
+    },
+    "shortcuts": {
+      "gestures": "Gebaar opzoeken",
+      "mySpace": "Mijn ruimte"
+    }
   },
   "legal": {
     "lastUpdated": "Laatst bijgewerkt op {{date}}",
@@ -2689,8 +2714,8 @@
   },
   "sponsor": {
     "meta": {
-      "title": "Sponsor een gebaar",
-      "description": "Steun een gebaar voor één jaar. Jouw naam verschijnt in de video en helpt het SMOG-project."
+      "title": "Word peter of meter van een gebaar",
+      "description": "Sponsor een SMOG-gebaar voor een jaar. Na een controle staan je naam en, als je wilt, je logo aan het einde van de video van het gebaar."
     },
     "steps": {
       "select": "Gebaren kiezen",

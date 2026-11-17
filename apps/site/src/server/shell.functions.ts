@@ -17,6 +17,7 @@ import {
   getRequest,
   getRequestHeader,
   setCookie,
+  setResponseHeader,
 } from "@tanstack/react-start/server";
 import {
   isTheme,
@@ -68,6 +69,9 @@ export const getShell = createServerFn().handler(async (): Promise<Shell> => {
         fallback
       )
     );
+    // The document's language, as `<html lang>` states it (the Worker adds
+    // `Vary: Accept-Language, Cookie` to every document, `headers.ts`).
+    setResponseHeader("content-language", catalogue.locale);
     return {
       auth: publicAuthConfig(worker),
       languages: [...catalogue.languages],

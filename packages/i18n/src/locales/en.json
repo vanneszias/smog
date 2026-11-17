@@ -44,7 +44,8 @@
     "toggleSidebar": "Toggle sidebar",
     "sidebar": "Sidebar",
     "loading": "Loading",
-    "logo": "SMOG & Co logo",
+    "logo": "SMOG & Co",
+    "homeLink": "SMOG & Co, home page",
     "clearSearch": "Clear search",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
@@ -535,7 +536,7 @@
       "share": "Share link",
       "dismiss": "Not now"
     },
-    "metaDescription": "Watch the SMOG gesture for “{{name}}” on video.",
+    "metaDescription": "How to make the SMOG gesture for “{{name}}”. Watch the video as a memory aid for your SMOG course or introductory session.",
     "description": "Description",
     "actions": "Actions for {{name}}",
     "linkCopied": "Link copied",
@@ -1017,6 +1018,30 @@
     "description": "View this gesture in the app.",
     "action": "Open in the app",
     "getApp": "Get the app"
+  },
+  "meta": {
+    "home": {
+      "title": "SMOG gestures on video",
+      "description": "SMOG gestures on video, a memory aid for your SMOG course or introductory session. Look up a gesture, see how it's made and save it to a list."
+    },
+    "shareImageAlt": "SMOG & Co: People naturally use gestures to support their speech",
+    "gesture": {
+      "title": "{{name}} · SMOG gesture",
+      "imageAlt": "Still from the video of the SMOG gesture for “{{name}}”"
+    },
+    "list": {
+      "description": "A list of SMOG gestures, shared through SMOG & Co."
+    },
+    "privacy": {
+      "description": "How SMOG & Co handles your data on the website and in the app, and the choices you have."
+    },
+    "terms": {
+      "description": "The terms for using the SMOG & Co website and app."
+    },
+    "shortcuts": {
+      "gestures": "Look up a gesture",
+      "mySpace": "My space"
+    }
   },
   "legal": {
     "lastUpdated": "Last updated on {{date}}",
@@ -2689,8 +2714,8 @@
   },
   "sponsor": {
     "meta": {
-      "title": "Sponsor a gesture",
-      "description": "Support a gesture for one year. Your name appears in the video and helps the SMOG project."
+      "title": "Sponsor a SMOG gesture",
+      "description": "Sponsor a SMOG gesture for a year. Once we have checked it, your name, and your logo if you like, appears at the end of the gesture's video."
     },
     "steps": {
       "select": "Choose gestures",

@@ -33,7 +33,11 @@ export function validateLegalSearch(
   return search.lang === "nl" ? { lang: "nl" } : {};
 }
 
-/** The page head: title, the first paragraph as description, canonical. */
+/**
+ * The page head: the published text's title, a fixed plain-language
+ * description per page (`meta.privacy` / `meta.terms`; the text's first
+ * paragraph was formal and far over the length a result shows), canonical.
+ */
 export function legalHead(
   matches: Parameters<typeof shellHead>[0],
   kind: LegalHeadKind,
@@ -42,7 +46,9 @@ export function legalHead(
   const { locale, t } = shellHead(matches);
   const own = meta?.[locale];
   return seoHead(matches, {
-    description: own?.description ?? t("common.appName"),
+    description: t(
+      kind === "privacy" ? "meta.privacy.description" : "meta.terms.description"
+    ),
     path: `/${kind}`,
     ...(own ? { title: own.title } : {}),
   });

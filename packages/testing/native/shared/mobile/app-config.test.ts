@@ -112,9 +112,7 @@ describe("app.config", () => {
   it("falls back to the staging host", () => {
     delete process.env.EXPO_PUBLIC_SITE_HOST;
     const config = load();
-    expect(config.ios?.associatedDomains).toEqual([
-      "applinks:smog.zias.be",
-    ]);
+    expect(config.ios?.associatedDomains).toEqual(["applinks:smog.zias.be"]);
   });
 
   it("uses the generated brand assets on the brand green", () => {

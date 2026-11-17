@@ -7,7 +7,8 @@ import {
   useGesture,
   useRelated,
 } from "@smog/gestures/client";
-import { muxStreamUrl, muxThumbnailUrl } from "@smog/utils";
+import { DEFAULT_LOCALE, intlTag } from "@smog/i18n";
+import { muxStreamUrl } from "@smog/utils";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import { OpenInApp } from "@/components/app-banner";
@@ -17,12 +18,15 @@ import { gestureHref } from "@/components/learning/links";
 import { Page, RouteError } from "@/components/learning/page";
 import { useHearts } from "@/components/learning/use-hearts";
 import { RELATED_LIMIT } from "@/lib/gesture-queries";
-import { pageMeta, seoHead, shellHead } from "@/lib/head";
+import { graphIds, pageMeta, seoHead, shellHead } from "@/lib/head";
+import { gestureShareImage, gestureThumbnails } from "@/lib/share-image";
 import type { RouterContext } from "@/router";
 
 /** What the head needs (the full detail is in the query cache). */
 export interface GestureHead {
   description: string;
+  /** The name is the default language's (no translation yet). */
+  fallbackUsed: boolean;
   name: string;
   playbackId: string;
   /** Epoch ms. */
@@ -79,6 +83,7 @@ async function loadGesture({
   );
   return {
     description: gesture.description,
+    fallbackUsed: gesture.fallbackUsed,
     name: gesture.name,
     playbackId: gesture.playbackId,
     publishedAt: gesture.publishedAt,
@@ -94,28 +99,36 @@ export const Route = createFileRoute("/gestures/$slug")({
     if (!loaderData) {
       return pageMeta(matches, "states.notFound.title");
     }
-    const { siteUrl, t } = shellHead(matches);
+    const { locale, siteUrl, t } = shellHead(matches);
     const path = gestureHref(loaderData.slug);
+    const { name, playbackId } = loaderData;
     const description =
-      loaderData.description ||
-      t("gesture.metaDescription", { name: loaderData.name });
-    const image = muxThumbnailUrl(loaderData.playbackId, { width: 1200 });
+      loaderData.description || t("gesture.metaDescription", { name });
+    const ids = graphIds(siteUrl);
     return seoHead(matches, {
       description,
-      image,
+      image: gestureShareImage(
+        playbackId,
+        t("meta.gesture.imageAlt", { name })
+      ),
+      // No `duration`: it is not stored, and it is never guessed.
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "VideoObject",
-        contentUrl: muxStreamUrl(loaderData.playbackId),
+        contentUrl: muxStreamUrl(playbackId),
         dateModified: new Date(loaderData.updatedAt).toISOString(),
         description,
-        name: loaderData.name,
-        thumbnailUrl: image,
+        // An untranslated gesture shows the default language's text.
+        inLanguage: intlTag(loaderData.fallbackUsed ? DEFAULT_LOCALE : locale),
+        isPartOf: { "@id": ids.site },
+        name,
+        publisher: { "@id": ids.org },
+        thumbnailUrl: gestureThumbnails(playbackId),
         uploadDate: new Date(loaderData.publishedAt).toISOString(),
         url: `${siteUrl}${path}`,
       },
       path,
-      title: loaderData.name,
+      title: t("meta.gesture.title", { name }),
       type: "video.other",
     });
   },

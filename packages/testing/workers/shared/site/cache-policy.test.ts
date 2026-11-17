@@ -82,6 +82,9 @@ describe("cacheControlFor (P-18), path by path", () => {
     "/icon.svg",
     "/favicon.ico",
     "/og.png",
+    "/og-nl.png",
+    "/og-en.png",
+    "/og-fr.png",
   ])("%s is cached for a day", (path) => {
     expect(policy(path)).toBe(ONE_DAY);
     expect(ONE_DAY).toBe("public, max-age=86400");
@@ -232,6 +235,9 @@ describe("public/_headers agrees with the policy", () => {
       "/icon-maskable-512.png",
       "/icon.svg",
       "/og.png",
+      "/og-nl.png",
+      "/og-en.png",
+      "/og-fr.png",
     ]) {
       expect(rules.get(path), path).toBe(ONE_DAY);
     }

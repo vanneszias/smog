@@ -9,6 +9,8 @@ const FIRST_RENDER_TIMEOUT = 120_000;
 const HTML_TAG = /<html[^>]*>/;
 const DARK_CLASS = /class="[^"]*\bdark\b/;
 const THEME_COLOR_META = /<meta[^>]*name="theme-color"[^>]*>/g;
+const VIEWPORT_COVER =
+  /<meta content="[^"]*viewport-fit=cover[^"]*" name="viewport"\/>/;
 
 async function page(
   path: string,
@@ -93,11 +95,48 @@ describe("app shell (SSR)", () => {
     expect(html).toContain("<noscript>");
     expect(html).toContain("Zet JavaScript aan");
 
+    // The browser bar continues the header green, per theme.
+    expect(themeColors.join(" ")).toContain(
+      `content="${tokens.chrome.themeColor.light}"`
+    );
+    expect(themeColors.join(" ")).toContain(
+      `content="${tokens.chrome.themeColor.dark}"`
+    );
+    expect(tokens.chrome.themeColor.light).toBe(tokens.color.light.sidebar);
+
     // A chosen theme has its own colour only.
     const dark = await page("/", { cookie: "theme=dark" });
     expect(dark.match(THEME_COLOR_META)).toEqual([
-      expect.stringContaining(`content="${tokens.color.dark.background}"`),
+      expect.stringContaining(`content="${tokens.chrome.themeColor.dark}"`),
     ]);
+
+    // The auth pages start on the page background, and so does the bar.
+    const signIn = await page("/sign-in", { cookie: "theme=light" });
+    expect(signIn.match(THEME_COLOR_META)).toEqual([
+      expect.stringContaining(`content="${tokens.color.light.background}"`),
+    ]);
+  });
+
+  it("runs under the notch and names the installed app", async () => {
+    const html = await page("/");
+    expect(html).toMatch(VIEWPORT_COVER);
+    expect(html).toContain(
+      '<meta content="SMOG &amp; Co" name="apple-mobile-web-app-title"/>'
+    );
+    expect(html).toContain(
+      '<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>'
+    );
+  });
+
+  it("states the document's language and varies on what chose it", async () => {
+    const response = await exports.default.fetch(`${ORIGIN}/`, {
+      headers: { "accept-language": "fr-BE,fr;q=0.9" },
+    });
+    expect(response.headers.get("content-language")).toBe("fr");
+    const vary = (response.headers.get("vary") ?? "").toLowerCase();
+    expect(vary).toContain("accept-language");
+    expect(vary).toContain("cookie");
+    await response.text();
   });
 
   it("server-renders the sign-in screen at the email step", async () => {

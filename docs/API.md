@@ -443,7 +443,7 @@ One table, `apps/site/src/worker/cache.ts` (`cacheHeaders`, applied in `worker/h
 | Path class | `Cache-Control` |
 |---|---|
 | Hashed build output `/assets/<name>-<hash>.(css\|js\|woff2)` | `public, max-age=31536000, immutable` (matched by extension in `_headers`: a new hashed extension needs a line there) |
-| The unhashed brand files, icons, `og.png`, any other `/assets/*` (including the generated `/assets/logo.svg`) | `public, max-age=86400` |
+| The unhashed brand files, icons, `og.png`, the share cards `og-<locale>.png`, any other `/assets/*` (including the generated `/assets/logo.svg`) | `public, max-age=86400` |
 | `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest` | `public, max-age=3600` |
 | Documents (every SSR page; each carries its CSP nonce) | `private, no-cache` |
 | `/api/*`, `/_serverFn/*` (TanStack server functions, session-dependent), `/webhooks/*`, `/dev/*`, the token `302` and every 5xx (the maintenance page included) | `no-store` |
