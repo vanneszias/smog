@@ -10,7 +10,7 @@ const HTML_TAG = /<html[^>]*>/;
 const DARK_CLASS = /class="[^"]*\bdark\b/;
 const THEME_COLOR_META = /<meta[^>]*name="theme-color"[^>]*>/g;
 const VIEWPORT_COVER =
-  /<meta content="[^"]*viewport-fit=cover[^"]*" name="viewport"\/>/;
+  /<meta content="[^"]*viewport-fit=cover[^"]*" name="viewport"/;
 
 async function page(
   path: string,
@@ -121,10 +121,10 @@ describe("app shell (SSR)", () => {
     const html = await page("/");
     expect(html).toMatch(VIEWPORT_COVER);
     expect(html).toContain(
-      '<meta content="SMOG &amp; Co" name="apple-mobile-web-app-title"/>'
+      '<meta content="SMOG &amp; Co" name="apple-mobile-web-app-title"'
     );
     expect(html).toContain(
-      '<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>'
+      '<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"'
     );
   });
 

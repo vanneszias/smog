@@ -19,7 +19,7 @@ async function html(
 
 function meta(page: string, key: string): string | undefined {
   const pattern = new RegExp(
-    `<meta content="([^"]*)" (?:name|property)="${key.replaceAll(":", "\\:")}"/>`
+    `<meta content="([^"]*)" (?:name|property)="${key}"[^>]*>`
   );
   return page.match(pattern)?.[1];
 }

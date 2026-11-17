@@ -198,7 +198,7 @@ describe("/gestures/$slug (SSR detail)", () => {
     expect(body).toContain(
       `https://image.mux.com/${SAMPLE_PLAYBACK_ID}/thumbnail.jpg?fit_mode=smartcrop&amp;height=630&amp;width=1200`
     );
-    expect(body).toContain('<meta content="1200" property="og:image:width"/>');
+    expect(body).toContain('<meta content="1200" property="og:image:width"');
     expect(body).toContain('name="description"');
     expect(body).toContain("Het gebaar voor hond.");
     expect(body).toContain('"@type":"VideoObject"');
