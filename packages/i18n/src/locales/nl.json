@@ -893,11 +893,23 @@
     "intro": "Een geheugensteun bij je SMOG-cursus of initiatie.",
     "description": "SMOG staat voor Spreken Met Ondersteuning van Gebaren. Fris met de video's op wat je in een SMOG-cursus of initiatie leerde. Bewaar gebaren in je favorieten en lijsten.",
     "searchLabel": "Zoek een gebaar",
-    "searchPlaceholder": "Zoek een gebaar, bijvoorbeeld hond"
+    "searchPlaceholder": "Zoek een gebaar, bijvoorbeeld hond",
+    "eyebrow": "Spreken Met Ondersteuning van Gebaren",
+    "searchSubmit": "Zoeken",
+    "contentsTitle": "Gebaren per thema",
+    "picksTitle": "Om mee te beginnen",
+    "aboutTitle": "Wat is SMOG?",
+    "aboutBody": "SMOG staat voor Spreken Met Ondersteuning van Gebaren. Je praat zoals altijd en maakt bij de belangrijkste woorden een gebaar. Zo ondersteunen je handen wat je zegt.",
+    "aboutMemory": "De video's zijn een geheugensteun. Je leert de gebaren in een SMOG-cursus of initiatie en kijkt ze hier na als je er een vergeten bent.",
+    "aboutCourse": "Bekijk waar je een SMOG-cursus kunt volgen",
+    "sponsorTitle": "Word peter of meter van een gebaar",
+    "sponsorBody": "Je naam, en als je wilt je logo, staat een jaar lang aan het einde van de video van je gebaar. We bekijken elke sponsoring voor ze online komt en mailen je zodra ze er staat.",
+    "sponsorAction": "Kies je gebaar"
   },
   "footer": {
-    "madeBy": "Gemaakt met ♡ door zias.be",
-    "love": "liefde"
+    "about": "SMOG staat voor Spreken Met Ondersteuning van Gebaren.",
+    "nav": "Meer van SMOG & Co",
+    "credit": "Gemaakt door zias.be"
   },
   "account": {
     "title": "Je account",
@@ -1029,9 +1041,10 @@
   },
   "gestures": {
     "description": "Zoek SMOG-gebaren op woord of categorie en bekijk ze in video.",
+    "allThemes": "Alle thema's",
     "select": {
       "title": "Kies een gebaar",
-      "description": "Selecteer een gebaar in de lijst om de video en de details te bekijken."
+      "description": "Kies een gebaar in de lijst. De video verschijnt hier."
     }
   },
   "maintenance": {

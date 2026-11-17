@@ -902,11 +902,23 @@
     "intro": "Un aide-mémoire pour votre cours ou initiation SMOG.",
     "description": "SMOG signifie Spreken Met Ondersteuning van Gebaren : des gestes pour soutenir la parole. Retrouvez en vidéo ce que vous avez appris dans un cours ou une initiation SMOG. Enregistrez les gestes dans vos favoris et vos listes.",
     "searchLabel": "Chercher un geste",
-    "searchPlaceholder": "Cherchez un geste, par exemple chien"
+    "searchPlaceholder": "Cherchez un geste, par exemple chien",
+    "eyebrow": "Spreken Met Ondersteuning van Gebaren",
+    "searchSubmit": "Rechercher",
+    "contentsTitle": "Les gestes par thème",
+    "picksTitle": "Quelques gestes pour commencer",
+    "aboutTitle": "Qu’est-ce que SMOG ?",
+    "aboutBody": "SMOG signifie Spreken Met Ondersteuning van Gebaren, en néerlandais parler avec le soutien de gestes. Vous parlez comme d’habitude et faites un geste pour les mots les plus importants. Vos mains soutiennent ce que vous dites.",
+    "aboutMemory": "Les vidéos sont un aide-mémoire. Vous apprenez les gestes dans un cours ou une initiation SMOG, et vous les retrouvez ici quand l’un d’eux vous échappe.",
+    "aboutCourse": "Voir où suivre un cours SMOG",
+    "sponsorTitle": "Devenez parrain ou marraine d’un geste",
+    "sponsorBody": "Votre nom, et votre logo si vous le souhaitez, apparaît pendant un an à la fin de la vidéo de votre geste. Nous vérifions chaque parrainage avant sa mise en ligne et vous écrivons dès qu’il y est.",
+    "sponsorAction": "Choisir votre geste"
   },
   "footer": {
-    "madeBy": "Fait avec ♡ par zias.be",
-    "love": "amour"
+    "about": "SMOG signifie Spreken Met Ondersteuning van Gebaren : parler avec le soutien de gestes.",
+    "nav": "Plus de SMOG & Co",
+    "credit": "Réalisé par zias.be"
   },
   "account": {
     "title": "Votre compte",
@@ -1038,9 +1050,10 @@
   },
   "gestures": {
     "description": "Cherchez les gestes SMOG par mot ou par catégorie et regardez-les en vidéo.",
+    "allThemes": "Tous les thèmes",
     "select": {
       "title": "Choisissez un geste",
-      "description": "Sélectionnez un geste dans la liste pour voir sa vidéo et ses détails."
+      "description": "Choisissez un geste dans la liste, sa vidéo s’affiche ici."
     }
   },
   "maintenance": {
