@@ -1,4 +1,3 @@
-import { CONTACT_EMAIL } from "@smog/config/constants";
 import { Trans, useTranslation } from "@smog/i18n/react";
 import Info from "lucide-react-native/icons/info";
 import X from "lucide-react-native/icons/x";
@@ -19,6 +18,8 @@ export type CourseMessageIndex = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export interface CourseBannerProps extends Omit<ViewProps, "children"> {
   className?: string;
+  /** The address marked `<email>` opens a mail to it (`CONTACT_EMAIL`); plain text without. */
+  contactEmail?: string;
   /** Where the linked phrase goes (`COURSE_URL`). */
   courseUrl: string;
   /** Which message to show (the caller picks one per playthrough). */
@@ -34,6 +35,7 @@ function report(error: unknown): void {
 /** The disclaimer after a gesture video; a polite live region. */
 export function CourseBanner({
   className,
+  contactEmail,
   courseUrl,
   messageIndex,
   onDismiss,
@@ -45,8 +47,10 @@ export function CourseBanner({
     Linking.openURL(courseUrl).catch(report);
   }, [courseUrl]);
   const openMail = useCallback((): void => {
-    Linking.openURL(`mailto:${CONTACT_EMAIL}`).catch(report);
-  }, []);
+    if (contactEmail) {
+      Linking.openURL(`mailto:${contactEmail}`).catch(report);
+    }
+  }, [contactEmail]);
   return (
     <View
       accessibilityLiveRegion="polite"
@@ -77,12 +81,14 @@ export function CourseBanner({
                   onPress={openCourse}
                 />
               ),
-              email: (
+              email: contactEmail ? (
                 <Text
                   accessibilityRole="link"
                   className="font-medium text-primary-strong underline"
                   onPress={openMail}
                 />
+              ) : (
+                <Text />
               ),
             }}
             i18nKey={`gesture.videoComplete.${messageIndex}`}

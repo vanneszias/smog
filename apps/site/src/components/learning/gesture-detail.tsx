@@ -1,6 +1,6 @@
 import type { GestureViewSource } from "@smog/analytics/schema";
 import { useAuthState } from "@smog/auth/react";
-import { COURSE_URL } from "@smog/config/constants";
+import { CONTACT_EMAIL, COURSE_URL } from "@smog/config/constants";
 import {
   useGestureViewed,
   useRememberGesture,
@@ -229,6 +229,7 @@ export function GestureDetailView({
     <div className="flex min-w-0 flex-col gap-6">
       {course.messageIndex ? (
         <CourseBanner
+          contactEmail={CONTACT_EMAIL}
           courseUrl={COURSE_URL}
           messageIndex={course.messageIndex}
           onDismiss={course.dismiss}

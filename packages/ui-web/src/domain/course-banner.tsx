@@ -1,4 +1,3 @@
-import { CONTACT_EMAIL } from "@smog/config/constants";
 import { Trans, useTranslation } from "@smog/i18n/react";
 import { Info, X } from "lucide-react";
 import { type ComponentProps, type ReactNode, useId } from "react";
@@ -24,6 +23,8 @@ export type CourseMessageIndex = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export interface CourseBannerProps
   extends Omit<ComponentProps<"div">, "children" | "title"> {
+  /** The address marked `<email>` opens a mail to it (`CONTACT_EMAIL`); plain text without. */
+  contactEmail?: string;
   /** Where the linked phrase goes (`COURSE_URL`). */
   courseUrl: string;
   /** Which message to show (the caller picks one per playthrough). */
@@ -40,6 +41,7 @@ export interface CourseBannerProps
  */
 export function CourseBanner({
   className,
+  contactEmail,
   courseUrl,
   messageIndex,
   onDismiss,
@@ -70,15 +72,17 @@ export function CourseBanner({
                 target="_blank"
               />
             ),
-            email: (
+            email: contactEmail ? (
               // biome-ignore lint/a11y/useAnchorContent: Trans puts the address inside
               <a
                 className={cn(
                   "rounded-sm font-medium text-primary-strong underline underline-offset-2 hover:no-underline",
                   focusRing
                 )}
-                href={`mailto:${CONTACT_EMAIL}`}
+                href={`mailto:${contactEmail}`}
               />
+            ) : (
+              <span />
             ),
           }}
           i18nKey={`gesture.videoComplete.${messageIndex}`}

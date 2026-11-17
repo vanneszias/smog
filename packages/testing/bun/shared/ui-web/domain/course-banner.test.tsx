@@ -63,14 +63,20 @@ describe("CourseBanner", () => {
         return hasLink;
       });
     const nl = linked("nl");
-    expect(nl).toEqual([1, 2, 3, 6, 7]);
+    expect(nl).toEqual([1, 2, 3, 6]);
     for (const locale of LOCALES) {
       expect(linked(locale)).toEqual(nl);
     }
   });
 
   test("the contact address opens a mail", () => {
-    renderKit(<CourseBanner courseUrl={COURSE_URL} messageIndex={7} />);
+    renderKit(
+      <CourseBanner
+        contactEmail="info@smog.vlaanderen"
+        courseUrl={COURSE_URL}
+        messageIndex={7}
+      />
+    );
     const link = screen.getByRole("link", { name: "info@smog.vlaanderen" });
     expect(link.getAttribute("href")).toBe("mailto:info@smog.vlaanderen");
   });

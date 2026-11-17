@@ -1,6 +1,6 @@
 import { isDefinedError } from "@orpc/client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { COURSE_URL } from "@smog/config/constants";
+import { CONTACT_EMAIL, COURSE_URL } from "@smog/config/constants";
 import {
   gestureViewSource,
   useGesture,
@@ -204,6 +204,7 @@ function GestureDetail({
       />
       {course.messageIndex ? (
         <CourseBanner
+          contactEmail={CONTACT_EMAIL}
           courseUrl={COURSE_URL}
           messageIndex={course.messageIndex}
           onDismiss={course.dismiss}
