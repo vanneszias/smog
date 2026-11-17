@@ -23,12 +23,18 @@ const STYLE_ATTRIBUTE = /\bstyle=/;
 const PAINT = /\b(?:fill|stroke)="([^"]*)"/g;
 
 /**
- * SHA-256 of the app icon the App Store and Play Store already ship. The
- * mobile icon is this file, not a rendering of the artwork; change the hash
- * only together with a deliberate new store icon.
+ * SHA-256 of the wordmark app icon the stores shipped before the hand icon.
+ * Kept byte for byte in `art/previous/` so the owner can go back to it.
  */
-const STORE_ICON_SHA256 =
+const PREVIOUS_STORE_ICON_SHA256 =
   "655c3d08a6a130140ad927b17cf40efa463c46aec20543ee6a93871fc7008042";
+
+/** The brand green as Icon Composer writes it (`srgb:r,g,b,a`, 0 to 1). */
+function iconComposerColour(hex: string): string {
+  const channel = (start: number): string =>
+    (Number.parseInt(hex.slice(start, start + 2), 16) / 255).toFixed(5);
+  return `srgb:${channel(1)},${channel(3)},${channel(5)},1.00000`;
+}
 
 function read(path: string): Uint8Array {
   return new Uint8Array(readFileSync(join(REPO_ROOT, path)));
@@ -56,6 +62,7 @@ const PNG_OUTPUTS: PngExpectation[] = [
   png("apps/site/public/icon-192.png", 192, 192, true),
   png("apps/site/public/icon-512.png", 512, 512, true),
   png("apps/site/public/icon-maskable-512.png", 512, 512, true),
+  png("apps/mobile/assets/icon.png", 1024, 1024, true),
   png("apps/site/public/og.png", 1200, 630, true),
   // The email header logo (`@smog/email`), at 2x for a 40 px tall image.
   png("apps/site/public/brand/email-logo.png", 369, 80, true),
@@ -71,12 +78,20 @@ const PNG_OUTPUTS: PngExpectation[] = [
 ];
 
 /** Drawn in `currentColor`, for inline use or as a CSS mask. */
-const CURRENT_COLOUR_SVGS = [
-  "apps/site/public/brand/logo.svg",
+const HAND_SVGS = [
   "apps/site/public/brand/hand-1.svg",
   "apps/site/public/brand/hand-2.svg",
   "apps/site/public/brand/hand-3.svg",
 ];
+
+const CURRENT_COLOUR_SVGS = [
+  "apps/site/public/brand/logo.svg",
+  "apps/site/public/brand/logo-small.svg",
+  "apps/site/public/brand/mark.svg",
+  ...HAND_SVGS,
+];
+
+const PATH_TAG = /<path\b[^>]*>/g;
 
 const FIXED_COLOUR_SVGS = [
   { colours: [GREEN, WHITE], path: "apps/site/public/icon.svg" },
@@ -157,11 +172,35 @@ describe("SVG outputs", () => {
     "%s takes its colour from currentColor",
     (path) => {
       const source = readFileSync(join(REPO_ROOT, path), "utf8");
-      expect(source).toContain('fill="currentColor"');
       expect(source).not.toMatch(HEX_COLOUR);
       expect(source).not.toMatch(STYLE_ATTRIBUTE);
-      const paints = [...source.matchAll(PAINT)].map((match) => match[1]);
-      expect(new Set(paints)).toEqual(new Set(["currentColor"]));
+      const paints = new Set(
+        [...source.matchAll(PAINT)].map((match) => match[1])
+      );
+      expect(paints.has("currentColor")).toBe(true);
+      paints.delete("none");
+      expect(paints).toEqual(new Set(["currentColor"]));
+    }
+  );
+
+  it.each(HAND_SVGS)(
+    "%s is one constant stroke that can draw itself",
+    (path) => {
+      const source = readFileSync(join(REPO_ROOT, path), "utf8");
+      const root = readXmlRoot(source);
+      expect(root.get("fill")).toBe("none");
+      expect(root.get("stroke")).toBe("currentColor");
+      expect(root.get("stroke-linecap")).toBe("round");
+      expect(root.get("stroke-linejoin")).toBe("round");
+      expect(Number(root.get("stroke-width"))).toBeGreaterThan(0);
+      const paths = source.match(PATH_TAG) ?? [];
+      expect(paths.length).toBeGreaterThan(1);
+      for (const tag of paths) {
+        expect(tag).toContain('pathLength="1"');
+        expect(tag).toContain('vector-effect="non-scaling-stroke"');
+        expect(tag).not.toContain("stroke-width");
+        expect(tag).not.toContain("fill=");
+      }
     }
   );
 
@@ -177,20 +216,18 @@ describe("SVG outputs", () => {
   );
 });
 
-describe("store icon", () => {
-  it("is the icon the stores already ship, byte for byte", () => {
-    for (const path of [
-      "apps/mobile/assets/icon.png",
-      "packages/brand/src/art/icon.png",
-    ]) {
-      const hash = createHash("sha256").update(read(path)).digest("hex");
-      expect(hash, path).toBe(STORE_ICON_SHA256);
-    }
-  });
-
-  it("is a 1024 px square", () => {
-    const header = readPngHeader(read("apps/mobile/assets/icon.png"));
-    expect([header.width, header.height]).toEqual([1024, 1024]);
+describe("previous store icon", () => {
+  it("is kept byte for byte so the owner can go back to it", () => {
+    const hash = createHash("sha256")
+      .update(read("packages/brand/src/art/previous/icon-wordmark.png"))
+      .digest("hex");
+    expect(hash).toBe(PREVIOUS_STORE_ICON_SHA256);
+    expect(
+      readFileSync(
+        join(ART_DIR, "previous/smog-wordmark.icon/icon.json"),
+        "utf8"
+      )
+    ).toContain('"image-name": "logo.svg"');
   });
 });
 
@@ -212,6 +249,25 @@ describe("iOS layered icon", () => {
       ).toBe(true);
     }
   });
+
+  it("fills with the brand green and draws the hand layer", () => {
+    const icon = JSON.parse(
+      readFileSync(join(source, "icon.json"), "utf8")
+    ) as {
+      fill: { "linear-gradient": string[] };
+      groups: { layers: { "image-name": string }[] }[];
+    };
+    expect(new Set(icon.fill["linear-gradient"])).toEqual(
+      new Set([iconComposerColour(GREEN)])
+    );
+    const images = icon.groups.flatMap((group) =>
+      group.layers.map((layer) => layer["image-name"])
+    );
+    expect(images).toEqual(["hand.svg"]);
+    expect(
+      filesUnder(join(source, "Assets")).map((path) => relative(source, path))
+    ).toEqual(["Assets/hand.svg"]);
+  });
 });
 
 describe("svg module", () => {
@@ -221,11 +277,16 @@ describe("svg module", () => {
     );
   });
 
-  it("exports the logo, the stacked mark and three hands in currentColor", async () => {
-    const { handSvgs, logoStackedSvg, logoSvg } = await import(
-      "../../../../brand/src/svg.gen"
-    );
-    for (const svg of [logoSvg, logoStackedSvg, ...handSvgs]) {
+  it("exports the logos, the small mark and three hands in currentColor", async () => {
+    const { handSvgs, logoSmallSvg, logoStackedSvg, logoSvg, markSvg } =
+      await import("../../../../brand/src/svg.gen");
+    for (const svg of [
+      logoSvg,
+      logoStackedSvg,
+      logoSmallSvg,
+      markSvg,
+      ...handSvgs,
+    ]) {
       expect(svg.startsWith("<svg")).toBe(true);
       expect(svg).toContain("currentColor");
     }
