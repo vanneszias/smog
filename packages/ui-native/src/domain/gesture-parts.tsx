@@ -54,7 +54,7 @@ export function GestureThumbnail({
     <Image
       accessibilityElementsHidden
       accessibilityIgnoresInvertColors
-      className={cn("bg-surface-sunken", className)}
+      className={cn("bg-sidebar", className)}
       importantForAccessibility="no"
       resizeMode="cover"
       source={{ uri: muxThumbnailUrl(playbackId, { width }) }}
