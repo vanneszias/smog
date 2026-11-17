@@ -22,6 +22,7 @@ export {
   createNearEndTracker,
   END_CARD_SECONDS,
   endCardStart,
+  GESTURE_STILL_SECONDS,
   isEndCardVisible,
   LOGO_KEY_PREFIX,
   type MuxThumbnailOptions,

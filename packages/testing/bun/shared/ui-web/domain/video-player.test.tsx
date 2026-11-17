@@ -28,6 +28,9 @@ mock.module("@mux/mux-player-react", () => ({
 const { VideoPlayer } = await import(
   "../../../../../ui-web/src/domain/video-player"
 );
+const { titleFontSize } = await import(
+  "../../../../../ui-web/src/domain/gesture-title"
+);
 const { renderToString } = await import("react-dom/server");
 
 function tick(currentTime: number, duration = 20): void {
@@ -135,7 +138,7 @@ describe("VideoPlayer", () => {
     );
     await screen.findByTestId("mux");
     const overlay = container.querySelector('[data-slot="video-name-overlay"]');
-    expect(overlay?.textContent).toBe("Hallo");
+    expect(overlay?.textContent?.trim()).toBe("Hallo");
     // Hidden from the accessibility tree: the name is not read twice.
     expect(overlay?.getAttribute("aria-hidden")).toBe("true");
     expect(screen.getAllByText("Hallo")).toHaveLength(1);
@@ -144,19 +147,35 @@ describe("VideoPlayer", () => {
     expect(classesOf(overlay)).toContain("pointer-events-none");
   });
 
-  test("the overlay is readable on any frame (a solid green pill) and fades in unless motion is reduced", async () => {
+  test("the overlay is the video's own title: the pointing hand and the name, white, sized to the frame, fading in unless motion is reduced", async () => {
     const { container } = renderKit(
       <VideoPlayer nameOverlay="Hallo" playbackId="pb-1" />
     );
     await screen.findByTestId("mux");
-    const pill = container.querySelector(
-      '[data-slot="video-name-overlay"] span'
-    );
-    const classes = classesOf(pill);
-    expect(classes).toContain("bg-sidebar");
-    expect(classes).toContain("text-sidebar-foreground");
+    const overlay = container.querySelector('[data-slot="video-name-overlay"]');
+    // The frame is the size container: every length follows the frame.
+    expect(classesOf(overlay)).toContain("@container");
+    const title = container.querySelector('[data-slot="video-name-title"]');
+    const classes = classesOf(title);
+    expect(classes).toContain("text-white");
+    expect(classes).toContain("font-normal");
+    expect(classes).toContain("top-[20.7%]");
+    expect(classes).not.toContain("bg-sidebar");
     expect(classes).toContain("animate-fade-in");
     expect(classes).toContain("motion-reduce:animate-none");
+    // Its size (`titleFontSize`, tested below) is a container unit the
+    // test DOM does not parse.
+    const hand = title?.querySelector('[data-slot="gesture-title-hand"]');
+    expect(hand?.getAttribute("aria-hidden")).toBe("true");
+    expect(hand?.querySelector("svg")).not.toBeNull();
+  });
+
+  test("a long name steps down so its longest word fits the frame", () => {
+    expect(titleFontSize("Aap")).toBe("10.7cqw");
+    expect(titleFontSize("Goedemorgen")).toBe("10.58cqw");
+    expect(titleFontSize("Verkeersbord")).toBe("9.7cqw");
+    // Words wrap at spaces: only the longest word has to fit one line.
+    expect(titleFontSize("Tot straks")).toBe("10.7cqw");
   });
 
   test("shows no overlay without a name (a burned-in video, or the viewer hid it)", async () => {
@@ -176,7 +195,10 @@ describe("VideoPlayer", () => {
     const card = (container: HTMLElement): Element | null =>
       container.querySelector('[data-slot="sponsor-end-card"]');
 
-    test("shows only in the last seconds, timed from the duration, and hides again after a seek back", async () => {
+    const state = (container: HTMLElement): string | undefined =>
+      (card(container) as HTMLElement | null)?.dataset.state;
+
+    test("shows only in the last seconds, timed from the duration, and leaves again after a seek back", async () => {
       const { container } = renderKit(
         <VideoPlayer
           endCard={{ logoSrc: "/api/sponsor-logos/l1", name: "Bakkerij Jan" }}
@@ -184,17 +206,19 @@ describe("VideoPlayer", () => {
         />
       );
       await screen.findByTestId("mux");
-      expect(card(container)).toBeNull();
+      // Mounted from the start, hidden: it can fade out instead of vanishing.
+      expect(state(container)).toBe("hidden");
       tick(10, 20);
-      expect(card(container)).toBeNull();
+      expect(state(container)).toBe("hidden");
       tick(15.9, 20);
-      expect(card(container)).toBeNull();
+      expect(state(container)).toBe("hidden");
       tick(16, 20);
-      expect(card(container)).not.toBeNull();
+      expect(state(container)).toBe("shown");
       tick(19.9, 20);
-      expect(card(container)).not.toBeNull();
+      expect(state(container)).toBe("shown");
       tick(2, 20);
-      expect(card(container)).toBeNull();
+      expect(state(container)).toBe("hidden");
+      expect(card(container)).not.toBeNull();
     });
 
     test("a short video shows it for its last half at most", async () => {
@@ -203,9 +227,9 @@ describe("VideoPlayer", () => {
       );
       await screen.findByTestId("mux");
       tick(2.9, 6);
-      expect(card(container)).toBeNull();
+      expect(state(container)).toBe("hidden");
       tick(3, 6);
-      expect(card(container)).not.toBeNull();
+      expect(state(container)).toBe("shown");
     });
 
     test("waits for a known duration", async () => {
@@ -215,7 +239,7 @@ describe("VideoPlayer", () => {
       await screen.findByTestId("mux");
       tick(1, Number.NaN);
       tick(5, 0);
-      expect(card(container)).toBeNull();
+      expect(state(container)).toBe("hidden");
     });
 
     test("says the message in the viewer's language, the name as typed, and the logo", async () => {
@@ -232,6 +256,7 @@ describe("VideoPlayer", () => {
       await screen.findByTestId("mux");
       tick(18);
       const shown = card(fr.container);
+      expect(shown?.getAttribute("data-state")).toBe("shown");
       expect(shown?.textContent).toBe("Rendu possible grâce àBakkerij JAN nv");
       expect(shown?.getAttribute("aria-hidden")).toBe("true");
       expect(classesOf(shown)).toContain("pointer-events-none");
@@ -250,16 +275,24 @@ describe("VideoPlayer", () => {
       expect(card(nl.container)?.querySelector("img")).toBeNull();
     });
 
-    test("fades in unless motion is reduced", async () => {
+    test("part of the film: a deep green band that rises in, and fades out faster, unless motion is reduced", async () => {
       const { container } = renderKit(
         <VideoPlayer endCard={{ name: "Jan" }} playbackId="pb-1" />
       );
       await screen.findByTestId("mux");
       tick(19);
-      const classes = classesOf(card(container)?.firstElementChild ?? null);
-      expect(classes).toContain("animate-fade-in");
-      expect(classes).toContain("motion-reduce:animate-none");
-      expect(classes).toContain("bg-card");
+      const classes = classesOf(card(container));
+      expect(classes).toContain("from-sidebar");
+      expect(classes).toContain("bg-linear-to-t");
+      expect(classes).not.toContain("bg-card");
+      expect(classes).toContain("duration-slow");
+      expect(classes).toContain("ease-enter");
+      expect(classes).toContain("data-[state=hidden]:opacity-0");
+      expect(classes).toContain("data-[state=hidden]:invisible");
+      expect(classes).toContain("data-[state=hidden]:duration-normal");
+      expect(classes).toContain("motion-reduce:transition-none");
+      // Above the player's control bar.
+      expect(classes).toContain("pb-16");
     });
 
     test("shows no card without an end card (no sponsor, or a rendered video)", async () => {
@@ -270,6 +303,19 @@ describe("VideoPlayer", () => {
     });
   });
 
+  test("the skin: no seeks, volume slider or picture-in-picture, a 1x/0.5x speed toggle, the brand's track", async () => {
+    renderKit(<VideoPlayer playbackId="pb-1" />);
+    await screen.findByTestId("mux");
+    const style = last.style as Record<string, string>;
+    expect(style["--seek-backward-button"]).toBe("none");
+    expect(style["--seek-forward-button"]).toBe("none");
+    expect(style["--volume-range"]).toBe("none");
+    expect(style["--pip-button"]).toBe("none");
+    expect(style["--media-font-family"]).toBe("var(--font-sans)");
+    expect(style["--media-range-bar-color"]).toBe("var(--color-primary)");
+    expect(last.playbackRates).toEqual([1, 0.5]);
+  });
+
   test("the server render is the poster, without the player", () => {
     const html = renderToString(
       <I18nextProvider i18n={createI18n("en")}>
@@ -277,7 +323,10 @@ describe("VideoPlayer", () => {
       </I18nextProvider>
     );
     expect(html).toContain('data-slot="video-poster"');
-    expect(html).toContain("https://image.mux.com/pb-1/thumbnail.webp");
+    // One second in: the title and the movement, never the closing slate.
+    expect(html).toContain(
+      "https://image.mux.com/pb-1/thumbnail.webp?width=720&amp;time=1"
+    );
     expect(html).not.toContain("data-testid");
     expect(last).toEqual({});
   });

@@ -11,7 +11,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "./empty";
-import { HandIllustration } from "./hand-illustration";
+import { HAND, HandIllustration } from "./hand-illustration";
 
 export interface ErrorStateProps
   extends Omit<ComponentProps<"section">, "title"> {
@@ -25,8 +25,11 @@ export interface ErrorStateProps
 }
 
 /**
- * A data view failed to load: the registry `empty` parts with a brand hand,
- * title, description and retry (`states.error.*` by default).
+ * A data view failed to load: the registry `empty` parts with the open
+ * palm in the brand green on a pale red disc (an error you did not cause:
+ * the disc and the title say so, the colour is not the only signal; the
+ * same mark on web and native), title, description and retry
+ * (`states.error.*` by default).
  */
 export function ErrorState({
   className,
@@ -48,11 +51,17 @@ export function ErrorState({
       <Empty className="py-10">
         <EmptyHeader>
           <EmptyMedia>
-            <HandIllustration
-              className="h-20 text-danger-strong"
-              data-slot="error-illustration"
-              hand={2}
-            />
+            <span
+              aria-hidden="true"
+              className="grid size-24 place-items-center rounded-full bg-danger-subtle"
+              data-slot="error-disc"
+            >
+              <HandIllustration
+                className="h-12 text-primary"
+                data-slot="error-illustration"
+                hand={HAND.welcome}
+              />
+            </span>
           </EmptyMedia>
           <EmptyTitle level={level}>
             {title ?? t("states.error.title")}

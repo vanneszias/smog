@@ -99,4 +99,46 @@ describe("empty states", () => {
       unmount();
     }
   });
+
+  test("each hand keeps its meaning: the open palm for nothing yet, pointing across for search", () => {
+    const cases = [
+      [FavoritesEmptyState, "2"],
+      [ListsEmptyState, "2"],
+      [ListItemsEmptyState, "2"],
+      [NoResultsEmptyState, "1"],
+      [SearchIdleEmptyState, "1"],
+    ] as const;
+    for (const [Component, hand] of cases) {
+      const { container, unmount } = renderKit(<Component />);
+      expect(
+        container
+          .querySelector('[data-slot="empty-illustration"]')
+          ?.getAttribute("data-hand")
+      ).toBe(hand);
+      unmount();
+    }
+  });
+
+  test("no results is never a dead end: clear the search, and near matches when there are some", async () => {
+    const onClear = mock();
+    renderKit(
+      <NoResultsEmptyState
+        onClear={onClear}
+        suggestions={[
+          { href: "/gestures/hond", name: "Hond" },
+          { href: "/gestures/hondje", name: "Hondje" },
+        ]}
+      />
+    );
+    const near = screen.getByRole("navigation", {
+      name: "Did you mean one of these gestures?",
+    });
+    expect(
+      within(near).getByRole("link", { name: "Hond" }).getAttribute("href")
+    ).toBe("/gestures/hond");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Clear the search" })
+    );
+    expect(onClear).toHaveBeenCalledTimes(1);
+  });
 });
