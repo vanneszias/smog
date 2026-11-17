@@ -2,6 +2,7 @@ import { useTranslation } from "@smog/i18n/react";
 import { type ReactElement, type ReactNode, useCallback } from "react";
 import { View } from "react-native";
 import { useControllableState } from "../lib/controllable";
+import { hapticDanger } from "../lib/haptics";
 import { withPress } from "../lib/overlay";
 import { Button } from "./button";
 import { ModalCard } from "./dialog";
@@ -67,10 +68,14 @@ export function AlertDialog({
   }, [setOpen]);
   const confirm = useCallback((): void => {
     // As Radix's Action: confirming also closes it (a controlled caller can
-    // keep it open while `loading` by ignoring that onOpenChange).
+    // keep it open while `loading` by ignoring that onOpenChange). The
+    // warning haptic belongs to this moment, not to opening the dialog.
+    if (tone === "danger") {
+      hapticDanger();
+    }
     onConfirm();
     setOpen(false);
-  }, [onConfirm, setOpen]);
+  }, [onConfirm, setOpen, tone]);
   return (
     <>
       {children ? withPress(children, show) : null}

@@ -1,7 +1,7 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import { tokens } from "@smog/styles/tokens";
 import { act, fireEvent, screen, within } from "@testing-library/react-native";
-import { notificationAsync } from "expo-haptics";
+import { NotificationFeedbackType, notificationAsync } from "expo-haptics";
 import { colorScheme } from "nativewind";
 import { type ReactElement, useCallback } from "react";
 import { Text } from "react-native";
@@ -113,11 +113,13 @@ describe("AlertDialog", () => {
     );
     await fireEvent.press(screen.getByRole("button", { name: "Delete" }));
     expect(screen.getByTestId("alert").props.accessibilityRole).toBe("alert");
+    // Opening the confirmation is not the destructive moment.
+    expect(notificationAsync).not.toHaveBeenCalled();
     await fireEvent.press(
       screen.getByRole("button", { name: t("kit.confirm") })
     );
     expect(onConfirm).toHaveBeenCalledTimes(1);
-    expect(notificationAsync).toHaveBeenCalled();
+    expect(notificationAsync).toHaveBeenCalledTimes(1);
   });
 
   it("cancels without confirming", async () => {
@@ -237,7 +239,31 @@ function DangerToastButton(): ReactElement {
   return <Button onPress={fail}>Fail</Button>;
 }
 
+function SuccessToastButton(): ReactElement {
+  const { toast } = useToast();
+  const save = useCallback((): void => {
+    toast({ title: "Saved", variant: "success" });
+  }, [toast]);
+  return <Button onPress={save}>Save</Button>;
+}
+
 describe("Toast", () => {
+  it("a success toast plays the success haptic as it appears, others none", async () => {
+    await renderKit(
+      <>
+        <ToastButton />
+        <SuccessToastButton />
+      </>
+    );
+    await fireEvent.press(screen.getByRole("button", { name: "Show" }));
+    expect(notificationAsync).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+    expect(notificationAsync).toHaveBeenCalledTimes(1);
+    expect(notificationAsync).toHaveBeenCalledWith(
+      NotificationFeedbackType.Success
+    );
+  });
+
   it("draws above an open dialog, once", async () => {
     await renderKit(
       <Dialog open>

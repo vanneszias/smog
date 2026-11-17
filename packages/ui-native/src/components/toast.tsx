@@ -24,6 +24,7 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { hapticSuccess } from "../lib/haptics";
 import { ICON_SIZE, textOf } from "../lib/icon";
 import { easeEnter, MOTION_MS } from "../lib/motion";
 import { useColor, useShadow, useThemeVars } from "../lib/theme";
@@ -127,6 +128,10 @@ export function ToastProvider({
           dismiss(id);
         }, options.duration ?? DEFAULT_DURATION)
       );
+      // A success is felt as it appears (a meaningful moment, not every toast).
+      if (options.variant === "success") {
+        hapticSuccess();
+      }
       // Read once on iOS; Android uses the live region.
       AccessibilityInfo.announceForAccessibility(
         [textOf(options.title), textOf(options.description)]
