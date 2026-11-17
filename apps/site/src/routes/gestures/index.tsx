@@ -281,7 +281,10 @@ function Gestures(): ReactNode {
 
   return (
     <Page>
-      <PageHeader title={t("nav.gestures")} />
+      <PageHeader
+        description={t("gestures.description")}
+        title={t("nav.gestures")}
+      />
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-start gap-2">
           <div className="min-w-full flex-1 sm:min-w-0">

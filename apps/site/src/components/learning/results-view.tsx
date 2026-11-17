@@ -10,6 +10,7 @@ import {
 } from "@smog/ui-web";
 import { Link, useSearch } from "@tanstack/react-router";
 import { type ReactNode, useCallback, useMemo } from "react";
+import { useCatalogDisplay } from "./catalog-display";
 import { GestureRowsSkeleton, LinkedGestureCard } from "./gesture-cards";
 import { gestureHref } from "./links";
 import { type Hearts, useHeart } from "./use-hearts";
@@ -69,12 +70,13 @@ function ResultRow({
   selected: boolean;
 }): ReactNode {
   const heart = useHeart(hearts, gesture.id);
+  const display = useCatalogDisplay();
   return (
     <GestureRow
       aria-current={selected ? "true" : undefined}
       className={selected ? "bg-primary-subtle" : undefined}
       favorite={heart.active}
-      gesture={gesture}
+      gesture={display.gesture(gesture)}
       href={gestureHref(gesture.slug)}
       linkComponent={SelectLink}
       onFavoriteToggle={heart.onToggle}
@@ -121,7 +123,10 @@ function ResultRows({
   }
   return (
     <section className="flex flex-col gap-2">
-      <p className="text-body-sm text-muted-foreground" role="status">
+      <p
+        className="text-body-sm text-muted-foreground tabular-nums"
+        role="status"
+      >
         {t("search.resultCount", { count: items.length })}
       </p>
       <ul className="flex flex-col gap-1">
