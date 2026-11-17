@@ -198,6 +198,14 @@ export const styles = {
     lineHeight: px(fontSize.body.lineHeight),
     margin: `${px(spacing["1"])} 0`,
   },
+  /** The approved tagline under the logo, in the header's secondary text. */
+  tagline: {
+    color: color.sidebarForegroundMuted,
+    fontSize: px(fontSize["body-sm"].size),
+    lineHeight: px(fontSize["body-sm"].lineHeight),
+    margin: `${px(spacing["3"])} 0 0`,
+    textAlign: "center",
+  },
   text: {
     color: color.foreground,
     fontSize: px(fontSize.body.size),
