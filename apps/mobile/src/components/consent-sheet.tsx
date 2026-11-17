@@ -5,8 +5,10 @@ import {
 } from "@smog/account/client";
 import { useTranslation } from "@smog/i18n/react";
 import { ConsentBanner, Switch, useToast } from "@smog/ui-native";
+import { usePathname } from "expo-router";
 import { type ReactElement, useCallback, useState } from "react";
 import { Linking } from "react-native";
+import { useConsentMoment } from "@/consent-moment";
 import { privacyUrl } from "@/lib/site";
 
 /** Opens the site's privacy policy in the browser. */
@@ -26,14 +28,18 @@ function useSaveFailed(): () => void {
 }
 
 /**
- * The consent sheet (spec §10, inventory P-06): shown on launch while the
- * decision is open (`useConsentPrompt`), after the guest import sheet.
+ * The consent sheet (spec §10, inventory P-06): shown while the decision is
+ * open (`useConsentPrompt`), after the guest import sheet, once a gesture
+ * video has been watched on this device (`useConsentMoment`) and not over
+ * the gesture itself: the first launch opens on Home, not on a question.
  * Dismissing it leaves the decision open and hides it until the next
  * launch; nothing is sent meanwhile.
  */
 export function ConsentSheet(): ReactElement | null {
   const onSaveFailed = useSaveFailed();
   const prompt = useConsentPrompt({ onSaveFailed });
+  const { reached } = useConsentMoment();
+  const onGesture = usePathname().startsWith("/gestures/");
   const [dismissed, setDismissed] = useState(false);
   const { allow, decline } = prompt;
   const onAllow = useCallback(() => {
@@ -43,7 +49,7 @@ export function ConsentSheet(): ReactElement | null {
     decline();
   }, [decline]);
   const dismiss = useCallback(() => setDismissed(true), []);
-  if (!prompt.open || dismissed) {
+  if (!(prompt.open && reached) || onGesture || dismissed) {
     return null;
   }
   return (
