@@ -105,7 +105,7 @@ export interface SeoOptions {
   ogTitle?: string;
   /** The canonical path, e.g. `/gestures/hond`. */
   path: string;
-  /** The page's own title; the app name is appended (none on the home page). */
+  /** The page's own title; the app name is appended (only the app name without one). */
   title?: string;
   /** `og:type`. */
   type?: "video.other" | "website";
