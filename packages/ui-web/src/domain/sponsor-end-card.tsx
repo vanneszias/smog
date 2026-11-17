@@ -8,48 +8,71 @@ export interface SponsorEndCardProps
   logoSrc?: string | null | undefined;
   /** The sponsor's name, as typed (never translated or reformatted). */
   name: string;
+  /**
+   * Whether it is on screen (the player's last seconds). It stays mounted
+   * while hidden, so it can leave with a fade instead of vanishing when the
+   * video loops or is seeked back. Shown by default (the sponsor preview).
+   */
+  shown?: boolean;
 }
 
 /**
  * The sponsor message over the last seconds of a gesture video (phase 10b
- * ruling 9): "Made possible by" in the viewer's language (the catalogue),
- * the sponsor's name as typed and the logo. It is decoration (`aria-hidden`):
- * the gesture page states the credit in text (the sponsor card), so a
- * screen reader never gets it twice. It fades in, and does not move or fade
- * when the system asks for reduced motion. Taps go through it to the
- * player's controls. A solid `card` surface, so the text reads on any frame.
+ * ruling 9), drawn as part of the film: a deep green band rising from the
+ * bottom of the frame (the `sidebar` green, solid behind the text, so the
+ * pairs `sidebar-foreground` and `sidebar-foreground-muted` on `sidebar`
+ * hold on any frame), "Made possible by" in the viewer's language, the
+ * sponsor's name as typed and the logo on a light plate. The caller places
+ * it at the bottom of the frame.
+ *
+ * It is decoration (`aria-hidden`): the gesture page states the credit in
+ * text (the sponsor card), so a screen reader never gets it twice. Taps go
+ * through it to the player's controls. It rises 8 px and fades in over
+ * `duration-slow` with `ease-enter`, and leaves faster (`duration-normal`,
+ * fade only); under reduced motion it appears and goes at once.
  */
 export function SponsorEndCard({
   className,
   logoSrc,
   name,
+  shown = true,
   ...props
 }: SponsorEndCardProps): ReactNode {
   const { t } = useTranslation();
   return (
     <div
       aria-hidden="true"
-      className={cn("pointer-events-none flex justify-center", className)}
+      className={cn(
+        "@container pointer-events-none bg-linear-to-t from-70% from-sidebar to-transparent",
+        "transition-[opacity,translate,visibility] duration-slow ease-enter motion-reduce:transition-none",
+        "data-[state=hidden]:invisible data-[state=hidden]:translate-y-2 data-[state=hidden]:opacity-0 data-[state=hidden]:duration-normal data-[state=hidden]:ease-standard",
+        className
+      )}
       data-slot="sponsor-end-card"
+      data-state={shown ? "shown" : "hidden"}
       {...props}
     >
-      <div className="flex max-w-full animate-fade-in items-center gap-3 rounded-xl bg-card px-4 py-3 text-card-foreground shadow-2 motion-reduce:animate-none">
+      <div className="flex items-center gap-3 px-[6cqw] pt-[18cqw] pb-4">
         {logoSrc ? (
-          <img
-            alt=""
-            className="size-12 shrink-0 rounded-md object-contain"
-            data-slot="sponsor-end-card-logo"
-            decoding="async"
-            height={48}
-            src={logoSrc}
-            width={48}
-          />
+          <span className="inline-flex shrink-0 rounded-md bg-sidebar-foreground p-1.5">
+            <img
+              alt=""
+              className="size-10 object-contain"
+              data-slot="sponsor-end-card-logo"
+              decoding="async"
+              height={40}
+              src={logoSrc}
+              width={40}
+            />
+          </span>
         ) : null}
         <p className="flex min-w-0 flex-col text-left">
-          <span className="text-body-sm text-muted-foreground">
+          <span className="text-body-sm text-sidebar-foreground-muted">
             {t("endCard.message")}
           </span>
-          <span className="wrap-anywhere font-semibold text-body">{name}</span>
+          <span className="wrap-anywhere font-semibold text-sidebar-foreground text-title-3">
+            {name}
+          </span>
         </p>
       </div>
     </div>

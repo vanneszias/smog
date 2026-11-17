@@ -35,7 +35,7 @@ export function SponsorCta({ gesture, level }: SponsorCtaProps): ReactNode {
         <Text tone="muted">
           {t("gesture.sponsorCta.available.description")}
         </Text>
-        <Button asChild className="self-start">
+        <Button asChild className="self-start" variant="action">
           <Link search={{ gesture: gesture.slug }} to="/sponsor">
             {t("gesture.sponsorCta.available.action")}
           </Link>

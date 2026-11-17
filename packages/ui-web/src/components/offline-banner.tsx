@@ -27,6 +27,8 @@ export function useOnline(): boolean {
 
 export interface OfflineBannerProps
   extends Omit<ComponentProps<"div">, "children"> {
+  /** What still works on this surface (`states.offline.description` by default). */
+  description?: ReactNode;
   /** Controlled connectivity (native passes NetInfo); browser events when omitted. */
   online?: boolean;
 }
@@ -34,6 +36,7 @@ export interface OfflineBannerProps
 /** Shown while the network is lost (`states.offline.*`); a polite status message. */
 export function OfflineBanner({
   className,
+  description,
   online,
   ...props
 }: OfflineBannerProps): ReactNode {
@@ -45,7 +48,7 @@ export function OfflineBanner({
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-md bg-warning-subtle px-4 py-3 text-warning-strong",
+        "flex items-start gap-3 rounded-card bg-warning-subtle px-4 py-3 text-warning-strong",
         className
       )}
       role="status"
@@ -55,7 +58,7 @@ export function OfflineBanner({
       <p className="flex flex-col text-body-sm">
         <span className="font-semibold">{t("states.offline.title")}</span>
         <span className="text-foreground">
-          {t("states.offline.description")}
+          {description ?? t("states.offline.description")}
         </span>
       </p>
     </div>

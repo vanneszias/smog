@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { RotateCw } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { OfflineNotice } from "@/components/offline-notice";
 import { StatusPage } from "@/components/status-page";
 
 /** The page column: the header's width and gutters (spec §16: 16/24/32). */
@@ -25,6 +26,7 @@ export function Page({
         className
       )}
     >
+      <OfflineNotice />
       {children}
     </div>
   );

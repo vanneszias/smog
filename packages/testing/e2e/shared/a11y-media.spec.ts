@@ -29,7 +29,8 @@ import { mp3Bytes } from "../../support/translation/fixtures";
 
 const NAME = `Zz media ${letters(8)}`;
 const OVERLAY = '[data-slot="video-name-overlay"]';
-const PILL = `${OVERLAY} span`;
+/** The title inside the overlay (the pointing hand and the name). */
+const PILL = `${OVERLAY} [data-slot="video-name-title"]`;
 
 let made: MadeGesture | null = null;
 

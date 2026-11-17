@@ -197,7 +197,9 @@ describe("the payment's return page (S-14)", () => {
       })
     ).toBeDefined();
     expect(
-      screen.getByText("Your name stays in the video until 12 May 2028.")
+      screen.getByText(
+        "Your name stays at the end of the video until 12 May 2028."
+      )
     ).toBeDefined();
   });
 

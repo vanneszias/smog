@@ -68,8 +68,8 @@ describe("the gesture's sponsor card on mobile (L-17, ruling 13)", () => {
       routes: { "sponsorships/availability": availability({}) },
     });
     const cta = await card();
-    expect(cta.getByText("Sponsor this gesture")).toBeOnTheScreen();
-    fireEvent.press(cta.getByRole("button", { name: "Sponsor now" }));
+    expect(cta.getByText("Become this gesture's sponsor")).toBeOnTheScreen();
+    fireEvent.press(cta.getByRole("button", { name: "Sponsor this gesture" }));
     expect(openURL).toHaveBeenCalledWith(
       expect.stringMatching(SPONSOR_GESTURE_HOND)
     );
@@ -91,7 +91,9 @@ describe("the gesture's sponsor card on mobile (L-17, ruling 13)", () => {
     );
     await screen.findByText("Het gebaar voor hond.");
     expect(screen.queryByTestId("sponsor-cta")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Sponsor now" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Sponsor this gesture" })
+    ).toBeNull();
   });
 
   it.each([
@@ -121,7 +123,7 @@ describe("the gesture's sponsor card on mobile (L-17, ruling 13)", () => {
       // On iOS without the link, "available again from" would still point
       // at a purchase outside the app (guideline 3.1.1 anti-steering).
       const date = cta.queryByText(
-        "It will be available for sponsoring again from 12 May 2027."
+        "You can sponsor this gesture again from 12 May 2027."
       );
       expect(date !== null).toBe(dated);
     }
@@ -137,7 +139,7 @@ describe("the gesture's sponsor card on mobile (L-17, ruling 13)", () => {
     const cta = await card();
     expect(
       cta.getByText(
-        "This gesture has already been chosen for sponsorship and is not available right now."
+        "Someone is already sponsoring this gesture. Feel free to choose another one."
       )
     ).toBeOnTheScreen();
     expect(cta.queryByRole("button")).toBeNull();

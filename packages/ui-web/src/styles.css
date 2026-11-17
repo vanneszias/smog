@@ -110,6 +110,21 @@
   --animate-progress: progress calc(var(--duration-slow) * 4) var(--ease-move)
     infinite;
 
+  /*
+   * A wizard's next step slides in from the side it comes from: set
+   * `--step-dx` to 16px going forward, -16px going back.
+   */
+  --animate-step-in: step-in var(--duration-normal) var(--ease-enter) both;
+  /*
+   * The paid moment (sponsor success): the mark settles, its check draws
+   * itself (`pathLength="1"`, `stroke-dasharray: 1`), then "what happens
+   * next" rises. Delays are zeroed with the durations under reduced motion,
+   * and the start states live only in the keyframes.
+   */
+  --animate-success-in: success-in var(--duration-slow) var(--ease-enter) both;
+  --animate-draw-in: draw-in var(--duration-slow) var(--ease-enter) 160ms both;
+  --animate-rise-in: rise-in var(--duration-slow) var(--ease-enter) 360ms both;
+
   /* Accordion: the content height is measured by Radix. */
   --animate-accordion-down: accordion-down var(--duration-normal)
     var(--ease-enter);
@@ -209,6 +224,29 @@
       transform: translateX(-100%);
     }
   }
+  @keyframes step-in {
+    from {
+      opacity: 0;
+      translate: var(--step-dx, 16px) 0;
+    }
+  }
+  @keyframes success-in {
+    from {
+      opacity: 0;
+      scale: 0.8;
+    }
+  }
+  @keyframes draw-in {
+    from {
+      stroke-dashoffset: 1;
+    }
+  }
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      translate: 0 8px;
+    }
+  }
   @keyframes favorite-pop {
     0% {
       scale: 0.9;
@@ -248,4 +286,34 @@
 /* SearchField draws its own clear button. */
 [data-slot="search-field"]::-webkit-search-cancel-button {
   appearance: none;
+}
+
+/*
+ * The video player's centre play button (VideoPlayer, DESIGN.md "Video
+ * player"): the orange "do it" disc under dark ink on every frame size, the
+ * same mark as the play badge on gesture cards. mux-player exports its
+ * buttons as parts; an outer `::part` rule wins over its theme's own `#000`
+ * disc. 64 px keeps it well above the 44 px target on a phone.
+ */
+mux-player::part(center play button) {
+  --media-control-background: var(--color-highlight);
+  --media-control-hover-background: var(--color-highlight);
+  --media-icon-color: var(--color-highlight-foreground);
+  --media-primary-color: var(--color-highlight-foreground);
+  width: 64px;
+  height: 64px;
+  padding: 20px;
+  color: var(--color-highlight-foreground);
+  border-radius: 9999px;
+  box-shadow: var(--shadow-2);
+  transition: scale var(--duration-fast) var(--ease-standard);
+}
+
+mux-player::part(center play button):active {
+  scale: 0.94;
+}
+
+mux-player::part(center play button):focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: 2px;
 }

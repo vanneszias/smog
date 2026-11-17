@@ -1,6 +1,5 @@
 import { useTranslation } from "@smog/i18n/react";
-import { cn, SponsorEndCard } from "@smog/ui-web";
-import { muxThumbnailUrl } from "@smog/utils";
+import { cn, GestureThumbnail, SponsorEndCard } from "@smog/ui-web";
 import type { ReactNode } from "react";
 import { useObjectUrl } from "./use-object-url";
 
@@ -35,28 +34,24 @@ export function SponsorPreviewSlot({
   const logoUrl = useObjectUrl(logo);
   const shownName = displayName.trim();
   return (
-    <figure
-      className={cn("flex w-full max-w-[20rem] flex-col gap-3", className)}
-    >
+    <figure className={cn("flex w-full max-w-80 flex-col gap-3", className)}>
       <div
         aria-label={t("sponsor.preview.label", { name })}
-        className="relative aspect-3/4 w-full overflow-hidden rounded-lg border border-border-subtle bg-surface-sunken"
+        className="relative aspect-3/4 w-full overflow-hidden rounded-card bg-sidebar shadow-1 ring-1 ring-foreground/10"
         role="img"
       >
         {/* The frame's label names the picture; the poster and the card
             (`aria-hidden` itself) are not read out. */}
         <div aria-hidden="true" className="absolute inset-0">
-          <img
-            alt=""
-            className="absolute inset-0 size-full object-cover"
-            decoding="async"
-            height={640}
-            src={muxThumbnailUrl(playbackId, { width: 480 })}
+          <GestureThumbnail
+            className="absolute inset-0 size-full"
+            name={name}
+            playbackId={playbackId}
             width={480}
           />
           {shownName ? (
             <SponsorEndCard
-              className="absolute inset-x-3 bottom-3"
+              className="absolute inset-x-0 bottom-0"
               logoSrc={logoUrl}
               name={shownName}
             />

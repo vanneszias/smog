@@ -548,18 +548,18 @@
     },
     "sponsorCta": {
       "available": {
-        "title": "Sponsor this gesture",
-        "description": "Become the sponsor of this gesture.",
-        "action": "Sponsor now"
+        "title": "Become this gesture's sponsor",
+        "description": "For a year, your name appears at the end of this video.",
+        "action": "Sponsor this gesture"
       },
       "pending": {
         "title": "Sponsorship in progress",
-        "description": "This gesture has already been chosen for sponsorship and is not available right now."
+        "description": "Someone is already sponsoring this gesture. Feel free to choose another one."
       },
       "sponsored": {
         "title": "Currently sponsored",
         "description": "This gesture is sponsored by {{name}}.",
-        "availableFrom": "It will be available for sponsoring again from {{date}}."
+        "availableFrom": "You can sponsor this gesture again from {{date}}."
       }
     }
   },
@@ -2690,7 +2690,7 @@
   "sponsor": {
     "meta": {
       "title": "Sponsor a gesture",
-      "description": "Support a gesture for one year. Your name appears in the video and helps the SMOG project."
+      "description": "Sponsor a SMOG gesture. For a year, your name appears at the end of the gesture's video."
     },
     "steps": {
       "select": "Choose gestures",
@@ -2701,18 +2701,26 @@
       "title": "Sponsoring is paused for now",
       "description": "You cannot sponsor a gesture right now. Please try again later."
     },
+    "story": {
+      "howTitle": "How it works",
+      "priceTitle": "What it costs",
+      "where": "Your name shows at the end of the video for {{duration}}, over the gesture itself.",
+      "review": "We check your sponsorship before it goes online. You get an email as soon as it's online.",
+      "expiry": "After a year your name goes. The gesture and its video stay.",
+      "sampleName": "Your name",
+      "sampleLabel": "Example: your name at the end of a gesture's video"
+    },
     "select": {
-      "title": "Support a gesture",
-      "description": "Support a gesture for one year. Your name appears in the video and helps the SMOG project.",
+      "title": "Sponsor a gesture",
+      "description": "For a year, your name appears at the end of the gesture's video. You can add your logo too.",
       "value": {
         "perGesture": "Per gesture, per year",
-        "seconds": "{{seconds}} sec",
-        "nameInVideo": "Your name with the chosen gestures",
+        "nameInVideo": "On screen at the end of each video",
         "logoPrice": "+{{price}}",
-        "optionalLogo": "Add your logo (optional)"
+        "optionalLogo": "With your logo, per gesture"
       },
       "search": "Search gestures",
-      "searchPlaceholder": "Search by name, concept or category...",
+      "searchPlaceholder": "Search by name, concept or category…",
       "showMore": "+{{count}} more",
       "showLess": "Show less",
       "clearFilters": "Clear filters",
@@ -2848,11 +2856,11 @@
       },
       "paid": {
         "title": "Payment successful!",
-        "description": "Thank you for supporting SMOG."
+        "description": "Thank you for supporting SMOG & Co."
       },
       "renewed": {
         "title": "Your sponsorship is renewed!",
-        "description": "Your name stays in the video until {{date}}."
+        "description": "Your name stays at the end of the video until {{date}}."
       },
       "failed": {
         "title": "The payment did not go through",
@@ -2944,5 +2952,14 @@
     "title": "Sign out?",
     "message": "You can sign in again at any time.",
     "confirm": "Sign out"
+  },
+  "stateActions": {
+    "noResults": {
+      "clear": "Clear the search",
+      "suggestions": "Did you mean one of these gestures?"
+    },
+    "offline": {
+      "web": "What's already on your screen stays here. Other pages, search and videos work again once you're connected."
+    }
   }
 }

@@ -52,7 +52,12 @@ export function GestureCard({
       )}
       {...props}
     >
-      <GestureThumbnail playbackId={gesture.playbackId} showPlay width={480} />
+      <GestureThumbnail
+        name={gesture.name}
+        playbackId={gesture.playbackId}
+        showPlay
+        width={480}
+      />
       <div className="flex min-w-0 flex-col items-start gap-1.5 p-3">
         <Heading className="w-full truncate font-semibold text-body">
           <GestureLink href={href} linkComponent={linkComponent}>
