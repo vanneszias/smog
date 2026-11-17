@@ -2919,7 +2919,7 @@
       "redirectNote": "Vous serez redirigé vers Mollie pour un paiement sécurisé.",
       "captchaHint": "Confirmez d'abord que vous n'êtes pas un robot.",
       "back": "Retour aux coordonnées",
-      "failed": "Le passage au paiement a échoué. Veuillez réessayer."
+      "failed": "Le passage au paiement a échoué. Réessayez."
     },
     "success": {
       "title": "Votre parrainage",
@@ -2987,11 +2987,11 @@
       "loading": "Vérification de votre lien…",
       "notFound": {
         "title": "Lien introuvable",
-        "description": "Ce lien est invalide ou a déjà été utilisé. Contactez SMOG si vous pensez qu'il s'agit d'une erreur."
+        "description": "Ce lien est invalide ou a déjà été utilisé. Si cela vous semble une erreur, écrivez-nous à <email>{{email}}</email>."
       },
       "expired": {
         "title": "Lien expiré",
-        "description": "Ce lien a expiré. Demandez un nouveau lien à SMOG.",
+        "description": "Ce lien a expiré. Écrivez-nous à <email>{{email}}</email> et nous vous en enverrons un nouveau.",
         "since": "Expiré le {{date}}"
       },
       "unavailable": {
@@ -3013,7 +3013,7 @@
         "title": "Envoyé\u00a0!",
         "description": "Nous vérifions vos modifications avant leur mise en ligne. Vous n’avez pas à payer à nouveau."
       },
-      "failed": "Nous n'avons pas pu envoyer votre modification. Veuillez réessayer."
+      "failed": "Nous n'avons pas pu envoyer votre modification. Réessayez."
     },
     "renew": {
       "eyebrow": "Prolonger votre parrainage",
@@ -3025,7 +3025,7 @@
       "newEnd": "Après prolongation jusqu'au",
       "amount": "Montant",
       "pay": "Prolonger et payer",
-      "failed": "Le paiement n'a pas pu démarrer. Veuillez réessayer."
+      "failed": "Le paiement n'a pas pu démarrer. Réessayez."
     },
     "preview": {
       "label": "Aperçu pour {{name}}",

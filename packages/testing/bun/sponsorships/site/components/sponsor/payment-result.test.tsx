@@ -154,7 +154,7 @@ describe("the payment's return page (S-14)", () => {
 
   test.each([
     ["failed", "The payment did not go through"],
-    ["canceled", "The payment was cancelled"],
+    ["canceled", "The payment was canceled"],
     ["expired", "The payment expired"],
   ] as const)(
     "%s: Try again goes back to the wizard with the selection",

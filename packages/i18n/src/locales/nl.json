@@ -2862,7 +2862,7 @@
       "gestures": "Gebaren",
       "duration": "Duur",
       "durationValue": "1 jaar",
-      "nameInVideo": "Naam in video",
+      "nameInVideo": "Naam in de video",
       "logo": "Logo",
       "yes": "Ja",
       "no": "Nee",
@@ -2941,11 +2941,11 @@
       "loading": "Je link controleren…",
       "notFound": {
         "title": "Link niet gevonden",
-        "description": "Deze link is ongeldig of al gebruikt. Neem contact op met SMOG als je denkt dat dit niet klopt."
+        "description": "Deze link is ongeldig of al gebruikt. Klopt dat niet? Mail ons op <email>{{email}}</email>."
       },
       "expired": {
         "title": "Link verlopen",
-        "description": "Deze link is verlopen. Vraag SMOG om een nieuwe link.",
+        "description": "Deze link is verlopen. Mail ons op <email>{{email}}</email>, dan sturen we je een nieuwe.",
         "since": "Verlopen op {{date}}"
       },
       "unavailable": {
@@ -2973,7 +2973,7 @@
       "title": "Nog een jaar in de video",
       "description": "Verleng je sponsoring met één jaar. Je naam en eventueel logo blijven hetzelfde.",
       "gesture": "Gebaar",
-      "name": "Naam in video",
+      "name": "Naam in de video",
       "currentEnd": "Loopt nu tot",
       "newEnd": "Na verlenging tot",
       "amount": "Bedrag",

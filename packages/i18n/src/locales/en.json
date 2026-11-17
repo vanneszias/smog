@@ -2737,7 +2737,7 @@
     },
     "paused": {
       "title": "Sponsoring is paused for now",
-      "description": "You cannot sponsor a gesture right now. Please try again later."
+      "description": "You can't sponsor a gesture right now. Try again later."
     },
     "story": {
       "howTitle": "How it works",
@@ -2777,7 +2777,7 @@
       "taken": "Someone else was just ahead of you. Those gestures are marked; choose others if you like.",
       "availabilityError": {
         "title": "Availability could not be checked",
-        "description": "We could not check which gestures are still free. Please try again."
+        "description": "We couldn't check which gestures are still free. Try again."
       },
       "empty": {
         "title": "No gestures found",
@@ -2794,7 +2794,7 @@
       "title": "Your name and contact details",
       "videoSection": "In the video",
       "displayName": "Name in the video",
-      "displayNamePlaceholder": "Your name or your organisation's name",
+      "displayNamePlaceholder": "Your name or your organization's name",
       "displayNameHint": "Example: “{{intro}} {{name}}”",
       "logo": {
         "include": "Add a logo (+{{price}} per gesture)",
@@ -2862,7 +2862,7 @@
       "gestures": "Gestures",
       "duration": "Duration",
       "durationValue": "1 year",
-      "nameInVideo": "Name in video",
+      "nameInVideo": "Name in the video",
       "logo": "Logo",
       "yes": "Yes",
       "no": "No",
@@ -2873,7 +2873,7 @@
       "redirectNote": "You will be redirected to Mollie for a secure payment.",
       "captchaHint": "First confirm that you are not a robot.",
       "back": "Back to details",
-      "failed": "Continuing to payment failed. Please try again."
+      "failed": "We couldn't continue to the payment. Try again."
     },
     "success": {
       "title": "Your sponsorship",
@@ -2907,7 +2907,7 @@
         "renewalDescriptionUndated": "Nothing was charged and your sponsorship keeps running until its current end date. Use the link in your email to try again."
       },
       "canceled": {
-        "title": "The payment was cancelled"
+        "title": "The payment was canceled"
       },
       "expired": {
         "title": "The payment expired"
@@ -2941,11 +2941,11 @@
       "loading": "Checking your link…",
       "notFound": {
         "title": "Link not found",
-        "description": "This link is invalid or has already been used. Contact SMOG if you think this is wrong."
+        "description": "This link is invalid or has already been used. If that seems wrong, email us at <email>{{email}}</email>."
       },
       "expired": {
         "title": "Link expired",
-        "description": "This link has expired. Ask SMOG for a new link.",
+        "description": "This link has expired. Email us at <email>{{email}}</email> and we'll send you a new one.",
         "since": "Expired on {{date}}"
       },
       "unavailable": {
@@ -2966,19 +2966,19 @@
         "title": "Sent!",
         "description": "We check your changes before they go online. You do not have to pay again."
       },
-      "failed": "We could not send your change. Please try again."
+      "failed": "We couldn't send your change. Try again."
     },
     "renew": {
       "eyebrow": "Renew your sponsorship",
       "title": "Another year in the video",
       "description": "Renew your sponsorship for one year. Your name and any logo stay the same.",
       "gesture": "Gesture",
-      "name": "Name in video",
+      "name": "Name in the video",
       "currentEnd": "Currently runs until",
       "newEnd": "After renewal until",
       "amount": "Amount",
       "pay": "Renew and pay",
-      "failed": "The payment could not start. Please try again."
+      "failed": "The payment couldn't start. Try again."
     },
     "preview": {
       "label": "Preview for {{name}}",

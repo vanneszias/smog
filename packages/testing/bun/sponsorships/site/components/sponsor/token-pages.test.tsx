@@ -360,7 +360,7 @@ describe("the renewal page (S-20)", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Renew and pay" })
     );
-    await screen.findByText("The payment could not start. Please try again.");
+    await screen.findByText("The payment couldn't start. Try again.");
     answer = {
       checkoutUrl: "https://mollie.test/checkout/tr_9",
       paymentId: "8c3c5a52-7a0c-4d9b-9d65-1f1d7f0c2a11",

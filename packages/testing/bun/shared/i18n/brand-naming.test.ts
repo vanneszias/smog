@@ -84,19 +84,6 @@ const SIGNS: Record<string, RegExp> = {
   fr: /\bsignes?\b/i,
 };
 
-/**
- * Keys owned by the sponsor-flow workstream of the identity overhaul,
- * rewritten there with the sponsor story. Remove each entry when that
- * branch is merged; the list must end up empty.
- */
-const PENDING_SPONSOR_FLOW = new Set([
-  "sponsor.link.expired.description",
-  "sponsor.link.notFound.description",
-  "sponsor.meta.description",
-  "sponsor.select.description",
-  "sponsor.success.paid.description",
-]);
-
 describe("brand naming in the catalogues", () => {
   for (const locale of LOCALES) {
     const entries = flatten(resources[locale].translation as unknown as Tree);
@@ -112,9 +99,9 @@ describe("brand naming in the catalogues", () => {
 
     test(`${locale}: SMOG names the method, SMOG & Co the product and the organisation`, () => {
       const offenders = entries.flatMap(([key, value]) =>
-        PRODUCT_AS_SMOG.filter(
-          ([pattern]) => pattern.test(value) && !PENDING_SPONSOR_FLOW.has(key)
-        ).map(([, why]) => `${key}: ${why}: ${value}`)
+        PRODUCT_AS_SMOG.filter(([pattern]) => pattern.test(value)).map(
+          ([, why]) => `${key}: ${why}: ${value}`
+        )
       );
       expect(offenders).toEqual([]);
     });
@@ -129,21 +116,6 @@ describe("brand naming in the catalogues", () => {
       });
     }
   }
-
-  test("the sponsor-flow exemptions still need one", () => {
-    // An exemption that no longer matches is stale: delete it.
-    const stale = [...PENDING_SPONSOR_FLOW].filter((key) =>
-      LOCALES.every((locale) => {
-        const value = flatten(
-          resources[locale].translation as unknown as Tree
-        ).find(([k]) => k === key)?.[1];
-        return !(
-          value && PRODUCT_AS_SMOG.some(([pattern]) => pattern.test(value))
-        );
-      })
-    );
-    expect(stale).toEqual([]);
-  });
 });
 
 const ROOT = new URL("../../../../..", import.meta.url).pathname;

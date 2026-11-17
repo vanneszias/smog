@@ -692,7 +692,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
         screen.getByRole("button", { name: "Continue to payment" })
       );
     pay();
-    await screen.findByText("Continuing to payment failed. Please try again.");
+    await screen.findByText("We couldn't continue to the payment. Try again.");
     pay();
     await waitFor(() => expect(checkoutIds(calls)).toHaveLength(2));
     // Back to the details, a new name, and pay again: a different payment.
