@@ -1,5 +1,6 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import { act, fireEvent, screen } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import {
   AudioButton,
@@ -153,6 +154,8 @@ describe("NameOverlayToggle", () => {
   });
 });
 
+const HIDDEN_TOO = { includeHiddenElements: true } as const;
+
 describe("the name over the video", () => {
   it("shows the name as decoration, hidden from the screen reader (the video's label is the name)", async () => {
     await renderKit(
@@ -182,6 +185,36 @@ describe("the name over the video", () => {
     });
     expect(overlays.at(-1)?.props.entering).toBeUndefined();
     jest.mocked(useReducedMotion).mockReturnValue(false);
+  });
+
+  it("is the hand pointing at the word: top left, white Figtree, sized to the frame", async () => {
+    await renderKit(<VideoPlayer nameOverlay="Hond" playbackId="pb-1" />);
+    const title = screen.getByTestId("gesture-title", HIDDEN_TOO);
+    await fireEvent(title, "layout", {
+      nativeEvent: { layout: { height: 400, width: 300 } },
+    });
+    // The hand starts 6 % in and is 22 % of the frame wide.
+    const hand = screen.getByTestId("gesture-title-hand", HIDDEN_TOO);
+    expect(hand.props.width).toBeCloseTo(66);
+    const name = screen.getByText("Hond", HIDDEN_TOO);
+    // 12 % of the width, Figtree Regular, white, never scaled past the frame.
+    expect(name).toHaveStyle({ color: "#FFFFFF", fontSize: 36 });
+    expect(name.props.allowFontScaling).toBe(false);
+  });
+
+  it("steps a long word down so it stays inside the frame", async () => {
+    await renderKit(
+      <VideoPlayer nameOverlay="Verjaardagstaart" playbackId="pb-1" />
+    );
+    await fireEvent(screen.getByTestId("gesture-title", HIDDEN_TOO), "layout", {
+      nativeEvent: { layout: { height: 400, width: 300 } },
+    });
+    const { fontSize } = StyleSheet.flatten(
+      screen.getByText("Verjaardagstaart", HIDDEN_TOO).props.style
+    ) as { fontSize: number };
+    // 16 characters at 0.55 em fit in 62 % of 300 pt.
+    expect(fontSize).toBeCloseTo((0.62 * 300) / (16 * 0.55), 1);
+    expect(fontSize).toBeLessThan(36);
   });
 
   it("shows no overlay without a name", async () => {

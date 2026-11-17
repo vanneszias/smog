@@ -19,7 +19,7 @@ import {
 } from "react";
 import { AccessibilityInfo, Pressable, Text, View } from "react-native";
 import Animated, {
-  FadeInUp,
+  FadeInDown,
   FadeOutDown,
   useReducedMotion,
 } from "react-native-reanimated";
@@ -239,14 +239,15 @@ function ToastItem({
     entry.action?.onPress();
     onDismiss(id);
   }, [entry.action, id, onDismiss]);
-  // The queue sits at the bottom: a toast rises from that edge and leaves
-  // the way it came.
+  // The queue sits at the bottom: a toast rises from that edge (Reanimated's
+  // FadeInDown starts below and moves up; FadeInUp would drop from above)
+  // and leaves the way it came.
   return (
     <Animated.View
       entering={
         reducedMotion
           ? undefined
-          : FadeInUp.duration(MOTION_MS.normal).easing(easeEnter)
+          : FadeInDown.duration(MOTION_MS.normal).easing(easeEnter)
       }
       exiting={
         reducedMotion

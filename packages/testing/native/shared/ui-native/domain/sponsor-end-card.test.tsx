@@ -3,6 +3,7 @@ import { createI18n, type Locale } from "@smog/i18n";
 import { I18nextProvider } from "@smog/i18n/react";
 import { act, render, screen } from "@testing-library/react-native";
 import type { ReactElement } from "react";
+import { useReducedMotion } from "react-native-reanimated";
 import { KitProvider } from "../../../../../ui-native/src/components/kit-provider";
 import { SponsorEndCard } from "../../../../../ui-native/src/domain/sponsor-end-card";
 import { VideoPlayer } from "../../../../../ui-native/src/domain/video-player";
@@ -79,6 +80,29 @@ describe("SponsorEndCard", () => {
     expect(card.props.pointerEvents).toBe("none");
     await rerender(<SponsorEndCard name="Jan" />);
     expect(screen.queryByTestId("sponsor-end-card-logo", HIDDEN)).toBeNull();
+  });
+});
+
+describe("SponsorEndCard look and motion", () => {
+  it("is a deep green band at the bottom, the name in the surface's text", async () => {
+    await renderKit(<SponsorEndCard name="Jan" />);
+    expect(
+      screen.getByTestId("sponsor-end-card-band", HIDDEN)
+    ).toBeOnTheScreen();
+    expect(screen.getByText("Jan", HIDDEN)).toBeOnTheScreen();
+  });
+
+  it("rises in and fades out, and does neither under reduced motion", async () => {
+    await renderKit(<SponsorEndCard name="Jan" />);
+    const card = screen.getByTestId("sponsor-end-card", HIDDEN);
+    expect(card.props.entering).toBeDefined();
+    expect(card.props.exiting).toBeDefined();
+    jest.mocked(useReducedMotion).mockReturnValue(true);
+    await renderKit(<SponsorEndCard name="Ann" />);
+    const reduced = screen.getAllByTestId("sponsor-end-card", HIDDEN).at(-1);
+    expect(reduced?.props.entering).toBeUndefined();
+    expect(reduced?.props.exiting).toBeUndefined();
+    jest.mocked(useReducedMotion).mockReturnValue(false);
   });
 });
 

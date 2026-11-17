@@ -22,14 +22,15 @@ export interface ErrorStateProps extends Omit<ViewProps, "children"> {
   title?: ReactNode;
 }
 
-/** The open palm inside the disc (the disc is `size-20`). */
+/** The open palm inside the disc (the disc is `size-24`). */
 const HAND_SIZE = tokens.spacing["12"];
 
 /**
- * A data view failed to load: the brand's open palm on a pale red disc (as
- * the web kit, never a stock alert glyph), title, description and retry
- * (`states.error.*` by default). The title says it is an error, so the
- * state never relies on colour alone.
+ * A data view failed to load: the brand's open palm in the brand green on
+ * a pale red disc (an error you did not cause; the same mark as the web
+ * kit, never a stock alert glyph), title, description and retry
+ * (`states.error.*` by default). The disc and the title say it is an
+ * error, so the state never relies on colour alone.
  */
 export function ErrorState({
   className,
@@ -41,7 +42,7 @@ export function ErrorState({
   ...props
 }: ErrorStateProps): ReactElement {
   const { t } = useTranslation();
-  const handColor = useColor("dangerStrong");
+  const handColor = useColor("primary");
   return (
     <View className={cn("items-center gap-3 px-4 py-10", className)} {...props}>
       <View
@@ -53,7 +54,7 @@ export function ErrorState({
       >
         <View
           accessibilityElementsHidden
-          className="mb-1 size-20 items-center justify-center rounded-full bg-danger-subtle"
+          className="mb-1 size-24 items-center justify-center rounded-full bg-danger-subtle"
           importantForAccessibility="no-hide-descendants"
           testID="error-illustration"
         >

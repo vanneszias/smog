@@ -91,7 +91,7 @@ describe("ErrorState", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the open palm on a pale red disc, hidden from assistive tech", async () => {
+  it("shows the open palm on a 96 pt pale red disc, as the web, hidden from assistive tech", async () => {
     await renderKit(
       <View style={themeVars.light}>
         <ErrorState />
@@ -103,6 +103,8 @@ describe("ErrorState", () => {
     expect(disc.props.accessibilityElementsHidden).toBe(true);
     expect(disc).toHaveStyle({
       backgroundColor: rgba(tokens.color.light.dangerSubtle),
+      height: 96,
+      width: 96,
     });
     expect(drawnSvgs()).toContain(handSvgs[2]);
   });
