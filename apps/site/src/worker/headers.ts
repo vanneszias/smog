@@ -186,7 +186,7 @@ function isDocument(response: Response): boolean {
  * one language or one account to everyone. Added to any `Vary` the
  * response already has.
  */
-export const DOCUMENT_VARY = ["Accept-Language", "Cookie"] as const;
+const DOCUMENT_VARY = ["Accept-Language", "Cookie"] as const;
 
 function appendVary(headers: Headers, names: readonly string[]): void {
   const current = (headers.get("vary") ?? "")

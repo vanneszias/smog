@@ -6,7 +6,7 @@ import { useLocale } from "@/lib/locale";
  * Category names are stored as typed ("dieren", "eten en drinken"): on
  * screen they start with a capital, as a contents list would print them.
  */
-export function sentenceCase(name: string, locale: string): string {
+function sentenceCase(name: string, locale: string): string {
   const first = name.charAt(0);
   return first ? first.toLocaleUpperCase(locale) + name.slice(1) : name;
 }

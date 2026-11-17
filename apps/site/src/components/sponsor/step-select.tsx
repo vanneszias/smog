@@ -63,7 +63,7 @@ export interface StepSelectProps {
 }
 
 /** "4 seconden" / "4 seconds" / "4 secondes": the unit in the page's language, never split. */
-export function formatSeconds(seconds: number, locale: Locale): string {
+function formatSeconds(seconds: number, locale: Locale): string {
   return new Intl.NumberFormat(intlTag(locale), {
     style: "unit",
     unit: "second",
