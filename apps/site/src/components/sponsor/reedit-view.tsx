@@ -12,6 +12,7 @@ import {
   Button,
   EmptyState,
   Field,
+  HAND,
   Heading,
   Input,
   Text,
@@ -71,7 +72,7 @@ function Submitted(): ReactNode {
           </Button>
         }
         description={t("sponsor.edit.submitted.description")}
-        illustration={1}
+        illustration={HAND.welcome}
         level={1}
         title={t("sponsor.edit.submitted.title")}
       />

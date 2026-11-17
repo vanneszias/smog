@@ -14,7 +14,7 @@ import {
 } from "@smog/ui-web";
 import { formatMoney } from "@smog/utils";
 import { Link } from "@tanstack/react-router";
-import { CircleAlert, CircleCheck, CircleX, Clock } from "lucide-react";
+import { CircleAlert, CircleX, Clock } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { usePageLocale } from "./page-locale";
 import { StatusTimeline } from "./status-timeline";
@@ -88,6 +88,36 @@ function Summary({ view }: { view: PaymentStatusView }): ReactNode {
         ))}
       </dl>
     </Card>
+  );
+}
+
+/**
+ * The paid moment (identity overhaul, F): a green ring that settles in and
+ * a check that draws itself after it (`success-in`, then `draw-in` 160 ms
+ * later), for a paid sponsorship and a paid renewal only. Under reduced
+ * motion it is simply there.
+ */
+function DrawnCheck(): ReactNode {
+  return (
+    <svg
+      aria-hidden="true"
+      className="animate-success-in text-success-strong motion-reduce:animate-none"
+      data-testid="paid-check"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path
+        className="animate-draw-in motion-reduce:animate-none"
+        d="m8 12.5 2.75 2.75L16.5 9.5"
+        pathLength={1}
+        strokeDasharray={1}
+      />
+    </svg>
   );
 }
 
@@ -256,17 +286,17 @@ export function PaymentResult({
               date: formatDate(view.renewedUntil, locale),
             }),
       final: true,
-      icon: <CircleCheck className="text-success-strong" />,
+      icon: <DrawnCheck />,
       title: t("sponsor.success.renewed.title"),
     };
   } else if (view.status === "paid") {
     headline = {
       description: t("sponsor.success.paid.description"),
       final: true,
-      icon: <CircleCheck className="text-success-strong" />,
+      icon: <DrawnCheck />,
       title: t("sponsor.success.paid.title"),
     };
-    extra = <StatusTimeline />;
+    extra = <StatusTimeline animated />;
   } else if (view.status === "refund_needed") {
     headline = {
       description: t("sponsor.success.refund.description"),

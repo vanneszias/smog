@@ -1,9 +1,9 @@
 import { useTranslation } from "@smog/i18n/react";
-import { Button, Text } from "@smog/ui-web";
+import { Button, cn, Text } from "@smog/ui-web";
 import { formatMoney } from "@smog/utils";
 import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
-import { useReservedSpace } from "@/lib/use-reserved-space";
+import { useOverlayBarOpen, useReservedSpace } from "@/lib/use-reserved-space";
 import { usePageLocale } from "./page-locale";
 
 export interface SelectionBarProps {
@@ -15,12 +15,16 @@ export interface SelectionBarProps {
 
 /**
  * The sticky bar under step 1 (S-03): how many gestures are chosen, the
- * total (`formatMoney`) and Continue. It stays in view while the grid
- * scrolls; the count is announced as it changes. Its height is reserved as
- * scroll padding, so a control that takes focus (Load more, a card) is
- * never scrolled under it (WCAG 2.4.11, phase review M-4). It sticks above
- * a fixed bar (the consent banner, `--overlay-bottom`), so neither hides
- * the other.
+ * total (`formatMoney`) and Continue, the orange "do it" of the step. It
+ * stays in view while the grid scrolls, inside the content column with the
+ * card's rounded top; the count is announced as it changes. Its height is
+ * reserved as scroll padding, so a control that takes focus (Load more, a
+ * card) is never scrolled under it (WCAG 2.4.11, phase review M-4).
+ *
+ * One bottom bar at a time: while the consent banner is open
+ * (`useOverlayBarOpen`), the bar steps into the flow at the end of the
+ * step instead of stacking over it, and sticks again once the visitor
+ * has answered.
  */
 export function SelectionBar({
   count,
@@ -30,17 +34,25 @@ export function SelectionBar({
   const { t } = useTranslation();
   const locale = usePageLocale();
   const reserve = useReservedSpace();
+  const overlayOpen = useOverlayBarOpen();
   return (
     <div
-      className="sticky bottom-[var(--overlay-bottom,0px)] z-[1] -mx-4 border-border-subtle border-t bg-card px-4 py-3 shadow-2 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 dark:shadow-none"
-      ref={reserve}
+      className={cn(
+        "z-10 border border-border-subtle bg-card px-4 py-3 md:px-6",
+        overlayOpen
+          ? "rounded-card"
+          : "sticky bottom-0 rounded-t-card border-b-0 pb-[max(--spacing(3),env(safe-area-inset-bottom))] shadow-2 dark:shadow-none"
+      )}
+      data-slot="selection-bar"
+      data-sticky={overlayOpen ? "false" : "true"}
+      ref={overlayOpen ? undefined : reserve}
     >
-      <div className="mx-auto flex max-w-content flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div aria-live="polite" className="flex flex-col">
           <Text className="font-semibold" data-testid="selection-count">
             {t("sponsor.bar.selected", { count })}
           </Text>
-          <Text size="body-sm" tone="muted">
+          <Text className="tabular-nums" size="body-sm" tone="muted">
             {t("sponsor.bar.total", { price: formatMoney(totalCents, locale) })}
           </Text>
         </div>
@@ -48,6 +60,7 @@ export function SelectionBar({
           disabled={count === 0}
           icon={<ArrowRight />}
           onClick={onContinue}
+          variant="action"
         >
           {t("sponsor.bar.continue")}
         </Button>

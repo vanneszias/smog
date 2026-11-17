@@ -87,7 +87,7 @@ export function LogoDropzone({ file, onChange }: LogoDropzoneProps): ReactNode {
           <div className="flex flex-wrap items-center justify-center gap-4">
             <img
               alt={t("sponsor.details.logo.previewAlt")}
-              className="size-[6rem] rounded-md border border-border-subtle bg-surface-sunken object-contain"
+              className="size-24 rounded-md border border-border-subtle bg-surface-sunken object-contain"
               height={96}
               src={preview}
               width={96}

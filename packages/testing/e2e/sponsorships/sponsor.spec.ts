@@ -152,7 +152,10 @@ async function openWizard(page: Page, path = "/sponsor"): Promise<void> {
   await waitForApp(page);
   await declineConsent(page);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Steun een gebaar" })
+    page.getByRole("heading", {
+      level: 1,
+      name: "Word peter of meter van een gebaar",
+    })
   ).toBeVisible();
 }
 
@@ -481,10 +484,9 @@ test("the gesture CTA: free, being sponsored, sponsored (L-17)", async ({
   await page.goto(`/gestures/${FREE}`);
   await waitForApp(page);
   const cta = page.getByTestId("sponsor-cta");
-  await expect(cta.getByRole("link", { name: "Nu sponsoren" })).toHaveAttribute(
-    "href",
-    `/sponsor?gesture=${FREE}`
-  );
+  await expect(
+    cta.getByRole("link", { name: "Dit gebaar sponsoren" })
+  ).toHaveAttribute("href", `/sponsor?gesture=${FREE}`);
   await page.goto(`/gestures/${PENDING}`);
   await expect(cta).toContainText(
     "Dit gebaar is al gekozen voor sponsoring en is nu niet beschikbaar."

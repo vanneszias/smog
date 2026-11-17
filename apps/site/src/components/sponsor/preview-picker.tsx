@@ -1,6 +1,5 @@
 import { useTranslation } from "@smog/i18n/react";
-import { cn } from "@smog/ui-web";
-import { muxThumbnailUrl } from "@smog/utils";
+import { cn, GestureThumbnail } from "@smog/ui-web";
 import {
   type FocusEvent,
   type KeyboardEvent,
@@ -104,7 +103,7 @@ export function PreviewPicker({
           <button
             aria-pressed={pressed}
             className={cn(
-              "flex w-[5rem] flex-col gap-1 rounded-md border-2 bg-card p-1 text-left text-foreground transition motion-reduce:transition-none",
+              "flex w-20 flex-col gap-1 rounded-md border-2 bg-card p-1 text-left text-foreground transition motion-reduce:transition-none",
               "focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2",
               pressed
                 ? "border-primary"
@@ -120,13 +119,9 @@ export function PreviewPicker({
             title={gesture.name}
             type="button"
           >
-            <img
-              alt=""
-              className="aspect-3/4 w-full rounded-sm bg-surface-sunken object-cover"
-              decoding="async"
-              height={213}
-              loading="lazy"
-              src={muxThumbnailUrl(gesture.playbackId, { width: 160 })}
+            <GestureThumbnail
+              className="w-full rounded-sm"
+              playbackId={gesture.playbackId}
               width={160}
             />
             {/* Two lines, broken anywhere: "Goedemorgen" fits whole. */}

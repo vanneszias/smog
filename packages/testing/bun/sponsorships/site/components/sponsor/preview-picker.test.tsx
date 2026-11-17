@@ -48,14 +48,14 @@ describe("PreviewPicker (phase 7 ruling 8)", () => {
     expect(toggle("Zus").getAttribute("aria-pressed")).toBe("false");
     const poster = toggle("Zus").querySelector("img");
     expect(poster?.getAttribute("src")).toBe(
-      "https://image.mux.com/pb-zus/thumbnail.webp?width=160"
+      "https://image.mux.com/pb-zus/thumbnail.webp?width=160&time=1"
     );
     expect(poster?.getAttribute("alt")).toBe("");
   });
 
   test("a long name wraps onto two lines instead of being cut, and its title holds it whole (M-6)", () => {
     renderPicker();
-    const label = toggle("Broer").querySelector("span");
+    const label = toggle("Broer").querySelector(":scope > span:last-child");
     expect(label?.className).toContain("line-clamp-2");
     expect(label?.className).toContain("wrap-anywhere");
     expect(label?.className).not.toContain("truncate");
