@@ -1,49 +1,67 @@
 import type { Category } from "@smog/gestures/schema";
 import { useTranslation } from "@smog/i18n/react";
-import { HandIllustration, type HandIndex, Heading } from "@smog/ui-web";
+import { Heading } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-
-const HANDS: readonly HandIndex[] = [0, 1, 2];
+import { useCatalogDisplay } from "./catalog-display";
 
 /**
- * Home's categories: an illustrated chip per category (a brand hand, the
- * three in turn, until categories carry their own image) that opens the
+ * Home's categories as a contents page: each theme by name with its number
+ * of gestures, text only (no hand: each hand has one meaning, and none of
+ * them means "a theme"), in one to three columns. Each row opens the
  * gestures filtered by it. A navigation landmark: these are links, unlike
  * the filter chips of the browse page.
  */
 export function CategoryTiles({
   categories,
 }: {
-  categories: readonly Pick<Category, "name" | "slug">[];
+  categories: readonly Pick<
+    Category,
+    "fallbackUsed" | "gestureCount" | "name" | "slug"
+  >[];
 }): ReactNode {
   const { t } = useTranslation();
+  const display = useCatalogDisplay();
   if (categories.length === 0) {
     return null;
   }
   return (
-    <nav aria-label={t("search.categories")} className="flex flex-col gap-4">
-      <Heading level={2} size="title-2">
-        {t("landing.categoriesIntro")}
+    <nav aria-labelledby="home-contents-title" className="flex flex-col gap-6">
+      <Heading id="home-contents-title" level={2} size="title-1">
+        {t("home.contentsTitle")}
       </Heading>
-      <ul className="flex flex-wrap gap-3">
-        {categories.map((category, index) => (
-          <li key={category.slug}>
-            <Link
-              className="inline-flex min-h-14 items-center gap-3 rounded-full border border-border bg-card py-1.5 pr-5 pl-2 font-medium text-foreground outline-none transition duration-fast ease-standard hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
-              search={{ category: category.slug }}
-              to="/gestures"
+      <ul className="gap-x-12 sm:columns-2 lg:columns-3">
+        {categories.map((item) => {
+          const category = display.category(item);
+          return (
+            <li
+              className="break-inside-avoid border-border-subtle border-t"
+              key={category.slug}
             >
-              <span className="inline-flex size-11 items-center justify-center rounded-full bg-primary-subtle">
-                <HandIllustration
-                  className="h-7"
-                  hand={HANDS[index % HANDS.length] ?? 0}
-                />
-              </span>
-              {category.name}
-            </Link>
-          </li>
-        ))}
+              <Link
+                className="group flex min-h-touch items-baseline gap-4 rounded-md py-3 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                search={{ category: category.slug }}
+                to="/gestures"
+              >
+                <span
+                  className="min-w-0 flex-1 text-pretty font-medium text-body text-foreground underline-offset-4 group-hover:text-primary-strong group-hover:underline"
+                  lang={category.lang}
+                >
+                  {category.name}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="text-body-sm text-muted-foreground tabular-nums"
+                >
+                  {category.gestureCount}
+                </span>
+                <span className="sr-only">
+                  {t("search.resultCount", { count: category.gestureCount })}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );
