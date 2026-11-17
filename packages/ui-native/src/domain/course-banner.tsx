@@ -1,3 +1,4 @@
+import { CONTACT_EMAIL } from "@smog/config/constants";
 import { Trans, useTranslation } from "@smog/i18n/react";
 import Info from "lucide-react-native/icons/info";
 import X from "lucide-react-native/icons/x";
@@ -27,7 +28,7 @@ export interface CourseBannerProps extends Omit<ViewProps, "children"> {
 }
 
 function report(error: unknown): void {
-  console.error("[uiNative] Failed to open the course link:", error);
+  console.error("[uiNative] Failed to open the course or mail link:", error);
 }
 
 /** The disclaimer after a gesture video; a polite live region. */
@@ -39,15 +40,18 @@ export function CourseBanner({
   ...props
 }: CourseBannerProps): ReactElement {
   const { t } = useTranslation();
-  const warning = useColor("warningStrong");
+  const iconColor = useColor("primaryStrong");
   const openCourse = useCallback((): void => {
     Linking.openURL(courseUrl).catch(report);
   }, [courseUrl]);
+  const openMail = useCallback((): void => {
+    Linking.openURL(`mailto:${CONTACT_EMAIL}`).catch(report);
+  }, []);
   return (
     <View
       accessibilityLiveRegion="polite"
       className={cn(
-        "flex-row items-start gap-3 rounded-card border border-border-subtle border-l-4 border-l-warning bg-card p-4",
+        "flex-row items-start gap-3 rounded-card border border-border-subtle bg-card p-4",
         className
       )}
       {...props}
@@ -57,7 +61,7 @@ export function CourseBanner({
         className="mt-0.5"
         importantForAccessibility="no-hide-descendants"
       >
-        <Info color={warning} size={ICON_SIZE.md} />
+        <Info color={iconColor} size={ICON_SIZE.md} />
       </View>
       <View className="flex-1 flex-col gap-1">
         <Text className="font-semibold text-body-sm text-foreground">
@@ -71,6 +75,13 @@ export function CourseBanner({
                   accessibilityRole="link"
                   className="font-medium text-primary-strong underline"
                   onPress={openCourse}
+                />
+              ),
+              email: (
+                <Text
+                  accessibilityRole="link"
+                  className="font-medium text-primary-strong underline"
+                  onPress={openMail}
                 />
               ),
             }}

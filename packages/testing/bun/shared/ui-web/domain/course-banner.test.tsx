@@ -58,14 +58,21 @@ describe("CourseBanner", () => {
         const hasLink = screen.queryByRole("link") !== null;
         expect(text).not.toContain("gesture.videoComplete");
         expect(text).not.toContain("<course>");
+        expect(text).not.toContain("<email>");
         unmount();
         return hasLink;
       });
     const nl = linked("nl");
-    expect(nl).toEqual([1, 2, 3, 6]);
+    expect(nl).toEqual([1, 2, 3, 6, 7]);
     for (const locale of LOCALES) {
       expect(linked(locale)).toEqual(nl);
     }
+  });
+
+  test("the contact address opens a mail", () => {
+    renderKit(<CourseBanner courseUrl={COURSE_URL} messageIndex={7} />);
+    const link = screen.getByRole("link", { name: "info@smog.vlaanderen" });
+    expect(link.getAttribute("href")).toBe("mailto:info@smog.vlaanderen");
   });
 
   test("onDismiss adds a close button", async () => {
