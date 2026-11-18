@@ -80,8 +80,10 @@ describe("dynamic type", () => {
       .filter(({ text }) => FONT_SCALING.test(text))
       .map(({ file }) => file);
     expect(offenders).toEqual([]);
-    const text = sources().find(({ file }) => file === "components/text.tsx");
-    expect(text?.text).not.toContain("allowFontScaling");
+    const heading = sources().find(
+      ({ file }) => file === "components/text.tsx"
+    );
+    expect(heading?.text).not.toContain("allowFontScaling");
   });
 
   it("lets a heading grow to at least twice its size (WCAG 1.4.4), the largest least", () => {
