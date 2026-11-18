@@ -19,6 +19,8 @@ export interface SearchResultsProps<T extends GestureCardData>
   /** The next action on the empty state (e.g. clear the categories). */
   emptyAction?: ReactNode;
   items: readonly T[];
+  /** Clears the search: the empty state's "Clear the search", unless `emptyAction` replaces it. */
+  onClearSearch?: () => void;
   onRetry: () => void;
   /** One result (a GestureCard by default). */
   renderItem?: (item: T, index: number) => ReactNode;
@@ -38,6 +40,7 @@ export function SearchResults<T extends GestureCardData>({
   className,
   emptyAction,
   items,
+  onClearSearch,
   onRetry,
   renderItem,
   retrying = false,
@@ -74,7 +77,9 @@ export function SearchResults<T extends GestureCardData>({
       {state === "results" ? (
         <GestureGrid items={items} renderItem={renderItem} />
       ) : null}
-      {state === "empty" ? <NoResultsEmptyState action={emptyAction} /> : null}
+      {state === "empty" ? (
+        <NoResultsEmptyState action={emptyAction} onClear={onClearSearch} />
+      ) : null}
       {state === "error" ? (
         <ErrorState onRetry={onRetry} retrying={retrying} />
       ) : null}

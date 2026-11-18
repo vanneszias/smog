@@ -21,6 +21,7 @@ import {
   AlertTitle,
 } from "../../../../../ui-native/src/components/alert";
 import { Button } from "../../../../../ui-native/src/components/button";
+import { Chip } from "../../../../../ui-native/src/components/chip";
 import { IconButton } from "../../../../../ui-native/src/components/icon-button";
 import { Label } from "../../../../../ui-native/src/components/label";
 import {
@@ -275,21 +276,60 @@ describe("Surface", () => {
       </Surface>
     );
     expect(screen.getByTestId("h")).toHaveStyle({
-      color: rgba(light.primaryForeground),
+      color: rgba(light.sidebarForeground),
     });
     expect(screen.getByTestId("p")).toHaveStyle({
-      color: rgba(light.primaryForegroundMuted),
+      color: rgba(light.sidebarForegroundMuted),
     });
     expect(screen.getByTestId("warn")).toHaveStyle({
       color: rgba(light.warningStrong),
     });
   });
 
-  it("paints the header tone with the deeper green", async () => {
-    await inTheme(<Surface testID="s" tone="header" />);
+  it("paints both green tones with the deep green", async () => {
+    await inTheme(
+      <>
+        <Surface testID="s" tone="header" />
+        <Surface testID="hero" tone="primary" />
+      </>
+    );
     expect(screen.getByTestId("s")).toHaveStyle({
       backgroundColor: rgba(light.sidebar),
     });
+    expect(screen.getByTestId("hero")).toHaveStyle({
+      backgroundColor: rgba(light.sidebar),
+    });
+  });
+
+  it("draws the action variants as the orange do-it, on the page and on green", async () => {
+    await inTheme(
+      <>
+        <Button testID="page-action" variant="action">
+          Play
+        </Button>
+        <Chip selected testID="chip" tone="action">
+          Animals
+        </Chip>
+        <Surface tone="primary">
+          <Button testID="green-action" variant="action">
+            Search
+          </Button>
+        </Surface>
+      </>
+    );
+    for (const id of ["page-action", "chip", "green-action"]) {
+      expect(screen.getByTestId(id)).toHaveStyle({
+        backgroundColor: rgba(light.highlight),
+      });
+    }
+    expect(screen.getByTestId("page-action")).toHaveStyle({
+      borderRadius: 9999,
+    });
+    for (const label of ["Play", "Animals", "Search"]) {
+      expect(screen.getByText(label)).toHaveStyle({
+        color: rgba(light.highlightForeground),
+      });
+    }
   });
 
   it("makes the primary button the orange highlight and keeps it readable", async () => {

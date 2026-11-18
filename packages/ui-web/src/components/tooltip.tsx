@@ -41,7 +41,7 @@ export function Tooltip({
           align={align}
           className={cn(
             "z-50 max-w-reading rounded-2xl bg-foreground px-3 py-1.5 text-background text-caption shadow-2",
-            "data-[state=closed]:animate-fade-out data-[state=delayed-open]:animate-fade-in data-[state=instant-open]:animate-fade-in motion-reduce:animate-none",
+            "origin-(--radix-tooltip-content-transform-origin) data-[state=closed]:animate-fade-out data-[state=delayed-open]:animate-grow-in motion-reduce:animate-none",
             className
           )}
           data-slot="tooltip"

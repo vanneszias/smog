@@ -37,6 +37,7 @@ const preset = {
       "foreground": "rgb(var(--color-foreground) / <alpha-value>)",
       "highlight": "rgb(var(--color-highlight) / <alpha-value>)",
       "highlight-foreground": "rgb(var(--color-highlight-foreground) / <alpha-value>)",
+      "highlight-strong": "rgb(var(--color-highlight-strong) / <alpha-value>)",
       "input": "rgb(var(--color-input) / <alpha-value>)",
       "muted": "rgb(var(--color-muted) / <alpha-value>)",
       "muted-foreground": "rgb(var(--color-muted-foreground) / <alpha-value>)",
@@ -70,9 +71,11 @@ const preset = {
     },
     "extend": {
       "borderRadius": {
+        "card": "20px",
         "full": "9999px",
         "lg": "14px",
         "md": "10px",
+        "pill": "9999px",
         "sm": "6px",
         "xl": "20px"
       },
@@ -85,42 +88,56 @@ const preset = {
         "body": [
           "16px",
           {
+            "letterSpacing": "0px",
             "lineHeight": "24px"
           }
         ],
         "body-sm": [
           "14px",
           {
+            "letterSpacing": "0.07px",
             "lineHeight": "20px"
           }
         ],
         "caption": [
           "12px",
           {
+            "letterSpacing": "0.14px",
             "lineHeight": "16px"
           }
         ],
         "display": [
           "40px",
           {
-            "lineHeight": "48px"
+            "letterSpacing": "-0.88px",
+            "lineHeight": "44px"
+          }
+        ],
+        "lead": [
+          "18px",
+          {
+            "letterSpacing": "-0.05px",
+            "lineHeight": "28px"
           }
         ],
         "title-1": [
           "28px",
           {
+            "letterSpacing": "-0.45px",
             "lineHeight": "34px"
           }
         ],
         "title-2": [
           "22px",
           {
+            "letterSpacing": "-0.22px",
             "lineHeight": "28px"
           }
         ],
         "title-3": [
           "18px",
           {
+            "letterSpacing": "-0.09px",
             "lineHeight": "24px"
           }
         ]
@@ -129,7 +146,8 @@ const preset = {
         "body": "24px",
         "body-sm": "20px",
         "caption": "16px",
-        "display": "48px",
+        "display": "44px",
+        "lead": "28px",
         "title-1": "34px",
         "title-2": "28px",
         "title-3": "24px"
@@ -157,10 +175,14 @@ const preset = {
       },
       "transitionDuration": {
         "fast": "120ms",
+        "gesture": "640ms",
         "normal": "200ms",
         "slow": "320ms"
       },
       "transitionTimingFunction": {
+        "drawer": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "enter": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "move": "cubic-bezier(0.77, 0, 0.175, 1)",
         "standard": "cubic-bezier(0.2, 0, 0, 1)"
       }
     }

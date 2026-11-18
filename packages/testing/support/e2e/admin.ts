@@ -92,7 +92,7 @@ export async function openAdmin(page: Page, path: string): Promise<void> {
     return;
   }
   await page
-    .getByRole("button", { name: "Geen statistieken" })
+    .getByRole("button", { name: "Niet toestaan" })
     .click({ timeout: 5000 })
     .then(() => consented.add(page))
     .catch(() => undefined);

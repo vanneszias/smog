@@ -65,6 +65,22 @@ describe("SearchResults", () => {
     expect(screen.getByRole("status").textContent).toBe("No gestures found");
   });
 
+  test("empty: without an action, onClearSearch gives the way out", async () => {
+    const onClearSearch = mock();
+    renderKit(
+      <SearchResults
+        items={[]}
+        onClearSearch={onClearSearch}
+        onRetry={noop}
+        state="empty"
+      />
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Clear the search" })
+    );
+    expect(onClearSearch).toHaveBeenCalledTimes(1);
+  });
+
   test("error: an alert with retry", async () => {
     const onRetry = mock();
     renderKit(<SearchResults items={[]} onRetry={onRetry} state="error" />);
@@ -98,5 +114,47 @@ describe("empty states", () => {
       expect(screen.getByRole("button", { name: "Browse" })).toBeDefined();
       unmount();
     }
+  });
+
+  test("each hand keeps its meaning: the open palm for nothing yet, pointing across for search", () => {
+    const cases = [
+      [FavoritesEmptyState, "2"],
+      [ListsEmptyState, "2"],
+      [ListItemsEmptyState, "2"],
+      [NoResultsEmptyState, "1"],
+      [SearchIdleEmptyState, "1"],
+    ] as const;
+    for (const [Component, hand] of cases) {
+      const { container, unmount } = renderKit(<Component />);
+      expect(
+        container
+          .querySelector('[data-slot="empty-illustration"]')
+          ?.getAttribute("data-hand")
+      ).toBe(hand);
+      unmount();
+    }
+  });
+
+  test("no results is never a dead end: clear the search, and near matches when there are some", async () => {
+    const onClear = mock();
+    renderKit(
+      <NoResultsEmptyState
+        onClear={onClear}
+        suggestions={[
+          { href: "/gestures/hond", name: "Hond" },
+          { href: "/gestures/hondje", name: "Hondje" },
+        ]}
+      />
+    );
+    const near = screen.getByRole("navigation", {
+      name: "Did you mean one of these gestures?",
+    });
+    expect(
+      within(near).getByRole("link", { name: "Hond" }).getAttribute("href")
+    ).toBe("/gestures/hond");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Clear the search" })
+    );
+    expect(onClear).toHaveBeenCalledTimes(1);
   });
 });

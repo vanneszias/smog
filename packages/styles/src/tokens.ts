@@ -21,22 +21,33 @@ const brand = {
  * `popover`, `secondary`, `muted`, `accent`, `destructive`, `input`, `ring`,
  * `sidebar-*`, `chart-*`) so registry components compile unchanged. The
  * phase 1 to 9 names that duplicated one (`surface`, `surfaceRaised`,
- * `danger`, `focusRing`, `foregroundMuted`) are gone (task 9).
+ * `danger`, `focusRing`, `foregroundMuted`) are gone (task 9). The brand
+ * identity pass (DECISIONS, "Brand identity: colour") retuned the values:
  *
- * - **Green is a surface.** `primary` with `primaryForeground` (white) is
- *   the filled green: buttons, the hero, the auth screens. `sidebar` with
- *   `sidebarForeground` is the deeper green of the header and the admin
- *   sidebar; its hover, active and ring roles are tuned for text and focus on
- *   green. `primaryStrong` is the deeper green for text on warm neutrals and
- *   for pressed states.
- * - **Orange is the accent**, as `highlight` (+ `highlightForeground`). It is
- *   never text on a light surface. shadcn's own `accent` is a quiet green
- *   tint for hover and selected rows, so registry code looks right.
- * - **Neutrals are warm** with a faint green tint; dark mode is a deep
- *   green-black.
+ * - **Green says where you are.** The `sidebar` family is the deep green
+ *   surface: the header, the home hero, the auth panel, the native stack
+ *   headers and the admin rail, in both themes. Its light value is a step
+ *   deeper than the studio teal behind every gesture video (`#0B5F55`), so
+ *   the interface and the videos read as one place, and deep enough for an
+ *   orange mark to reach 3:1 on it. Dark mode keeps it a deep green with
+ *   light text (no mint slab). Its hover is `sidebarAccent`, its active mark
+ *   `sidebarPrimary` (orange) and its focus ring `sidebarRing` (white).
+ * - **`primary` is the brand green `#00805F` for controls**: buttons, links,
+ *   switches, checkboxes, the stepper. It is not a large surface any more
+ *   (white text on it has little headroom, and in dark it is a light mint
+ *   under dark text). `primaryStrong` is the green for text on light
+ *   neutrals and for pressed states.
+ * - **Orange means "do it"**, as `highlight`: a fill under dark ink
+ *   (`highlightForeground`; the play button, the search action, the active
+ *   filter, the primary action on deep green) or a mark on the deep green
+ *   (`sidebarPrimary`). It is never text on a light surface: orange text or
+ *   icons on a light surface use the darker `highlightStrong`.
+ * - **Neutrals are a cool paper** with a trace of green (no cream); dark
+ *   mode is a deep teal-black. shadcn's own `accent` is a quiet green tint
+ *   for hover and selected rows, so registry code looks right.
  * - The light `ring` is a darker orange than the brand orange: `#EE971C`
- *   measures 2.19:1 on white and a focus indicator needs 3:1 (WCAG 1.4.11).
- *   On green surfaces the focus ring is `sidebarRing` (white).
+ *   measures 2.31:1 on white and a focus indicator needs 3:1 (WCAG 1.4.11).
+ *   On green surfaces the focus ring is white (`sidebarRing`, `primaryRing`).
  * - Text roles for the status hues: `*Subtle` is a tinted background,
  *   `*Strong` the shade that passes as body text on it and on every page
  *   background. The base `success`/`warning` stay for icons and fills; they
@@ -45,9 +56,9 @@ const brand = {
 const light = {
   accent: "#E4F1EA",
   accentForeground: "#17211A",
-  background: "#FAF9F4",
-  border: "#DCD8CB",
-  borderSubtle: "#EBE8DE",
+  background: "#F6F8F5",
+  border: "#D5DED7",
+  borderSubtle: "#E3E9E4",
   card: "#FFFFFF",
   cardForeground: "#17211A",
   chart1: "#00805F",
@@ -62,8 +73,9 @@ const light = {
   foreground: "#17211A",
   highlight: brand.orange,
   highlightForeground: "#17211A",
+  highlightStrong: "#9A5700",
   input: "#6E7B72",
-  muted: "#F2F0E8",
+  muted: "#ECF1EC",
   mutedForeground: "#56635A",
   popover: "#FFFFFF",
   popoverForeground: "#17211A",
@@ -74,21 +86,21 @@ const light = {
   primaryStrong: "#006B50",
   primarySubtle: "#E4F1EA",
   ring: "#B36B0B",
-  secondary: "#EFEDE3",
+  secondary: "#E7EDE8",
   secondaryForeground: "#17211A",
-  sidebar: "#006B50",
-  sidebarAccent: "#00805F",
+  sidebar: "#09564C",
+  sidebarAccent: "#0F6A5E",
   sidebarAccentForeground: "#FFFFFF",
-  sidebarBorder: "#2F8F77",
+  sidebarBorder: "#2E7A6F",
   sidebarForeground: "#FFFFFF",
-  sidebarForegroundMuted: "#E3F3EC",
-  sidebarPrimary: "#F5AB45",
+  sidebarForegroundMuted: "#D3E9E2",
+  sidebarPrimary: brand.orange,
   sidebarPrimaryForeground: "#17211A",
   sidebarRing: "#FFFFFF",
   success: "#1F8A4C",
   successStrong: "#166B3A",
   successSubtle: "#E3F3EA",
-  surfaceSunken: "#F2F0E8",
+  surfaceSunken: "#ECF1EC",
   warning: "#B7791F",
   warningStrong: "#7A4D06",
   warningSubtle: "#FBF0DA",
@@ -97,12 +109,12 @@ const light = {
 export type ColorRole = keyof typeof light;
 
 const dark: { readonly [Role in ColorRole]: string } = {
-  accent: "#17352A",
+  accent: "#163631",
   accentForeground: "#EAF1EC",
-  background: "#0C110E",
-  border: "#2B352E",
-  borderSubtle: "#1F2722",
-  card: "#131914",
+  background: "#0C1513",
+  border: "#283631",
+  borderSubtle: "#1C2723",
+  card: "#121D1A",
   cardForeground: "#EAF1EC",
   chart1: "#2BB38A",
   chart2: "#F5AB45",
@@ -116,56 +128,94 @@ const dark: { readonly [Role in ColorRole]: string } = {
   foreground: "#EAF1EC",
   highlight: "#F5AB45",
   highlightForeground: "#04140E",
-  input: "#6F8076",
-  muted: "#1B231E",
-  mutedForeground: "#9DB0A4",
-  popover: "#1A211C",
+  highlightStrong: "#F5AB45",
+  input: "#6C817A",
+  muted: "#18231F",
+  mutedForeground: "#9DB2AA",
+  popover: "#18241F",
   popoverForeground: "#EAF1EC",
   primary: "#2BB38A",
   primaryForeground: "#04140E",
   primaryForegroundMuted: "#0A3526",
   primaryRing: "#04140E",
   primaryStrong: "#2BB38A",
-  primarySubtle: "#0F2A21",
+  primarySubtle: "#0E2A25",
   ring: "#F5AB45",
-  secondary: "#1F2823",
+  secondary: "#1C2823",
   secondaryForeground: "#EAF1EC",
-  sidebar: "#0F2A21",
-  sidebarAccent: "#17402F",
+  sidebar: "#0E2E29",
+  sidebarAccent: "#174A41",
   sidebarAccentForeground: "#EAF1EC",
-  sidebarBorder: "#1F4A39",
+  sidebarBorder: "#1F4A42",
   sidebarForeground: "#EAF1EC",
-  sidebarForegroundMuted: "#9DB0A4",
+  sidebarForegroundMuted: "#A9C7BE",
   sidebarPrimary: "#F5AB45",
   sidebarPrimaryForeground: "#04140E",
-  sidebarRing: "#F5AB45",
+  sidebarRing: "#EAF1EC",
   success: "#4CC27E",
   successStrong: "#4CC27E",
   successSubtle: "#123021",
-  surfaceSunken: "#080B09",
+  surfaceSunken: "#070D0B",
   warning: "#E9B24A",
   warningStrong: "#E9B24A",
   warningSubtle: "#33260B",
 };
 
+/**
+ * The colours outside the page: the browser bar (`<meta name="theme-color">`
+ * per scheme), the web manifest's `theme_color` and `background_color` (the
+ * installed app's title bar and splash) all follow the header's deep green,
+ * so the chrome, the header and the native splash read as one band
+ * (DECISIONS, "Brand identity: the browser bar follows the header").
+ */
+const chrome = {
+  manifestBackground: light.sidebar,
+  manifestTheme: light.sidebar,
+  themeColor: { dark: dark.sidebar, light: light.sidebar },
+} as const;
+
 interface TypeStep {
   lineHeight: number;
-  /** Web only: the size from the `md` breakpoint up. */
-  md?: { size: number; lineHeight: number };
+  /** Web only: the size, line height and tracking from the `md` breakpoint up. */
+  md?: { size: number; lineHeight: number; tracking: number };
   size: number;
+  /**
+   * Letter spacing in em: tighter as the size grows, a touch looser when
+   * small (Figtree is generous at its defaults). Native gets it in pt.
+   */
+  tracking: number;
 }
 
+/**
+ * The type scale, Figtree tuned as an identity element (DECISIONS, "Brand
+ * identity: type"): leading falls and tracking tightens as the size grows.
+ * `display` is set bold (the hero), the titles semibold, body regular;
+ * `lead` is the line under a display title (the hero's supporting line,
+ * the auth panel). Body never goes below 16, anything read to act never
+ * below 14; `caption` is for redundant labels only.
+ */
 const fontSize = {
-  body: { lineHeight: 24, size: 16 },
-  "body-sm": { lineHeight: 20, size: 14 },
-  caption: { lineHeight: 16, size: 12 },
-  display: { lineHeight: 48, md: { lineHeight: 64, size: 56 }, size: 40 },
-  "title-1": { lineHeight: 34, size: 28 },
-  "title-2": { lineHeight: 28, size: 22 },
-  "title-3": { lineHeight: 24, size: 18 },
+  body: { lineHeight: 24, size: 16, tracking: 0 },
+  "body-sm": { lineHeight: 20, size: 14, tracking: 0.005 },
+  caption: { lineHeight: 16, size: 12, tracking: 0.012 },
+  display: {
+    lineHeight: 44,
+    md: { lineHeight: 60, size: 56, tracking: -0.028 },
+    size: 40,
+    tracking: -0.022,
+  },
+  lead: { lineHeight: 28, size: 18, tracking: -0.003 },
+  "title-1": { lineHeight: 34, size: 28, tracking: -0.016 },
+  "title-2": { lineHeight: 28, size: 22, tracking: -0.01 },
+  "title-3": { lineHeight: 24, size: 18, tracking: -0.005 },
 } as const satisfies Record<string, TypeStep>;
 
+/**
+ * The weights in use. Bold is the display weight (the native app embeds
+ * Figtree-Bold; the web loads the variable font).
+ */
 const fontWeight = {
+  bold: 700,
   medium: 500,
   regular: 400,
   semibold: 600,
@@ -227,10 +277,19 @@ const spacing = {
   touch: touchTarget,
 } as const;
 
+/**
+ * Corner radii. Two are the brand's shape, used by both kits and email:
+ * `pill` for every control a finger presses or types into (buttons, fields,
+ * chips, toggles, tabs), so a control's ends are as round as the palm in the
+ * hands; `card` for the one card frame (cards, gesture tiles, the video, banners,
+ * alerts). The steps (`sm` to `xl`) are for small inner parts and overlays.
+ */
 const radius = {
+  card: 20,
   full: 9999,
   lg: 14,
   md: 10,
+  pill: 9999,
   sm: 6,
   xl: 20,
 } as const;
@@ -352,15 +411,47 @@ export function boxShadow(
     .join(", ");
 }
 
+/**
+ * The motion language: SMOG moves like a calm hand. It arrives quickly,
+ * settles slowly, grows from where you pointed and never bounces (the
+ * favourite heart is the one exception). Under `prefers-reduced-motion`
+ * nothing moves: the web zeroes every duration and every delay, native
+ * skips the animation (DECISIONS, "Brand identity: motion").
+ */
 const motion = {
-  duration: { fast: 120, normal: 200, slow: 320 },
-  easing: { standard: [0.2, 0, 0, 1] },
+  duration: {
+    /** Exits, press, hover colour. */
+    fast: 120,
+    /** The hand drawing itself once (the home hero): a gesture, not a UI step. */
+    gesture: 640,
+    /** Fades, pops, menus, accordions. */
+    normal: 200,
+    /** Sheets in, the heart pop, the still zoom. */
+    slow: 320,
+  },
+  easing: {
+    /** Something on screen sliding from an edge: sheets, drawers (iOS-like). */
+    drawer: [0.32, 0.72, 0, 1],
+    /** Anything that appears or leaves: starts fast, settles softly. */
+    enter: [0.23, 1, 0.32, 1],
+    /** Something already on screen moving to a new place: the switch thumb, the sidebar. */
+    move: [0.77, 0, 0.175, 1],
+    /** Hover, colour, focus: gentle both ways. */
+    standard: [0.2, 0, 0, 1],
+  },
   /** The favorite heart's pop peaks at this scale (web keyframes, native Reanimated). */
   popScale: 1.25,
+  /** The heart's settle (native): the one spring allowed a small bounce. */
+  popSpring: { dampingRatio: 0.5, duration: 450 },
+  /** Pressed compact controls shrink to this scale (web `:active`). */
+  pressScale: 0.97,
+  /** The one spring for everything else (native): calm, no visible bounce. */
+  spring: { dampingRatio: 0.85, duration: 450 },
 } as const;
 
 export const tokens = {
   breakpoint,
+  chrome,
   color: { brand, dark, light },
   elevation,
   fontFamily,

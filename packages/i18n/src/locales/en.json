@@ -44,7 +44,8 @@
     "toggleSidebar": "Toggle sidebar",
     "sidebar": "Sidebar",
     "loading": "Loading",
-    "logo": "SMOG & Co logo",
+    "logo": "SMOG & Co",
+    "homeLink": "SMOG\u00a0&\u00a0Co, home page",
     "clearSearch": "Clear search",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
@@ -115,7 +116,7 @@
     "subtitle": "With an account, your favorites and lists are with you on every device.",
     "signInTitle": "Welcome back",
     "signUpTitle": "Create an account",
-    "signUpSubtitle": "There's no account for {{email}} yet. Create one in a few steps.",
+    "signUpSubtitle": "There’s no account for {{email}} yet. Create one in a few steps.",
     "continueAsGuest": "Continue without an account",
     "legal": "By continuing, you agree to our terms and privacy policy.",
     "email": {
@@ -166,13 +167,13 @@
       "resend": "Send the link again",
       "resent": "We sent you a new link.",
       "appTitle": "Sign in to the app",
-      "appDescription": "This link signs you in to the SMOG & Co app. Open it on the phone that has the app.",
+      "appDescription": "This link signs you in to the SMOG\u00a0&\u00a0Co app. Open it on the phone that has the app.",
       "continueInBrowser": "Sign in in this browser",
       "confirmTitle": "Sign in with the link from your email?",
-      "confirmDescription": "Only continue if you asked for this link yourself. You'll see which account you're signed in to.",
+      "confirmDescription": "Only continue if you asked for this link yourself. You’ll see which account you’re signed in to.",
       "confirm": "Sign in",
       "switchTitle": "Switch account?",
-      "switchDescription": "You're signed in as {{current}}. This link may sign you in to a different account.",
+      "switchDescription": "You’re signed in as {{current}}. This link may sign you in to a different account.",
       "switch": "Switch account",
       "wrongAccount": "This link signs in to another account."
     },
@@ -192,9 +193,9 @@
     },
     "forgotPassword": {
       "title": "Forgot your password",
-      "description": "Enter your email address and we'll send you a link to choose a new password.",
+      "description": "Enter your email address and we’ll send you a link to choose a new password.",
       "submit": "Send me a link",
-      "sent": "If there's an account for {{email}}, you'll receive an email shortly.",
+      "sent": "If there’s an account for {{email}}, you’ll receive an email shortly.",
       "backToSignIn": "Back to sign in"
     },
     "resetPassword": {
@@ -206,19 +207,19 @@
     "passkey": {
       "add": "Add a passkey",
       "added": "Your passkey has been added.",
-      "unsupported": "Your device or browser doesn't support passkeys."
+      "unsupported": "Your device or browser doesn’t support passkeys."
     },
     "captcha": {
       "label": "Security check",
-      "description": "Just checking that you're not a robot. This takes a few seconds.",
-      "appOnly": "This page only works in the SMOG & Co app.",
-      "failed": "The security check didn't work. Please try again.",
+      "description": "Just checking that you’re not a robot. This takes a few seconds.",
+      "appOnly": "This page only works in the SMOG\u00a0&\u00a0Co app.",
+      "failed": "The security check didn’t work. Try again.",
       "retry": "Try again"
     },
-    "signedIn": "You're signed in.",
-    "signedInAs": "You're signed in as {{email}}.",
+    "signedIn": "You’re signed in.",
+    "signedInAs": "You’re signed in as {{email}}.",
     "signingIn": "Signing you in…",
-    "signedOut": "You're signed out.",
+    "signedOut": "You’re signed out.",
     "errors": {
       "emailRequired": "Enter your email address.",
       "emailInvalid": "Enter a valid email address.",
@@ -226,19 +227,19 @@
       "passwordRequired": "Enter your password.",
       "passwordTooShort": "Your password must have at least {{min}} characters.",
       "passwordTooLong": "Your password can have at most {{max}} characters.",
-      "passwordMismatch": "The passwords don't match.",
+      "passwordMismatch": "The passwords don’t match.",
       "invalidCredentials": "That email address or password is incorrect.",
-      "emailNotVerified": "Your email address isn't confirmed yet. Check your inbox or request a new confirmation email.",
-      "emailNotSent": "We couldn't send the email. Please try again in a moment.",
+      "emailNotVerified": "Your email address isn’t confirmed yet. Check your inbox or request a new confirmation email.",
+      "emailNotSent": "We couldn’t send the email. Try again in a moment.",
       "userExists": "An account with this email address already exists. Sign in instead.",
       "codeRequired": "Enter the code.",
       "codeInvalid": "That code is incorrect or has expired. Check the code or request a new one.",
       "linkInvalid": "This link has expired or is no longer valid.",
       "rateLimited": "Too many attempts. Wait a moment and try again.",
-      "captchaFailed": "The security check failed. Please try again.",
-      "socialFailed": "Signing in with {{provider}} didn't work. Please try again.",
-      "passkeyFailed": "Signing in with your passkey didn't work. Try again or choose another sign-in method.",
-      "generic": "Something went wrong. Please try again."
+      "captchaFailed": "The security check failed. Try again.",
+      "socialFailed": "Signing in with {{provider}} didn’t work. Try again.",
+      "passkeyFailed": "Signing in with your passkey didn’t work. Try again or choose another sign-in method.",
+      "generic": "That didn’t work. Try again. If it keeps happening, email info@smog.vlaanderen."
     },
     "import": {
       "title": "Bring your data along?",
@@ -252,7 +253,7 @@
       "skip": "Not now",
       "importing": "Importing…",
       "success": "Your favorites and lists are now in your account.",
-      "failed": "The import didn't work. Your data stays on this device.",
+      "failed": "The import didn’t work. Your data stays on this device.",
       "skipped_one": "{{count}} gesture is no longer available and was skipped.",
       "skipped_other": "{{count}} gestures are no longer available and were skipped.",
       "overLimit": "Not everything fit in your account: it holds up to {{maxLists}} lists of {{maxItems}} gestures each.",
@@ -267,35 +268,35 @@
     "retry": "Try again",
     "empty": {
       "title": "Nothing here yet",
-      "description": "As soon as there's something, you'll find it here."
+      "description": "As soon as there’s something, you’ll find it here."
     },
     "error": {
-      "title": "Something went wrong",
-      "description": "We couldn't load this. Please try again."
+      "title": "This won’t load right now",
+      "description": "Check your internet connection and try again."
     },
     "offline": {
-      "title": "You're offline",
-      "description": "Some features only work again once you're connected.",
-      "backOnline": "You're back online."
+      "title": "You’re offline",
+      "description": "Your favorites and lists stay here. Search and videos work again once you’re connected.",
+      "backOnline": "You’re back online."
     },
     "notFound": {
       "title": "Page not found",
-      "description": "This page doesn't exist (anymore). The link may be out of date, or the address may have a typo.",
+      "description": "We can’t find this page. The link may be old, or the address may have a typo.",
       "action": "Go to the home page",
       "browse": "Search gestures"
     },
     "pageError": {
-      "title": "This page won't load",
-      "description": "Something went wrong while loading. Trying again often works.",
-      "stillFailingTitle": "It still isn't working",
-      "stillFailingDescription": "Try again in a few minutes, or carry on from the home page."
+      "title": "This page won’t load",
+      "description": "Trying again often works.",
+      "stillFailingTitle": "It still isn’t working",
+      "stillFailingDescription": "Try again in a few minutes, or carry on from the home page. If it keeps happening, email info@smog.vlaanderen."
     },
-    "actionFailed": "That didn't work. Please try again."
+    "actionFailed": "That didn’t work. Try again."
   },
   "lists": {
-    "ownerFallback": "a SMOG user",
+    "ownerFallback": "someone using SMOG\u00a0&\u00a0Co",
     "addToList": "Save to list",
-    "noLists": "You don't have any lists yet.",
+    "noLists": "You don’t have any lists yet.",
     "newList": "New list",
     "newListPlaceholder": "Name of the list",
     "create": "Create",
@@ -327,7 +328,7 @@
       "signInTitle": "Sign in to share",
       "signInDescription": "Sign in to create a share link. After signing in, you can choose to add the lists on this device to your account.",
       "copied": "Link copied",
-      "copyFailed": "Copying didn't work. The link is {{url}}"
+      "copyFailed": "Copying didn’t work. The link is {{url}}"
     },
     "itemCount_one": "{{count}} gesture",
     "itemCount_other": "{{count}} gestures",
@@ -345,10 +346,10 @@
     "moveUp": "Move up",
     "moveDown": "Move down",
     "removeItem": "Remove from list",
-    "reorderFailed": "The order couldn't be saved.",
+    "reorderFailed": "The order couldn’t be saved.",
     "notFound": {
       "title": "List not found",
-      "description": "This link doesn't work (anymore), or the list is private."
+      "description": "We can’t find this list. The link may be old, or the list may be private."
     },
     "sharedCanEdit": "You can edit this list.",
     "description": "Group gestures for a lesson, a theme or at home.",
@@ -364,8 +365,8 @@
       "picked": "Picked up {{name}}, position {{position}} of {{total}}.",
       "moved": "Moved {{name}} to position {{position}} of {{total}}.",
       "dropped": "Dropped {{name}} at position {{position}} of {{total}}.",
-      "cancelled": "Move cancelled. {{name}} is back at position {{position}}.",
-      "failed": "The new order couldn't be saved."
+      "cancelled": "Move canceled. {{name}} is back at position {{position}}.",
+      "failed": "The new order couldn’t be saved."
     },
     "sharedView": {
       "by": "Shared by {{owner}}",
@@ -392,7 +393,7 @@
     "admin": {
       "audio": {
         "title": "Pronunciation (audio)",
-        "description": "One clip per language: the spoken name of the gesture. MP3 or M4A, at most 1 MB and 10 seconds.",
+        "description": "One clip per language: the spoken name of the gesture. MP3 or M4A, at most 1\u00a0MB and 10\u00a0seconds.",
         "none": "No audio yet",
         "choose": "Choose audio",
         "replace": "Replace audio",
@@ -401,11 +402,11 @@
         "removed": "Audio removed",
         "duration": "{{seconds}} s",
         "errors": {
-          "format": "This is not a valid MP3 or M4A file.",
-          "duration": "The clip is longer than 10 seconds.",
-          "tooLarge": "The file is larger than 1 MB.",
-          "missing": "The upload did not arrive. Try again.",
-          "key": "This upload does not belong to this gesture.",
+          "format": "This isn’t a valid MP3 or M4A file.",
+          "duration": "The clip is longer than 10\u00a0seconds.",
+          "tooLarge": "The file is larger than 1\u00a0MB.",
+          "missing": "The upload didn’t arrive. Try again.",
+          "key": "This upload doesn’t belong to this gesture.",
           "network": "The upload failed. Check your connection and try again.",
           "generic": "Saving failed. Try again.",
           "removeFailed": "Removing failed. Try again."
@@ -413,7 +414,7 @@
       },
       "recut": {
         "title": "Video without text",
-        "description": "This gesture's video still has the name in the picture. Upload the video without text and confirm it here: the player then shows the name in the viewer's language.",
+        "description": "This gesture’s video still has the name in the picture. Upload the video without text and confirm it here: the player then shows the name in the viewer’s language.",
         "needed": "The name is still in the video",
         "done": "Video without text uploaded",
         "doneSaved": "Marked as a video without text",
@@ -448,14 +449,14 @@
     },
     "notFound": {
       "title": "Lesson not found",
-      "description": "This lesson doesn't exist (anymore)."
+      "description": "We can’t find this lesson. It may have been deleted."
     },
     "notes": "Notes",
     "ungrouped": "Gestures",
     "section": "Section",
     "emptyLesson": "This lesson has no gestures yet.",
     "unpublished": "Not published",
-    "unpublishedHint": "This gesture is not published and can't be opened.",
+    "unpublishedHint": "This gesture isn’t published and can’t be opened.",
     "export": {
       "open": "Export as PDF",
       "title": "Lesson as a PDF",
@@ -468,13 +469,13 @@
         "forbidden": "You need a teacher or admin role to make this PDF. Ask an admin for access.",
         "notFound": "This lesson no longer exists.",
         "offline": "No connection. Connect to the internet and try again.",
-        "sharingUnavailable": "This device can't share files."
+        "sharingUnavailable": "This device can’t share files."
       }
     }
   },
   "drawings": {
     "title": "Drawings",
-    "description": "Line drawings for the participants' sheet: one image per step, a second step is optional. PNG or JPEG, at most 512 kB and 1200 pixels on a side. Only teachers, translators and admins can see them.",
+    "description": "Line drawings for the participants' sheet: one image per step, a second step is optional. PNG or JPEG, at most 512\u00a0kB and 1200 pixels on a side. Only teachers, translators and admins can see them.",
     "step": "Step {{step}}",
     "stepOptional": "Step {{step}} (optional)",
     "none": "No drawing yet",
@@ -496,11 +497,11 @@
     "removeDescription": "The drawing of step {{step}} is deleted. Lessons that use this gesture print it without the drawing.",
     "removeConfirm": "Remove",
     "errors": {
-      "format": "This is not a valid PNG or JPEG image (a WebP cannot go into the PDF).",
+      "format": "This isn’t a valid PNG or JPEG image (a WebP can’t go into the PDF).",
       "dimensions": "The image is larger than 1200 pixels on a side.",
-      "tooLarge": "The file is larger than 512 kB.",
-      "missing": "The upload did not arrive. Try again.",
-      "key": "This upload does not belong to this gesture.",
+      "tooLarge": "The file is larger than 512\u00a0kB.",
+      "missing": "The upload didn’t arrive. Try again.",
+      "key": "This upload doesn’t belong to this gesture.",
       "network": "The upload failed. Check your connection and try again.",
       "generic": "Saving failed. Try again.",
       "removeFailed": "Removing failed. Try again."
@@ -509,25 +510,25 @@
   "gesture": {
     "sponsored": "Sponsored",
     "disclaimer": {
-      "title": "Important notice"
+      "title": "Good to know"
     },
     "videoComplete": {
-      "1": "These videos support what you learn in a SMOG course or introductory session. They do not replace it. <course>Find a course</course>.",
+      "1": "These videos support what you learn in a SMOG course or introductory session. They don’t replace it. <course>Find a course</course>.",
       "2": "Would you like to take a SMOG course or introductory session? <course>Find a course</course>.",
       "3": "A SMOG course also explains the theory behind the gestures. <course>About the courses</course>.",
-      "4": "The gestures are protected. Don't invent others.",
-      "5": "Take a SMOG course or introductory session to learn the gestures. Use these videos afterwards as a reminder.",
-      "6": "Discover how SMOG began. <course>About SMOG</course>.",
-      "7": "Have a question about SMOG? Email info@smog.vlaanderen."
+      "4": "SMOG gestures are fixed and protected. Make them as shown in the video and don’t invent your own versions. That way they stay the same for everyone.",
+      "5": "Take a SMOG course or introductory session to learn the gestures. Then use these videos as a memory aid.",
+      "6": "A SMOG course also tells you how SMOG began. <course>Find a course</course>.",
+      "7": "Got a question about SMOG? Email us at <email>info@smog.vlaanderen</email>."
     },
     "about": "About this gesture",
     "keywords": "Related concepts",
     "related": "Related gestures",
     "share": "Share gesture",
-    "shareMessage": "{{name}} in SMOG: {{url}}",
+    "shareMessage": "The SMOG gesture for “{{name}}”: {{url}}",
     "notFound": {
       "title": "Gesture not found",
-      "description": "This gesture doesn't exist (anymore)."
+      "description": "We can’t find this gesture. It may have been removed, or the link may be old."
     },
     "screenshot": {
       "title": "Share this gesture?",
@@ -535,11 +536,11 @@
       "share": "Share link",
       "dismiss": "Not now"
     },
-    "metaDescription": "Watch the SMOG gesture for “{{name}}” on video.",
+    "metaDescription": "How to make the SMOG gesture for “{{name}}”. Watch the video as a memory aid for your SMOG course or introductory session.",
     "description": "Description",
     "actions": "Actions for {{name}}",
     "linkCopied": "Link copied",
-    "copyFailed": "Copying didn't work. The link is {{url}}",
+    "copyFailed": "Copying didn’t work. The link is {{url}}",
     "qr": {
       "open": "QR code",
       "title": "QR code for {{name}}",
@@ -548,18 +549,18 @@
     },
     "sponsorCta": {
       "available": {
-        "title": "Sponsor this gesture",
-        "description": "Become the sponsor of this gesture.",
-        "action": "Sponsor now"
+        "title": "Become this gesture’s sponsor",
+        "description": "For a year, your name appears at the end of this video.",
+        "action": "Sponsor this gesture"
       },
       "pending": {
         "title": "Sponsorship in progress",
-        "description": "This gesture has already been chosen for sponsorship and is not available right now."
+        "description": "Someone is already sponsoring this gesture. Feel free to choose another one."
       },
       "sponsored": {
         "title": "Currently sponsored",
         "description": "This gesture is sponsored by {{name}}.",
-        "availableFrom": "It will be available for sponsoring again from {{date}}."
+        "availableFrom": "You can sponsor this gesture again from {{date}}."
       }
     }
   },
@@ -605,7 +606,7 @@
   },
   "shell": {
     "explore": "Explore",
-    "supportTitle": "Support SMOG",
+    "supportTitle": "Support SMOG\u00a0&\u00a0Co",
     "supportText": "Show your name or logo with a gesture.",
     "backToSite": "Back to the website"
   },
@@ -619,7 +620,7 @@
       "edit": "Edit link",
       "guestTitle": "Share lists with an account",
       "guestDescription": "Sharing lists needs an account. Sign in to create a view or edit link.",
-      "emptyTitle": "You are not sharing any lists yet",
+      "emptyTitle": "You’re not sharing any lists yet",
       "emptyDescription": "Create a view or edit link in a list to share it. The lists you share show up here.",
       "toLists": "Go to my lists"
     }
@@ -671,27 +672,27 @@
         "subject": "Confirm your email address",
         "preheader": "One more click and your account is ready.",
         "heading": "Confirm your email address",
-        "body": "Thanks for creating a SMOG & Co account. Click the button below to confirm your email address.",
+        "body": "Thanks for creating a SMOG\u00a0&\u00a0Co account. Click the button below to confirm your email address.",
         "button": "Confirm email address",
         "expiry": "The link is valid for {{minutes}} minutes.",
-        "footer": "Didn't create an account? You can ignore this email."
+        "footer": "Didn’t create an account? You can ignore this email."
       },
       "otp": {
         "subject": "{{code}} is your SMOG & Co code",
         "preheader": "Your code is {{code}}.",
         "heading": "Your code",
         "body": "Enter this code to continue:",
-        "expiry": "The code is valid for {{minutes}} minutes. Don't share it with anyone.",
-        "footer": "Didn't ask for a code? You can ignore this email."
+        "expiry": "The code is valid for {{minutes}} minutes. Don’t share it with anyone.",
+        "footer": "Didn’t ask for a code? You can ignore this email."
       },
       "magicLink": {
         "subject": "Your SMOG & Co sign-in link",
         "preheader": "Click the link to sign in.",
-        "heading": "Sign in to SMOG & Co",
+        "heading": "Sign in to SMOG\u00a0&\u00a0Co",
         "body": "Click the button below to sign in. No password needed.",
         "button": "Sign in",
         "expiry": "The link is valid for {{minutes}} minutes and works only once.",
-        "footer": "Didn't try to sign in? You can ignore this email."
+        "footer": "Didn’t try to sign in? You can ignore this email."
       },
       "resetPassword": {
         "subject": "Choose a new password",
@@ -700,17 +701,17 @@
         "body": "We received a request to change the password of your account. Click the button below to choose a new password.",
         "button": "Choose a new password",
         "expiry": "The link is valid for {{minutes}} minutes.",
-        "footer": "Didn't ask for this? You can ignore this email. Your password stays the same."
+        "footer": "Didn’t ask for this? You can ignore this email. Your password stays the same."
       }
     },
     "common": {
       "yourGesture": "your gesture",
       "gestureNamed": "the gesture ‘{{name}}’",
       "logoAlt": "SMOG & Co",
-      "copyright": "© {{year}} SMOG & CO vzw · Belgium",
+      "copyright": "© {{year}} SMOG\u00a0&\u00a0Co vzw · Belgium",
       "tagline": "People naturally use gestures to support their speech",
-      "questions": "Questions? Just reply to this email.",
-      "adminFooter": "You get this email because you are an administrator of SMOG & Co.",
+      "questions": "Questions? Reply to this email.",
+      "adminFooter": "You get this email because you’re an administrator of SMOG\u00a0&\u00a0Co.",
       "contactWithCompany": "{{name}} ({{company}})",
       "oneYear": "1 year",
       "yes": "Yes",
@@ -722,8 +723,8 @@
         "paidAmount": "Amount paid",
         "amount": "Amount",
         "total": "Total",
-        "activeFrom": "Live from",
-        "activeUntil": "Live until",
+        "activeFrom": "Online from",
+        "activeUntil": "Online until",
         "renewedUntil": "Renewed until",
         "payment": "Payment",
         "email": "Email",
@@ -740,51 +741,51 @@
     "transactional": {
       "welcome": {
         "subject": "Welcome to SMOG & Co",
-        "preheader": "Discover gestures and support SMOG by sponsoring one.",
-        "heading": "Welcome to SMOG & Co",
-        "body": "Your account is ready. Here is what you can do:",
-        "explore": "Discover gestures and see how to make them",
-        "favorites": "Save your favourite gestures and make your own lists",
-        "sponsor": "Support SMOG by sponsoring a gesture",
+        "preheader": "Look up the gestures you learned and save your favorites.",
+        "heading": "Welcome to SMOG\u00a0&\u00a0Co",
+        "body": "Your account is ready. The videos help you go over what you learned in your SMOG course or introductory session. Here’s what you can do:",
+        "explore": "Look up gestures and see how to make them",
+        "favorites": "Save your favorite gestures and make your own lists",
+        "sponsor": "Sponsor a gesture and support SMOG\u00a0&\u00a0Co",
         "button": "Discover gestures",
-        "footer": "Didn't create this account? You can ignore this email."
+        "footer": "Didn’t create this account? You can ignore this email."
       },
       "sponsorshipReceived": {
-        "subject": "We have received your sponsorship",
-        "preheader": "Thank you! Here is what happens next.",
+        "subject": "We’ve received your sponsorship",
+        "preheader": "Thank you. Here’s what happens next.",
         "heading": "Sponsorship received",
         "body": "Thank you for sponsoring {{gesture}}. The end of the video will show the name {{displayName}}.",
         "nextTitle": "What happens next?",
         "stepReview": "We review your sponsorship before it goes online.",
         "stepLive": "You get an email as soon as your sponsorship is online.",
-        "footer": "You get this email because you recently submitted a sponsorship through SMOG & Co."
+        "footer": "You get this email because you recently submitted a sponsorship through SMOG\u00a0&\u00a0Co."
       },
       "paymentConfirmed": {
-        "subject": "Payment confirmed. Thank you!",
-        "preheader": "We have received your payment of {{amount}}.",
+        "subject": "Payment confirmed, thank you",
+        "preheader": "We’ve received your payment of {{amount}}.",
         "heading": "Payment confirmed",
-        "body": "We have received your payment. Thank you!",
-        "initialNext": "We check your sponsorship before it goes online. We will email you when it does.",
+        "body": "Thank you, we’ve received your payment.",
+        "initialNext": "We check your sponsorship before it goes online. We’ll email you when it does.",
         "renewalNext": "Your sponsorship has been renewed and now runs until {{date}}.",
-        "footer": "Keep this email as proof of payment. Need an invoice? Please get in touch."
+        "footer": "Keep this email as proof of payment. Need an invoice? Reply to this email."
       },
       "sponsorshipLive": {
-        "subject": "Your sponsorship is live!",
-        "preheader": "Your sponsored video is online.",
-        "heading": "Your sponsorship is live!",
+        "subject": "Your sponsorship is online",
+        "preheader": "Your name now appears at the end of the gesture’s video.",
+        "heading": "Your sponsorship is online",
         "body": "Your sponsorship of {{gesture}} is now online: the end of the video shows the name {{displayName}}.",
-        "button": "View on SMOG",
-        "thanks": "Thank you for supporting SMOG!",
-        "footer": "We will send you a reminder 30 days before the end, so you can renew."
+        "button": "See the gesture",
+        "thanks": "Thank you for supporting SMOG\u00a0&\u00a0Co!",
+        "footer": "We’ll send you a reminder 30 days before the end, so you can renew."
       },
       "renewalReminder": {
-        "subject": "Your SMOG sponsorship ends soon",
+        "subject": "Your SMOG & Co sponsorship ends soon",
         "preheader": "Your sponsorship ends on {{date}}.",
         "heading": "Your sponsorship ends soon",
         "body": "Your sponsorship of {{gesture}} ends on {{date}}, within 30 days. Your name and any logo will then stop appearing with the video. The gesture stays available.",
         "renew": "Would you like to sponsor for another year? Renew with the button below. A renewal is a new payment for one more year, at the price then shown.",
         "button": "Renew sponsorship",
-        "footer": "The link works until your sponsorship ends. Don't want to renew? Then you don't need to do anything."
+        "footer": "The link works until your sponsorship ends. Don’t want to renew? Then you don’t need to do anything."
       },
       "adminNewSponsorship": {
         "subject": "New sponsorship from {{name}}",
@@ -793,7 +794,7 @@
         "heading": "New sponsorship paid",
         "headingRenewal": "Sponsorship renewed",
         "body": "A sponsorship has been paid. It now waits for approval.",
-        "bodyRenewal": "A sponsorship has been renewed for a year. No new video or approval is needed.",
+        "bodyRenewal": "A sponsorship has been renewed for a year. Nothing needs approval.",
         "detailsTitle": "Sponsorship",
         "invoiceTitle": "Invoicing",
         "button": "View in the admin"
@@ -804,18 +805,18 @@
         "heading": "Refund needed",
         "body": "This payment has to be refunded by hand.",
         "reasonLate": "Paid too late: someone else has sponsored the gesture in the meantime.",
-        "reasonMismatch": "The payment's amount or currency does not match the order.",
+        "reasonMismatch": "The payment’s amount or currency doesn’t match the order.",
         "reasonDouble": "Paid twice: the payment had already been marked as paid by hand.",
         "reasonChargeback": "Charged back: the bank reversed the payment. Check the sponsorship and contact the sponsor if needed.",
-        "steps": "Refund the amount in the Mollie dashboard. If the refund does not show in the admin afterwards, record it on the payment.",
+        "steps": "Refund the amount in the Mollie dashboard. If the refund doesn’t show in the admin afterwards, record it on the payment.",
         "button": "Open in Mollie"
       },
       "weMoved": {
-        "subject": "SMOG has moved",
-        "preheader": "Your account, your favourites and your lists have moved with us. Here is how to sign in.",
-        "heading": "SMOG has moved",
-        "body": "SMOG & Co now runs on a new system. Your account has moved with it, with your favourite gestures and your lists.",
-        "newAddress": "SMOG & Co has a new address:",
+        "subject": "SMOG & Co has moved",
+        "preheader": "Your account, favorites and lists have moved with us. Here’s how to sign in.",
+        "heading": "SMOG\u00a0&\u00a0Co has moved",
+        "body": "SMOG\u00a0&\u00a0Co now runs on a new system. Your account has moved with it, with your favorite gestures and your lists.",
+        "newAddress": "SMOG\u00a0&\u00a0Co has a new address:",
         "signInTitle": "Your old password no longer works. Sign in with:",
         "signInCode": "a code we email you",
         "signInLink": "a sign-in link by email",
@@ -825,13 +826,13 @@
         "signInReset": "or choose ‘Forgot your password’ and set a new password",
         "app": "Using the app? Then update the app to the latest version: the old version no longer works.",
         "button": "Sign in",
-        "footer": "You get this email once, because you have an account with SMOG & Co."
+        "footer": "You get this email once, because you have an account with SMOG\u00a0&\u00a0Co."
       },
       "adminDeadLetter": {
         "subject": "Dead letters need attention",
-        "preheader": "Messages could not be delivered.",
+        "preheader": "Messages couldn’t be delivered.",
         "heading": "Dead letters need attention",
-        "body": "Some messages could not be delivered after every retry. Replay or discard them in the admin.",
+        "body": "Some messages couldn’t be delivered after every retry. Replay or discard them in the admin.",
         "emailOpen": "Emails waiting",
         "eventsOpen": "Sponsorship events waiting",
         "lost": "Messages lost while the database was down",
@@ -856,7 +857,7 @@
     "gallery": {
       "intro": "Every component in every variant and size, light and dark side by side.",
       "sampleTitle": "Greetings",
-      "sampleText": "Learn the signs you use every day.",
+      "sampleText": "Learn the gestures you use every day.",
       "rowGreetings": "Greetings",
       "rowFood": "Food and drink",
       "rowFeelings": "Feelings",
@@ -893,24 +894,36 @@
     "intro": "A reminder of what you learned in your SMOG course or introductory session.",
     "description": "SMOG stands for Spreken Met Ondersteuning van Gebaren: using gestures to support speech. Use the videos to refresh what you learned in a SMOG course or introductory session. Save gestures in your favorites and lists.",
     "searchLabel": "Look up a gesture",
-    "searchPlaceholder": "Look up a gesture, for example dog"
+    "searchPlaceholder": "Look up a gesture, for example dog",
+    "eyebrow": "Spreken Met Ondersteuning van Gebaren",
+    "searchSubmit": "Search",
+    "contentsTitle": "Gestures by theme",
+    "picksTitle": "A few to start with",
+    "aboutTitle": "What is SMOG?",
+    "aboutBody": "SMOG stands for Spreken Met Ondersteuning van Gebaren, Dutch for speaking with the support of gestures. You talk as you always do and make a gesture with the most important words. Your hands support what you say.",
+    "aboutMemory": "The videos are a memory aid. You learn the gestures in a SMOG course or introductory session, and look them up here when one slips your mind.",
+    "aboutCourse": "See where to take a SMOG course",
+    "sponsorTitle": "Sponsor a gesture",
+    "sponsorBody": "Your name, and your logo if you like, appears at the end of your gesture’s video for a year. We check every sponsorship before it goes online and email you once it is there.",
+    "sponsorAction": "Choose your gesture"
   },
   "footer": {
-    "madeBy": "Made with ♡ by zias.be",
-    "love": "love"
+    "about": "SMOG stands for Spreken Met Ondersteuning van Gebaren: speaking with the support of gestures.",
+    "nav": "More from SMOG\u00a0&\u00a0Co",
+    "credit": "Made by zias.be"
   },
   "account": {
     "title": "Your account",
     "signedInAs": "Signed in as {{email}}",
     "export": {
-      "sensitive": "This file holds your personal data and the active share links of your lists: anyone with a link can open that list. Keep it safe and do not share it."
+      "sensitive": "This file holds your personal data and the active share links of your lists: anyone with a link can open that list. Keep it safe and don’t share it."
     },
     "errors": {
       "passwordRequired": "Enter your password to delete your account.",
       "sessionNotFresh": "Sign in again to delete your account.",
-      "invalidPassword": "That password is not correct.",
-      "deleteFailed": "Your account could not be deleted. Please try again.",
-      "lastAdmin": "You are the only admin. Make another account an admin before you delete yours.",
+      "invalidPassword": "That password isn’t correct.",
+      "deleteFailed": "We couldn’t delete your account. Try again.",
+      "lastAdmin": "You’re the only admin. Make another account an admin before you delete yours.",
       "signInAgain": "For your security, sign in again to do this."
     },
     "guest": {
@@ -921,7 +934,7 @@
       "title": "Profile",
       "name": "Name",
       "email": "Email address",
-      "emailHint": "Your email address can't be changed.",
+      "emailHint": "Your email address can’t be changed.",
       "saved": "Your profile has been saved."
     },
     "methods": {
@@ -929,20 +942,20 @@
       "description": "You can always sign in with a code or a link sent by email.",
       "password": "Password",
       "passwordSet": "You sign in with your email address and password.",
-      "passwordNone": "You don't have a password yet.",
+      "passwordNone": "You don’t have a password yet.",
       "changePassword": "Change password",
       "setPassword": "Set a password",
-      "setPasswordHint": "We'll email you a link to choose a password. After that you sign in again everywhere.",
+      "setPasswordHint": "We’ll email you a link to choose a password. After that you sign in again everywhere.",
       "currentPassword": "Current password",
       "passwordChanged": "Your password has been changed. Your other devices were signed out.",
       "passkeys": "Passkeys",
       "passkeysDescription": "Sign in with your fingerprint, face or device PIN.",
-      "noPasskeys": "You haven't added a passkey yet.",
+      "noPasskeys": "You haven’t added a passkey yet.",
       "passkeyName": "Passkey",
       "addedOn": "Added on {{date}}",
       "removePasskey": "Remove passkey",
       "removePasskeyTitle": "Remove this passkey?",
-      "removePasskeyDescription": "You will no longer be able to sign in with it.",
+      "removePasskeyDescription": "You won’t be able to sign in with it anymore.",
       "passkeyRemoved": "The passkey has been removed.",
       "linked": "Linked",
       "notLinked": "Not linked",
@@ -950,7 +963,7 @@
       "unlink": "Unlink",
       "linkedToast": "{{provider}} has been linked.",
       "unlinkTitle": "Unlink {{provider}}?",
-      "unlinkDescription": "You will no longer be able to sign in with {{provider}}. You can link it again later.",
+      "unlinkDescription": "You won’t be able to sign in with {{provider}} anymore. You can link it again later.",
       "unlinked": "{{provider}} has been unlinked.",
       "lastMethod": "This is your only sign-in method. Add another one first.",
       "google": "Google",
@@ -961,8 +974,8 @@
       "export": "Download my data",
       "exportDescription": "A JSON file with your profile, favorites, lists, consent history and sponsorships.",
       "exported": "Your data has been downloaded.",
-      "exportFailed": "Your data could not be downloaded. Please try again.",
-      "shareTitle": "Your SMOG data",
+      "exportFailed": "We couldn’t download your data. Try again.",
+      "shareTitle": "Your SMOG & Co data",
       "policy": "Privacy policy"
     },
     "delete": {
@@ -970,14 +983,14 @@
       "description": "This permanently deletes your account, favorites, lists and share links. Sponsorships are kept, as the law requires.",
       "action": "Delete my account",
       "dialogTitle": "Delete your account for good?",
-      "dialogDescription": "Your account, favorites, lists and share links will be permanently deleted. You will be signed out on every device. This cannot be undone.",
+      "dialogDescription": "Your account, favorites, lists and share links will be permanently deleted. You’ll be signed out on every device. This can’t be undone.",
       "confirmLabel": "Type {{word}} to confirm",
       "password": "Your password",
       "deleted": "Your account has been permanently deleted.",
       "signInAgain": "Sign in again"
     },
     "preferences": {
-      "languageHint": "When you're signed in, this is also the language of the emails we send you."
+      "languageHint": "When you’re signed in, this is also the language of the emails we send you."
     },
     "nav": {
       "label": "Account settings",
@@ -994,15 +1007,15 @@
     "about": "About the app"
   },
   "consent": {
-    "title": "Help improve SMOG",
-    "description": "With your permission we collect limited usage statistics to improve SMOG. We don't use them for advertising and don't follow you in other apps or on other websites.",
+    "title": "Help us improve SMOG\u00a0&\u00a0Co",
+    "description": "With your permission we keep limited usage statistics to make SMOG\u00a0&\u00a0Co better. We don’t use them for advertising and don’t follow you in other apps or on other websites.",
     "privacyLink": "Read the privacy policy",
     "allow": "Allow statistics",
-    "decline": "No statistics",
+    "decline": "Don’t allow",
     "toggle": "Usage statistics",
-    "toggleDescription": "Share limited usage statistics to help improve SMOG.",
+    "toggleDescription": "Share limited usage statistics to help make SMOG\u00a0&\u00a0Co better.",
     "saved": "Your choice has been saved.",
-    "saveFailed": "Your choice could not be saved. Please try again."
+    "saveFailed": "We couldn’t save your choice. Try again."
   },
   "appBanner": {
     "badge": "The app",
@@ -1013,10 +1026,34 @@
     "dismiss": "Close the app banner"
   },
   "openInApp": {
-    "title": "Have the SMOG app?",
+    "title": "Have the SMOG\u00a0&\u00a0Co app?",
     "description": "View this gesture in the app.",
     "action": "Open in the app",
     "getApp": "Get the app"
+  },
+  "meta": {
+    "home": {
+      "title": "SMOG gestures on video",
+      "description": "SMOG gestures on video, a memory aid for your SMOG course or introductory session. Look up a gesture, see how it’s made and save it to a list."
+    },
+    "shareImageAlt": "SMOG\u00a0&\u00a0Co: People naturally use gestures to support their speech",
+    "gesture": {
+      "title": "{{name}} · SMOG gesture",
+      "imageAlt": "Still from the video of the SMOG gesture for “{{name}}”"
+    },
+    "list": {
+      "description": "A list of SMOG gestures, shared through SMOG\u00a0&\u00a0Co."
+    },
+    "privacy": {
+      "description": "How SMOG\u00a0&\u00a0Co handles your data on the website and in the app, and the choices you have."
+    },
+    "terms": {
+      "description": "The terms for using the SMOG\u00a0&\u00a0Co website and app."
+    },
+    "shortcuts": {
+      "gestures": "Look up a gesture",
+      "mySpace": "My space"
+    }
   },
   "legal": {
     "lastUpdated": "Last updated on {{date}}",
@@ -1024,21 +1061,22 @@
     "translationNotice": "This translation is provided for convenience; the Dutch version prevails.",
     "readDutch": "Read the Dutch version",
     "consentControl": "Your statistics choice",
-    "readingDutch": "You are reading the Dutch version, which prevails.",
+    "readingDutch": "You’re reading the Dutch version, which prevails.",
     "showTranslation": "Show the English translation"
   },
   "gestures": {
     "description": "Look up SMOG gestures by word or category and watch them on video.",
+    "allThemes": "All themes",
     "select": {
       "title": "Choose a gesture",
-      "description": "Select a gesture in the list to see its video and details."
+      "description": "Pick a gesture from the list and its video appears here."
     }
   },
   "maintenance": {
-    "documentTitle": "SMOG: Please bear with us",
+    "documentTitle": "SMOG & Co: back soon",
     "badge": "Maintenance in progress",
-    "title": "SMOG is under maintenance",
-    "description": "We are carrying out maintenance. You can use SMOG again once it is complete.",
+    "title": "SMOG\u00a0&\u00a0Co is down for maintenance",
+    "description": "We’re doing some work on the website and the app. As soon as we’re done, you can look up gestures again.",
     "until": "We expect to be back by {{time}}."
   },
   "admin": {
@@ -1073,7 +1111,7 @@
     },
     "dashboard": {
       "title": "Dashboard",
-      "description": "Where the catalogue and the accounts stand.",
+      "description": "Where the catalog and the accounts stand.",
       "gestures": "Gestures",
       "categories": "Categories",
       "users": "Users",
@@ -1119,7 +1157,7 @@
       },
       "chart": {
         "title": "At a glance",
-        "description": "The sponsorship pipeline and the state of the catalogue.",
+        "description": "The sponsorship pipeline and the state of the catalog.",
         "sponsorships": "Sponsorships by stage",
         "catalogue": "Gestures",
         "awaitingPayment": "Awaiting payment",
@@ -1192,7 +1230,7 @@
           "reject": "Sponsorship rejected",
           "request_changes": "Changes requested",
           "mark_paid": "Marked as paid manually",
-          "cancel": "Sponsorship cancelled",
+          "cancel": "Sponsorship canceled",
           "retry_render": "Video render retried",
           "force_expire": "Sponsorship ended",
           "regenerate_token": "New edit link created"
@@ -1351,7 +1389,7 @@
         "conflict_one": "Another admin changed the same fields of {{count}} gesture. Use their version, or overwrite it with yours.",
         "conflict_other": "Another admin changed the same fields of {{count}} gestures. Use their version, or overwrite it with yours.",
         "overwriteItem": "{{name}}: {{fields}}",
-        "overwriteDescription": "This replaces the other admin's changes to {{items}} with yours.",
+        "overwriteDescription": "This replaces the other admin’s changes to {{items}} with yours.",
         "discardTitle": "Discard {{count}} changes?",
         "discardDescription": "The edits in these rows are lost.",
         "locked": "Save or discard your table edits to change the filters or the page."
@@ -1419,7 +1457,7 @@
         "useTheirs": "Use their version",
         "overwrite": "Overwrite with mine",
         "overwriteTitle": "Overwrite their changes?",
-        "overwriteDescription": "This replaces the other admin's {{fields}} with yours.",
+        "overwriteDescription": "This replaces the other admin’s {{fields}} with yours.",
         "overwriteConfirm": "Overwrite",
         "merged": "Merged with a newer version and saved.",
         "fieldNames": {
@@ -1509,7 +1547,7 @@
         "picked": "Picked up {{name}}, position {{position}} of {{total}}.",
         "moved": "Moved {{name}} to position {{position}} of {{total}}.",
         "dropped": "Dropped {{name}} at position {{position}} of {{total}}.",
-        "cancelled": "Move cancelled. {{name}} is back at position {{position}}.",
+        "cancelled": "Move canceled. {{name}} is back at position {{position}}.",
         "failed": "The new order could not be saved."
       },
       "errors": {
@@ -1536,7 +1574,7 @@
       "loadMore": "Show more lessons",
       "backToList": "All lessons",
       "duplicated": "Lesson copied. You are now in your own copy.",
-      "duplicateFailed": "The lesson couldn't be copied. Try again.",
+      "duplicateFailed": "The lesson couldn’t be copied. Try again.",
       "columns": {
         "title": "Title",
         "number": "Number",
@@ -1555,7 +1593,7 @@
       },
       "notFound": {
         "title": "Lesson not found",
-        "description": "This lesson doesn't exist (any more)."
+        "description": "We can’t find this lesson. It may have been deleted."
       },
       "actions": {
         "label": "Actions for {{title}}",
@@ -1569,14 +1607,14 @@
         "titleLabel": "Title",
         "languageLabel": "Language of the title",
         "submit": "Create lesson",
-        "failed": "The lesson couldn't be created. Try again."
+        "failed": "The lesson couldn’t be created. Try again."
       },
       "delete": {
         "title": "Delete this lesson?",
         "description": "“{{title}}” and its sections are deleted for everyone. The gestures themselves stay.",
         "confirm": "Delete lesson",
         "done": "Lesson deleted.",
-        "failed": "The lesson couldn't be deleted. Try again."
+        "failed": "The lesson couldn’t be deleted. Try again."
       },
       "builder": {
         "title": "Lesson"
@@ -1653,7 +1691,7 @@
       },
       "picker": {
         "title": "Add gestures",
-        "description": "Search the catalogue and pick gestures. Each one goes straight into the lesson; a gesture appears once.",
+        "description": "Search the catalog and pick gestures. Each one goes straight into the lesson; a gesture appears once.",
         "placeholder": "Search gestures",
         "categories": "Filter by category",
         "destination": "Add to",
@@ -1708,8 +1746,8 @@
         "picked": "Picked up {{name}}, position {{position}} of {{total}}.",
         "moved": "Moved {{name}} to position {{position}} of {{total}}.",
         "dropped": "Dropped {{name}} at position {{position}} of {{total}}.",
-        "cancelled": "Move cancelled. {{name}} is back at position {{position}}.",
-        "failed": "The new order couldn't be applied."
+        "cancelled": "Move canceled. {{name}} is back at position {{position}}.",
+        "failed": "The new order couldn’t be applied."
       }
     },
     "teacherInfo": {
@@ -1819,7 +1857,7 @@
           "create": "The upload could not start. Try again.",
           "transfer": "The file could not be sent to Mux.",
           "processing": "Mux could not process this video. Try another file.",
-          "cancelled": "The upload expired or was cancelled.",
+          "cancelled": "The upload expired or was canceled.",
           "slow": "Mux is still busy after 10 minutes. Check again later."
         },
         "checkAgain": "Check again"
@@ -1923,7 +1961,7 @@
         "help": {
           "translator": "Translates names, keywords, screens and legal texts.",
           "teacher": "Manages teacher information and drawings, builds lessons and creates lesson PDFs.",
-          "admin": "Manages the catalogue, accounts, sponsorships and settings."
+          "admin": "Manages the catalog, accounts, sponsorships and settings."
         }
       },
       "grant": {
@@ -1991,7 +2029,7 @@
         "untilHint": "Optional, at most 7 days ahead. Shown on the page and sent as Retry-After.",
         "noUntil": "Not set",
         "untilInvalid": "Pick a time in the future, at most 7 days ahead.",
-        "propagation": "Other visitors follow within up to about 2 minutes: each server and each Cloudflare location keeps the setting for up to 30 seconds, and KV needs up to a minute to reach every region.",
+        "propagation": "Other visitors follow within up to about 2 minutes: each server and each Cloudflare location keeps the setting for up to 30\u00a0seconds, and KV needs up to a minute to reach every region.",
         "enable": "Enable maintenance",
         "enableNote": "You get a bypass cookie for this browser first, so you keep access.",
         "enabled": "Maintenance is on",
@@ -2037,8 +2075,8 @@
       },
       "locale": "Language",
       "width": "Width",
-      "desktop": "Desktop (780 px)",
-      "mobile": "Mobile (390 px)",
+      "desktop": "Desktop (780\u00a0px)",
+      "mobile": "Mobile (390\u00a0px)",
       "subject": "Subject",
       "view": "View",
       "html": "Email",
@@ -2109,13 +2147,13 @@
         "notFound": "This sponsorship or payment no longer exists.",
         "validation": "That does not match. Check what you entered.",
         "forbidden": "You are no longer an admin. Reload the page.",
-        "generic": "The action failed. Please try again."
+        "generic": "The action failed. Try again."
       },
       "paymentStatus": {
         "open": "Open",
         "paid": "Paid",
         "failed": "Failed",
-        "canceled": "Cancelled",
+        "canceled": "Canceled",
         "expired": "Expired",
         "refund_needed": "Refund needed"
       },
@@ -2206,8 +2244,8 @@
       "cancel": {
         "action": "Cancel payment",
         "keep": "Keep it",
-        "description": "It covers {{gestures}}: they are all cancelled and free again, and the payment is cancelled at Mollie too. No email is sent.",
-        "done": "Payment cancelled. {{gestures}}: free again.",
+        "description": "It covers {{gestures}}: they are all canceled and free again, and the payment is canceled at Mollie too. No email is sent.",
+        "done": "Payment canceled. {{gestures}}: free again.",
         "title": "Cancel the {{amount}} payment from {{name}}?"
       },
       "recordRefund": {
@@ -2278,7 +2316,7 @@
         "renewed": "Renewed",
         "expired": "Ended",
         "force_expired": "Ended early",
-        "cancelled": "Cancelled",
+        "cancelled": "Canceled",
         "revived": "Revived by a late payment",
         "refund_needed": "Refund needed",
         "token_issued": "Link made",
@@ -2506,7 +2544,7 @@
       },
       "strings": {
         "title": "Strings",
-        "description": "Edit the site, app and email texts without a new release. A change may take a little time to appear on every device."
+        "description": "Edit the site, app and email texts without a new release. A change may take a little time to appear on every device. Fixed terms: SMOG is the method and stays SMOG in every language; SMOG\u00a0&\u00a0Co is the app and the organization; a gesture is een gebaar in Dutch and un geste in French."
       },
       "filters": {
         "label": "Filters for the strings",
@@ -2662,22 +2700,22 @@
       "live": "Live",
       "expiring": "Expiring soon",
       "rejected": "Rejected",
-      "cancelled": "Cancelled",
+      "cancelled": "Canceled",
       "expired": "Expired"
     },
     "errors": {
       "stale": "This sponsorship changed in the meantime. Refresh the page and try again.",
-      "paymentsUnavailable": "Sponsoring is paused for now. Please try again later.",
-      "paymentProvider": "The payment could not be started. Nothing was charged. Please try again.",
+      "paymentsUnavailable": "Sponsoring is paused for now. Try again later.",
+      "paymentProvider": "We couldn’t start the payment. Nothing was charged. Try again.",
       "alreadySettled": "This payment has already been completed.",
-      "logoExpired": "Your uploaded logo has expired. Please upload it again, then submit.",
-      "logoInvalid": "The logo could not be read. Choose a PNG, JPEG or WebP file of at most 2 MB.",
-      "noLogo": "This sponsorship has no logo, so one cannot be added.",
+      "logoExpired": "Your uploaded logo has expired. Upload it again, then submit.",
+      "logoInvalid": "We couldn’t read the logo. Choose a PNG, JPEG or WebP file of at most 2\u00a0MB.",
+      "noLogo": "This sponsorship has no logo, so one can’t be added.",
       "notRenewable": "This sponsorship can no longer be renewed.",
       "gestureTaken": "Someone else has sponsored this gesture in the meantime.",
-      "rejectedTooLongAgo": "This sponsorship was rejected 30 days ago or more. You can no longer request changes. Contact SMOG for help.",
-      "noVideo": "The video is not ready yet.",
-      "paid": "This payment has been paid and cannot be cancelled.",
+      "rejectedTooLongAgo": "This sponsorship was rejected 30 or more days ago, so you can no longer ask for a change. Email info@smog.vlaanderen and we’ll find a solution together.",
+      "noVideo": "The video isn’t ready yet.",
+      "paid": "This payment has been paid and can’t be canceled.",
       "notRefunded": "Mollie reports no refund yet. Refund in the Mollie dashboard first.",
       "tooMany": "Too many rows to export. Choose a shorter date range."
     },
@@ -2690,7 +2728,7 @@
   "sponsor": {
     "meta": {
       "title": "Sponsor a gesture",
-      "description": "Support a gesture for one year. Your name appears in the video and helps the SMOG project."
+      "description": "Sponsor a SMOG gesture. Once we have checked it, your name (and your logo, if you like) appears at the end of the gesture’s video for a year."
     },
     "steps": {
       "select": "Choose gestures",
@@ -2699,20 +2737,29 @@
     },
     "paused": {
       "title": "Sponsoring is paused for now",
-      "description": "You cannot sponsor a gesture right now. Please try again later."
+      "description": "You can’t sponsor a gesture right now. Try again later."
+    },
+    "story": {
+      "howTitle": "How it works",
+      "priceTitle": "What it costs",
+      "where": "Your name shows at the end of the video for {{duration}}, over the gesture itself.",
+      "review": "We check your sponsorship before it goes online. You get an email as soon as it’s online.",
+      "expiry": "After a year your name goes. The gesture and its video stay.",
+      "funds": "Your contribution pays for building and running SMOG\u00a0&\u00a0Co: the website, the app and the nonprofit behind them.",
+      "sampleName": "Your name",
+      "sampleLabel": "Example: your name at the end of a gesture’s video"
     },
     "select": {
-      "title": "Support a gesture",
-      "description": "Support a gesture for one year. Your name appears in the video and helps the SMOG project.",
+      "title": "Sponsor a gesture",
+      "description": "For a year, your name appears at the end of the gesture’s video. You can add your logo too.",
       "value": {
         "perGesture": "Per gesture, per year",
-        "seconds": "{{seconds}} sec",
-        "nameInVideo": "Your name with the chosen gestures",
+        "nameInVideo": "On screen at the end of each video",
         "logoPrice": "+{{price}}",
-        "optionalLogo": "Add your logo (optional)"
+        "optionalLogo": "With your logo, per gesture"
       },
       "search": "Search gestures",
-      "searchPlaceholder": "Search by name, concept or category...",
+      "searchPlaceholder": "Search by name, concept or category…",
       "showMore": "+{{count}} more",
       "showLess": "Show less",
       "clearFilters": "Clear filters",
@@ -2731,7 +2778,7 @@
       "taken": "Someone else was just ahead of you. Those gestures are marked; choose others if you like.",
       "availabilityError": {
         "title": "Availability could not be checked",
-        "description": "We could not check which gestures are still free. Please try again."
+        "description": "We couldn’t check which gestures are still free. Try again."
       },
       "empty": {
         "title": "No gestures found",
@@ -2748,23 +2795,23 @@
       "title": "Your name and contact details",
       "videoSection": "In the video",
       "displayName": "Name in the video",
-      "displayNamePlaceholder": "Your name or your organisation's name",
+      "displayNamePlaceholder": "Your name or your organization’s name",
       "displayNameHint": "Example: “{{intro}} {{name}}”",
       "logo": {
         "include": "Add a logo (+{{price}} per gesture)",
         "label": "Logo",
         "drop": "Drag your logo here or",
         "browse": "browse",
-        "formats": "PNG, JPEG or WebP · max. 2 MB",
+        "formats": "PNG, JPEG or WebP · max. 2\u00a0MB",
         "previewAlt": "Preview of the logo",
         "remove": "Remove logo",
         "replace": "Choose another logo",
         "guidelines": {
           "title": "Logo guidelines",
           "format": "Format: PNG with a transparent background (recommended), JPEG or WebP",
-          "dimensions": "Size: at least 800 × 800 px for the best quality",
+          "dimensions": "Size: at least 800 × 800\u00a0px for the best quality",
           "aspectRatio": "Aspect ratio: square (1:1) recommended",
-          "fileSize": "File size: at most 2 MB",
+          "fileSize": "File size: at most 2\u00a0MB",
           "style": "Style: simple, high-contrast logos work best",
           "avoid": "Avoid: very detailed logos or thin lines"
         },
@@ -2791,7 +2838,7 @@
         "displayNameTooLong": "Use at most {{max}} characters.",
         "displayNameInvalid": "Use one line of text. Remove line breaks and invisible characters.",
         "logoRequired": "Upload a logo or untick the option.",
-        "logoTooLarge": "Choose a logo of at most 2 MB.",
+        "logoTooLarge": "Choose a logo of at most 2\u00a0MB.",
         "logoType": "Use a PNG, JPEG or WebP image.",
         "required": "This field is required.",
         "tooLong": "This text is too long.",
@@ -2816,7 +2863,7 @@
       "gestures": "Gestures",
       "duration": "Duration",
       "durationValue": "1 year",
-      "nameInVideo": "Name in video",
+      "nameInVideo": "Name in the video",
       "logo": "Logo",
       "yes": "Yes",
       "no": "No",
@@ -2827,7 +2874,7 @@
       "redirectNote": "You will be redirected to Mollie for a secure payment.",
       "captchaHint": "First confirm that you are not a robot.",
       "back": "Back to details",
-      "failed": "Continuing to payment failed. Please try again."
+      "failed": "We couldn’t continue to the payment. Try again."
     },
     "success": {
       "title": "Your sponsorship",
@@ -2847,12 +2894,12 @@
         "checkAgain": "Check again"
       },
       "paid": {
-        "title": "Payment successful!",
-        "description": "Thank you for supporting SMOG."
+        "title": "Your payment went through",
+        "description": "Thank you for supporting SMOG\u00a0&\u00a0Co."
       },
       "renewed": {
-        "title": "Your sponsorship is renewed!",
-        "description": "Your name stays in the video until {{date}}."
+        "title": "Your sponsorship is renewed",
+        "description": "Your name stays at the end of the video until {{date}}."
       },
       "failed": {
         "title": "The payment did not go through",
@@ -2861,7 +2908,7 @@
         "renewalDescriptionUndated": "Nothing was charged and your sponsorship keeps running until its current end date. Use the link in your email to try again."
       },
       "canceled": {
-        "title": "The payment was cancelled"
+        "title": "The payment was canceled"
       },
       "expired": {
         "title": "The payment expired"
@@ -2895,11 +2942,11 @@
       "loading": "Checking your link…",
       "notFound": {
         "title": "Link not found",
-        "description": "This link is invalid or has already been used. Contact SMOG if you think this is wrong."
+        "description": "This link is invalid or has already been used. If that seems wrong, email us at <email>{{email}}</email>."
       },
       "expired": {
         "title": "Link expired",
-        "description": "This link has expired. Ask SMOG for a new link.",
+        "description": "This link has expired. Email us at <email>{{email}}</email> and we’ll send you a new one.",
         "since": "Expired on {{date}}"
       },
       "unavailable": {
@@ -2917,22 +2964,22 @@
       "noPayment": "You do not have to pay again. We check the change before it goes online.",
       "submit": "Send for review",
       "submitted": {
-        "title": "Sent!",
-        "description": "We check your changes before they go online. You do not have to pay again."
+        "title": "Your changes have been sent",
+        "description": "We check your changes before they go online. You don’t have to pay again."
       },
-      "failed": "We could not send your change. Please try again."
+      "failed": "We couldn’t send your change. Try again."
     },
     "renew": {
       "eyebrow": "Renew your sponsorship",
       "title": "Another year in the video",
       "description": "Renew your sponsorship for one year. Your name and any logo stay the same.",
       "gesture": "Gesture",
-      "name": "Name in video",
+      "name": "Name in the video",
       "currentEnd": "Currently runs until",
       "newEnd": "After renewal until",
       "amount": "Amount",
       "pay": "Renew and pay",
-      "failed": "The payment could not start. Please try again."
+      "failed": "The payment couldn’t start. Try again."
     },
     "preview": {
       "label": "Preview for {{name}}",
@@ -2944,5 +2991,14 @@
     "title": "Sign out?",
     "message": "You can sign in again at any time.",
     "confirm": "Sign out"
+  },
+  "stateActions": {
+    "noResults": {
+      "clear": "Clear the search",
+      "suggestions": "Did you mean one of these gestures?"
+    },
+    "offline": {
+      "web": "What’s already on your screen stays here. Other pages, search and videos work again once you’re connected."
+    }
   }
 }

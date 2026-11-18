@@ -73,9 +73,11 @@ describe("renderEmail", () => {
       { minutes: 5, url: URL },
       "en"
     );
-    expect(email.html.toLowerCase()).toContain(
-      tokens.color.light.primary.toLowerCase()
-    );
+    const html = email.html.toLowerCase();
+    // The button in the brand green, the header in the deep green, as pills.
+    expect(html).toContain(tokens.color.light.primary.toLowerCase());
+    expect(html).toContain(tokens.color.light.sidebar.toLowerCase());
+    expect(html).toContain("border-radius:9999px");
   });
 
   it("renders the OTP code, the magic link and the reset link", async () => {

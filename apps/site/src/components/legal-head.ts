@@ -12,9 +12,13 @@ import { seoHead, shellHead } from "@/lib/head";
 /** `/privacy` or `/terms`. */
 export type LegalHeadKind = "privacy" | "terms";
 
-/** `/privacy?lang=nl`: the Dutch text in place, whatever the site language. */
+/**
+ * `/privacy?text=nl`: the Dutch text in place, whatever the site language.
+ * (`?lang` is the page's language on every public page,
+ * `lib/page-language.ts`; this one keeps the page as it is.)
+ */
 export interface LegalSearch {
-  lang?: "nl";
+  text?: "nl";
 }
 
 /** A page's title and description in one language. */
@@ -26,14 +30,18 @@ interface LegalMeta {
 /** What the route loader derives: title and description per language it loaded. */
 export type LegalMetaByLocale = Readonly<Record<string, LegalMeta>>;
 
-/** Keeps only `lang=nl` (review I2: reading Dutch changes no setting). */
+/** Keeps only `text=nl` (review I2: reading Dutch changes no setting). */
 export function validateLegalSearch(
   search: Record<string, unknown>
 ): LegalSearch {
-  return search.lang === "nl" ? { lang: "nl" } : {};
+  return search.text === "nl" ? { text: "nl" } : {};
 }
 
-/** The page head: title, the first paragraph as description, canonical. */
+/**
+ * The page head: the published text's title, a fixed plain-language
+ * description per page (`meta.privacy` / `meta.terms`; the text's first
+ * paragraph was formal and far over the length a result shows), canonical.
+ */
 export function legalHead(
   matches: Parameters<typeof shellHead>[0],
   kind: LegalHeadKind,
@@ -42,7 +50,9 @@ export function legalHead(
   const { locale, t } = shellHead(matches);
   const own = meta?.[locale];
   return seoHead(matches, {
-    description: own?.description ?? t("common.appName"),
+    description: t(
+      kind === "privacy" ? "meta.privacy.description" : "meta.terms.description"
+    ),
     path: `/${kind}`,
     ...(own ? { title: own.title } : {}),
   });

@@ -4,6 +4,17 @@ import { cn } from "../lib/cn";
 
 export type HandIndex = 0 | 1 | 2;
 
+/**
+ * Each hand has one fixed meaning (DESIGN.md, "Hands"): pointing down is
+ * "this one", pointing across is find or search (and no results), the open
+ * palm is welcome or nothing here yet (and, on a pale red disc, an error).
+ */
+export const HAND = {
+  search: 1,
+  thisOne: 0,
+  welcome: 2,
+} as const satisfies Record<string, HandIndex>;
+
 export interface HandIllustrationProps
   extends Omit<ComponentProps<"span">, "children"> {
   /** Which of the three brand hands (`handSvgs`); the first by default. */

@@ -15,7 +15,7 @@
  */
 
 /** Bump together with a new entry in `LESSON_PDF_ENGINE_HASHES`. */
-export const LESSON_PDF_LAYOUT_VERSION = 2;
+export const LESSON_PDF_LAYOUT_VERSION = 3;
 
 /** Version to engine fingerprint; an entry is never edited, a new version adds one. */
 export const LESSON_PDF_ENGINE_HASHES: Readonly<Record<number, string>> = {
@@ -23,4 +23,6 @@ export const LESSON_PDF_ENGINE_HASHES: Readonly<Record<number, string>> = {
   1: "8b82a08e80880176cc40945cf036d475009cc2b491165ec6257b1587a113bb63",
   // Review fix wave: a section title never alone on a page, bounded PNG inflate, glyph coverage module.
   2: "8ea46f5cf528ee7d61b557bdf6fafe334608866a9677912f9e785d5690992fe1",
+  // Brand identity: the print colours come from the tokens (and the hash now covers them).
+  3: "0b30befd86631922bd8d1e6002267562a372459c7f3667f5a09bb5a71371fc62",
 };

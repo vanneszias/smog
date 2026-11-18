@@ -9,9 +9,27 @@ import { cva, type VariantProps } from "class-variance-authority";
 export const focusRing =
   "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
+/**
+ * The focus ring on a deep green surface (`bg-sidebar`: the header, the hero,
+ * the auth panel, banners): white with a green offset. Put it after
+ * `focusRing`; any control on green takes it, never the orange `ring`.
+ */
+export const focusRingOnGreen =
+  "focus-visible:ring-sidebar-ring focus-visible:ring-offset-sidebar";
+
 /** Colour and shadow changes on hover/press; none under reduced motion. */
 export const transition =
   "transition duration-fast ease-standard motion-reduce:transition-none";
+
+/**
+ * Press feedback, a kit contract like `focusRing`: a pressed compact control
+ * (button, icon button, chip, toggle, the heart) shrinks to
+ * `--motion-press-scale` (0.97) over the `transition` fragment's 120 ms and
+ * springs back on release, so a tap on a phone (where `hover:` never fires)
+ * is felt at once. Only with motion allowed; never on cards, rows or links in
+ * text (large surfaces look like they jump).
+ */
+export const press = "motion-safe:active:scale-(--motion-press-scale)";
 
 /**
  * Grows the hit area of a small control to 44 × 44 px without changing its
@@ -53,12 +71,12 @@ export const disabled =
 
 /**
  * Border and fill of text inputs, selects and textareas: the registry's
- * pill field (`rounded-4xl`, a `bg-input/30` wash) with the kit's contracts on
+ * pill field (`rounded-pill`, a `bg-input/30` wash) with the kit's contracts on
  * top (44 px, the 2 px `focus-ring`, a 3:1 `border-input`).
  */
 export const fieldVariants = cva(
   [
-    "w-full min-w-0 rounded-4xl border border-input bg-card text-body text-foreground placeholder:text-muted-foreground",
+    "w-full min-w-0 rounded-pill border border-input bg-card text-body text-foreground placeholder:text-muted-foreground",
     "hover:border-foreground aria-invalid:border-destructive",
     focusRing,
     transition,

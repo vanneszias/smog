@@ -1,6 +1,6 @@
 import type { GestureViewSource } from "@smog/analytics/schema";
 import { useAuthState } from "@smog/auth/react";
-import { COURSE_URL } from "@smog/config/constants";
+import { CONTACT_EMAIL, COURSE_URL } from "@smog/config/constants";
 import {
   useGestureViewed,
   useRememberGesture,
@@ -20,7 +20,6 @@ import {
   COURSE_MESSAGE_COUNT,
   CourseBanner,
   type CourseMessageIndex,
-  cn,
   ErrorState,
   Heading,
   NameOverlayToggle,
@@ -30,9 +29,12 @@ import {
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useCallback } from "react";
 import { SponsorCta } from "@/components/sponsor/sponsor-cta";
+import { RELATED_LIMIT } from "@/lib/gesture-queries";
 import { useNameOverlayPreference } from "@/lib/name-overlay";
+import { useCatalogDisplay } from "./catalog-display";
 import { GestureActions } from "./gesture-actions";
 import { GestureGridSkeleton, LinkedGestureGrid } from "./gesture-cards";
+import { Page } from "./page";
 import type { Hearts } from "./use-hearts";
 
 export interface RelatedState {
@@ -40,6 +42,17 @@ export interface RelatedState {
   isError: boolean;
   isRefetching: boolean;
   refetch: () => unknown;
+}
+
+/**
+ * The related row's columns: six across on the page (two rows of three on a
+ * tablet, three of two on a phone), three across in the browse panel, so
+ * `RELATED_LIMIT` (6) never leaves an orphan. The skeleton uses the same.
+ */
+function relatedGrid(level: 2 | 3): string {
+  return level === 2
+    ? "lg:grid-cols-6 xl:grid-cols-6"
+    : "lg:grid-cols-3 xl:grid-cols-3";
 }
 
 function Related({
@@ -66,12 +79,18 @@ function Related({
       />
     );
   } else if (related.data === undefined) {
-    body = <GestureGridSkeleton count={4} />;
+    body = (
+      <GestureGridSkeleton
+        className={relatedGrid(level)}
+        count={RELATED_LIMIT}
+      />
+    );
   } else if (related.data.length === 0) {
     return null;
   } else {
     body = (
       <LinkedGestureGrid
+        className={relatedGrid(level)}
         from="related_gestures"
         hearts={hearts}
         items={related.data}
@@ -129,13 +148,22 @@ function TeacherInfoLink({
   );
 }
 
+/** The video on the stage: 3:4, as tall as a laptop screen allows. */
+export const STAGE_VIDEO = "mx-auto w-full max-w-sm md:max-w-md";
+
+/** The text and the sponsor card under the stage. */
+export const PAGE_COLUMNS =
+  "grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16";
+
 /**
- * A gesture: the video on top (3:4, the course banner under it when due),
- * then the name, its categories (links to the filtered browse), the
- * actions, description, related concepts, the sponsor card (L-17: the
- * credit, or "Sponsor this gesture") and related gestures (spec §16
- * flow 1). `page` puts the video beside the text from
- * `lg`; `panel` stacks everything (the browse page's detail column).
+ * A gesture: the video (3:4) on the deep green stage, the same green as
+ * the backdrop of the videos, then the course banner when due, the name,
+ * its categories (quiet tinted links to the filtered browse), the actions,
+ * description, related concepts, the sponsor card (L-17: the credit, or
+ * "Sponsor this gesture") and related gestures (spec §16 flow 1). `page`
+ * runs the stage across the full width under the header, with the sponsor
+ * card beside the text from `lg`; `panel` insets the stage and stacks
+ * everything (the browse page's detail column).
  * `viewSource` is where it was opened from (`gesture_viewed`, once per
  * gesture shown). `appLink` goes under the actions (the page's "Open in
  * the app" on phones).
@@ -179,110 +207,140 @@ export function GestureDetailView({
     messageCount: COURSE_MESSAGE_COUNT,
     storage: webAdapter,
   });
-  return (
-    <div className="flex flex-col gap-10">
-      <article
-        className={cn(
-          "grid gap-6",
-          page && "lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-12"
-        )}
-      >
-        <div
-          className={cn(
-            "mx-auto flex w-full max-w-lg flex-col gap-4",
-            page && "lg:mx-0 lg:max-w-none"
-          )}
+  const shown = useCatalogDisplay().gesture(gesture);
+  const video = (
+    // On the deep green stage the frame lies flat: the stage already sets
+    // it apart, and the kit's ring and raised shadow (made for a light
+    // page) drew a light edge around the video in the dark theme.
+    <VideoPlayer
+      className="shadow-none ring-0"
+      endCard={endCardOf(gesture)}
+      nameOverlay={
+        overlayApplies && nameOverlay.loaded && nameOverlay.shown
+          ? gesture.name
+          : undefined
+      }
+      onNearEnd={onNearEnd}
+      playbackId={gesture.playbackId}
+      title={gesture.name}
+    />
+  );
+  const details = (
+    <div className="flex min-w-0 flex-col gap-6">
+      {course.messageIndex ? (
+        <CourseBanner
+          contactEmail={CONTACT_EMAIL}
+          courseUrl={COURSE_URL}
+          messageIndex={course.messageIndex}
+          onDismiss={course.dismiss}
+        />
+      ) : null}
+      <div className="flex flex-col gap-3">
+        <Heading
+          lang={shown.nameLang}
+          level={titleLevel}
+          size={page ? "display" : "title-1"}
         >
-          <VideoPlayer
-            endCard={endCardOf(gesture)}
-            nameOverlay={
-              overlayApplies && nameOverlay.loaded && nameOverlay.shown
-                ? gesture.name
-                : undefined
-            }
-            onNearEnd={onNearEnd}
-            playbackId={gesture.playbackId}
-            title={gesture.name}
-          />
-          {course.messageIndex ? (
-            <CourseBanner
-              courseUrl={COURSE_URL}
-              messageIndex={course.messageIndex}
-              onDismiss={course.dismiss}
+          {gesture.name}
+        </Heading>
+        {showTranslationStatus ? (
+          <Badge variant="warning">{t("admin.catalogTranslation.needs")}</Badge>
+        ) : null}
+        <TeacherInfoLink gestureId={gesture.id} roles={roles} />
+        {shown.categories.length > 0 ? (
+          <ul
+            aria-label={t("search.categories")}
+            className="flex flex-wrap gap-2"
+          >
+            {shown.categories.map((category) => (
+              <li key={category.slug}>
+                {/* What this is, not what you can do: the quiet green tint. */}
+                <Button
+                  asChild
+                  className="bg-primary-subtle text-primary-strong hover:bg-primary-subtle/70 hover:text-primary-strong"
+                  size="sm"
+                  variant="ghost"
+                >
+                  <Link search={{ category: category.slug }} to="/gestures">
+                    {category.name}
+                  </Link>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+      {gesture.audioPath || overlayApplies ? (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          {/* A clip of this language only; never a fallback. */}
+          {gesture.audioPath ? <AudioButton src={gesture.audioPath} /> : null}
+          {overlayApplies ? (
+            <NameOverlayToggle
+              checked={nameOverlay.shown}
+              onCheckedChange={nameOverlay.setShown}
             />
           ) : null}
         </div>
-        <div className="flex min-w-0 flex-col gap-6">
-          <div className="flex flex-col gap-3">
-            <Heading level={titleLevel} size="title-1">
-              {gesture.name}
-            </Heading>
-            {showTranslationStatus ? (
-              <Badge variant="warning">
-                {t("admin.catalogTranslation.needs")}
-              </Badge>
-            ) : null}
-            <TeacherInfoLink gestureId={gesture.id} roles={roles} />
-            {gesture.categories.length > 0 ? (
-              <ul
-                aria-label={t("search.categories")}
-                className="flex flex-wrap gap-2"
-              >
-                {gesture.categories.map((category) => (
-                  <li key={category.slug}>
-                    <Button asChild size="sm" variant="secondary">
-                      <Link search={{ category: category.slug }} to="/gestures">
-                        {category.name}
-                      </Link>
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-          {gesture.audioPath || overlayApplies ? (
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              {/* A clip of this language only; never a fallback. */}
-              {gesture.audioPath ? (
-                <AudioButton src={gesture.audioPath} />
-              ) : null}
-              {overlayApplies ? (
-                <NameOverlayToggle
-                  checked={nameOverlay.shown}
-                  onCheckedChange={nameOverlay.setShown}
-                />
-              ) : null}
-            </div>
-          ) : null}
-          <GestureActions gesture={gesture} hearts={hearts} />
-          {appLink}
-          {gesture.description ? (
-            <section className="flex max-w-reading flex-col gap-2">
-              <Heading level={sectionLevel} size="title-3">
-                {t("gesture.description")}
-              </Heading>
-              <Text>{gesture.description}</Text>
-            </section>
-          ) : null}
-          {gesture.keywords.length > 0 ? (
-            <section className="flex flex-col gap-2">
-              <Heading level={sectionLevel} size="title-3">
-                {t("gesture.keywords")}
-              </Heading>
-              <ul className="flex flex-wrap gap-2">
-                {gesture.keywords.map((keyword) => (
-                  <li key={keyword}>
-                    <Badge size="md">{keyword}</Badge>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-          {/* Last in the column: it mounts after its read, so nothing moves. */}
-          <SponsorCta gesture={gesture} level={sectionLevel} />
-        </div>
-      </article>
-      <Related hearts={hearts} level={sectionLevel} related={related} />
+      ) : null}
+      <GestureActions gesture={gesture} hearts={hearts} />
+      {appLink}
+      {gesture.description ? (
+        <section className="flex max-w-reading flex-col gap-2">
+          <Heading level={sectionLevel} size="title-3">
+            {t("gesture.description")}
+          </Heading>
+          <Text>{gesture.description}</Text>
+        </section>
+      ) : null}
+      {gesture.keywords.length > 0 ? (
+        <section className="flex flex-col gap-2">
+          <Heading level={sectionLevel} size="title-3">
+            {t("gesture.keywords")}
+          </Heading>
+          <ul className="flex flex-wrap gap-2">
+            {gesture.keywords.map((keyword) => (
+              <li key={keyword}>
+                <Badge size="md">{keyword}</Badge>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
+  );
+  const sponsor = <SponsorCta gesture={gesture} level={sectionLevel} />;
+  const relatedRow = (
+    <Related hearts={hearts} level={sectionLevel} related={related} />
+  );
+  if (!page) {
+    // The browse panel: the same green stage, inset, then everything stacked.
+    return (
+      <div className="flex flex-col gap-8">
+        <div className="flex justify-center rounded-card bg-sidebar p-4 md:p-6">
+          <div className="w-full max-w-sm">{video}</div>
+        </div>
+        {details}
+        {/* Last: it mounts after its read, so nothing above moves. */}
+        {sponsor}
+        {relatedRow}
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="bg-sidebar" data-slot="gesture-stage">
+        <div className="mx-auto w-full max-w-content px-4 py-6 md:px-6 md:py-10 lg:px-8">
+          <div className={STAGE_VIDEO}>{video}</div>
+        </div>
+      </div>
+      <Page className="gap-12 md:gap-16">
+        <div className={PAGE_COLUMNS}>
+          {details}
+          {/* Beside the text from `lg`; it mounts after its read. */}
+          <div className="flex min-w-0 flex-col">{sponsor}</div>
+        </div>
+        {relatedRow}
+      </Page>
+    </>
   );
 }

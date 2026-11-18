@@ -140,6 +140,54 @@ describe("green surfaces", () => {
   });
 });
 
+describe("orange means do it", () => {
+  it("gives orange a 3:1 mark and fill edge on the deep green, in both themes", () => {
+    for (const background of ["sidebar"] as const) {
+      for (const foreground of ["sidebarPrimary", "highlight"] as const) {
+        expect(CONTRAST_PAIRS).toContainEqual({
+          background,
+          foreground,
+          min: AA_LARGE,
+        });
+      }
+    }
+  });
+
+  it("writes orange text on light surfaces only in the darker highlightStrong", () => {
+    for (const background of ["background", "card", "muted"] as const) {
+      expect(CONTRAST_PAIRS).toContainEqual({
+        background,
+        foreground: "highlightStrong",
+        min: AA_BODY,
+      });
+      expect(CONTRAST_PAIRS).not.toContainEqual({
+        background,
+        foreground: "highlight",
+        min: AA_BODY,
+      });
+    }
+  });
+});
+
+describe("the deep green surface", () => {
+  it("stays a deep green under light text in dark mode (no mint slab)", () => {
+    const { dark } = tokens.color;
+    expect(
+      contrastRatio(dark.sidebarForeground, dark.sidebar)
+    ).toBeGreaterThanOrEqual(7);
+    expect(contrastRatio(dark.sidebar, dark.background)).toBeLessThan(1.5);
+  });
+
+  it("drives the browser bar and the manifest from the header green", () => {
+    expect(tokens.chrome.themeColor).toEqual({
+      dark: tokens.color.dark.sidebar,
+      light: tokens.color.light.sidebar,
+    });
+    expect(tokens.chrome.manifestTheme).toBe(tokens.color.light.sidebar);
+    expect(tokens.chrome.manifestBackground).toBe(tokens.color.light.sidebar);
+  });
+});
+
 describe("brand", () => {
   it("keeps the brand green as the light primary", () => {
     expect(tokens.color.light.primary).toBe("#00805F");

@@ -12,8 +12,8 @@ export default function AuthLayout(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const background = useColor("background");
-  const green = useColor("primary");
-  const onGreen = useColor("primaryForeground");
+  const green = useColor("sidebar");
+  const onGreen = useColor("sidebarForeground");
   const close = useCallback(() => router.dismissTo("/"), [router]);
   const headerRight = useCallback(
     () => (

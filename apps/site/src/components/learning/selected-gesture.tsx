@@ -1,7 +1,13 @@
 import { isDefinedError } from "@orpc/client";
 import { useGesture, useRelated } from "@smog/gestures/client";
 import { useTranslation } from "@smog/i18n/react";
-import { EmptyState, ErrorState } from "@smog/ui-web";
+import {
+  EmptyState,
+  ErrorState,
+  HandIllustration,
+  Heading,
+  Text,
+} from "@smog/ui-web";
 import { type ReactNode, useCallback, useEffect } from "react";
 import { RELATED_LIMIT } from "@/lib/gesture-queries";
 import { GestureDetailView } from "./gesture-detail";
@@ -72,13 +78,18 @@ export function SelectedGesture({
 }): ReactNode {
   const { t } = useTranslation();
   if (!slug) {
+    // The deep green stage the video will stand on, waiting: the open palm
+    // (nothing here yet) and what to do.
     return (
-      <EmptyState
-        description={t("gestures.select.description")}
-        illustration={2}
-        level={2}
-        title={t("gestures.select.title")}
-      />
+      <div className="flex min-h-96 flex-col items-center justify-center gap-4 rounded-card bg-sidebar px-8 py-12 text-center text-sidebar-foreground">
+        <HandIllustration className="h-16 text-sidebar-foreground" hand={2} />
+        <Heading className="text-sidebar-foreground" level={2} size="title-2">
+          {t("gestures.select.title")}
+        </Heading>
+        <Text className="max-w-xs text-sidebar-foreground-muted">
+          {t("gestures.select.description")}
+        </Text>
+      </div>
     );
   }
   return <SelectedDetail key={slug} slug={slug} />;

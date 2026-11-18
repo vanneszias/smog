@@ -27,7 +27,7 @@ import {
   useHeart,
   useHearts,
 } from "@/components/learning/use-hearts";
-import { pageMeta, shellHead } from "@/lib/head";
+import { pageMeta, shareCard, shellHead } from "@/lib/head";
 import type { RouterContext } from "@/router";
 
 // One public read; an unknown or revoked link is the 404 page.
@@ -58,13 +58,28 @@ export const Route = createFileRoute("/lists/$shareToken")({
     if (!loaderData) {
       return pageMeta(matches, "states.notFound.title");
     }
-    const { t } = shellHead(matches);
+    // Private (no index), but a link sent in a chat still shows a card.
+    const { locale, siteUrl, t } = shellHead(matches);
+    const card = shareCard(siteUrl, locale, t);
     return {
       meta: [
         {
           title: `${loaderData.name} · ${t("nav.lists")} · ${t("common.appName")}`,
         },
         { content: "noindex", name: "robots" },
+        {
+          content: `${loaderData.name} · ${t("common.appName")}`,
+          property: "og:title",
+        },
+        { content: t("meta.list.description"), property: "og:description" },
+        { content: card.url, property: "og:image" },
+        { content: card.type, property: "og:image:type" },
+        { content: String(card.width), property: "og:image:width" },
+        { content: String(card.height), property: "og:image:height" },
+        { content: card.alt, property: "og:image:alt" },
+        { content: t("common.appName"), property: "og:site_name" },
+        { content: "summary_large_image", name: "twitter:card" },
+        { content: card.alt, name: "twitter:image:alt" },
       ],
     };
   },

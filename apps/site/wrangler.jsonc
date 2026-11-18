@@ -140,8 +140,11 @@
       ]
     },
     "staging": {
+      // The owner's domain for staging (zias.be is on this account's Cloudflare
+      // zone). The custom domain creates its DNS record and certificate on deploy.
+      "routes": [{ "pattern": "smog.zias.be", "custom_domain": true }],
       "vars": {
-        "SITE_URL": "https://smog-site-staging.zias.workers.dev",
+        "SITE_URL": "https://smog.zias.be",
         "ENVIRONMENT": "staging",
         "MEDIA_BUCKET": "smog-staging-media",
         // Empty until staging gets R2 tokens: logos use the signed fallback.

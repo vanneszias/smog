@@ -5,10 +5,16 @@ import type { ReactNode } from "react";
 
 /**
  * "What happens next?" after a paid sponsorship (S-14): the payment is
- * confirmed (done), an administrator reviews it within
- * five working days, and an email follows when it is live.
+ * confirmed (done), we check the sponsorship before it goes online (no
+ * deadline is promised), and an email follows when it is online.
+ * `animated`: it rises in after the paid check has drawn itself (the paid
+ * moment), and not under reduced motion.
  */
-export function StatusTimeline(): ReactNode {
+export function StatusTimeline({
+  animated = false,
+}: {
+  animated?: boolean;
+}): ReactNode {
   const { t } = useTranslation();
   const steps = [
     { done: true, label: t("sponsor.success.timeline.paid") },
@@ -18,7 +24,11 @@ export function StatusTimeline(): ReactNode {
   return (
     <section
       aria-labelledby="sponsor-timeline"
-      className="flex flex-col gap-4 rounded-lg bg-primary-subtle p-4 sm:p-6"
+      className={cn(
+        "flex flex-col gap-4 rounded-card bg-primary-subtle p-4 sm:p-6",
+        animated && "animate-rise-in motion-reduce:animate-none"
+      )}
+      data-testid="sponsor-timeline"
     >
       <h2
         className="font-semibold text-primary-strong text-title-3"

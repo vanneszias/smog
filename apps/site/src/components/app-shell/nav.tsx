@@ -4,7 +4,7 @@ import { Button, cn, ListItem } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import { Hand, UserRound } from "lucide-react";
 import { type MouseEvent, type ReactNode, useCallback } from "react";
-import { GREEN_BUTTON } from "./on-green";
+import { GREEN_BUTTON, GREEN_ROW } from "./on-green";
 
 interface NavItem {
   href: string;
@@ -55,9 +55,12 @@ function closeOnPlainClick(
 /** The same links as rows, for the mobile menu sheet. */
 export function MainNavList({
   className,
+  onGreen = false,
   onNavigate,
 }: {
   className?: string;
+  /** The rows sit on the deep green (the header's phone menu). */
+  onGreen?: boolean;
   /** Called when a link is followed (the sheet closes, the page changes). */
   onNavigate?: () => void;
 }): ReactNode {
@@ -75,7 +78,12 @@ export function MainNavList({
       <ul className="flex flex-col">
         {NAV_ITEMS.map((item) => (
           <li key={item.href}>
-            <ListItem asChild leading={item.icon} title={t(item.label)}>
+            <ListItem
+              asChild
+              className={onGreen ? GREEN_ROW : undefined}
+              leading={item.icon}
+              title={t(item.label)}
+            >
               <Link onClick={onClick} to={item.href}>
                 {t(item.label)}
               </Link>

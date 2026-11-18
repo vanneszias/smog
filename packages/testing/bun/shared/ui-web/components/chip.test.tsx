@@ -26,6 +26,26 @@ describe("Chip", () => {
     expect(classesOf(chip)).toContain("bg-primary-subtle");
   });
 
+  test("the action tone makes the selected chip the orange do-it", () => {
+    renderKit(
+      <>
+        <Chip selected tone="action">
+          Animals
+        </Chip>
+        <Chip selected={false} tone="action">
+          Food
+        </Chip>
+      </>
+    );
+    const on = classesOf(screen.getByRole("button", { name: "Animals" }));
+    expect(on).toContain("bg-highlight");
+    expect(on).toContain("text-highlight-foreground");
+    expect(on).toContain("border-highlight-strong");
+    expect(on).not.toContain("bg-primary-subtle");
+    const off = classesOf(screen.getByRole("button", { name: "Food" }));
+    expect(off).not.toContain("bg-highlight");
+  });
+
   test("a removable chip has a labelled remove button", async () => {
     const onRemove = mock();
     renderKit(<Chip onRemove={onRemove}>Food</Chip>);

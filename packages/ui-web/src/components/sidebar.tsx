@@ -205,7 +205,7 @@ export function Sidebar({
       {/* The gap that keeps the page content beside the fixed panel. */}
       <div
         className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-normal ease-standard motion-reduce:transition-none",
+          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-normal ease-move motion-reduce:transition-none",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -216,7 +216,7 @@ export function Sidebar({
       />
       <div
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-normal ease-standard data-[side=right]:right-0 data-[side=left]:left-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] motion-reduce:transition-none md:flex",
+          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-normal ease-move data-[side=right]:right-0 data-[side=left]:left-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] motion-reduce:transition-none md:flex",
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-sidebar-border group-data-[side=right]:border-sidebar-border group-data-[side=left]:border-r group-data-[side=right]:border-l",
@@ -352,7 +352,7 @@ export function SidebarGroupLabel({
     <div
       className={cn(
         // sidebar-foreground-muted is the contrast-checked muted text on the green surface.
-        "flex h-8 shrink-0 items-center rounded-xl px-3 font-medium text-caption text-sidebar-foreground-muted transition-[margin,opacity] duration-normal ease-standard group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 motion-reduce:transition-none [&>svg]:size-4 [&>svg]:shrink-0",
+        "flex h-8 shrink-0 items-center rounded-xl px-3 font-medium text-caption text-sidebar-foreground-muted transition-[margin,opacity] duration-normal ease-move group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 motion-reduce:transition-none [&>svg]:size-4 [&>svg]:shrink-0",
         className
       )}
       data-sidebar="group-label"
@@ -420,7 +420,10 @@ export function SidebarMenuItem({
 
 const sidebarMenuButtonVariants = cva(
   [
-    "peer/menu-button group/menu-button flex min-h-touch w-full items-center gap-2 overflow-hidden rounded-xl px-3 py-2 text-left text-body-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground [&>span:last-child]:truncate [&_svg]:size-5 [&_svg]:shrink-0",
+    // The current item: the orange `sidebar-primary` bar at its start edge on
+    // the plain `sidebar`, no wash (the orange reaches 3:1 only on `sidebar`;
+    // the wash is hover's).
+    "peer/menu-button group/menu-button relative flex min-h-touch w-full items-center gap-2 overflow-hidden rounded-xl px-3 py-2 text-left text-body-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-active:font-medium data-active:before:absolute data-active:before:inset-y-2 data-active:before:left-1 data-active:before:w-1 data-active:before:rounded-full data-active:before:bg-sidebar-primary data-active:hover:bg-transparent [&>span:last-child]:truncate [&_svg]:size-5 [&_svg]:shrink-0",
     "aria-disabled:pointer-events-none aria-disabled:opacity-50 group-data-[collapsible=icon]:size-touch! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!",
     "outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
     transition,

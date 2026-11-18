@@ -18,7 +18,8 @@ const WRANGLER = readFileSync(
   join(ROOT, "apps", "site", "wrangler.jsonc"),
   "utf8"
 );
-const STAGING_ORIGIN = "https://smog-site-staging.zias.workers.dev";
+// Staging's SITE_URL, the owner's custom domain (wrangler.jsonc `env.staging`).
+const STAGING_ORIGIN = "https://smog.zias.be";
 const LAUNCH_ORIGIN = "https://smog.example";
 
 interface FakeAccount {
@@ -443,7 +444,7 @@ describe("ensureResources --create", () => {
     }
   });
 
-  test("staging's own host still passes --create", async () => {
+  test("staging's own origin still passes --create", async () => {
     expect(planResources(WRANGLER, "staging").buckets[0]?.corsOrigin).toBe(
       STAGING_ORIGIN
     );

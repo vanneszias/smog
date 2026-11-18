@@ -14,7 +14,7 @@ const GESTURE: SponsorCtaProps["gesture"] = {
   sponsor: null,
 };
 const LIVE_UNTIL = Date.UTC(2027, 4, 12, 10);
-const SPONSOR_LINK = /Sponsor now/;
+const SPONSOR_LINK = /Sponsor this gesture/;
 
 function availability(
   item: Partial<Availability["items"][number]>,
@@ -48,7 +48,7 @@ describe("the gesture's sponsor card (L-17, ruling 13)", () => {
     const link = await screen.findByRole("link", { name: SPONSOR_LINK });
     expect(link.getAttribute("href")).toBe("/sponsor?gesture=hond");
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
-      "Sponsor this gesture"
+      "Become this gesture’s sponsor"
     );
     expect(calls).toContainEqual({
       input: { gestureIds: ["g-hond"] },
@@ -74,7 +74,7 @@ describe("the gesture's sponsor card (L-17, ruling 13)", () => {
     });
     expect(
       await screen.findByText(
-        "This gesture has already been chosen for sponsorship and is not available right now."
+        "Someone is already sponsoring this gesture. Feel free to choose another one."
       )
     ).toBeDefined();
     expect(screen.queryByRole("link")).toBeNull();
@@ -97,9 +97,7 @@ describe("the gesture's sponsor card (L-17, ruling 13)", () => {
       await screen.findByText("This gesture is sponsored by Bakkerij Jansen.")
     ).toBeDefined();
     expect(
-      screen.getByText(
-        "It will be available for sponsoring again from 12 May 2027."
-      )
+      screen.getByText("You can sponsor this gesture again from 12 May 2027.")
     ).toBeDefined();
     expect(screen.queryByRole("link")).toBeNull();
   });

@@ -158,6 +158,7 @@ export default function SharedListScreen(): ReactElement {
             </Button>
           }
           description={t("lists.notFound.description")}
+          illustration={2}
           title={t("lists.notFound.title")}
         />
       </ListState>

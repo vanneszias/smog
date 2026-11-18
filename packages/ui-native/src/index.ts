@@ -49,6 +49,11 @@ export {
   type FieldProps,
   useFieldControl,
 } from "./components/field";
+export {
+  HandIllustration,
+  type HandIllustrationProps,
+  type HandIndex,
+} from "./components/hand-illustration";
 export { IconButton, type IconButtonProps } from "./components/icon-button";
 export { Input, type InputProps } from "./components/input";
 export { KitProvider } from "./components/kit-provider";

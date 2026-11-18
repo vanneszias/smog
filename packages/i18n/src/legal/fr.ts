@@ -6,14 +6,14 @@ export const fr: LegalTexts = {
     sections: [
       {
         blocks: [
-          "La présente politique de confidentialité décrit comment SMOG & CO vzw traite les données personnelles lorsque vous utilisez le site web SMOG&Co, l'application mobile, les comptes, les listes partagées, le parrainage et l'assistance associée (ensemble\u202f: le «\u202fService\u202f»).",
+          "La présente politique de confidentialité décrit comment SMOG\u00a0&\u00a0Co vzw traite les données personnelles lorsque vous utilisez le site web SMOG\u00a0&\u00a0Co, l'application mobile, les comptes, les listes partagées, le parrainage et l'assistance associée (ensemble\u202f: le «\u202fService\u202f»).",
         ],
         id: "scope",
         title: "Champ d'application",
       },
       {
         blocks: [
-          "SMOG & CO vzw, Arthur Goemaerelei 66, 2018 Anvers, Belgique, numéro d'entreprise 1009 954 991, est le responsable du traitement. Vous pouvez envoyer vos questions sur la vie privée à [info@smog.vlaanderen](mailto:info@smog.vlaanderen).",
+          "SMOG\u00a0&\u00a0Co vzw, Arthur Goemaerelei 66, 2018 Anvers, Belgique, numéro d'entreprise 1009 954 991, est le responsable du traitement. Vous pouvez envoyer vos questions sur la vie privée à [info@smog.vlaanderen](mailto:info@smog.vlaanderen).",
         ],
         id: "controller",
         title: "Responsable du traitement",
@@ -26,7 +26,7 @@ export const fr: LegalTexts = {
               "**Utilisation sans compte\u202f:** les favoris, les listes, les recherches récentes, les préférences et votre choix concernant les statistiques restent sur votre appareil. Ils ne quittent pas votre appareil, sauf si, après vous être connecté, vous choisissez de les importer dans votre compte, et hormis les statistiques facultatives ci-dessous (par exemple le geste que vous avez regardé ou enregistré).",
               "**Fonctions d'apprentissage\u202f:** gestes favoris, listes, descriptions de listes, liens de partage et leurs droits (consulter ou modifier). Les termes de recherche récents restent localement sur votre appareil.",
               "**Parrainage\u202f:** nom de contact, nom du sponsor ou de l'entreprise, e-mail, gestes choisis, nom affiché, logo facultatif, aperçu du nom et du logo sur la vidéo du geste, statut, référence de paiement et durée.",
-              "**Facturation\u202f:** nom de facturation, numéro de TVA ou d'entreprise et adresse e-mail de facturation lorsque vous demandez une facture. Mollie traite les données de paiement\u202f; SMOG&Co ne reçoit pas les données complètes de carte ou de compte bancaire.",
+              "**Facturation\u202f:** nom de facturation, numéro de TVA ou d'entreprise et adresse e-mail de facturation lorsque vous demandez une facture. Mollie traite les données de paiement\u202f; SMOG\u00a0&\u00a0Co vzw ne reçoit pas les données complètes de carte ou de compte bancaire.",
               "**Données techniques\u202f:** adresse IP, données de l'appareil, du navigateur et de l'application, journaux de sécurité, informations d'erreur et données nécessaires à la diffusion des vidéos et au trafic réseau. Lors de la connexion, de l'inscription, de la réinitialisation du mot de passe et d'autres formulaires (comme la demande d'un code ou d'un lien de connexion), Cloudflare Turnstile vérifie que la demande provient d'un humain.",
               "**Historique du consentement\u202f:** lorsque vous êtes connecté, nous conservons vos choix concernant les statistiques (oui ou non, moment et version de la politique), afin de pouvoir démontrer quel choix s'applique.",
               "**Statistiques facultatives\u202f:** uniquement avec votre consentement\u202f: chemin de l'écran, plateforme, données d'événement limitées, identifiants de gestes, nombres de résultats et de catégories, longueur d'une recherche et lecture terminée, avec votre adresse IP et les données de votre navigateur ou de l'application (voir Statistiques et identification). Nous n'envoyons ni termes de recherche, ni noms, ni adresses e-mail et n'enregistrons pas les sessions.",
@@ -57,7 +57,7 @@ export const fr: LegalTexts = {
             list: [
               "**Cloudflare\u202f:** hébergement du site web et de l'API (Workers), de la base de données (D1), stockage de fichiers comme les logos des sponsors (R2), données temporaires (KV), files d'attente (Queues), envoi des e-mails (Email) et prévention des abus (Turnstile). [Politique de confidentialité](https://www.cloudflare.com/privacypolicy/)",
               "**Better Auth\u202f:** logiciel de connexion open source que nous faisons fonctionner nous-mêmes dans notre environnement Cloudflare. Aucune donnée n'est envoyée à un prestataire distinct pour cela.",
-              "**Mux\u202f:** stockage, traitement et diffusion des vidéos de gestes. Le lecteur affiche le nom du sponsor et son éventuel logo sur la fin de la vidéo. Aucune vidéo de parrainage séparée n'est créée. [Politique de confidentialité](https://www.mux.com/privacy)",
+              "**Mux\u202f:** stockage, traitement et diffusion des vidéos de gestes. Le lecteur affiche le nom du sponsor et son éventuel logo en carton de fin, sur la fin de la vidéo du geste elle-même. Aucune vidéo de parrainage séparée n'est créée. [Politique de confidentialité](https://www.mux.com/privacy)",
               "**Mollie\u202f:** traitement hébergé des paiements et statut des paiements. [Politique de confidentialité](https://www.mollie.com/legal/privacy)",
               "**Expo\u202f:** distribution et mises à jour de l'application mobile. [Politique de confidentialité](https://expo.dev/privacy)",
               "**Google et Apple\u202f:** lorsque vous choisissez de vous connecter avec votre compte Google ou Apple. Si vous avez une photo de profil Google, votre navigateur la récupère directement auprès de Google à chaque affichage\u202f; Google voit votre adresse IP et les données de votre navigateur. [Google](https://policies.google.com/privacy) · [Apple](https://www.apple.com/legal/privacy/)",
@@ -78,7 +78,7 @@ export const fr: LegalTexts = {
       },
       {
         blocks: [
-          "SMOG & Co ne suit pas les utilisateurs à travers les applications ou sites web d'autres entreprises. Nous n'utilisons pas les données statistiques pour de la publicité ciblée ou la mesure publicitaire et ne partageons pas les données statistiques avec des courtiers en données.",
+          "SMOG\u00a0&\u00a0Co ne suit pas les utilisateurs à travers les applications ou sites web d'autres entreprises. Nous n'utilisons pas les données statistiques pour de la publicité ciblée ou la mesure publicitaire et ne partageons pas les données statistiques avec des courtiers en données.",
         ],
         id: "no-tracking",
         title: "Pas de pistage ni de publicité",
@@ -160,7 +160,7 @@ export const fr: LegalTexts = {
         blocks: [
           {
             lines: [
-              "SMOG & CO vzw",
+              "SMOG\u00a0&\u00a0Co vzw",
               "Arthur Goemaerelei 66, 2018 Anvers, Belgique",
               "E-mail\u202f: [info@smog.vlaanderen](mailto:info@smog.vlaanderen)",
               "Tél.\u202f: +32 3 216 29 90",
@@ -179,7 +179,7 @@ export const fr: LegalTexts = {
     sections: [
       {
         blocks: [
-          "Les présentes conditions s'appliquent au site web SMOG&Co, à l'application mobile, aux comptes, aux listes, au parrainage et aux services associés (le «\u202fService\u202f»), proposés par SMOG & CO vzw, Arthur Goemaerelei 66, 2018 Anvers, Belgique, numéro d'entreprise 1009 954 991. En utilisant le Service, vous acceptez ces conditions. Le droit impératif de la consommation reste toujours applicable.",
+          "Les présentes conditions s'appliquent au site web SMOG\u00a0&\u00a0Co, à l'application mobile, aux comptes, aux listes, au parrainage et aux services associés (le «\u202fService\u202f»), proposés par SMOG\u00a0&\u00a0Co vzw, Arthur Goemaerelei 66, 2018 Anvers, Belgique, numéro d'entreprise 1009 954 991. En utilisant le Service, vous acceptez ces conditions. Le droit impératif de la consommation reste toujours applicable.",
         ],
         id: "provider",
         title: "Application et prestataire",
@@ -217,7 +217,7 @@ export const fr: LegalTexts = {
       },
       {
         blocks: [
-          "Le Service, les logiciels, les textes, la conception et les vidéos de gestes appartiennent à SMOG&Co ou à ses concédants. Vous obtenez une licence limitée, révocable, non exclusive et non transférable pour un usage personnel et éducatif. La mise en cache normale par le navigateur ou l'application est autorisée\u202f; le téléchargement, la republication, la modification, l'exploitation commerciale ou la création d'un produit vidéo dérivé nécessitent une autorisation préalable, sauf lorsque la loi le permet expressément.",
+          "Le Service, les logiciels, les textes, la conception et les vidéos de gestes appartiennent à SMOG\u00a0&\u00a0Co vzw ou à ses concédants. Vous obtenez une licence limitée, révocable, non exclusive et non transférable pour un usage personnel et éducatif. La mise en cache normale par le navigateur ou l'application est autorisée\u202f; le téléchargement, la republication, la modification, l'exploitation commerciale ou la création d'un produit vidéo dérivé nécessitent une autorisation préalable, sauf lorsque la loi le permet expressément.",
         ],
         id: "ip",
         title: "Propriété intellectuelle",
@@ -226,11 +226,11 @@ export const fr: LegalTexts = {
         blocks: [
           {
             list: [
-              "Un parrainage affiche le nom du sponsor, le texte et éventuellement le logo choisis sur la fin d'une ou de plusieurs vidéos de gestes pendant la durée indiquée. La vidéo du geste ne change pas.",
+              "Un parrainage affiche le nom du sponsor, le texte et éventuellement le logo choisis en carton de fin, sur la fin de la vidéo d'un ou de plusieurs gestes, pendant la durée indiquée. La vidéo du geste ne change pas.",
               "Le prix, la durée et l'éventuel supplément pour le logo sont indiqués avant le paiement. Le serveur vérifie le montant dû. Une demande de parrainage n'est considérée comme payée qu'une fois le paiement confirmé par Mollie.",
-              "SMOG&Co examine le parrainage avant sa publication et peut refuser un contenu illicite, trompeur, nuisible, inapproprié ou techniquement inutilisable. En cas de refus, nous vous contactons au sujet d'une modification ou d'un traitement approprié du paiement.",
-              "Vous garantissez que vous disposez des droits et autorisations nécessaires pour les noms, marques, logos, textes et autres contenus fournis. Pour l'exécution du parrainage, vous accordez à SMOG&Co une licence non exclusive pour traiter, générer, héberger et afficher ce contenu.",
-              "L'aperçu et l'affichage de la vidéo peuvent être adaptés techniquement pour le format, la lisibilité et la diffusion. Le lecteur affiche le nom du sponsor et son éventuel logo. Aucune vidéo de parrainage séparée n'est créée. Un lien de modification fourni par SMOG&Co est personnel, valable 7 jours et ne peut pas être partagé.",
+              "SMOG\u00a0&\u00a0Co vzw examine le parrainage avant sa publication et peut refuser un contenu illicite, trompeur, nuisible, inapproprié ou techniquement inutilisable. En cas de refus, nous vous contactons au sujet d'une modification ou d'un traitement approprié du paiement.",
+              "Vous garantissez que vous disposez des droits et autorisations nécessaires pour les noms, marques, logos, textes et autres contenus fournis. Pour l'exécution du parrainage, vous accordez à SMOG\u00a0&\u00a0Co vzw une licence non exclusive pour traiter, héberger et afficher ce contenu.",
+              "L'aperçu et l'affichage de la vidéo peuvent être adaptés techniquement pour le format, la lisibilité et la diffusion. Le lecteur affiche le nom du sponsor et son éventuel logo en carton de fin sur la vidéo du geste. Aucune vidéo de parrainage séparée n'est créée. Un lien de modification fourni par SMOG\u00a0&\u00a0Co vzw est personnel, valable 7 jours et ne peut pas être partagé.",
               "Environ 30 jours avant la fin de la durée, vous recevez un e-mail avec un lien pour renouveler le parrainage. Un renouvellement est un nouveau paiement pour une année supplémentaire au prix alors indiqué\u202f; un parrainage n'est jamais renouvelé automatiquement.",
               "Les demandes non payées peuvent être annulées après 24 heures. Pour une annulation, un remboursement ou un paiement erroné, contactez-nous\u202f; les droits légaux des consommateurs restent applicables.",
             ],
@@ -262,14 +262,14 @@ export const fr: LegalTexts = {
       },
       {
         blocks: [
-          "Dans la mesure permise par la loi, SMOG&Co n'est pas responsable des dommages indirects, des dommages consécutifs ou des pertes qui n'étaient pas raisonnablement prévisibles. Rien dans ces conditions ne limite une responsabilité qui ne peut pas être exclue par la loi, notamment la responsabilité pour faute intentionnelle ou faute grave lorsque le droit applicable le prévoit. Les consommateurs conservent leurs recours légaux impératifs.",
+          "Dans la mesure permise par la loi, SMOG\u00a0&\u00a0Co vzw n'est pas responsable des dommages indirects, des dommages consécutifs ou des pertes qui n'étaient pas raisonnablement prévisibles. Rien dans ces conditions ne limite une responsabilité qui ne peut pas être exclue par la loi, notamment la responsabilité pour faute intentionnelle ou faute grave lorsque le droit applicable le prévoit. Les consommateurs conservent leurs recours légaux impératifs.",
         ],
         id: "liability",
         title: "Responsabilité",
       },
       {
         blocks: [
-          "Vous restez responsable du contenu que vous fournissez. Dans la mesure permise par la loi, un utilisateur professionnel indemnise SMOG&Co des réclamations de tiers qui résultent directement d'une utilisation intentionnellement illicite ou d'un contenu de parrainage fourni pour lequel cet utilisateur ne dispose pas des droits requis. Cette disposition ne limite pas la protection légale des consommateurs.",
+          "Vous restez responsable du contenu que vous fournissez. Dans la mesure permise par la loi, un utilisateur professionnel indemnise SMOG\u00a0&\u00a0Co vzw des réclamations de tiers qui résultent directement d'une utilisation intentionnellement illicite ou d'un contenu de parrainage fourni pour lequel cet utilisateur ne dispose pas des droits requis. Cette disposition ne limite pas la protection légale des consommateurs.",
         ],
         id: "indemnity",
         title: "Contenu des utilisateurs et indemnisation",
@@ -299,7 +299,7 @@ export const fr: LegalTexts = {
         blocks: [
           {
             lines: [
-              "SMOG & CO vzw",
+              "SMOG\u00a0&\u00a0Co vzw",
               "Arthur Goemaerelei 66, 2018 Anvers, Belgique",
               "E-mail\u202f: [info@smog.vlaanderen](mailto:info@smog.vlaanderen)",
               "Tél.\u202f: +32 3 216 29 90",

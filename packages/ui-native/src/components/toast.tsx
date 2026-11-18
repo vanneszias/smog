@@ -20,11 +20,13 @@ import {
 import { AccessibilityInfo, Pressable, Text, View } from "react-native";
 import Animated, {
   FadeInDown,
-  FadeOut,
+  FadeOutDown,
   useReducedMotion,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { hapticSuccess } from "../lib/haptics";
 import { ICON_SIZE, textOf } from "../lib/icon";
+import { easeEnter, MOTION_MS } from "../lib/motion";
 import { useColor, useShadow, useThemeVars } from "../lib/theme";
 import { IconButton } from "./icon-button";
 
@@ -126,6 +128,10 @@ export function ToastProvider({
           dismiss(id);
         }, options.duration ?? DEFAULT_DURATION)
       );
+      // A success is felt as it appears (a meaningful moment, not every toast).
+      if (options.variant === "success") {
+        hapticSuccess();
+      }
       // Read once on iOS; Android uses the live region.
       AccessibilityInfo.announceForAccessibility(
         [textOf(options.title), textOf(options.description)]
@@ -233,11 +239,21 @@ function ToastItem({
     entry.action?.onPress();
     onDismiss(id);
   }, [entry.action, id, onDismiss]);
-  const motion = tokens.motion.duration;
+  // The queue sits at the bottom: a toast rises from that edge (Reanimated's
+  // FadeInDown starts below and moves up; FadeInUp would drop from above)
+  // and leaves the way it came.
   return (
     <Animated.View
-      entering={reducedMotion ? undefined : FadeInDown.duration(motion.normal)}
-      exiting={reducedMotion ? undefined : FadeOut.duration(motion.fast)}
+      entering={
+        reducedMotion
+          ? undefined
+          : FadeInDown.duration(MOTION_MS.normal).easing(easeEnter)
+      }
+      exiting={
+        reducedMotion
+          ? undefined
+          : FadeOutDown.duration(MOTION_MS.fast).easing(easeEnter)
+      }
     >
       <View
         accessibilityLiveRegion={assertive ? "assertive" : "polite"}

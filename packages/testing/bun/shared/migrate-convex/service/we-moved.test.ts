@@ -368,7 +368,7 @@ describe("we-moved dry run", () => {
       `3 migrated account(s); 0 already queued (ledger); 3 to queue in 1 batch(es) to smog-production-email (${QUEUE_ID})`
     );
     expect(log).toContain('the "new address" sentence is shown');
-    expect(log).toContain("nl subject: SMOG is verhuisd");
+    expect(log).toContain("nl subject: SMOG & Co is verhuisd");
     expect(log).toContain('"to":"p***@s***.be"');
     expect(log).toContain(
       "Sign-in providers named in the email: google, apple"

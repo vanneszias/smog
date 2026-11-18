@@ -21,11 +21,17 @@ export const ART_DIR = fileURLToPath(new URL("./art/", import.meta.url));
 export const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 
 /**
- * Width of the stacked mark on a full green square, as a fraction of the
- * edge. Taken from the store icon (`art/icon.png`), so every square icon
- * matches the one people already have on their home screen.
+ * Width of the app icon hand (`art/icon-hand.svg`) on a full green square,
+ * as a fraction of the edge: the store icon, the PWA icons and the Apple
+ * touch icon. Leaves the iOS and launcher corner masks clear of the line.
  */
-const SQUARE_MARK_WIDTH = 0.845;
+const ICON_HAND_WIDTH = 0.66;
+
+/**
+ * Width of the small mark (`art/mark.svg`) on the favicon square. Larger
+ * than the app icon's hand: at 16 px every pixel of the line counts.
+ */
+const FAVICON_MARK_WIDTH = 0.84;
 
 /** Corner radius of the rounded-square favicon, as a fraction of the edge. */
 const FAVICON_CORNER_RADIUS = 0.1875;
@@ -37,6 +43,11 @@ const FAVICON_CORNER_RADIUS = 0.1875;
  */
 const MASKABLE_SAFE_ZONE = 0.8;
 const ANDROID_SAFE_ZONE = 0.66;
+/**
+ * The hand in the launcher circles, as a fraction of the safe circle: the
+ * glyph is drawn with a margin inside it, like the square icons.
+ */
+const HAND_IN_CIRCLE = 0.9;
 
 /** Width of the horizontal logo on the share image, as a fraction. */
 const OG_LOGO_WIDTH = 0.6;
@@ -62,11 +73,18 @@ const ICO_SIZES = [16, 32, 48] as const;
 const OPEN_TAG = /^<svg\b[^>]*>/;
 const VIEW_BOX = /\bviewBox="([^"]+)"/;
 const WHITESPACE = /\s+/;
+/** Root attributes that paint the drawing (the stroked art sets them once). */
+const PAINT_ATTRIBUTE = /\s(fill|stroke(?:-[a-z]+)?)="([^"]*)"/g;
 
 interface Artwork {
   /** The root element's children, still in `currentColor`. */
   body: string;
   height: number;
+  /**
+   * The root's paint attributes (` fill="none" stroke=...`), carried onto
+   * the nested `<svg>` so stroked artwork keeps its stroke when composed.
+   */
+  paint: string;
   viewBox: string;
   width: number;
 }
@@ -87,9 +105,13 @@ function readArtwork(name: string): Artwork {
   if (!(width && height)) {
     throw new Error(`[brand] ${name} has an unreadable viewBox`);
   }
+  const paint = [...open.matchAll(PAINT_ATTRIBUTE)]
+    .map(([, attribute, value]) => ` ${attribute}="${value}"`)
+    .join("");
   return {
     body: source.slice(open.length, close).trim(),
     height,
+    paint,
     viewBox,
     width,
   };
@@ -128,7 +150,7 @@ function compose(
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">`,
     rect,
-    `<svg x="${round(x)}" y="${round(y)}" width="${round(artWidth)}" height="${round(artHeight)}" viewBox="${artwork.viewBox}">`,
+    `<svg x="${round(x)}" y="${round(y)}" width="${round(artWidth)}" height="${round(artHeight)}" viewBox="${artwork.viewBox}"${recolour(artwork.paint, colour)}>`,
     recolour(artwork.body, colour),
     "</svg>",
     "</svg>",
@@ -166,31 +188,46 @@ const MOBILE = "apps/mobile/assets";
 export function brandPlan(): BrandPlan {
   const logo = readArtwork("logo.svg");
   const stacked = readArtwork("logo-stacked.svg");
+  const hand = readArtwork("icon-hand.svg");
+  const mark = readArtwork("mark.svg");
 
-  const onSquare = (size: number, radius: number): string =>
-    compose(square(size), stacked, WHITE, size * SQUARE_MARK_WIDTH, {
+  // The app icon: one bold hand (the logo's pointing hand) on the green.
+  const handOnSquare = (size: number): string =>
+    compose(square(size), hand, WHITE, size * ICON_HAND_WIDTH, {
       colour: GREEN,
-      radius: size * radius,
+      radius: 0,
     });
-  const inCircle = (
+  const handInCircle = (
     size: number,
     safeZone: number,
     background?: Background
   ): string =>
     compose(
       square(size),
-      stacked,
+      hand,
       WHITE,
-      widthInCircle(stacked, size * safeZone),
+      widthInCircle(hand, size * safeZone * HAND_IN_CIRCLE),
       background
     );
+  // Favicons (16 to 48 px and the SVG icon): the small mark, whose line
+  // still holds at 16 px.
   const favicon = (size: number): string =>
-    onSquare(size, FAVICON_CORNER_RADIUS);
+    compose(square(size), mark, WHITE, size * FAVICON_MARK_WIDTH, {
+      colour: GREEN,
+      radius: size * FAVICON_CORNER_RADIUS,
+    });
 
   // Android reads only the alpha of the monochrome layer, so the white
-  // foreground already is the silhouette it needs; Android 12+ crops the
-  // splash icon to the same circle as the launcher.
-  const foreground = inCircle(1024, ANDROID_SAFE_ZONE);
+  // foreground already is the silhouette it needs.
+  const foreground = handInCircle(1024, ANDROID_SAFE_ZONE);
+  // The splash keeps the stacked wordmark (the hand is the icon, the name
+  // greets on launch); Android 12+ crops it to the launcher circle.
+  const splash = compose(
+    square(1024),
+    stacked,
+    WHITE,
+    widthInCircle(stacked, 1024 * ANDROID_SAFE_ZONE)
+  );
   const og = { height: 630, width: 1200 };
 
   const logos = [
@@ -253,15 +290,21 @@ export function brandPlan(): BrandPlan {
       {
         opaque: true,
         path: `${SITE}/apple-touch-icon.png`,
-        svg: onSquare(180, 0),
+        svg: handOnSquare(180),
       },
-      { opaque: true, path: `${SITE}/icon-192.png`, svg: onSquare(192, 0) },
-      { opaque: true, path: `${SITE}/icon-512.png`, svg: onSquare(512, 0) },
+      { opaque: true, path: `${SITE}/icon-192.png`, svg: handOnSquare(192) },
+      { opaque: true, path: `${SITE}/icon-512.png`, svg: handOnSquare(512) },
       {
         opaque: true,
         path: `${SITE}/icon-maskable-512.png`,
-        svg: inCircle(512, MASKABLE_SAFE_ZONE, { colour: GREEN, radius: 0 }),
+        svg: handInCircle(512, MASKABLE_SAFE_ZONE, {
+          colour: GREEN,
+          radius: 0,
+        }),
       },
+      // The store icon (iOS before 26 and Expo's fallback; iOS 26 reads the
+      // layered `smog.icon`). Full bleed: the platforms round the corners.
+      { opaque: true, path: `${MOBILE}/icon.png`, svg: handOnSquare(1024) },
       {
         opaque: true,
         path: `${SITE}/og.png`,
@@ -288,7 +331,7 @@ export function brandPlan(): BrandPlan {
         path: `${MOBILE}/android-icon-monochrome.png`,
         svg: foreground,
       },
-      { opaque: false, path: `${MOBILE}/splash-icon.png`, svg: foreground },
+      { opaque: false, path: `${MOBILE}/splash-icon.png`, svg: splash },
       ...logos,
     ],
     vectors: [
@@ -313,9 +356,15 @@ export function brandPlan(): BrandPlan {
         path: `${SITE}/brand/logo-stacked-white.svg`,
       },
       ...lockups,
-      ...["hand-1.svg", "hand-2.svg", "hand-3.svg"].map((hand) => ({
-        contents: readArt(hand),
-        path: `${SITE}/brand/${hand}`,
+      ...[
+        "hand-1.svg",
+        "hand-2.svg",
+        "hand-3.svg",
+        "logo-small.svg",
+        "mark.svg",
+      ].map((name) => ({
+        contents: readArt(name),
+        path: `${SITE}/brand/${name}`,
       })),
     ],
   };

@@ -49,7 +49,7 @@ describe("the layout", () => {
     );
     expect(email.html).toContain('alt="SMOG &amp; Co"');
     const year = new Date().getUTCFullYear();
-    expect(email.text).toContain(`© ${year} SMOG & CO vzw · België`);
+    expect(plain(email.text)).toContain(`© ${year} SMOG & Co vzw · België`);
     expect(email.text).toContain(
       "Mensen gaan van nature hun spraak ondersteunen met gebaren"
     );
@@ -105,12 +105,12 @@ describe("the layout", () => {
       const text = plain(email.text);
       const signature = {
         en: "The SMOG & Co team",
-        fr: "L'équipe SMOG & Co",
+        fr: "L’équipe SMOG & Co",
         nl: "Het team van SMOG & Co",
       }[locale];
       const reason = {
-        en: "Didn't create this account?",
-        fr: "Vous n'avez pas créé ce compte ?",
+        en: "Didn’t create this account?",
+        fr: "Vous n’avez pas créé ce compte ?",
         nl: "Heb jij dit account niet aangemaakt?",
       }[locale];
       expect(text.indexOf(signature)).toBeGreaterThan(-1);
@@ -397,9 +397,9 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
   const NEW_ORIGIN = "https://smog-site-production.zias.workers.dev";
 
   const SUBJECT: Record<Locale, string> = {
-    en: "SMOG has moved",
-    fr: "SMOG a déménagé",
-    nl: "SMOG is verhuisd",
+    en: "SMOG & Co has moved",
+    fr: "SMOG & Co a déménagé",
+    nl: "SMOG & Co is verhuisd",
   };
   const NEW_ADDRESS: Record<Locale, string> = {
     en: "SMOG & Co has a new address:",
@@ -413,7 +413,7 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
       "a code we email you",
       "a sign-in link by email",
       "Forgot your password",
-      "favourite gestures and your lists",
+      "favorite gestures and your lists",
       "update the app",
     ],
     fr: [
@@ -422,7 +422,7 @@ describe("we_moved (E-13, phase 8 ruling 15)", () => {
       "un lien de connexion par e-mail",
       "Mot de passe oublié",
       "gestes favoris et vos listes",
-      "mettez l'application à jour",
+      "mettez l’application à jour",
     ],
     nl: [
       "Je oude wachtwoord werkt niet meer",

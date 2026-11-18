@@ -68,6 +68,7 @@ import {
   List,
   Mail,
   Pencil,
+  Play,
   Plus,
   Settings,
   Share2,
@@ -91,7 +92,7 @@ import { RegistryShowcase } from "./ui-gallery-registry";
 
 const noop = (): void => undefined;
 
-const VARIANTS = ["primary", "secondary", "ghost", "danger"] as const;
+const VARIANTS = ["primary", "action", "secondary", "ghost", "danger"] as const;
 const SIZES = ["sm", "md", "lg"] as const;
 const BADGES = [
   "neutral",
@@ -202,9 +203,25 @@ function Showcase(): ReactNode {
   );
 }
 
+function iconFor(variant: (typeof VARIANTS)[number]): ReactNode {
+  if (variant === "danger") {
+    return <Trash />;
+  }
+  return variant === "action" ? <Play /> : <Heart />;
+}
+
+const ICON_LABEL = {
+  action: "a11y.playVideo",
+  danger: "common.delete",
+  ghost: "nav.favorites",
+  primary: "nav.favorites",
+  secondary: "nav.favorites",
+} as const;
+
 function ButtonsSection(): ReactNode {
   const { t } = useTranslation();
   const labels = {
+    action: t("common.search"),
     danger: t("common.delete"),
     ghost: t("common.edit"),
     primary: t("common.save"),
@@ -238,11 +255,9 @@ function ButtonsSection(): ReactNode {
           <Row key={size}>
             {VARIANTS.map((variant) => (
               <IconButton
-                icon={variant === "danger" ? <Trash /> : <Heart />}
+                icon={iconFor(variant)}
                 key={variant}
-                label={
-                  variant === "danger" ? t("common.delete") : t("nav.favorites")
-                }
+                label={t(ICON_LABEL[variant])}
                 size={size}
                 variant={variant}
               />
@@ -358,6 +373,18 @@ function BadgesAndChips(): ReactNode {
             />
           ))}
           <Chip disabled>{t("common.done")}</Chip>
+        </Row>
+        <Row>
+          {categories.map((category) => (
+            <SelectableChip
+              category={category}
+              key={category}
+              onToggle={toggleCategory}
+              selected={selected.includes(category)}
+              size="md"
+              tone="action"
+            />
+          ))}
         </Row>
       </Section>
     </>
@@ -743,6 +770,7 @@ function ProgressSection(): ReactNode {
       <Stepper current={0} steps={steps} />
       <Stepper current={1} steps={steps} />
       <Stepper current={2} steps={steps} />
+      <Stepper current={1} steps={steps} tone="action" />
     </Section>
   );
 }
@@ -752,18 +780,25 @@ function SelectableChip({
   onToggle,
   selected,
   size,
+  tone,
 }: {
   category: string;
   onToggle: (category: string, next: boolean) => void;
   selected: boolean;
   size: "sm" | "md";
+  tone?: "action";
 }): ReactNode {
   const handleChange = useCallback(
     (next: boolean) => onToggle(category, next),
     [category, onToggle]
   );
   return (
-    <Chip onSelectedChange={handleChange} selected={selected} size={size}>
+    <Chip
+      onSelectedChange={handleChange}
+      selected={selected}
+      size={size}
+      tone={tone}
+    >
       {category}
     </Chip>
   );

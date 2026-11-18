@@ -180,6 +180,31 @@ function isDocument(response: Response): boolean {
   return redirect || type.startsWith("text/html");
 }
 
+/**
+ * What a document's content depends on besides its URL: its language comes
+ * from the `locale` cookie, then `Accept-Language` (`getShell`), and the
+ * session cookie decides what a signed-in user sees. Today every document
+ * is `private, no-cache`; the `Vary` keeps a shared cache from ever serving
+ * one language or one account to everyone. Added to any `Vary` the
+ * response already has.
+ */
+const DOCUMENT_VARY = ["Accept-Language", "Cookie"] as const;
+
+function appendVary(headers: Headers, names: readonly string[]): void {
+  const current = (headers.get("vary") ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (current.includes("*")) {
+    return;
+  }
+  const lower = new Set(current.map((name) => name.toLowerCase()));
+  const added = names.filter((name) => !lower.has(name.toLowerCase()));
+  if (added.length > 0) {
+    headers.set("vary", [...current, ...added].join(", "));
+  }
+}
+
 function setMissing(
   headers: Headers,
   values: Readonly<Record<string, string>>
@@ -217,6 +242,7 @@ export function withSecurityHeaders(
     return secured;
   }
   setMissing(headers, DOCUMENT_HEADERS);
+  appendVary(headers, DOCUMENT_VARY);
   const endpoints = reportingEndpoints(options.requestUrl);
   if (endpoints) {
     setMissing(headers, { [REPORTING_ENDPOINTS]: endpoints });

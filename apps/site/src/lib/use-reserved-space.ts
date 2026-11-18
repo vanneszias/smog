@@ -1,10 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 /** The CSS variable on `<html>` with the height of the fixed bars. */
 const OVERLAY_BOTTOM_VAR = "--overlay-bottom";
 
 /** The heights reserved by every mounted bar (the consent banner, …). */
 const reserved = new Map<symbol, { height: number; overlay: boolean }>();
+
+/** Whether a fixed overlay bar (the consent banner) is on screen now. */
+let overlayOpen = false;
+const overlayListeners = new Set<() => void>();
+
+function subscribeOverlay(onChange: () => void): () => void {
+  overlayListeners.add(onChange);
+  return () => overlayListeners.delete(onChange);
+}
+
+/**
+ * Whether a fixed bar sits at the bottom of the viewport now (the consent
+ * banner). A page's own bottom bar (the sponsor wizard's selection bar)
+ * steps back into the flow while it does: one bottom bar at a time, so the
+ * two never stack over the page on a phone. `false` on the server.
+ */
+export function useOverlayBarOpen(): boolean {
+  return useSyncExternalStore(
+    subscribeOverlay,
+    () => overlayOpen,
+    () => false
+  );
+}
 
 function applyReservedSpace(): void {
   let total = 0;
@@ -21,6 +44,12 @@ function applyReservedSpace(): void {
     style.setProperty(OVERLAY_BOTTOM_VAR, `${overlay}px`);
   } else {
     style.removeProperty(OVERLAY_BOTTOM_VAR);
+  }
+  if (overlayOpen !== overlay > 0) {
+    overlayOpen = overlay > 0;
+    for (const listener of overlayListeners) {
+      listener();
+    }
   }
 }
 

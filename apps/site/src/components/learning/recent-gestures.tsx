@@ -57,7 +57,7 @@ export function RecentGestures(): ReactNode {
           level={3}
         />
       ) : (
-        <GestureGridSkeleton count={4} />
+        <GestureGridSkeleton className="xl:grid-cols-6" count={4} />
       )}
     </section>
   );

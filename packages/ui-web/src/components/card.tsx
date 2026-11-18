@@ -8,7 +8,7 @@ import { focusRing, transition } from "../lib/variants";
  * `popover` instead (spec §16; the dark `shadow-1` token is `none`).
  */
 const cardVariants = cva(
-  "flex flex-col gap-2 rounded-2xl p-4 text-card-foreground ring-1 ring-foreground/10 sm:p-6",
+  "flex flex-col gap-2 rounded-card p-4 text-card-foreground ring-1 ring-foreground/10 sm:p-6",
   {
     defaultVariants: { interactive: false, variant: "default" },
     variants: {

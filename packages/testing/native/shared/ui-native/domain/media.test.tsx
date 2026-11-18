@@ -122,7 +122,9 @@ describe("CourseBanner", () => {
     await renderKit(<CourseBanner courseUrl={COURSE_URL} messageIndex={4} />);
     expect(screen.queryByRole("link")).toBeNull();
     expect(
-      screen.getByText("The gestures are protected. Don't invent others.")
+      screen.getByText(
+        "SMOG gestures are fixed and protected. Make them as shown in the video and don’t invent your own versions. That way they stay the same for everyone."
+      )
     ).toBeOnTheScreen();
   });
 

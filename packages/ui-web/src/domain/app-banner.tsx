@@ -12,7 +12,12 @@ import { HandIllustration } from "../components/hand-illustration";
 import { IconButton } from "../components/icon-button";
 import { TextLink } from "../components/text-link";
 import { cn } from "../lib/cn";
-import { focusRing, stateLayer, transition } from "../lib/variants";
+import {
+  focusRing,
+  focusRingOnGreen,
+  stateLayer,
+  transition,
+} from "../lib/variants";
 
 export interface AppBannerProps
   extends Omit<ComponentProps<"section">, "children" | "title"> {
@@ -25,9 +30,10 @@ export interface AppBannerProps
 }
 
 const storeLink = cn(
-  "relative inline-flex min-h-touch items-center gap-3 rounded-full border border-primary-foreground/40 bg-primary-strong px-5 py-2 text-left text-primary-foreground",
-  stateLayer.md,
+  "relative inline-flex min-h-touch items-center gap-3 rounded-pill bg-highlight px-5 py-2 text-left text-highlight-foreground",
+  stateLayer.full,
   focusRing,
+  focusRingOnGreen,
   transition
 );
 
@@ -79,13 +85,13 @@ export function AppBanner({
     <section
       aria-labelledby={titleId}
       className={cn(
-        "relative flex animate-fade-in flex-col gap-4 overflow-hidden rounded-2xl bg-primary p-4 pr-16 text-primary-foreground shadow-1 motion-reduce:animate-none md:p-6 md:pr-16",
+        "relative flex animate-fade-in flex-col gap-4 overflow-hidden rounded-card bg-sidebar p-4 pr-16 text-sidebar-foreground shadow-1 motion-reduce:animate-none md:p-6 md:pr-16",
         className
       )}
       {...props}
     >
       <HandIllustration
-        className="pointer-events-none absolute right-16 bottom-0 hidden h-24 translate-y-3 text-primary-foreground/20 lg:inline-flex"
+        className="pointer-events-none absolute right-16 bottom-0 hidden h-24 translate-y-3 text-sidebar-foreground/20 lg:inline-flex"
         data-slot="banner-illustration"
         hand={1}
       />
@@ -111,7 +117,10 @@ export function AppBanner({
         />
       </div>
       <IconButton
-        className="absolute top-2 right-2 text-primary-foreground"
+        className={cn(
+          "absolute top-2 right-2 text-sidebar-foreground",
+          focusRingOnGreen
+        )}
         icon={<X />}
         label={t("appBanner.dismiss")}
         onClick={onDismiss}
@@ -148,7 +157,7 @@ export function OpenInAppBanner({
     <section
       aria-labelledby={titleId}
       className={cn(
-        "flex items-center gap-3 rounded-2xl bg-accent p-3 text-accent-foreground ring-1 ring-foreground/10",
+        "flex items-center gap-3 rounded-card bg-accent p-3 text-accent-foreground ring-1 ring-foreground/10",
         className
       )}
       {...props}

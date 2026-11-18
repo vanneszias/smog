@@ -9,7 +9,7 @@ First-time setup of the three environments, in the order the owner does it. The 
 | | `dev` | `staging` | `production` |
 |---|---|---|---|
 | Deployed from | your machine (`bun dev`, local Miniflare) | `develop`, every push, once CI passes (the four release-check lanes and the seven e2e shards) | `master`, the same way |
-| Origin (`SITE_URL`) | `http://localhost:5173` | `https://smog-site-staging.zias.workers.dev` | `https://smog-site-production.zias.workers.dev` (the default launch origin), or `https://app.smog.vlaanderen` on path D (`docs/cutover-runbook.md`) |
+| Origin (`SITE_URL`) | `http://localhost:5173` | `https://smog.zias.be` (a custom domain) | `https://smog-site-production.zias.workers.dev` (the default launch origin), or `https://app.smog.vlaanderen` on path D (`docs/cutover-runbook.md`) |
 | Worker | none | `smog-site-staging` | `smog-site-production` |
 | D1, KV | local state | `smog-staging`, ids in `wrangler.jsonc` | `smog-production`, **ids are placeholders until step 4** |
 | Queues, bucket | local | `smog-staging-*` (`-email`, `-email-dlq`, `-sponsorship-events`, `-sponsorship-events-dlq`, bucket `smog-staging-media`) | the same names with `production` |

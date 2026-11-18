@@ -36,9 +36,18 @@ describe("Heading", () => {
         SMOG
       </Heading>
     );
-    expect(screen.getByRole("header", { name: "SMOG" })).toHaveStyle({
+    const heading = screen.getByRole("header", { name: "SMOG" });
+    expect(heading).toHaveStyle({
+      fontFamily: "Figtree-Bold",
       fontSize: 40,
+      lineHeight: 44,
     });
+    // The display tracking, -0.022em of 40 pt.
+    const style = Object.assign(
+      {},
+      ...[heading.props.style].flat(Number.POSITIVE_INFINITY)
+    ) as { letterSpacing?: number };
+    expect(style.letterSpacing).toBeCloseTo(-0.88, 2);
   });
 });
 

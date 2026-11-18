@@ -98,15 +98,24 @@ function ClearFilters({
   );
 }
 
-/** Ranked results for a query (spec §7.1), at most `SEARCH_LIMIT`. */
+/**
+ * Ranked results for a query (spec §7.1), at most `SEARCH_LIMIT`. With no
+ * match there is always a way on: "Clear filters" while categories narrow
+ * it, then "Clear the search" (`onClearSearch`).
+ */
 function QueryResults({
   categories,
   hearts,
   onClearFilters,
+  onClearSearch,
   q,
   selected,
   source,
-}: ResultsProps & { q: string; source: SearchSource }): ReactNode {
+}: ResultsProps & {
+  onClearSearch: () => void;
+  q: string;
+  source: SearchSource;
+}): ReactNode {
   const { t } = useTranslation();
   const search = useGestureSearch({
     category: categories,
@@ -122,7 +131,9 @@ function QueryResults({
   const more = (search.data?.total ?? 0) > items.length;
   return (
     <ResultsView
-      emptyAction={<ClearFilters onClear={onClearFilters} />}
+      emptyAction={
+        onClearFilters ? <ClearFilters onClear={onClearFilters} /> : undefined
+      }
       footer={
         more ? (
           <Text size="body-sm" tone="muted">
@@ -132,6 +143,7 @@ function QueryResults({
       }
       hearts={hearts}
       items={items}
+      onClearSearch={onClearSearch}
       onRetry={retry}
       retrying={search.isRefetching}
       selected={selected}
@@ -270,6 +282,12 @@ function Gestures(): ReactNode {
     setSource("filter_change");
     update({ category: undefined });
   }, [update]);
+  const clearSearch = useCallback((): void => {
+    written.current = "";
+    setSource("filter_change");
+    setText("");
+    update({ category: undefined, q: undefined });
+  }, [update]);
   // While the field is emptied, the last query shows until the URL follows.
   const q = text.trim() ? text : (search.q ?? "");
   const results: ResultsProps = {
@@ -281,7 +299,10 @@ function Gestures(): ReactNode {
 
   return (
     <Page>
-      <PageHeader title={t("nav.gestures")} />
+      <PageHeader
+        description={t("gestures.description")}
+        title={t("nav.gestures")}
+      />
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-start gap-2">
           <div className="min-w-full flex-1 sm:min-w-0">
@@ -308,7 +329,12 @@ function Gestures(): ReactNode {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <div className="flex min-w-0 flex-col">
           {search.q ? (
-            <QueryResults {...results} q={q} source={source} />
+            <QueryResults
+              {...results}
+              onClearSearch={clearSearch}
+              q={q}
+              source={source}
+            />
           ) : (
             <BrowseResults {...results} />
           )}

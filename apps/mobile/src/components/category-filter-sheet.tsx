@@ -81,7 +81,8 @@ export function CategoryFilterSheet({
                 : t("search.filter")
             }
             testID="category-filter"
-            variant={count > 0 ? "secondary" : "ghost"}
+            // An active filter is the orange "do it", as the web.
+            variant={count > 0 ? "action" : "ghost"}
           />
         </SheetTrigger>
         {count > 0 ? (

@@ -1,6 +1,7 @@
 /**
  * The documents say only what is true (phase 9 task 11). A machine reads
- * AGENTS.md, README.md and `docs/*.md` and fails on:
+ * AGENTS.md, README.md, DESIGN.md (the design language) and `docs/*.md` and
+ * fails on:
  *
  * - a `bun run <script>` / `bun -F @smog/<pkg> <script>` that no
  *   `package.json` defines;
@@ -28,6 +29,7 @@ const ROOT = new URL("../../../../..", import.meta.url).pathname;
 const DOCS = [
   "AGENTS.md",
   "README.md",
+  "DESIGN.md",
   "docs/deployment.md",
   "docs/cutover-runbook.md",
   "docs/API.md",
@@ -72,6 +74,7 @@ const PATH_ALLOW: readonly { path: string; why: string }[] = [
 const ROOT_FILES = new Set([
   "README.md",
   "AGENTS.md",
+  "DESIGN.md",
   "package.json",
   "turbo.json",
   "biome.json",

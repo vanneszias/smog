@@ -4,7 +4,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../lib/cn";
 
 const fillVariants = cva(
-  "h-full w-full rounded-full transition-transform duration-normal ease-standard motion-reduce:transition-none",
+  "h-full w-full rounded-full transition-transform duration-normal ease-move motion-reduce:transition-none",
   {
     defaultVariants: { tone: "primary" },
     variants: {

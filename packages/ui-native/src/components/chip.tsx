@@ -1,5 +1,5 @@
 import { useTranslation } from "@smog/i18n/react";
-import { tokens } from "@smog/styles/tokens";
+import { type ColorRole, tokens } from "@smog/styles/tokens";
 import { cva, type VariantProps } from "class-variance-authority";
 import Check from "lucide-react-native/icons/check";
 import X from "lucide-react-native/icons/x";
@@ -24,7 +24,14 @@ import { hitSlopFor, useColor } from "../lib/theme";
 const chipVariants = cva(
   "flex-row items-center gap-1 self-start rounded-full border active:opacity-80",
   {
-    defaultVariants: { selected: false, size: "md" },
+    compoundVariants: [
+      {
+        className: "border-highlight-strong bg-highlight",
+        selected: true,
+        tone: "action",
+      },
+    ],
+    defaultVariants: { selected: false, size: "md", tone: "default" },
     variants: {
       selected: {
         false: "border-muted-foreground bg-card",
@@ -35,15 +42,21 @@ const chipVariants = cva(
         // Dense filters; hitSlop keeps a 44 pt target.
         sm: "min-h-8 px-3",
       },
+      /** `action`: a selected chip is the orange "do it" (the active filter). */
+      tone: { action: "", default: "" },
     },
   }
 );
 
 const chipLabelVariants = cva("font-medium", {
-  defaultVariants: { selected: false, size: "md" },
+  compoundVariants: [
+    { className: "text-highlight-foreground", selected: true, tone: "action" },
+  ],
+  defaultVariants: { selected: false, size: "md", tone: "default" },
   variants: {
     selected: { false: "text-foreground", true: "text-primary-strong" },
     size: { md: "text-body-sm", sm: "text-caption" },
+    tone: { action: "", default: "" },
   },
 });
 
@@ -78,6 +91,7 @@ export function Chip({
   onSelectedChange,
   selected,
   size,
+  tone,
   ...props
 }: ChipProps): ReactElement {
   // PressableProps allow `null`.
@@ -86,7 +100,12 @@ export function Chip({
   const resolvedSize = size ?? "md";
   const isToggle = selected !== undefined;
   const isSelected = selected ?? false;
-  const labelColor = useColor(isSelected ? "primaryStrong" : "foreground");
+  const action = isSelected && tone === "action";
+  let labelRole: ColorRole = isSelected ? "primaryStrong" : "foreground";
+  if (action) {
+    labelRole = "highlightForeground";
+  }
+  const labelColor = useColor(labelRole);
   const mutedColor = useColor("mutedForeground");
   const handlePress = useCallback(
     (event: GestureResponderEvent): void => {
@@ -108,7 +127,7 @@ export function Chip({
         disabled,
       }}
       className={cn(
-        chipVariants({ selected: isSelected, size: resolvedSize }),
+        chipVariants({ selected: isSelected, size: resolvedSize, tone }),
         onRemove && "pr-10",
         disabled && "opacity-50",
         className
@@ -121,10 +140,13 @@ export function Chip({
       {renderIcon(leading, labelColor, ICON_SIZE.sm)}
       {typeof children === "string" || typeof children === "number" ? (
         <Text
-          className={chipLabelVariants({
-            selected: isSelected,
-            size: resolvedSize,
-          })}
+          className={cn(
+            chipLabelVariants({
+              selected: isSelected,
+              size: resolvedSize,
+              tone,
+            })
+          )}
         >
           {children}
         </Text>

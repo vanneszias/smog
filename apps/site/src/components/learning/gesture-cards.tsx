@@ -1,6 +1,7 @@
 import type { GestureViewSource } from "@smog/analytics/schema";
 import { useTranslation } from "@smog/i18n/react";
 import {
+  cn,
   GestureCard,
   type GestureCardData,
   GestureGrid,
@@ -8,6 +9,7 @@ import {
   Skeleton,
 } from "@smog/ui-web";
 import { type ReactNode, useCallback } from "react";
+import { useCatalogDisplay } from "./catalog-display";
 import { gestureHref, RouterLink } from "./links";
 import { type Hearts, useHeart } from "./use-hearts";
 
@@ -20,16 +22,17 @@ export function LinkedGestureCard({
   linkComponent = RouterLink,
 }: {
   from?: GestureViewSource | undefined;
-  gesture: GestureCardData;
+  gesture: GestureCardData & { fallbackUsed?: boolean };
   hearts: Hearts;
   level?: 2 | 3 | 4;
   linkComponent?: KitLinkComponent;
 }): ReactNode {
   const heart = useHeart(hearts, gesture.id);
+  const display = useCatalogDisplay();
   return (
     <GestureCard
       favorite={heart.active}
-      gesture={gesture}
+      gesture={display.gesture(gesture)}
       href={gestureHref(gesture.slug, from)}
       level={level}
       linkComponent={linkComponent}
@@ -51,11 +54,11 @@ export function LinkedGestureGrid({
   /** Where the cards open the gesture from (`gesture_viewed`). */
   from?: GestureViewSource | undefined;
   hearts: Hearts;
-  items: readonly GestureCardData[];
+  items: readonly (GestureCardData & { fallbackUsed?: boolean })[];
   level?: 2 | 3 | 4;
 }): ReactNode {
   const renderItem = useCallback(
-    (gesture: GestureCardData) => (
+    (gesture: GestureCardData & { fallbackUsed?: boolean }) => (
       <LinkedGestureCard
         from={from}
         gesture={gesture}
@@ -70,10 +73,16 @@ export function LinkedGestureGrid({
   );
 }
 
-/** Placeholder cards in the grid's columns (decorative; the region is busy). */
+/**
+ * Placeholder cards in the grid's columns (decorative; the region is busy).
+ * `className` takes the same column classes as the grid it stands in for,
+ * so nothing reflows when the data lands.
+ */
 export function GestureGridSkeleton({
+  className,
   count = 8,
 }: {
+  className?: string;
   count?: number;
 }): ReactNode {
   const { t } = useTranslation();
@@ -82,7 +91,12 @@ export function GestureGridSkeleton({
       <p className="sr-only" role="status">
         {t("states.loading")}
       </p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+      <div
+        className={cn(
+          "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5",
+          className
+        )}
+      >
         {Array.from({ length: count }, (_, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: identical, static placeholders
           <div className="flex flex-col gap-2" key={index}>

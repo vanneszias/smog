@@ -10,9 +10,9 @@
   --color-white: #FFFFFF;
   --color-accent: #E4F1EA;
   --color-accent-foreground: #17211A;
-  --color-background: #FAF9F4;
-  --color-border: #DCD8CB;
-  --color-border-subtle: #EBE8DE;
+  --color-background: #F6F8F5;
+  --color-border: #D5DED7;
+  --color-border-subtle: #E3E9E4;
   --color-card: #FFFFFF;
   --color-card-foreground: #17211A;
   --color-chart-1: #00805F;
@@ -27,8 +27,9 @@
   --color-foreground: #17211A;
   --color-highlight: #EE971C;
   --color-highlight-foreground: #17211A;
+  --color-highlight-strong: #9A5700;
   --color-input: #6E7B72;
-  --color-muted: #F2F0E8;
+  --color-muted: #ECF1EC;
   --color-muted-foreground: #56635A;
   --color-popover: #FFFFFF;
   --color-popover-foreground: #17211A;
@@ -39,62 +40,80 @@
   --color-primary-strong: #006B50;
   --color-primary-subtle: #E4F1EA;
   --color-ring: #B36B0B;
-  --color-secondary: #EFEDE3;
+  --color-secondary: #E7EDE8;
   --color-secondary-foreground: #17211A;
-  --color-sidebar: #006B50;
-  --color-sidebar-accent: #00805F;
+  --color-sidebar: #09564C;
+  --color-sidebar-accent: #0F6A5E;
   --color-sidebar-accent-foreground: #FFFFFF;
-  --color-sidebar-border: #2F8F77;
+  --color-sidebar-border: #2E7A6F;
   --color-sidebar-foreground: #FFFFFF;
-  --color-sidebar-foreground-muted: #E3F3EC;
-  --color-sidebar-primary: #F5AB45;
+  --color-sidebar-foreground-muted: #D3E9E2;
+  --color-sidebar-primary: #EE971C;
   --color-sidebar-primary-foreground: #17211A;
   --color-sidebar-ring: #FFFFFF;
   --color-success: #1F8A4C;
   --color-success-strong: #166B3A;
   --color-success-subtle: #E3F3EA;
-  --color-surface-sunken: #F2F0E8;
+  --color-surface-sunken: #ECF1EC;
   --color-warning: #B7791F;
   --color-warning-strong: #7A4D06;
   --color-warning-subtle: #FBF0DA;
 
   --spacing-touch: 2.75rem;
 
+  --radius-card: 1.25rem;
   --radius-full: 9999px;
   --radius-lg: 0.875rem;
   --radius-md: 0.625rem;
+  --radius-pill: 9999px;
   --radius-sm: 0.375rem;
   --radius-xl: 1.25rem;
 
   --font-sans: Figtree, "Figtree Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-weight-bold: 700;
   --font-weight-medium: 500;
   --font-weight-regular: 400;
   --font-weight-semibold: 600;
   --text-body: 1rem;
   --text-body--line-height: 1.5rem;
+  --text-body--letter-spacing: 0;
   --text-body-sm: 0.875rem;
   --text-body-sm--line-height: 1.25rem;
+  --text-body-sm--letter-spacing: 0.005em;
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;
+  --text-caption--letter-spacing: 0.012em;
   --text-display: 2.5rem;
-  --text-display--line-height: 3rem;
+  --text-display--line-height: 2.75rem;
+  --text-display--letter-spacing: -0.022em;
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.75rem;
+  --text-lead--letter-spacing: -0.003em;
   --text-title-1: 1.75rem;
   --text-title-1--line-height: 2.125rem;
+  --text-title-1--letter-spacing: -0.016em;
   --text-title-2: 1.375rem;
   --text-title-2--line-height: 1.75rem;
+  --text-title-2--letter-spacing: -0.01em;
   --text-title-3: 1.125rem;
   --text-title-3--line-height: 1.5rem;
+  --text-title-3--letter-spacing: -0.005em;
 
   --shadow-0: none;
   --shadow-1: 0 1px 2px rgb(23 33 26 / 0.06), 0 2px 6px rgb(23 33 26 / 0.08);
   --shadow-2: 0 2px 6px rgb(23 33 26 / 0.08), 0 12px 32px rgb(23 33 26 / 0.16);
   --shadow-3: 0 4px 12px rgb(23 33 26 / 0.1), 0 16px 40px rgb(23 33 26 / 0.2);
 
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-enter: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --duration-fast: 120ms;
+  --duration-gesture: 640ms;
   --duration-normal: 200ms;
   --duration-slow: 320ms;
   --motion-pop-scale: 1.25;
+  --motion-press-scale: 0.97;
   --default-transition-duration: var(--duration-normal);
   --default-transition-timing-function: var(--ease-standard);
 
@@ -114,18 +133,19 @@
 @media (width >= 48rem) {
   :root {
     --text-display: 3.5rem;
-    --text-display--line-height: 4rem;
+    --text-display--line-height: 3.75rem;
+    --text-display--letter-spacing: -0.028em;
   }
 }
 
 .dark {
   color-scheme: dark;
-  --color-accent: #17352A;
+  --color-accent: #163631;
   --color-accent-foreground: #EAF1EC;
-  --color-background: #0C110E;
-  --color-border: #2B352E;
-  --color-border-subtle: #1F2722;
-  --color-card: #131914;
+  --color-background: #0C1513;
+  --color-border: #283631;
+  --color-border-subtle: #1C2723;
+  --color-card: #121D1A;
   --color-card-foreground: #EAF1EC;
   --color-chart-1: #2BB38A;
   --color-chart-2: #F5AB45;
@@ -139,33 +159,34 @@
   --color-foreground: #EAF1EC;
   --color-highlight: #F5AB45;
   --color-highlight-foreground: #04140E;
-  --color-input: #6F8076;
-  --color-muted: #1B231E;
-  --color-muted-foreground: #9DB0A4;
-  --color-popover: #1A211C;
+  --color-highlight-strong: #F5AB45;
+  --color-input: #6C817A;
+  --color-muted: #18231F;
+  --color-muted-foreground: #9DB2AA;
+  --color-popover: #18241F;
   --color-popover-foreground: #EAF1EC;
   --color-primary: #2BB38A;
   --color-primary-foreground: #04140E;
   --color-primary-foreground-muted: #0A3526;
   --color-primary-ring: #04140E;
   --color-primary-strong: #2BB38A;
-  --color-primary-subtle: #0F2A21;
+  --color-primary-subtle: #0E2A25;
   --color-ring: #F5AB45;
-  --color-secondary: #1F2823;
+  --color-secondary: #1C2823;
   --color-secondary-foreground: #EAF1EC;
-  --color-sidebar: #0F2A21;
-  --color-sidebar-accent: #17402F;
+  --color-sidebar: #0E2E29;
+  --color-sidebar-accent: #174A41;
   --color-sidebar-accent-foreground: #EAF1EC;
-  --color-sidebar-border: #1F4A39;
+  --color-sidebar-border: #1F4A42;
   --color-sidebar-foreground: #EAF1EC;
-  --color-sidebar-foreground-muted: #9DB0A4;
+  --color-sidebar-foreground-muted: #A9C7BE;
   --color-sidebar-primary: #F5AB45;
   --color-sidebar-primary-foreground: #04140E;
-  --color-sidebar-ring: #F5AB45;
+  --color-sidebar-ring: #EAF1EC;
   --color-success: #4CC27E;
   --color-success-strong: #4CC27E;
   --color-success-subtle: #123021;
-  --color-surface-sunken: #080B09;
+  --color-surface-sunken: #070D0B;
   --color-warning: #E9B24A;
   --color-warning-strong: #E9B24A;
   --color-warning-subtle: #33260B;
@@ -178,14 +199,25 @@
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration-fast: 0ms;
+    --duration-gesture: 0ms;
     --duration-normal: 0ms;
     --duration-slow: 0ms;
+  }
+  *,
+  ::before,
+  ::after {
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
   }
 }
 
 @utility duration-fast {
   --tw-duration: var(--duration-fast);
   transition-duration: var(--duration-fast);
+}
+@utility duration-gesture {
+  --tw-duration: var(--duration-gesture);
+  transition-duration: var(--duration-gesture);
 }
 @utility duration-normal {
   --tw-duration: var(--duration-normal);

@@ -1,5 +1,6 @@
+import { CONTACT_EMAIL } from "@smog/config/constants";
 import { formatDate } from "@smog/i18n";
-import { useTranslation } from "@smog/i18n/react";
+import { Trans, useTranslation } from "@smog/i18n/react";
 import { sponsorshipError } from "@smog/sponsorships/client";
 import { INVALID_STATE_REASON_KEYS } from "@smog/sponsorships/schema";
 import {
@@ -8,11 +9,29 @@ import {
   ErrorState,
   Heading,
   Skeleton,
+  TextLink,
 } from "@smog/ui-web";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { invalidStateReason } from "./errors";
 import { usePageLocale } from "./page-locale";
+
+/** A link description that ends with the address to write to. */
+function ContactText({
+  i18nKey,
+}: {
+  i18nKey:
+    | "sponsor.link.expired.description"
+    | "sponsor.link.notFound.description";
+}): ReactNode {
+  return (
+    <Trans
+      components={{ email: <TextLink href={`mailto:${CONTACT_EMAIL}`} /> }}
+      i18nKey={i18nKey}
+      values={{ email: CONTACT_EMAIL }}
+    />
+  );
+}
 
 function BackLink(): ReactNode {
   const { t } = useTranslation();
@@ -64,7 +83,9 @@ export function LinkState({
     return (
       <EmptyState
         action={<BackLink />}
-        description={t("sponsor.link.notFound.description")}
+        description={
+          <ContactText i18nKey="sponsor.link.notFound.description" />
+        }
         level={1}
         title={t("sponsor.link.notFound.title")}
       />
@@ -78,7 +99,7 @@ export function LinkState({
         action={<BackLink />}
         description={
           <>
-            {t("sponsor.link.expired.description")}
+            <ContactText i18nKey="sponsor.link.expired.description" />
             {typeof expiresAt === "number" ? (
               <span className="mt-2 block">
                 {t("sponsor.link.expired.since", {

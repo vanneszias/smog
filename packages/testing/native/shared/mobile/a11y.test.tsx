@@ -149,7 +149,7 @@ const SCREENS: ScreenCase[] = [
   {
     name: "home",
     options: { initialUrl: "/" },
-    ready: "Gestures that support your speech",
+    ready: "People naturally use gestures to support their speech",
   },
   {
     name: "home (continue where you left off)",

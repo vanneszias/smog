@@ -2,6 +2,7 @@ import type { MuxCSSProperties } from "@mux/mux-player-react";
 import { useTranslation } from "@smog/i18n/react";
 import {
   createNearEndTracker,
+  GESTURE_STILL_SECONDS,
   isEndCardVisible,
   muxThumbnailUrl,
 } from "@smog/utils";
@@ -18,6 +19,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { cn } from "../lib/cn";
+import { GestureTitle } from "./gesture-title";
 import { SponsorEndCard } from "./sponsor-end-card";
 
 export type VideoAspect = "3:4" | "16:9";
@@ -83,14 +85,42 @@ function useMounted(): boolean {
 
 const ASPECT = { "3:4": "aspect-3/4", "16:9": "aspect-video" } as const;
 
-/** mux-player fills the frame; its colours follow the theme's roles. */
-const PLAYER_STYLE: MuxCSSProperties = {
+/**
+ * The player's skin (DESIGN.md, "Video player"): Figtree, white controls on
+ * a quiet bar, a pill-shaped 4 px track in the brand green, and only the
+ * controls a short clip needs: play, the scrubber, the time, mute, speed
+ * (1x and 0.5x, `PLAYBACK_RATES`) and fullscreen. No ten-second seeks on a
+ * clip of a few seconds, no volume slider (most clips are silent), no
+ * picture-in-picture, cast or AirPlay. The centre play button is the orange
+ * action (`styles.css`, `mux-player::part(center play button)`).
+ */
+const PLAYER_STYLE = {
+  "--airplay-button": "none",
+  "--cast-button": "none",
   "--media-accent-color": "var(--color-primary)",
-  "--media-background-color": "var(--color-muted)",
+  "--media-background-color": "var(--color-sidebar)",
+  "--media-control-background": "transparent",
+  "--media-control-hover-background":
+    "color-mix(in oklab, var(--color-white) 16%, transparent)",
+  "--media-font-family": "var(--font-sans)",
   "--media-object-fit": "contain",
+  "--media-primary-color": "var(--color-white)",
+  "--media-range-bar-color": "var(--color-primary)",
+  "--media-range-thumb-height": "14px",
+  "--media-range-thumb-width": "14px",
+  "--media-range-track-border-radius": "9999px",
+  "--media-range-track-height": "4px",
+  "--media-secondary-color": "transparent",
+  "--pip-button": "none",
+  "--seek-backward-button": "none",
+  "--seek-forward-button": "none",
+  "--volume-range": "none",
   height: "100%",
   width: "100%",
-};
+} as MuxCSSProperties;
+
+/** The speed toggle: normal, then half speed to study the movement. */
+const PLAYBACK_RATES = [1, 0.5];
 
 /**
  * No Google Cast: Chromium-based browsers would load Cast's sender script
@@ -121,22 +151,24 @@ function fullscreenFrame(player: PlayerElement | null, frameId: string): void {
 }
 
 /**
- * The name over the video: a solid green pill (`sidebar`, the pair
- * `sidebar-foreground` on `sidebar` is in `contrast.ts`), so the text is
- * readable on any frame, light or dark. It fades in, and does not move or
- * fade when the system asks for reduced motion. Taps go through it to the
- * player's controls.
+ * The name over a textless video: "the hand points at the word", the same
+ * title the burned-in videos open with (`GestureTitle`), so old and re-cut
+ * videos look alike. White on the studio set needs no scrim. It fades in,
+ * and does not fade when the system asks for reduced motion. Taps go
+ * through it to the player's controls.
  */
 function NameOverlay({ name }: { name: string }): ReactNode {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center p-3"
+      className="@container pointer-events-none absolute inset-0 z-10"
       data-slot="video-name-overlay"
     >
-      <span className="max-w-full animate-fade-in break-words rounded-full bg-sidebar px-4 py-1.5 text-center font-semibold text-sidebar-foreground text-title-3 shadow-1 motion-reduce:animate-none">
-        {name}
-      </span>
+      <GestureTitle
+        className="animate-fade-in motion-reduce:animate-none"
+        data-slot="video-name-title"
+        name={name}
+      />
     </div>
   );
 }
@@ -218,7 +250,10 @@ export function VideoPlayer({
   }, [tracker]);
 
   const name = title ?? t("a11y.gestureVideo");
-  const posterUrl = muxThumbnailUrl(playbackId, { width: POSTER_WIDTH });
+  const posterUrl = muxThumbnailUrl(playbackId, {
+    time: GESTURE_STILL_SECONDS,
+    width: POSTER_WIDTH,
+  });
   const poster = (
     <img
       alt=""
@@ -235,7 +270,7 @@ export function VideoPlayer({
     <section
       aria-label={name}
       className={cn(
-        "relative w-full overflow-hidden rounded-2xl bg-muted shadow-1 ring-1 ring-foreground/10",
+        "relative w-full overflow-hidden rounded-card bg-sidebar shadow-1 ring-1 ring-foreground/10",
         ASPECT[aspect],
         className
       )}
@@ -254,6 +289,7 @@ export function VideoPlayer({
             onEnded={handleEnded}
             onTimeUpdate={handleTimeUpdate}
             playbackId={playbackId}
+            playbackRates={PLAYBACK_RATES}
             playsInline
             poster={posterUrl}
             ref={attachPlayer}
@@ -265,12 +301,15 @@ export function VideoPlayer({
         poster
       )}
       {nameOverlay ? <NameOverlay name={nameOverlay} /> : null}
-      {endCard && endCardShown ? (
-        // Above the control bar of the player.
+      {endCard ? (
+        // Mounted for as long as there is a sponsor, so it can leave as
+        // gently as it came when the video loops or is seeked back. The
+        // padding keeps the name above the player's control bar.
         <SponsorEndCard
-          className="absolute inset-x-3 bottom-16 z-10"
+          className="absolute inset-x-0 bottom-0 z-10 pb-16"
           logoSrc={endCard.logoSrc}
           name={endCard.name}
+          shown={endCardShown}
         />
       ) : null}
     </section>

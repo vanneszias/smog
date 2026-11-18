@@ -40,7 +40,7 @@ export function TabsList({
         "group/tabs-list flex gap-1 overflow-x-auto text-muted-foreground group-data-vertical/tabs:flex-col",
         variant === "line"
           ? "border-border-subtle border-b group-data-vertical/tabs:border-r group-data-vertical/tabs:border-b-0"
-          : "w-fit rounded-4xl bg-muted p-[3px] group-data-vertical/tabs:rounded-2xl",
+          : "w-fit rounded-pill bg-muted p-[3px] group-data-vertical/tabs:rounded-2xl",
         className
       )}
       data-slot="tabs-list"
@@ -62,7 +62,7 @@ export function TabsTrigger({
         // line: the underline sits on the list border.
         "group-data-vertical/tabs:group-data-[variant=line]/tabs-list:-mr-px group-data-vertical/tabs:group-data-[variant=line]/tabs-list:mb-0 group-data-vertical/tabs:group-data-[variant=line]/tabs-list:border-r-2 group-data-vertical/tabs:group-data-[variant=line]/tabs-list:border-b-0 group-data-[variant=line]/tabs-list:-mb-px group-data-[variant=line]/tabs-list:border-b-2 group-data-[variant=line]/tabs-list:data-active:border-primary",
         // pill: a raised active tab.
-        "group-data-[variant=pill]/tabs-list:rounded-4xl group-data-[variant=pill]/tabs-list:border group-data-[variant=pill]/tabs-list:data-active:bg-background dark:group-data-[variant=pill]/tabs-list:data-active:border-input dark:group-data-[variant=pill]/tabs-list:data-active:bg-input/30",
+        "group-data-[variant=pill]/tabs-list:rounded-pill group-data-[variant=pill]/tabs-list:border group-data-[variant=pill]/tabs-list:data-active:bg-background dark:group-data-[variant=pill]/tabs-list:data-active:border-input dark:group-data-[variant=pill]/tabs-list:data-active:bg-input/30",
         focusRing,
         transition,
         disabled,

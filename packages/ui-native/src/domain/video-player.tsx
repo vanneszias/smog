@@ -8,9 +8,9 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { View, type ViewProps } from "react-native";
 import Animated, { FadeIn, useReducedMotion } from "react-native-reanimated";
-import { Surface } from "../components/surface";
-import { Text } from "../components/text";
 import { cn } from "../lib/cn";
+import { easeEnter, MOTION_MS } from "../lib/motion";
+import { GestureTitle } from "./gesture-title";
 import { SponsorEndCard } from "./sponsor-end-card";
 
 export type VideoAspect = "3:4" | "16:9";
@@ -44,9 +44,11 @@ export interface VideoPlayerProps extends Omit<ViewProps, "children"> {
    * video (a textless video, phase 10b); leave it out to show none (the
    * picture still carries the name, or the viewer hid it). It is
    * decoration, hidden from the screen reader: the video's own label
-   * (`title`) is the accessible name, so the name is never read twice. A
-   * solid green pill (`Surface tone="header"`), so it reads on any frame;
-   * it fades in unless the system asks for reduced motion.
+   * (`title`) is the accessible name, so the name is never read twice.
+   * "The hand points at the word" (`GestureTitle`): the title the
+   * burned-in videos open with, white on the studio set, top left, so old
+   * and re-cut videos look alike; it fades in unless the system asks for
+   * reduced motion.
    */
   nameOverlay?: string | undefined;
   /**
@@ -151,7 +153,7 @@ export function VideoPlayer({
     <View
       accessibilityLabel={title ?? t("a11y.gestureVideo")}
       className={cn(
-        "w-full overflow-hidden rounded-lg bg-surface-sunken",
+        "w-full overflow-hidden rounded-card bg-sidebar",
         className
       )}
       style={[ASPECT[aspect], style]}
@@ -166,28 +168,24 @@ export function VideoPlayer({
       {nameOverlay ? (
         <Animated.View
           accessibilityElementsHidden
-          className="absolute inset-x-0 top-0 items-center p-3"
+          className="absolute inset-0"
           entering={
-            reducedMotion ? undefined : FadeIn.duration(OVERLAY_FADE_MS)
+            reducedMotion
+              ? undefined
+              : FadeIn.duration(MOTION_MS.normal).easing(easeEnter)
           }
           importantForAccessibility="no-hide-descendants"
           pointerEvents="none"
           testID="video-name-overlay"
         >
-          <Surface
-            className="max-w-full rounded-full px-4 py-1.5"
-            tone="header"
-          >
-            <Text className="text-center" weight="semibold">
-              {nameOverlay}
-            </Text>
-          </Surface>
+          <GestureTitle name={nameOverlay} />
         </Animated.View>
       ) : null}
       {endCard && endCardShown ? (
-        // Above the native control bar.
+        // At the bottom of the frame; its padding keeps the name above the
+        // native control bar. It leaves with a fade (its `exiting`).
         <SponsorEndCard
-          className="absolute inset-x-3 bottom-16"
+          className="absolute inset-x-0 bottom-0"
           logoSrc={endCard.logoSrc}
           name={endCard.name}
         />
@@ -195,8 +193,5 @@ export function VideoPlayer({
     </View>
   );
 }
-
-/** The name's fade-in, in ms. */
-const OVERLAY_FADE_MS = 250;
 
 const FILL = { height: "100%", width: "100%" } as const;

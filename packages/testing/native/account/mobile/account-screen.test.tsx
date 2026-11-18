@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CONSENT_POLICY_VERSION } from "@smog/config/constants";
 import { router } from "expo-router";
 import {
@@ -10,6 +11,7 @@ import {
 } from "expo-router/testing-library";
 import { shareAsync } from "expo-sharing";
 import { Alert, type AlertButton } from "react-native";
+import { GESTURE_WATCHED_KEY } from "../../../../../apps/mobile/src/consent-moment";
 import { renderApp } from "../../../support/mobile/harness";
 
 // The real auth client (Better Auth, SecureStore) is never built: tests pass fakes.
@@ -29,6 +31,12 @@ jest.mock("nativewind", () => {
 
 const { mockFiles } = jest.requireMock("expo-file-system") as {
   mockFiles: Map<string, string>;
+};
+const { mockVideoPlayers } = jest.requireMock("expo-video") as {
+  mockVideoPlayers: {
+    duration: number;
+    emit: (event: string, payload?: unknown) => void;
+  }[];
 };
 
 const EXPORT_URI = /^file:\/\/\/cache\/smog-export-\d{4}-\d{2}-\d{2}\.json$/;
@@ -91,13 +99,49 @@ async function inAccount(): Promise<ReturnType<typeof within>> {
 }
 
 describe("consent sheet", () => {
-  it("shows on first launch and Allow saves the decision on the device", async () => {
+  afterEach(async () => {
+    await AsyncStorage.clear();
+  });
+
+  it("does not ask on the first launch: Home comes first", async () => {
+    await renderApp({ guest: { consent: { analytics: null } } });
+    await screen.findByTestId("home-screen");
+    // Give the stored mark and the consent state time to load.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.queryByTestId("consent-banner")).not.toBeOnTheScreen();
+  });
+
+  it("asks once the first gesture is watched and left, and Allow saves the decision on the device", async () => {
     const { clients } = await renderApp({
       guest: { consent: { analytics: null } },
+      initialUrl: "/",
+    });
+    await screen.findByTestId("home-screen");
+    await act(() => {
+      router.push("/gestures/hond");
+    });
+    await screen.findByTestId("gesture-page");
+    const player = mockVideoPlayers.at(-1);
+    if (!player) {
+      throw new Error("No video player");
+    }
+    player.duration = 20;
+    await act(() => {
+      player.emit("timeUpdate", { currentTime: 17 });
+    });
+    // Not over the gesture being watched.
+    expect(screen.queryByTestId("consent-banner")).not.toBeOnTheScreen();
+    expect(await AsyncStorage.getItem(GESTURE_WATCHED_KEY)).toBe("1");
+    await act(() => {
+      router.back();
     });
     const sheet = within(await screen.findByTestId("consent-banner"));
     expect(
-      sheet.getByRole("header", { name: "Help improve SMOG" })
+      sheet.getByRole("header", {
+        name: "Help us improve SMOG\u00a0&\u00a0Co",
+      })
     ).toBeOnTheScreen();
     await fireEvent.press(
       sheet.getByRole("button", { name: "Allow statistics" })
@@ -108,7 +152,14 @@ describe("consent sheet", () => {
     expect(clients.store.getSnapshot().consent.analytics).toBe(true);
   });
 
+  it("asks at launch once a gesture was watched before", async () => {
+    await AsyncStorage.setItem(GESTURE_WATCHED_KEY, "1");
+    await renderApp({ guest: { consent: { analytics: null } } });
+    expect(await screen.findByTestId("consent-banner")).toBeOnTheScreen();
+  });
+
   it("waits for the guest import sheet (review I1)", async () => {
+    await AsyncStorage.setItem(GESTURE_WATCHED_KEY, "1");
     await renderApp({
       guest: {
         consent: { analytics: null },
@@ -145,6 +196,7 @@ describe("consent sheet", () => {
   });
 
   it("stays closed once decided", async () => {
+    await AsyncStorage.setItem(GESTURE_WATCHED_KEY, "1");
     await renderApp();
     await screen.findByTestId("home-screen");
     expect(screen.queryByTestId("consent-banner")).not.toBeOnTheScreen();
@@ -239,7 +291,7 @@ describe("settings/account", () => {
     expect(account.queryByText("Email language")).not.toBeOnTheScreen();
     expect(
       account.getByText(
-        "When you're signed in, this is also the language of the emails we send you."
+        "When you’re signed in, this is also the language of the emails we send you."
       )
     ).toBeOnTheScreen();
     await fireEvent.press(account.getByRole("combobox", { name: "Language" }));
@@ -324,7 +376,7 @@ describe("settings/account", () => {
       });
       expect(signOut).not.toHaveBeenCalled();
       expect(result.getPathname()).toBe("/settings/account");
-      expect(screen.queryByText("You're signed out.")).toBeNull();
+      expect(screen.queryByText("You’re signed out.")).toBeNull();
     });
 
     it("Sign out signs out, says so and goes to the welcome screen", async () => {
@@ -345,7 +397,7 @@ describe("settings/account", () => {
         buttons.find((button) => button.text === "Sign out")?.onPress?.();
       });
       await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
-      expect(await screen.findByText("You're signed out.")).toBeOnTheScreen();
+      expect(await screen.findByText("You’re signed out.")).toBeOnTheScreen();
       expect(mockFiles.has(leftover)).toBe(false);
       await waitFor(() => expect(result.getPathname()).toBe("/"));
     });
@@ -370,7 +422,9 @@ describe("settings/account", () => {
       });
       await waitFor(() => expect(signOut).toHaveBeenCalled());
       expect(
-        await screen.findByText("Something went wrong. Please try again.")
+        await screen.findByText(
+          "That didn’t work. Try again. If it keeps happening, email info@smog.vlaanderen."
+        )
       ).toBeOnTheScreen();
       expect(result.getPathname()).toBe("/settings/account");
       logged.mockRestore();
@@ -491,7 +545,7 @@ describe("settings/account", () => {
     }
     await fireEvent.press(confirm);
     expect(
-      await screen.findByText("That password is not correct.")
+      await screen.findByText("That password isn’t correct.")
     ).toBeOnTheScreen();
     expect(signOut).not.toHaveBeenCalled();
   });

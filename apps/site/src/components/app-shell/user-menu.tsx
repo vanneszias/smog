@@ -35,7 +35,11 @@ import { TRANSLATION_HOME } from "@/lib/admin-access";
 import { useAuthClient } from "@/lib/auth-client";
 import { signInReturnPath } from "@/lib/redirect";
 import { LanguageMenuItems } from "./language-menu";
-import { GREEN_BUTTON, GREEN_ICON_BUTTON } from "./on-green";
+import {
+  GREEN_BUTTON,
+  GREEN_ICON_BUTTON,
+  GREEN_PRIMARY_BUTTON,
+} from "./on-green";
 import { ThemeMenuItems } from "./theme-menu";
 
 /** Signs out, refreshes the route data and says so. */
@@ -117,8 +121,8 @@ export function UserMenu(): ReactNode {
       <>
         <Button
           asChild
-          className="hidden border-transparent bg-sidebar-foreground text-sidebar hover:bg-sidebar-foreground/90 focus-visible:ring-sidebar-ring focus-visible:ring-offset-sidebar md:inline-flex dark:hover:bg-sidebar-foreground/90"
-          variant="secondary"
+          className={cn("hidden md:inline-flex", GREEN_PRIMARY_BUTTON)}
+          variant="action"
         >
           <Link search={redirect ? { redirect } : {}} to="/sign-in">
             <LogIn aria-hidden="true" className="size-5 shrink-0" />

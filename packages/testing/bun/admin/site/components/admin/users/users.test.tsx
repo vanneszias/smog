@@ -83,7 +83,7 @@ describe("user labels", () => {
       "The email address does not match."
     );
     expect(userActionError(t, new Error("network"))).toBe(
-      "Something went wrong. Please try again."
+      "That didn’t work. Try again. If it keeps happening, email info@smog.vlaanderen."
     );
   });
 });

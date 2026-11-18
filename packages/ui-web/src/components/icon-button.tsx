@@ -5,6 +5,7 @@ import {
   disabled,
   focusRing,
   hitArea,
+  press,
   stateLayer,
   transition,
 } from "../lib/variants";
@@ -16,6 +17,7 @@ const iconButtonVariants = cva(
     stateLayer.full,
     focusRing,
     transition,
+    press,
     disabled,
   ],
   {
@@ -28,6 +30,8 @@ const iconButtonVariants = cva(
         sm: cn("size-8", hitArea),
       },
       variant: {
+        // The orange "do it" (play): a fill under dark ink.
+        action: "border-transparent bg-highlight text-highlight-foreground",
         danger: "border-transparent bg-destructive text-primary-foreground",
         ghost: "border-transparent bg-transparent text-foreground",
         primary: "border-transparent bg-primary text-primary-foreground",

@@ -13,11 +13,11 @@
   "devDependencies": {
     "@smog/config": "workspace:*",
     "@types/bun": "catalog:",
-    "expo-crypto": "~58.0.7",
+    "expo-crypto": "~58.0.8",
     "typescript": "catalog:"
   },
   "peerDependencies": {
-    "expo-crypto": "~58.0.7"
+    "expo-crypto": "~58.0.8"
   },
   "peerDependenciesMeta": {
     "expo-crypto": {

@@ -90,9 +90,13 @@ export function renderNativeTailwindConfig(): string {
       extend: {
         borderRadius: mapValues(radius, px),
         fontFamily: { sans: [tokens.fontFamily.native.regular] },
+        // Tracking in pt: the web's em times the size (React Native has no em).
         fontSize: mapValues(fontSize, (step) => [
           px(step.size),
-          { lineHeight: px(step.lineHeight) },
+          {
+            letterSpacing: px(Number((step.tracking * step.size).toFixed(2))),
+            lineHeight: px(step.lineHeight),
+          },
         ]),
         lineHeight: mapValues(fontSize, (step) => px(step.lineHeight)),
         // Tailwind 3 emits screens in object order, so they must ascend.
@@ -103,9 +107,10 @@ export function renderNativeTailwindConfig(): string {
         ),
         spacing: mapValues(spacing, px),
         transitionDuration: mapValues(motion.duration, (ms) => `${ms}ms`),
-        transitionTimingFunction: {
-          standard: `cubic-bezier(${motion.easing.standard.join(", ")})`,
-        },
+        transitionTimingFunction: mapValues(
+          motion.easing,
+          (curve) => `cubic-bezier(${(curve as readonly number[]).join(", ")})`
+        ),
       },
     },
   };

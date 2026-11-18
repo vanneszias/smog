@@ -33,7 +33,7 @@ function HoverCardContent({
       <HoverCardPrimitive.Content
         align={align}
         className={cn(
-          "z-50 w-72 max-w-reading origin-(--radix-hover-card-content-transform-origin) rounded-2xl bg-popover p-4 text-body-sm text-popover-foreground shadow-2 outline-hidden ring-1 ring-foreground/10 data-closed:animate-fade-out data-open:animate-fade-in motion-reduce:animate-none",
+          "z-50 w-72 max-w-reading origin-(--radix-hover-card-content-transform-origin) rounded-2xl bg-popover p-4 text-body-sm text-popover-foreground shadow-2 outline-hidden ring-1 ring-foreground/10 data-closed:animate-grow-out data-open:animate-grow-in motion-reduce:animate-none",
           className
         )}
         data-slot="hover-card-content"

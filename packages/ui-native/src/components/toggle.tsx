@@ -23,7 +23,7 @@ import { ICON_SIZE, renderIcon } from "../lib/icon";
 import { hitSlopFor, useColor } from "../lib/theme";
 
 const toggleVariants = cva(
-  "flex-row items-center justify-center gap-2 rounded-md border active:opacity-80",
+  "flex-row items-center justify-center gap-2 rounded-pill border active:opacity-80",
   {
     defaultVariants: { size: "md", variant: "default" },
     variants: {

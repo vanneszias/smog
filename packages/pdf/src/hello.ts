@@ -7,7 +7,8 @@
  * real layout engine replaces it in task 5.
  */
 import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, rgb } from "pdf-lib";
+import { PDFDocument } from "pdf-lib";
+import { PDF_COLOURS } from "./colours";
 
 export interface HelloAssets {
   boldFont: Uint8Array;
@@ -56,7 +57,7 @@ export async function renderHelloDocument(
     y: y - logoSize,
   });
   page.drawText(title, {
-    color: rgb(0.05, 0.3, 0.2),
+    color: PDF_COLOURS.green,
     font: bold,
     size: 20,
     x: MARGIN + logoSize + 12,

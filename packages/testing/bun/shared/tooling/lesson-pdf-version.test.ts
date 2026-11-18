@@ -3,8 +3,10 @@
  * cached PDF is served for an unchanged lesson for up to 30 days, so a change
  * to what the engine prints must change `LESSON_PDF_LAYOUT_VERSION` (part of
  * every cache key). This test fingerprints the engine (its non-test sources,
- * its fonts and logo, the pinned `pdf-lib` and fontkit versions) and fails
- * when the fingerprint is not the one recorded for the current version.
+ * its fonts and logo, the pinned `pdf-lib` and fontkit versions, and, since
+ * version 3, the print palette it takes from `@smog/styles`, so a token
+ * change that recolours the print trips it too) and fails when the
+ * fingerprint is not the one recorded for the current version.
  */
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
@@ -14,6 +16,7 @@ import {
   LESSON_PDF_ENGINE_HASHES,
   LESSON_PDF_LAYOUT_VERSION,
 } from "../../../../features/lessons/src/server/layout-version";
+import { PDF_COLOURS } from "../../../../pdf/src/colours";
 
 const PDF = new URL("../../../../pdf", import.meta.url).pathname;
 
@@ -43,6 +46,9 @@ function engineFingerprint(): string {
     hash.update(`${path.slice(PDF.length)}\n`);
     hash.update(readFileSync(path));
   }
+  // The colours come from the tokens, outside packages/pdf: hash what they
+  // resolve to.
+  hash.update(JSON.stringify(PDF_COLOURS));
   return hash.digest("hex");
 }
 

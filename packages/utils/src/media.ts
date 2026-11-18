@@ -59,6 +59,14 @@ export function muxStreamUrl(playbackId: string): string {
   return `https://stream.mux.com/${encodeURIComponent(playbackId)}.m3u8`;
 }
 
+/**
+ * Where a gesture's still is taken, in seconds. Mux defaults to the middle
+ * of the video, which on the shortest clips lands on the white closing
+ * slate (a lone "S"); one second in shows the title and the movement
+ * starting on every clip (identity overhaul, checked on real clips).
+ */
+export const GESTURE_STILL_SECONDS = 1;
+
 export interface MuxThumbnailOptions {
   /** Seconds into the video. */
   time?: number;

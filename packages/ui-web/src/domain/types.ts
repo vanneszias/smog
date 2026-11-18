@@ -12,6 +12,11 @@ import type { ComponentType, ReactNode } from "react";
 export interface CategoryRef {
   /** Web only: a decorative icon or image the category chip leads with. */
   icon?: ReactNode;
+  /**
+   * The language of `name` when it differs from the page's (a name shown
+   * untranslated, in the default language), so it is read out correctly.
+   */
+  lang?: string | undefined;
   name: string;
   slug: string;
 }
@@ -21,6 +26,8 @@ export interface GestureCardData {
   categories: readonly CategoryRef[];
   id: string;
   name: string;
+  /** The language of `name` when it differs from the page's (untranslated). */
+  nameLang?: string | undefined;
   playbackId: string;
   slug: string;
 }

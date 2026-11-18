@@ -43,3 +43,9 @@
   Cache-Control: public, max-age=86400
 /og.png
   Cache-Control: public, max-age=86400
+/og-nl.png
+  Cache-Control: public, max-age=86400
+/og-en.png
+  Cache-Control: public, max-age=86400
+/og-fr.png
+  Cache-Control: public, max-age=86400

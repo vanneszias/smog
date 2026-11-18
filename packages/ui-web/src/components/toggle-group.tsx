@@ -38,7 +38,7 @@ function ToggleGroup({
   return (
     <ToggleGroupPrimitive.Root
       className={cn(
-        "group/toggle-group flex w-fit flex-row items-center gap-(--gap) data-[spacing=0]:data-[variant=outline]:rounded-4xl data-vertical:flex-col data-vertical:items-stretch",
+        "group/toggle-group flex w-fit flex-row items-center gap-(--gap) data-[spacing=0]:data-[variant=outline]:rounded-pill data-vertical:flex-col data-vertical:items-stretch",
         className
       )}
       data-orientation={orientation}

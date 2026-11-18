@@ -12,16 +12,16 @@ import { signInAsAdmin } from "../../support/e2e/maintenance";
 /*
  * The legal texts (phase 10b task 7): an admin drafts, previews and publishes
  * the English terms and the public page shows the new text at once, then
- * restores version 2 (the shipped text) so the text every other spec reads is
+ * restores version 3 (the shipped text) so the text every other spec reads is
  * unchanged; a translator sees the editor and the history but no restore.
  * The restore runs in `finally` through the same procedure. The effective
- * date is the shipped one (2026-10-29) so the date the page prints does not
+ * date is the shipped one (2026-11-18) so the date the page prints does not
  * change either.
  */
 
 const LEGAL = "/admin/translation/legal?kind=terms&lang=en";
-const SHIPPED_VERSION = 2;
-const SHIPPED_DATE = "2026-10-29";
+const SHIPPED_VERSION = 3;
+const SHIPPED_DATE = "2026-11-18";
 const NEW_TITLE = "Terms of service (e2e edit)";
 const PUBLISHED = /Versie \d+ gepubliceerd/;
 const RESTORED = /Versie \d+ hersteld/;
@@ -35,7 +35,7 @@ async function axe(page: Page, where: string): Promise<string[]> {
   );
 }
 
-/** The English terms are the shipped text again: version 2 restored when a later version is current. */
+/** The English terms are the shipped text again: version 3 restored when a later version is current. */
 async function restoreShipped(page: Page): Promise<void> {
   await signInAsAdmin(page.request);
   const detail = await adminRpc<{

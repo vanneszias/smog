@@ -31,7 +31,7 @@ export type LegalTexts = Readonly<Record<string, LegalText>>;
 
 const inputSchema = z.object({
   kind: z.enum(LEGAL_KINDS),
-  /** The site language and, when it differs, the Dutch text (`?lang=nl`, the translation notice). */
+  /** The site language and, when it differs, the Dutch text (`?text=nl`, the translation notice). */
   locales: z.array(z.string().min(2).max(35)).min(1).max(2),
 });
 

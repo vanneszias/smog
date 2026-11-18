@@ -83,7 +83,9 @@ describe("OpenInAppBanner", () => {
         onOpen={onOpen}
       />
     );
-    const region = screen.getByRole("region", { name: "Have the SMOG app?" });
+    const region = screen.getByRole("region", {
+      name: "Have the SMOG\u00a0&\u00a0Co app?",
+    });
     expect(region.textContent).toContain("View this gesture in the app.");
     const link = screen.getByRole("link", { name: "Open in the app" });
     expect(link.getAttribute("href")).toBe("https://smog.test/gestures/hallo");

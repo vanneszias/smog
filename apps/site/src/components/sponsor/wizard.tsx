@@ -26,7 +26,7 @@ import {
   AVAILABILITY_IDS_MAX,
   type AvailabilityItem,
 } from "@smog/sponsorships/schema";
-import { EmptyState, Stepper } from "@smog/ui-web";
+import { EmptyState, HAND, Stepper } from "@smog/ui-web";
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -35,6 +35,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  type CSSProperties,
   type ReactNode,
   useCallback,
   useEffect,
@@ -282,6 +283,8 @@ export function SponsorWizard({
   const [search, setSearch] = useState<SelectSearch>({ categories: [], q: "" });
   const [paused, setPaused] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  // Which way the last step change went: the next step slides in from there.
+  const [direction, setDirection] = useState<1 | -1>(1);
   const turnstile = useTurnstileToken();
   const { reset: resetTurnstile, token } = turnstile;
   const titleRef = useStepFocus(state.step);
@@ -316,9 +319,10 @@ export function SponsorWizard({
       setPayError(null);
       // The widget lives on step 3: its token goes with it (review M-3).
       resetTurnstile();
+      setDirection(step >= state.step ? 1 : -1);
       dispatch({ step, type: "step" });
     },
-    [dispatch, resetTurnstile]
+    [dispatch, resetTurnstile, state.step]
   );
   const setDetails = useCallback(
     (patch: Partial<WizardDetails>) => dispatch({ patch, type: "details" }),
@@ -381,7 +385,7 @@ export function SponsorWizard({
     return (
       <EmptyState
         description={t("sponsor.paused.description")}
-        illustration={2}
+        illustration={HAND.welcome}
         level={1}
         title={t("sponsor.paused.title")}
       />
@@ -442,10 +446,24 @@ export function SponsorWizard({
       />
     );
   }
+  const slide = { "--step-dx": `${direction * 16}px` } as CSSProperties;
   return (
     <div className="flex flex-col gap-8">
-      <Stepper current={state.step} steps={steps} />
-      {body}
+      <Stepper current={state.step} steps={steps} tone="action" />
+      {/*
+        A new key per step: it slides 16 px in from the side it comes from
+        (forward from the right, back from the left), 200 ms, and not at all
+        under reduced motion. The old step needs no exit: the page is
+        already scrolled to the top and the title takes focus.
+      */}
+      <div
+        className="flex animate-step-in flex-col gap-8 motion-reduce:animate-none"
+        data-step={state.step}
+        key={state.step}
+        style={slide}
+      >
+        {body}
+      </div>
     </div>
   );
 }

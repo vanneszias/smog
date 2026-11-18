@@ -16,6 +16,11 @@ export interface CategoryChipsProps
   selected: readonly string[];
   /** Leads with an `All` chip (`search.allCategories`) that clears the selection. */
   showAll?: boolean;
+  /**
+   * `action`: a selected category is the orange "do it" (the active filter
+   * of a search), as the web kit. The `All` chip keeps the green tint.
+   */
+  tone?: "action" | "default";
 }
 
 /**
@@ -29,6 +34,7 @@ export function CategoryChips({
   onChange,
   selected,
   showAll = true,
+  tone = "default",
   ...props
 }: CategoryChipsProps): ReactElement {
   const { t } = useTranslation();
@@ -72,6 +78,7 @@ export function CategoryChips({
           onToggle={toggle}
           selected={selected.includes(category.slug)}
           slug={category.slug}
+          tone={tone}
         />
       ))}
     </ScrollView>
@@ -83,11 +90,13 @@ function CategoryChip({
   onToggle,
   selected,
   slug,
+  tone,
 }: {
   name: string;
   onToggle: (slug: string, on: boolean) => void;
   selected: boolean;
   slug: string;
+  tone: "action" | "default";
 }): ReactElement {
   const change = useCallback(
     (on: boolean): void => {
@@ -96,7 +105,7 @@ function CategoryChip({
     [onToggle, slug]
   );
   return (
-    <Chip onSelectedChange={change} selected={selected}>
+    <Chip onSelectedChange={change} selected={selected} tone={tone}>
       {name}
     </Chip>
   );

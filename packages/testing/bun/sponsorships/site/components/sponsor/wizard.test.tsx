@@ -181,9 +181,19 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     expect(card("Mama").getAttribute("aria-describedby")).toBe(
       screen.getByText("Sponsored").id
     );
-    // The value cards come from the constants (bug 24).
+    // The prices come from the constants (bug 24); the seconds are a
+    // labelled unit in the page's language, never split.
     expect(screen.getByText(FIFTY_EUROS)).toBeDefined();
-    expect(screen.getByText("4 sec")).toBeDefined();
+    // Testing Library folds the non-breaking space the page writes.
+    const seconds = screen.getByText("4 seconds");
+    expect(seconds.textContent).toBe("4\u00a0seconds");
+    // Purpose and a picture of the end card come before the price.
+    const sample = screen.getByRole("img", {
+      name: "Example: your name at the end of a gesture’s video",
+    });
+    expect(sample.textContent).toContain("Your name");
+    const order = sample.compareDocumentPosition(screen.getByText(FIFTY_EUROS));
+    expect(order).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(screen.getByText(TEN_EUROS_EXTRA)).toBeDefined();
     expect(
       screen.getByText("2 available gestures shown · 0 selected")
@@ -342,7 +352,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Continue to payment" })
     );
-    await screen.findByRole("heading", { level: 1, name: "Support a gesture" });
+    await screen.findByRole("heading", { level: 1, name: "Sponsor a gesture" });
     expect(screen.getByRole("alert").textContent).toContain(
       "Someone else was just ahead of you"
     );
@@ -373,7 +383,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     );
     expect(
       await screen.findByText(
-        "The payment could not be started. Nothing was charged. Please try again."
+        "We couldn’t start the payment. Nothing was charged. Try again."
       )
     ).toBeDefined();
   });
@@ -624,7 +634,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
     );
     fireEvent.click(pay);
     expect(
-      await screen.findByText("The security check failed. Please try again.")
+      await screen.findByText("The security check failed. Try again.")
     ).toBeDefined();
     expect(
       headers
@@ -654,7 +664,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
       screen.getByRole("button", { name: "Continue to payment" })
     );
     await screen.findByText(
-      "The payment could not be started. Nothing was charged. Please try again."
+      "We couldn’t start the payment. Nothing was charged. Try again."
     );
     answer = {
       checkoutUrl: "https://mollie.test/checkout/tr_4",
@@ -682,7 +692,7 @@ describe("the sponsor wizard (S-01–S-11)", () => {
         screen.getByRole("button", { name: "Continue to payment" })
       );
     pay();
-    await screen.findByText("Continuing to payment failed. Please try again.");
+    await screen.findByText("We couldn’t continue to the payment. Try again.");
     pay();
     await waitFor(() => expect(checkoutIds(calls)).toHaveLength(2));
     // Back to the details, a new name, and pay again: a different payment.

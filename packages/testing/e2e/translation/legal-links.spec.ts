@@ -10,14 +10,14 @@ import {
 
 /** Review artifacts are opt-in, not pixel assertions or files in the app tree. */
 const SCREENSHOTS = process.env.SCREENSHOTS_DIR ?? process.env.PUBLIC_SHOTS_DIR;
-const CONSENT = "Help SMOG verbeteren";
-const DECLINE = "Geen statistieken";
+const CONSENT = "Help ons SMOG & Co beter maken";
+const DECLINE = "Niet toestaan";
 const APP_BANNER = "Je SMOG-gebaren bij de hand";
-const OPEN_IN_APP = "Heb je de SMOG-app?";
+const OPEN_IN_APP = "Heb je de SMOG & Co-app?";
 const IPHONE = devices["iPhone 15"].userAgent;
 const SIGN_IN_URL = /\/sign-in\?redirect=%2Faccount$/;
 const DUTCH_TITLE = "Privacybeleid";
-const DUTCH_TERMS = /\/terms\?lang=nl$/;
+const DUTCH_TERMS = /\/terms\?text=nl$/;
 const RIGHTS_ANCHOR = /#rights$/;
 const DIEREN_FILTER = /\/gestures\?category=dieren$/;
 const APP_STORE_LINK = /App Store/;
@@ -45,7 +45,7 @@ test.describe("legal pages", () => {
       page.getByRole("heading", { level: 1, name: DUTCH_TITLE })
     ).toBeVisible();
     await expect(page.getByRole("note")).toHaveCount(0);
-    await page.getByRole("link", { name: "Uw rechten" }).click();
+    await page.getByRole("link", { name: "Je rechten" }).click();
     await expect(page).toHaveURL(RIGHTS_ANCHOR);
     await expect(
       page.getByRole("group", { name: "Je keuze voor statistieken" })
@@ -72,7 +72,7 @@ test.describe("legal pages", () => {
       page.getByRole("heading", { level: 1, name: "Servicevoorwaarden" })
     ).toBeVisible();
     await expect(page.getByRole("note")).toContainText(
-      "You are reading the Dutch version"
+      "You’re reading the Dutch version"
     );
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     const cookies = await page.context().cookies();
@@ -274,9 +274,11 @@ test.describe("screenshots", () => {
           ]);
           await page.goto("/");
           await waitForApp(page);
-          await expect(
-            page.getByRole("region", { name: APP_BANNER })
-          ).toBeVisible();
+          // The banner on a phone, the home's App section from `md`: one
+          // region with this name, never both.
+          const app = page.getByRole("region", { name: APP_BANNER });
+          await expect(app).toBeVisible();
+          await expect(app).toHaveCount(1);
           await settleForShot(page);
           if (SCREENSHOTS) {
             await page.screenshot({

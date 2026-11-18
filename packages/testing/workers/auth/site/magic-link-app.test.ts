@@ -21,7 +21,9 @@ describe("/magic-link/app (the app's link, opened in a browser)", () => {
     "explains the link is for the app and offers a browser sign-in with fixed callbacks",
     async () => {
       const html = await page(`?token=${TOKEN}`);
-      expect(html).toContain("This link signs you in to the SMOG &amp; Co app");
+      expect(html).toContain(
+        "This link signs you in to the SMOG\u00a0&amp;\u00a0Co app"
+      );
       const href = html.match(HREF)?.[1]?.replaceAll("&amp;", "&") ?? "";
       const url = new URL(href, ORIGIN);
       expect(url.origin).toBe(ORIGIN);

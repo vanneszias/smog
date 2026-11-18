@@ -19,7 +19,7 @@ const CATALOGUE_CHUNK_NAME = /^.*\/(nl|en|fr)(?:\.json|-[\w-]+\.js)$/;
 
 const PAGES = [
   {
-    heading: "Gebaren die je spraak ondersteunen",
+    heading: "Mensen gaan van nature hun spraak ondersteunen met gebaren",
     name: "home",
     path: "/",
     signedIn: false,
@@ -46,9 +46,9 @@ test.describe("app shell", () => {
   });
 
   for (const [locale, name] of [
-    ["nl", "Gemaakt met liefde door zias.be"],
-    ["en", "Made with love by zias.be"],
-    ["fr", "Fait avec amour par zias.be"],
+    ["nl", "Gemaakt door zias.be"],
+    ["en", "Made by zias.be"],
+    ["fr", "Réalisé par zias.be"],
   ] as const) {
     test(`footer credit is an accessible external link in ${locale}`, async ({
       page,
@@ -63,11 +63,8 @@ test.describe("app shell", () => {
       await expect(credit).toHaveAttribute("href", "https://zias.be");
       await expect(credit).toHaveAttribute("target", "_blank");
       await expect(credit).toHaveAttribute("rel", "noopener noreferrer");
-      await expect(credit.locator("svg")).toHaveAttribute(
-        "aria-hidden",
-        "true"
-      );
-      await expect(credit).not.toContainText("<heart");
+      // A plain credit line: no pill, no heart icon.
+      await expect(credit.locator("svg")).toHaveCount(0);
       await credit.focus();
       await expect(credit).toBeFocused();
       const ring = await credit.evaluate(
@@ -287,6 +284,6 @@ test.describe("app shell", () => {
     const background = await page
       .getByRole("banner")
       .evaluate((header) => getComputedStyle(header).backgroundColor);
-    expect(background).toBe("rgb(0, 107, 80)");
+    expect(background).toBe("rgb(9, 86, 76)");
   });
 });

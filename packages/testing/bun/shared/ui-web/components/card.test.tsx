@@ -16,7 +16,7 @@ describe("Card", () => {
       </Card>
     );
     const card = classesOf(screen.getByTestId("card"));
-    expect(card).toContain("rounded-2xl");
+    expect(card).toContain("rounded-card");
     expect(card).toContain("shadow-1");
     expect(card).toContain("dark:bg-popover");
     expect(screen.getByRole("heading", { name: "Title" })).toBeDefined();

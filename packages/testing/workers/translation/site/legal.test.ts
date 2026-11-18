@@ -34,19 +34,19 @@ describe("/privacy and /terms (spec §9, inventory P-07, P-08, R-16)", () => {
       "nl",
       "Privacybeleid",
       "Verwerkingsverantwoordelijke",
-      "Laatst bijgewerkt op 29 oktober 2026",
+      "Laatst bijgewerkt op 18 november 2026",
     ],
     [
       "en",
       "Privacy policy",
       "Data controller",
-      "Last updated on 29 October 2026",
+      "Last updated on 18 November 2026",
     ],
     [
       "fr",
       "Politique de confidentialité",
       "Responsable du traitement",
-      "Dernière mise à jour le 29 octobre 2026",
+      "Dernière mise à jour le 18 novembre 2026",
     ],
   ])(
     "renders the privacy policy in %s",
@@ -89,21 +89,19 @@ describe("/privacy and /terms (spec §9, inventory P-07, P-08, R-16)", () => {
     expect(fr.body).toContain("la version néerlandaise prévaut");
   });
 
-  it("shows the Dutch text in place for ?lang=nl, changing no setting (review I2)", async () => {
+  it("shows the Dutch text in place for ?text=nl, changing no setting (review I2)", async () => {
     const en = await page("/terms", "en");
-    expect(en.body).toContain('href="/terms?lang=nl"');
-    const { body, response } = await page("/privacy?lang=nl", "en");
+    expect(en.body).toContain('href="/terms?text=nl"');
+    const { body, response } = await page("/privacy?text=nl", "en");
     expect(response.status).toBe(200);
     expect(response.headers.get("set-cookie")).toBeNull();
     // The site stays English; only the legal text is Dutch.
     expect(body).toContain('<html lang="en"');
     expect(body).toMatch(DUTCH_ARTICLE);
-    expect(body).toContain(
-      "You are reading the Dutch version, which prevails."
-    );
+    expect(body).toContain("You’re reading the Dutch version, which prevails.");
     expect(body).toContain('href="/privacy"');
     // Dutch readers never see the switch.
-    const nl = await page("/privacy?lang=nl", "nl");
+    const nl = await page("/privacy?text=nl", "nl");
     expect(nl.body).not.toContain(NOTICE);
   });
 
@@ -143,7 +141,7 @@ async function publishRow(
 async function removeRows(kind: string, locale: string): Promise<void> {
   await d1
     .prepare(
-      "DELETE FROM legal_text WHERE kind = ? AND locale = ? AND version > 2"
+      "DELETE FROM legal_text WHERE kind = ? AND locale = ? AND version > 3"
     )
     .bind(kind, locale)
     .run();
@@ -164,7 +162,7 @@ describe("legal texts from D1 (phase 10b task 7)", () => {
 
   it("shows a published edit at once, with its effective date, and the shipped text again without it", async () => {
     try {
-      await publishRow("terms", "en", 3, edited, "2026-11-15");
+      await publishRow("terms", "en", 4, edited, "2026-11-15");
       const { body } = await page("/terms", "en");
       expect(body).toMatch(EDITED_H1);
       expect(body).toContain("Edited scope");
@@ -184,10 +182,10 @@ describe("legal texts from D1 (phase 10b task 7)", () => {
     );
   });
 
-  it("an edit of the Dutch text shows for ?lang=nl on another language's page", async () => {
+  it("an edit of the Dutch text shows for ?text=nl on another language's page", async () => {
     try {
-      await publishRow("terms", "nl", 3, edited, "2026-11-16");
-      const { body } = await page("/terms?lang=nl", "en");
+      await publishRow("terms", "nl", 4, edited, "2026-11-16");
+      const { body } = await page("/terms?text=nl", "en");
       expect(body).toMatch(LANG_NL_ARTICLE);
       expect(body).toMatch(EDITED_H1);
       expect(body).toContain("Laatst bijgewerkt op 16 november 2026");
@@ -198,11 +196,11 @@ describe("legal texts from D1 (phase 10b task 7)", () => {
 
   it("a published row that does not validate never breaks the page: the shipped text shows", async () => {
     try {
-      await publishRow("terms", "fr", 3, { title: "broken" }, "2026-11-17");
+      await publishRow("terms", "fr", 4, { title: "broken" }, "2026-11-17");
       const { body, response } = await page("/terms", "fr");
       expect(response.status).toBe(200);
       expect(body).toContain("Droit applicable et litiges");
-      expect(body).toContain("Dernière mise à jour le 29 octobre 2026");
+      expect(body).toContain("Dernière mise à jour le 18 novembre 2026");
     } finally {
       await removeRows("terms", "fr");
     }

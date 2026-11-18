@@ -23,13 +23,13 @@ export interface LegalLoaderArgs {
   parentMatchPromise: Promise<{ loaderData?: { locale: string } | undefined }>;
 }
 
-/** The loader dependencies: only `?lang=nl` changes what the page loads. */
+/** The loader dependencies: only `?text=nl` changes what the page loads. */
 export function legalDeps({ search }: { search: LegalSearch }): LegalSearch {
-  return search.lang ? { lang: search.lang } : {};
+  return search.text ? { text: search.text } : {};
 }
 
 /**
- * The loader of one legal route: the site language and, for `?lang=nl`, the
+ * The loader of one legal route: the site language and, for `?text=nl`, the
  * Dutch text, read from D1 on the server (cached with the i18n version, so a
  * published edit shows without a deploy). The page code (`legal-page`) loads
  * on demand: it stays out of every other page.
@@ -40,7 +40,7 @@ export function legalLoader(
   return async ({ deps, parentMatchPromise }) => {
     const root = await parentMatchPromise;
     const locale = root.loaderData?.locale ?? "nl";
-    const locales = deps.lang ? [...new Set([locale, deps.lang])] : [locale];
+    const locales = deps.text ? [...new Set([locale, deps.text])] : [locale];
     const [texts] = await Promise.all([
       getLegalTexts({ data: { kind, locales } }),
       // The page labels itself in the text's language and the notice in Dutch: the browser holds only the active catalogue.

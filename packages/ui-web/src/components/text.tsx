@@ -3,13 +3,16 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "../lib/cn";
 import { toneText } from "../lib/variants";
 
-const textVariants = cva("", {
+// `text-pretty`: no lone word on a paragraph's last line.
+const textVariants = cva("text-pretty", {
   defaultVariants: { size: "body", tone: "default", weight: "regular" },
   variants: {
     size: {
       body: "text-body",
       "body-sm": "text-body-sm",
       caption: "text-caption",
+      // The line under a display title (the hero, the auth panel).
+      lead: "text-lead",
     },
     tone: toneText,
     weight: {
@@ -30,7 +33,7 @@ export interface TextProps
   ref?: ComponentProps<"p">["ref"];
 }
 
-/** Body copy: `body | body-sm | caption`, a tone and a weight. */
+/** Body copy: `lead | body | body-sm | caption`, a tone and a weight. */
 export function Text({
   as = "p",
   className,
@@ -54,7 +57,8 @@ export function Text({
 const headingVariants = cva("wrap-anywhere text-balance font-semibold", {
   variants: {
     size: {
-      display: "text-display",
+      // The display step is the one bold heading: the brand's voice at size.
+      display: "text-display font-bold",
       "title-1": "text-title-1",
       "title-2": "text-title-2",
       "title-3": "text-title-3",

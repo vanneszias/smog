@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { GestureCard } from "../../../../../ui-web/src/domain/gesture-card";
@@ -43,7 +43,7 @@ describe("GestureCard", () => {
     const badge = container.querySelector('[data-slot="gesture-category"]');
     expect(badge?.textContent).toBe("Greetings, Everyday");
     expect(container.querySelector("article")?.className).toContain(
-      "rounded-2xl"
+      "rounded-card"
     );
   });
 
@@ -137,5 +137,41 @@ describe("GestureGrid", () => {
     expect(screen.getByRole("link", { name: "Eat" }).getAttribute("href")).toBe(
       "/gestures/eat"
     );
+  });
+});
+
+describe("GestureThumbnail", () => {
+  test("a still one second in, over the branded placeholder: the deep green and the video's title", () => {
+    const { container } = renderKit(
+      <GestureCard gesture={HELLO} href="/gestures/hello" />
+    );
+    expect(container.querySelector("img")?.getAttribute("src")).toContain(
+      "time=1"
+    );
+    const fallback = container.querySelector(
+      '[data-slot="gesture-still-fallback"]'
+    );
+    expect(fallback?.getAttribute("aria-hidden")).toBe("true");
+    expect(classesOf(fallback)).toContain("bg-sidebar");
+    // The name is drawn, not written: the card's heading stays its only text.
+    const title = fallback?.querySelector('[data-slot="gesture-title"]');
+    expect(title?.querySelector("[data-name]")?.getAttribute("data-name")).toBe(
+      "Hello"
+    );
+    expect(fallback?.textContent?.trim()).toBe("");
+    expect(screen.getAllByText("Hello")).toHaveLength(1);
+  });
+
+  test("a still that fails to load leaves the placeholder, never a blank tile", () => {
+    const { container } = renderKit(<GestureCard gesture={HELLO} />);
+    const image = container.querySelector("img");
+    expect(image).not.toBeNull();
+    act(() => {
+      image?.dispatchEvent(new Event("error"));
+    });
+    expect(container.querySelector("img")).toBeNull();
+    expect(
+      container.querySelector('[data-slot="gesture-still-fallback"]')
+    ).not.toBeNull();
   });
 });

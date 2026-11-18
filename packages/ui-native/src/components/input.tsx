@@ -13,7 +13,7 @@ import { useFieldControl } from "./field";
 
 /** Border and fill of text inputs, selects and textareas (as web). */
 export const fieldVariants = cva(
-  "w-full flex-row items-center gap-2 rounded-md border bg-card",
+  "w-full flex-row items-center gap-2 rounded-pill border bg-card",
   {
     defaultVariants: { invalid: false, size: "md" },
     variants: {

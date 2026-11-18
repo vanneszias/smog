@@ -96,7 +96,11 @@ exports[`the production config matches the snapshot with no variant 1`] = `
     [
       "expo-splash-screen",
       {
-        "backgroundColor": "#00805F",
+        "backgroundColor": "#09564C",
+        "dark": {
+          "backgroundColor": "#0E2E29",
+          "image": "./assets/splash-icon.png",
+        },
         "image": "./assets/splash-icon.png",
         "imageWidth": 200,
         "resizeMode": "contain",

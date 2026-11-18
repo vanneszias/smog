@@ -167,7 +167,7 @@ function ToastCard({
       {action ? (
         <button
           className={cn(
-            "inline-flex min-h-touch shrink-0 items-center rounded-4xl px-3 font-medium text-body-sm text-primary-strong hover:bg-primary-subtle",
+            "inline-flex min-h-touch shrink-0 items-center rounded-pill px-3 font-medium text-body-sm text-primary-strong hover:bg-primary-subtle",
             focusRing,
             transition
           )}

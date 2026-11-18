@@ -13,6 +13,11 @@ function rem(px: number): string {
   return `${Number((px / ROOT_FONT_SIZE).toFixed(4))}rem`;
 }
 
+/** A tracking in em (`0` stays unitless). */
+function em(value: number): string {
+  return value === 0 ? "0" : `${value}em`;
+}
+
 /** `surfaceRaised` → `surface-raised`, `chart1` → `chart-1`. */
 export function kebab(name: string): string {
   return name
@@ -56,7 +61,6 @@ function durations(): [string, string][] {
  */
 function themeBlock(): string[] {
   const { fontSize, fontWeight, spacing, radius, breakpoint, layout } = tokens;
-  const easing = tokens.motion.easing.standard.join(", ");
   return [
     "@theme {",
     "  --color-*: initial;",
@@ -68,7 +72,7 @@ function themeBlock(): string[] {
     ...declarations(
       Object.entries(radius).map(([key, px]) => [
         `radius-${key}`,
-        key === "full" ? `${px}px` : rem(px),
+        px >= 9999 ? `${px}px` : rem(px),
       ])
     ),
     "",
@@ -83,14 +87,21 @@ function themeBlock(): string[] {
       Object.entries(fontSize).flatMap(([key, step]) => [
         [`text-${key}`, rem(step.size)],
         [`text-${key}--line-height`, rem(step.lineHeight)],
+        [`text-${key}--letter-spacing`, em(step.tracking)],
       ])
     ),
     "",
     ...declarations(shadows("light")),
     "",
-    `  --ease-standard: cubic-bezier(${easing});`,
+    ...declarations(
+      Object.entries(tokens.motion.easing).map(([name, curve]) => [
+        `ease-${name}`,
+        `cubic-bezier(${curve.join(", ")})`,
+      ])
+    ),
     ...declarations(durations()),
     `  --motion-pop-scale: ${tokens.motion.popScale};`,
+    `  --motion-press-scale: ${tokens.motion.pressScale};`,
     "  --default-transition-duration: var(--duration-normal);",
     "  --default-transition-timing-function: var(--ease-standard);",
     "",
@@ -116,6 +127,7 @@ function responsiveType(): string[] {
           [
             [`text-${key}`, rem(step.md.size)],
             [`text-${key}--line-height`, rem(step.md.lineHeight)],
+            [`text-${key}--letter-spacing`, em(step.md.tracking)],
           ],
           "    "
         )
@@ -141,6 +153,12 @@ function darkBlock(): string[] {
   ];
 }
 
+/**
+ * Reduced motion is no motion at all. Zeroing the durations alone is a
+ * trap: a delayed animation would still wait out its delay in its first
+ * keyframe (an element held invisible, then snapping in), so every delay
+ * goes to zero too.
+ */
 function reducedMotion(): string[] {
   return [
     "@media (prefers-reduced-motion: reduce) {",
@@ -149,6 +167,12 @@ function reducedMotion(): string[] {
       durations().map(([name]) => [name, "0ms"]),
       "    "
     ),
+    "  }",
+    "  *,",
+    "  ::before,",
+    "  ::after {",
+    "    animation-delay: 0ms !important;",
+    "    transition-delay: 0ms !important;",
     "  }",
     "}",
   ];

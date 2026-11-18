@@ -10,7 +10,7 @@ describe("EmptyState", () => {
     const heading = screen.getByRole("heading", { name: "Nothing here yet" });
     expect(classesOf(heading)).toContain("text-title-3");
     expect(
-      screen.getByText("As soon as there's something, you'll find it here.")
+      screen.getByText("As soon as there’s something, you’ll find it here.")
     ).toBeDefined();
     expect(screen.getByRole("button", { name: "Browse" })).toBeDefined();
   });

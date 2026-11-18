@@ -267,9 +267,7 @@ describe("sign-in with Turnstile on (the WebView sheet)", () => {
       first.props.onMessage(bridgeMessage({ type: "error" }, `${SITE}/x`))
     );
     expect(
-      await screen.findByText(
-        "The security check didn't work. Please try again."
-      )
+      await screen.findByText("The security check didn’t work. Try again.")
     ).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(await webview()).not.toBe(first);
@@ -360,7 +358,7 @@ describe("the app's magic link", () => {
     await waitFor(() => expect(result.getPathname()).toBe("/"));
     // The toast names the account of the new session.
     expect(
-      await screen.findByText(`You're signed in as ${EMAIL}.`)
+      await screen.findByText(`You’re signed in as ${EMAIL}.`)
     ).toBeOnTheScreen();
   });
 
@@ -385,7 +383,7 @@ describe("the app's magic link", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
     await waitFor(() => expect(verify).toHaveBeenCalledTimes(1));
     expect(
-      await screen.findByText(`You're signed in as ${OTHER}.`)
+      await screen.findByText(`You’re signed in as ${OTHER}.`)
     ).toBeOnTheScreen();
   });
 
@@ -402,7 +400,7 @@ describe("the app's magic link", () => {
       await screen.findByRole("header", { name: "Switch account?" })
     ).toBeOnTheScreen();
     expect(
-      screen.getByText(`You're signed in as ${EMAIL}.`, { exact: false })
+      screen.getByText(`You’re signed in as ${EMAIL}.`, { exact: false })
     ).toBeOnTheScreen();
     expect(verify).not.toHaveBeenCalled();
     await fireEvent.press(

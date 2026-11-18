@@ -532,7 +532,7 @@ test.describe("CSP (enforced in dev)", () => {
       await page.goto(`/sponsor?gesture=${SLUG}`);
       await waitForApp(page);
       await page
-        .getByRole("button", { name: "Geen statistieken" })
+        .getByRole("button", { name: "Niet toestaan" })
         .click({ timeout: 3000 })
         .catch(() => undefined);
       await expect(

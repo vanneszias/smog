@@ -1,7 +1,9 @@
-import { muxThumbnailUrl } from "@smog/utils";
+import { handSvgs } from "@smog/brand/svg";
+import { GESTURE_STILL_SECONDS, muxThumbnailUrl } from "@smog/utils";
 import { Play } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { cn } from "../lib/cn";
+import { GestureTitle } from "./gesture-title";
 import type { CategoryRef, KitLinkComponent, KitLinkProps } from "./types";
 
 /*
@@ -46,47 +48,104 @@ export function GestureLink({
   );
 }
 
-/** A decorative still (the name next to it is the text alternative). */
+/**
+ * The still's own placeholder, under the image while it loads and in its
+ * place when it fails: the deep green of the studio set with the video's
+ * own title ("the hand points at the word", `GestureTitle`) when the frame
+ * is large enough to read it, the pointing hand alone on a small one. Never
+ * a blank tile or a lone letter.
+ */
+function StillFallback({ name }: { name?: string | undefined }): ReactNode {
+  return (
+    <span
+      aria-hidden="true"
+      className="@container absolute inset-0 bg-sidebar"
+      data-slot="gesture-still-fallback"
+    >
+      {name ? (
+        <GestureTitle drawn name={name} />
+      ) : (
+        <span
+          className="absolute inset-x-[18%] top-1/2 inline-flex -translate-y-1/2 text-sidebar-foreground *:h-auto *:w-full"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: generated, trusted artwork from @smog/brand
+          dangerouslySetInnerHTML={{ __html: handSvgs[1] }}
+        />
+      )}
+    </span>
+  );
+}
+
+/**
+ * A decorative still (the name next to it is the text alternative), taken
+ * one second in (`GESTURE_STILL_SECONDS`), over its branded placeholder.
+ */
 export function GestureThumbnail({
   className,
+  name,
   playbackId,
   showPlay = false,
   width,
 }: {
   className?: string;
+  /** The gesture's name, drawn by the placeholder while there is no still. */
+  name?: string;
   playbackId: string;
   /** A play glyph on the still: the card is a video (decorative). */
   showPlay?: boolean;
   /** Requested pixel width (about twice the rendered width). */
   width: number;
 }): ReactNode {
+  // A broken still with `alt=""` draws nothing, so the placeholder under it
+  // shows even when the error fired before hydration; once React sees the
+  // error, the image is dropped.
+  const [failed, setFailed] = useState(false);
+  const onError = useCallback(() => setFailed(true), []);
+  // A span (phrasing content), so a still can sit inside a button.
   return (
-    <div
+    <span
       className={cn(
-        "relative aspect-3/4 shrink-0 overflow-hidden bg-muted",
+        "relative block aspect-3/4 shrink-0 overflow-hidden bg-sidebar",
         className
       )}
     >
-      <img
-        alt=""
-        className="size-full object-cover transition-transform duration-300 group-hover/card:scale-105 motion-reduce:transition-none motion-reduce:group-hover/card:scale-100"
-        decoding="async"
-        height={Math.round((width * 4) / 3)}
-        loading="lazy"
-        src={muxThumbnailUrl(playbackId, { width })}
-        width={width}
-      />
+      <StillFallback name={name} />
+      {failed ? null : (
+        // biome-ignore lint/a11y/noNoninteractiveElementInteractions: `error` is a load event, not an interaction; the still is decorative.
+        <img
+          alt=""
+          className="relative size-full object-cover transition-transform duration-slow ease-enter group-hover/card:scale-105 motion-reduce:transition-none motion-reduce:group-hover/card:scale-100"
+          decoding="async"
+          height={Math.round((width * 4) / 3)}
+          loading="lazy"
+          onError={onError}
+          src={muxThumbnailUrl(playbackId, {
+            time: GESTURE_STILL_SECONDS,
+            width,
+          })}
+          width={width}
+        />
+      )}
       {showPlay ? (
         <span
           aria-hidden="true"
-          className="absolute bottom-2 left-2 grid size-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-1"
+          className="absolute bottom-2 left-2 grid size-9 place-items-center rounded-full bg-highlight text-highlight-foreground shadow-1"
           data-slot="gesture-play"
         >
           <Play className="size-4 fill-current" />
         </span>
       ) : null}
-    </div>
+    </span>
   );
+}
+
+/** The language shared by every category of the line, if they share one. */
+export function categoryLineLang(
+  categories: readonly CategoryRef[]
+): string | undefined {
+  const first = categories[0]?.lang;
+  return first && categories.every((category) => category.lang === first)
+    ? first
+    : undefined;
 }
 
 /** "Greetings, Everyday". */

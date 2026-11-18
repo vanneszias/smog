@@ -4,6 +4,7 @@ import {
   PRICE_PER_GESTURE_YEAR_CENTS,
 } from "@smog/config/constants";
 import type { Category, GestureSummary } from "@smog/gestures/schema";
+import { intlTag, type Locale } from "@smog/i18n";
 import { useTranslation } from "@smog/i18n/react";
 import type { WizardGesture, WizardState } from "@smog/sponsorships/client";
 import type { AvailabilityItem } from "@smog/sponsorships/schema";
@@ -12,16 +13,20 @@ import {
   Button,
   CategoryChips,
   cn,
-  EmptyState,
   ErrorState,
+  GestureThumbnail,
+  HAND,
   Heading,
+  NoResultsEmptyState,
   SearchField,
   Skeleton,
+  SponsorEndCard,
   Text,
 } from "@smog/ui-web";
-import { END_CARD_SECONDS, formatMoney, muxThumbnailUrl } from "@smog/utils";
+import { END_CARD_SECONDS, formatMoney } from "@smog/utils";
 import { Check, Heart } from "lucide-react";
 import { type ReactNode, useCallback, useId, useMemo, useState } from "react";
+import { useCatalogDisplay } from "@/components/learning/catalog-display";
 import { usePageLocale } from "./page-locale";
 
 /** Category chips shown before "+N more" (S-03). */
@@ -57,20 +62,80 @@ export interface StepSelectProps {
   titleRef: (node: HTMLHeadingElement | null) => void;
 }
 
-/** The three value cards (bug 24: every figure from the constants). */
-function ValueCards(): ReactNode {
+/** "4 seconden" / "4 seconds" / "4 secondes": the unit in the page's language, never split. */
+function formatSeconds(seconds: number, locale: Locale): string {
+  return new Intl.NumberFormat(intlTag(locale), {
+    style: "unit",
+    unit: "second",
+    unitDisplay: "long",
+  })
+    .format(seconds)
+    .replaceAll(" ", "\u00a0");
+}
+
+/**
+ * A real picture of what a sponsor gets, before any price: a gesture's own
+ * still with the end card the player shows over its last seconds, carrying
+ * a sample name ("Your name"). The first gesture of the grid lends its
+ * still; until it is known, the branded placeholder stands in.
+ */
+function EndCardSample({
+  gesture,
+}: {
+  gesture: GestureSummary | undefined;
+}): ReactNode {
+  const { t } = useTranslation();
+  return (
+    <figure
+      aria-label={t("sponsor.story.sampleLabel")}
+      className="relative aspect-3/4 w-full overflow-hidden rounded-card bg-sidebar shadow-1 ring-1 ring-foreground/10"
+      data-testid="sponsor-sample"
+      role="img"
+    >
+      <span aria-hidden="true" className="absolute inset-0">
+        {gesture ? (
+          <GestureThumbnail
+            className="absolute inset-0 size-full"
+            name={gesture.name}
+            playbackId={gesture.playbackId}
+            width={480}
+          />
+        ) : null}
+        <SponsorEndCard
+          className="absolute inset-x-0 bottom-0"
+          name={t("sponsor.story.sampleName")}
+        />
+      </span>
+    </figure>
+  );
+}
+
+/**
+ * The sponsor story (identity overhaul, E): what a sponsor gets, shown and
+ * said, then the price. The promise holds to AGENTS.md: the name (and an
+ * optional logo) over the gesture's own video, checked before publication
+ * with an email when it is online and no review deadline, and expiry
+ * removes the end card, not the video. Every figure comes from the
+ * constants (bug 24).
+ */
+function SponsorStory({
+  sample,
+}: {
+  sample: GestureSummary | undefined;
+}): ReactNode {
   const { t } = useTranslation();
   const locale = usePageLocale();
-  const cards = [
+  const promises = [
+    t("sponsor.story.where", {
+      duration: formatSeconds(END_CARD_SECONDS, locale),
+    }),
+    t("sponsor.story.review"),
+    t("sponsor.story.expiry"),
+  ];
+  const prices = [
     {
       label: t("sponsor.select.value.perGesture"),
       value: formatMoney(PRICE_PER_GESTURE_YEAR_CENTS, locale),
-    },
-    {
-      label: t("sponsor.select.value.nameInVideo"),
-      value: t("sponsor.select.value.seconds", {
-        seconds: END_CARD_SECONDS,
-      }),
     },
     {
       label: t("sponsor.select.value.optionalLogo"),
@@ -78,23 +143,60 @@ function ValueCards(): ReactNode {
         price: formatMoney(LOGO_ADDON_PER_GESTURE_CENTS, locale),
       }),
     },
+    {
+      label: t("sponsor.select.value.nameInVideo"),
+      value: formatSeconds(END_CARD_SECONDS, locale),
+    },
   ];
   return (
-    <ul className="grid gap-3 sm:grid-cols-3">
-      {cards.map((card) => (
-        <li
-          className="flex flex-col gap-1 rounded-lg border border-border-subtle bg-card p-4"
-          key={card.label}
+    <div className="grid grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)] items-start gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)] sm:gap-6 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] lg:gap-8">
+      <EndCardSample gesture={sample} />
+      <div className="flex min-w-0 flex-col gap-5">
+        <section
+          aria-labelledby="sponsor-story-how"
+          className="flex flex-col gap-2"
         >
-          <span className="font-semibold text-primary-strong text-title-2 tabular-nums">
-            {card.value}
-          </span>
-          <span className="text-body-sm text-muted-foreground">
-            {card.label}
-          </span>
-        </li>
-      ))}
-    </ul>
+          <Heading id="sponsor-story-how" level={2} size="title-3">
+            {t("sponsor.story.howTitle")}
+          </Heading>
+          <ul className="flex flex-col gap-2">
+            {promises.map((promise) => (
+              <li
+                className="flex gap-2 text-body-sm text-foreground sm:text-body"
+                key={promise}
+              >
+                <Check
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-primary-strong sm:mt-1"
+                  strokeWidth={3}
+                />
+                <span className="text-pretty">{promise}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section
+          aria-labelledby="sponsor-story-price"
+          className="flex flex-col gap-2"
+        >
+          <Heading id="sponsor-story-price" level={2} size="title-3">
+            {t("sponsor.story.priceTitle")}
+          </Heading>
+          <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-3">
+            {prices.map((price) => (
+              <div className="flex flex-col-reverse gap-0.5" key={price.label}>
+                <dt className="text-body-sm text-muted-foreground">
+                  {price.label}
+                </dt>
+                <dd className="font-semibold text-primary-strong text-title-3 tabular-nums">
+                  {price.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      </div>
+    </div>
   );
 }
 
@@ -130,6 +232,8 @@ function CategoryBadges({
 }: {
   categories: GestureSummary["categories"];
 }): ReactNode {
+  // As on the public pages: sentence case, `lang` when untranslated.
+  const display = useCatalogDisplay();
   const [first, second, ...rest] = categories;
   if (!first) {
     return null;
@@ -138,11 +242,18 @@ function CategoryBadges({
     <span className="flex flex-wrap gap-1 px-3 pb-3">
       {[first, second]
         .filter((category) => category !== undefined)
-        .map((category) => (
-          <Badge className="max-w-full whitespace-normal" key={category.slug}>
-            {category.name}
-          </Badge>
-        ))}
+        .map((category) => {
+          const shown = display.category(category);
+          return (
+            <Badge
+              className="max-w-full whitespace-normal"
+              key={category.slug}
+              lang={shown.lang}
+            >
+              {shown.name}
+            </Badge>
+          );
+        })}
       {rest.length > 0 ? <Badge>+{rest.length}</Badge> : null}
     </span>
   );
@@ -195,7 +306,7 @@ function GestureToggle({
   return (
     <li
       className={cn(
-        "group relative flex min-w-0 flex-col overflow-hidden rounded-lg border-2 bg-card text-foreground transition",
+        "group relative flex min-w-0 flex-col overflow-hidden rounded-card border-2 bg-card text-foreground transition",
         "has-focus-visible:outline-2 has-focus-visible:outline-ring has-focus-visible:outline-offset-2",
         selected
           ? "border-primary"
@@ -224,16 +335,10 @@ function GestureToggle({
         onClick={toggle}
         type="button"
       >
-        <img
-          alt=""
-          className={cn(
-            "aspect-3/4 w-full bg-surface-sunken object-cover",
-            blocked && "opacity-50"
-          )}
-          decoding="async"
-          height={640}
-          loading="lazy"
-          src={muxThumbnailUrl(gesture.playbackId, { width: 480 })}
+        <GestureThumbnail
+          className={cn("w-full", blocked && "opacity-50")}
+          name={gesture.name}
+          playbackId={gesture.playbackId}
           width={480}
         />
         <span
@@ -243,7 +348,7 @@ function GestureToggle({
             blocked && "opacity-50"
           )}
         >
-          <span className="truncate font-semibold text-title-3" id={nameId}>
+          <span className="truncate font-semibold text-body" id={nameId}>
             {gesture.name}
           </span>
         </span>
@@ -297,7 +402,7 @@ function Grid({
         {Array.from({ length: 8 }, (_, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no identity.
           <li key={index}>
-            <Skeleton className="aspect-3/4 h-auto w-full rounded-lg" />
+            <Skeleton className="aspect-3/4 h-auto w-full rounded-card" />
           </li>
         ))}
       </ul>
@@ -305,7 +410,7 @@ function Grid({
   }
   if (items.length === 0) {
     return (
-      <EmptyState
+      <NoResultsEmptyState
         action={
           clearFilters ? (
             <Button onClick={clearFilters} variant="secondary">
@@ -314,6 +419,7 @@ function Grid({
           ) : undefined
         }
         description={t("sponsor.select.empty.description")}
+        illustration={HAND.search}
         level={2}
         title={t("sponsor.select.empty.title")}
       />
@@ -363,7 +469,8 @@ function useChips(
 }
 
 /**
- * Step 1, "Choose gestures" (S-03): the value cards, the whole catalogue
+ * Step 1, "Choose gestures" (S-03): the sponsor story (a picture of the
+ * end card and the promise before the price), the whole catalogue
  * a keyset page at a time (`gestures.list`, "Load more") or a search over
  * `gestures.search` (with a note when it shows part of its matches), the
  * category chips, the result line, and a grid of
@@ -411,6 +518,17 @@ export function StepSelect({
       (gesture) => cardState(gesture, availability, state.taken) === "available"
     ).length ?? 0;
   const filtered = search.q.trim() !== "" || search.categories.length > 0;
+  // The chips as the catalogue shows them: sentence case, `lang` if
+  // untranslated, the active filter orange.
+  const display = useCatalogDisplay();
+  const chipCategories = useMemo(
+    () =>
+      chips.shown.map((category) => {
+        const shown = display.category(category);
+        return { lang: shown.lang, name: shown.name, slug: shown.slug };
+      }),
+    [chips.shown, display]
+  );
 
   const grid = (
     <Grid
@@ -438,14 +556,14 @@ export function StepSelect({
         >
           {t("sponsor.select.title")}
         </Heading>
-        <Text className="max-w-reading" tone="muted">
-          {t("sponsor.select.description")}
+        <Text className="max-w-reading" size="lead" tone="muted">
+          {t("sponsor.select.description")} {t("sponsor.story.funds")}
         </Text>
       </div>
-      <ValueCards />
+      <SponsorStory sample={items?.[0]} />
       {state.taken.length > 0 ? (
         <Text
-          className="rounded-md bg-warning-subtle p-3 text-warning-strong"
+          className="rounded-card bg-warning-subtle p-3 text-warning-strong"
           role="alert"
         >
           {t("sponsor.select.taken")}
@@ -462,10 +580,10 @@ export function StepSelect({
         {categories.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
             <CategoryChips
-              categories={chips.shown}
-              className="md:flex-1"
+              categories={chipCategories}
               onChange={setCategories}
               selected={search.categories}
+              tone="action"
             />
             {categories.length > CHIPS_SHOWN ? (
               <Button onClick={chips.toggle} size="sm" variant="ghost">
@@ -493,7 +611,7 @@ export function StepSelect({
       </div>
       {state.limitReached ? (
         <Text
-          className="rounded-md bg-primary-subtle p-3 text-primary-strong"
+          className="rounded-card bg-primary-subtle p-3 text-primary-strong"
           role="status"
         >
           {t("sponsor.select.limit", { max: MAX_GESTURES_PER_CHECKOUT })}

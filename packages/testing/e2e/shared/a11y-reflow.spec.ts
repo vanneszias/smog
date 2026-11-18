@@ -215,7 +215,7 @@ test.describe("reflow at 320 x 256 px", () => {
       await page.goto("/sponsor?gesture=blij");
       await waitForApp(page);
       await expect(
-        page.getByRole("region", { name: "Help SMOG verbeteren" })
+        page.getByRole("region", { name: "Help ons SMOG & Co beter maken" })
       ).toBeVisible();
       await expectNoHorizontalScroll(page, "consent banner");
       // Taller than a 256 px viewport: the footer cannot clear it here, but
@@ -223,7 +223,7 @@ test.describe("reflow at 320 x 256 px", () => {
       await expectConsentOverlay(page, "consent banner at 400 %", {
         footerReachable: false,
       });
-      await page.getByRole("button", { name: "Geen statistieken" }).click();
+      await page.getByRole("button", { name: "Niet toestaan" }).click();
       await expectNoHorizontalScroll(page, "sponsor:1");
       await page.getByRole("button", { exact: true, name: "Doorgaan" }).click();
       await expect(
@@ -263,7 +263,7 @@ test.describe("reflow at 320 x 256 px", () => {
       await waitForApp(page);
       await expectNoHorizontalScroll(page, "consent banner [fr]");
       await expectConsentOverlay(page, "consent banner [fr] at 320", {
-        name: "Aidez-nous à améliorer SMOG",
+        name: "Aidez-nous à améliorer SMOG & Co",
       });
     } finally {
       await context.close();

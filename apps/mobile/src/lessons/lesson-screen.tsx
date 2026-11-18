@@ -104,6 +104,7 @@ function LessonBody({ id }: { id: string }): ReactElement {
         <ListState>
           <EmptyState
             description={t("teacherLessons.notFound.description")}
+            illustration={2}
             title={t("teacherLessons.notFound.title")}
           />
         </ListState>

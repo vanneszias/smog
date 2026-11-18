@@ -6,15 +6,18 @@ import { ICON_SIZE, renderIcon } from "../lib/icon";
 import { useColor } from "../lib/theme";
 import { Text } from "./text";
 
-const alertVariants = cva("flex-row items-start gap-3 rounded-lg border p-4", {
-  defaultVariants: { variant: "default" },
-  variants: {
-    variant: {
-      default: "border-border bg-card",
-      destructive: "border-destructive bg-danger-subtle",
+const alertVariants = cva(
+  "flex-row items-start gap-3 rounded-card border p-4",
+  {
+    defaultVariants: { variant: "default" },
+    variants: {
+      variant: {
+        default: "border-border bg-card",
+        destructive: "border-destructive bg-danger-subtle",
+      },
     },
-  },
-});
+  }
+);
 
 export interface AlertProps
   extends Omit<ViewProps, "children">,

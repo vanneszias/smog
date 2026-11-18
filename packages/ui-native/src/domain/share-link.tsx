@@ -58,7 +58,7 @@ export function ShareLink({
   return (
     <View
       className={cn(
-        "flex-col gap-3 rounded-lg border border-border-subtle bg-card p-4",
+        "flex-col gap-3 rounded-card border border-border-subtle bg-card p-4",
         className
       )}
       {...props}

@@ -46,6 +46,8 @@ const API = {
   },
 };
 
+const HOND_NAME = /Hond/;
+
 function viewed(events: AnalyticsEvent[]): AnalyticsEvent[] {
   return events.filter((event) => event.name === "gesture_viewed");
 }
@@ -124,6 +126,30 @@ describe("/gestures (search sources)", () => {
         "filter_change",
       ])
     );
+  });
+
+  test("a search with no match offers Clear the search, back to the catalogue", async () => {
+    await renderSite(null, {
+      api: API,
+      path: "/gestures?q=xyz",
+      routes: [[BrowseRoute, "/gestures/"]],
+    });
+    // The phone grid and the desktop rows both render (CSS shows one).
+    const clear = await screen.findAllByRole("button", {
+      name: "Clear the search",
+    });
+    act(() => {
+      fireEvent.click(clear[0] as HTMLElement);
+    });
+    await waitFor(() =>
+      expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("")
+    );
+    expect(
+      (await screen.findAllByRole("link", { name: HOND_NAME })).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryAllByRole("button", { name: "Clear the search" })
+    ).toEqual([]);
   });
 
   test("the detail beside the results counts as search_results", async () => {

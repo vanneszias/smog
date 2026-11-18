@@ -7,7 +7,7 @@ describe("OfflineBanner", () => {
   test("controlled: a status message with the offline copy", () => {
     renderKit(<OfflineBanner online={false} />);
     const banner = screen.getByRole("status");
-    expect(banner.textContent).toContain("You're offline");
+    expect(banner.textContent).toContain("You’re offline");
     expect(classesOf(banner)).toContain("bg-warning-subtle");
     expect(classesOf(banner)).toContain("text-warning-strong");
   });
@@ -28,7 +28,7 @@ describe("OfflineBanner", () => {
     act(() => {
       window.dispatchEvent(new Event("offline"));
     });
-    expect(screen.getByRole("status").textContent).toContain("You're offline");
+    expect(screen.getByRole("status").textContent).toContain("You’re offline");
     Object.defineProperty(navigator, "onLine", {
       configurable: true,
       get: () => true,

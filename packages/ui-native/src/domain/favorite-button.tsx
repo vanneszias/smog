@@ -9,12 +9,14 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withSequence,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { surfaceRoles, useSurface } from "../components/surface";
 import { cn } from "../lib/cn";
-import { hapticToggle } from "../lib/haptics";
+import { hapticCommit, hapticToggle } from "../lib/haptics";
 import { ICON_SIZE } from "../lib/icon";
+import { easeEnter, MOTION_MS, popSpring } from "../lib/motion";
 import { hitSlopFor, useColor } from "../lib/theme";
 
 const favoriteVariants = cva(
@@ -51,7 +53,10 @@ export interface FavoriteButtonProps
   variant?: "ghost" | "overlay";
 }
 
-/** The heart toggle: the selection haptic, and a pop when it is switched on. */
+/**
+ * The heart toggle: a light tap and a spring pop when it is switched on,
+ * the selection tick when it is switched off.
+ */
 export function FavoriteButton({
   active,
   className,
@@ -73,12 +78,22 @@ export function FavoriteButton({
     transform: [{ scale: scale.value }],
   }));
   const press = useCallback((): void => {
-    hapticToggle();
+    // Keeping a gesture is a small commitment (a light tap); letting it go
+    // is a plain toggle (the selection tick).
+    if (active) {
+      hapticToggle();
+    } else {
+      hapticCommit();
+    }
     if (!(active || reducedMotion)) {
-      const half = tokens.motion.duration.slow / 2;
+      // Out quickly on the enter curve, then the pop spring settles it (the
+      // one bounce in the kit); a second tap re-targets from where it is.
       scale.value = withSequence(
-        withTiming(tokens.motion.popScale, { duration: half }),
-        withTiming(1, { duration: half })
+        withTiming(tokens.motion.popScale, {
+          duration: MOTION_MS.fast,
+          easing: easeEnter,
+        }),
+        withSpring(1, popSpring)
       );
     }
     onToggle(!active);

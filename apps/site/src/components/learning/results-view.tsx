@@ -10,6 +10,7 @@ import {
 } from "@smog/ui-web";
 import { Link, useSearch } from "@tanstack/react-router";
 import { type ReactNode, useCallback, useMemo } from "react";
+import { useCatalogDisplay } from "./catalog-display";
 import { GestureRowsSkeleton, LinkedGestureCard } from "./gesture-cards";
 import { gestureHref } from "./links";
 import { type Hearts, useHeart } from "./use-hearts";
@@ -52,6 +53,8 @@ export interface ResultsViewProps {
   footer?: ReactNode;
   hearts: Hearts;
   items: readonly GestureSummary[];
+  /** Clears the search (the empty state's way out when `emptyAction` is not given). */
+  onClearSearch?: (() => void) | undefined;
   onRetry: () => void;
   retrying: boolean;
   /** The slug shown beside the rows (desktop). */
@@ -69,12 +72,13 @@ function ResultRow({
   selected: boolean;
 }): ReactNode {
   const heart = useHeart(hearts, gesture.id);
+  const display = useCatalogDisplay();
   return (
     <GestureRow
       aria-current={selected ? "true" : undefined}
       className={selected ? "bg-primary-subtle" : undefined}
       favorite={heart.active}
-      gesture={gesture}
+      gesture={display.gesture(gesture)}
       href={gestureHref(gesture.slug)}
       linkComponent={SelectLink}
       onFavoriteToggle={heart.onToggle}
@@ -88,6 +92,7 @@ function ResultRows({
   footer,
   hearts,
   items,
+  onClearSearch,
   onRetry,
   retrying,
   selected,
@@ -115,13 +120,16 @@ function ResultRows({
         <p className="sr-only" role="status">
           {t("search.noResults.title")}
         </p>
-        <NoResultsEmptyState action={emptyAction} />
+        <NoResultsEmptyState action={emptyAction} onClear={onClearSearch} />
       </>
     );
   }
   return (
     <section className="flex flex-col gap-2">
-      <p className="text-body-sm text-muted-foreground" role="status">
+      <p
+        className="text-body-sm text-muted-foreground tabular-nums"
+        role="status"
+      >
         {t("search.resultCount", { count: items.length })}
       </p>
       <ul className="flex flex-col gap-1">
@@ -146,8 +154,16 @@ function ResultRows({
  * from `lg` (master–detail). Only one of the two is displayed.
  */
 export function ResultsView(props: ResultsViewProps): ReactNode {
-  const { emptyAction, footer, hearts, items, onRetry, retrying, state } =
-    props;
+  const {
+    emptyAction,
+    footer,
+    hearts,
+    items,
+    onClearSearch,
+    onRetry,
+    retrying,
+    state,
+  } = props;
   const renderItem = useCallback(
     (gesture: GestureSummary) => (
       <LinkedGestureCard
@@ -165,6 +181,7 @@ export function ResultsView(props: ResultsViewProps): ReactNode {
         <SearchResults
           emptyAction={emptyAction}
           items={items}
+          onClearSearch={onClearSearch}
           onRetry={onRetry}
           renderItem={renderItem}
           retrying={retrying}

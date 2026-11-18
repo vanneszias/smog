@@ -35,7 +35,12 @@ export function SponsorCta({ gesture, level }: SponsorCtaProps): ReactNode {
         <Text tone="muted">
           {t("gesture.sponsorCta.available.description")}
         </Text>
-        <Button asChild className="self-start">
+        {/* The label may wrap inside the card (320 px with text spacing). */}
+        <Button
+          asChild
+          className="h-auto max-w-full self-start whitespace-normal py-2"
+          variant="action"
+        >
           <Link search={{ gesture: gesture.slug }} to="/sponsor">
             {t("gesture.sponsorCta.available.action")}
           </Link>

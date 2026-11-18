@@ -431,7 +431,7 @@ describe("the export", () => {
     ) as unknown as typeof fetch;
     await fireEvent.press(screen.getByTestId("export-download"));
     expect(
-      await screen.findByText("This device can't share files.")
+      await screen.findByText("This device can’t share files.")
     ).toBeOnTheScreen();
     expect(shareAsync).not.toHaveBeenCalled();
     expect(mockFiles.size).toBe(0);

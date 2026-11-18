@@ -192,11 +192,13 @@ describe("/gestures/$slug (SSR detail)", () => {
   it("renders the detail with its SEO head and JSON-LD", async () => {
     const { body, response } = await get("/gestures/hond");
     expect(response.status).toBe(200);
-    expect(body).toContain("<title>Hond · SMOG &amp; Co</title>");
+    expect(body).toContain("<title>Hond · SMOG-gebaar · SMOG &amp; Co</title>");
     expect(body).toMatch(CANONICAL_LINK);
+    // A landscape JPEG still at the card's size, cropped to the signer.
     expect(body).toContain(
-      `https://image.mux.com/${SAMPLE_PLAYBACK_ID}/thumbnail.webp?width=1200`
+      `https://image.mux.com/${SAMPLE_PLAYBACK_ID}/thumbnail.jpg?fit_mode=smartcrop&amp;height=630&amp;width=1200`
     );
+    expect(body).toContain('<meta content="1200" property="og:image:width"');
     expect(body).toContain('name="description"');
     expect(body).toContain("Het gebaar voor hond.");
     expect(body).toContain('"@type":"VideoObject"');
@@ -240,6 +242,105 @@ describe("/gestures/$slug (SSR detail)", () => {
       expect(body).toContain("Naar de startpagina");
     }
   );
+});
+
+const REGEXP_SPECIALS = /[.*+?^${}()|[\]\\/]/g;
+const HREFLANG_ATTRIBUTE = /hreflang="/i;
+
+/** A `<link>` with every attribute given, in any order. */
+function linkTag(attributes: Record<string, string>): RegExp {
+  const parts = Object.entries(attributes).map(
+    ([name, value]) =>
+      `(?=[^>]*${name}="${value.replace(REGEXP_SPECIALS, "\\$&")}")`
+  );
+  return new RegExp(`<link ${parts.join("")}[^>]*>`, "i");
+}
+
+describe("language URLs (?lang=, docs/DECISIONS.md)", () => {
+  it("serves a public page in the language the URL names, without a cookie", async () => {
+    const { body, response } = await get("/gestures/hond?lang=fr", {
+      headers: { cookie: "locale=en" },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.headers.get("content-language")).toBe("fr");
+    expect(body).toContain('<html lang="fr"');
+    // Its own canonical, the whole cluster and the bare URL as x-default.
+    expect(body).toMatch(
+      linkTag({ href: `${ORIGIN}/gestures/hond?lang=fr`, rel: "canonical" })
+    );
+    for (const code of ["nl", "en", "fr"]) {
+      expect(body).toMatch(
+        linkTag({
+          href: `${ORIGIN}/gestures/hond?lang=${code}`,
+          hreflang: code,
+          rel: "alternate",
+        })
+      );
+    }
+    expect(body).toMatch(
+      linkTag({
+        href: `${ORIGIN}/gestures/hond`,
+        hreflang: "x-default",
+        rel: "alternate",
+      })
+    );
+    expect(body).toContain('<meta content="fr_BE" property="og:locale"');
+    expect(body).toContain(
+      '<meta content="nl_BE" property="og:locale:alternate"'
+    );
+    expect(body).toContain(
+      '<meta content="en_BE" property="og:locale:alternate"'
+    );
+  });
+
+  it("keeps the bare URL negotiating, with the same alternates", async () => {
+    const { body } = await get("/gestures", {
+      headers: { "accept-language": "en-GB" },
+    });
+    expect(body).toContain('<html lang="en"');
+    expect(body).toMatch(
+      linkTag({ href: `${ORIGIN}/gestures`, rel: "canonical" })
+    );
+    expect(body).toMatch(
+      linkTag({
+        href: `${ORIGIN}/gestures?lang=en`,
+        hreflang: "en",
+        rel: "alternate",
+      })
+    );
+  });
+
+  it("ignores a language that is not enabled", async () => {
+    const { body } = await get("/gestures/hond?lang=xx");
+    expect(body).toContain('<html lang="nl"');
+    expect(body).toMatch(
+      linkTag({ href: `${ORIGIN}/gestures/hond`, rel: "canonical" })
+    );
+    expect(body).not.toContain("lang=xx");
+  });
+
+  it("changes nothing on a private page: no language, no alternates", async () => {
+    const { body } = await get(`/lists/${VIEW_TOKEN}?lang=fr`);
+    expect(body).toContain('<html lang="nl"');
+    expect(body).not.toMatch(HREFLANG_ATTRIBUTE);
+    expect(body).not.toContain("og:locale:alternate");
+    expect(body).toContain('content="noindex"');
+  });
+
+  it("lists every page in every language in the sitemap, with alternates", async () => {
+    const { body } = await get("/sitemap.xml");
+    expect(body).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
+    expect(body).toContain(`<loc>${ORIGIN}/gestures/hond?lang=fr</loc>`);
+    expect(body).toContain(`<loc>${ORIGIN}/?lang=en</loc>`);
+    expect(body).toContain(
+      `<xhtml:link rel="alternate" hreflang="x-default" href="${ORIGIN}/gestures/hond"/>`
+    );
+    expect(body).toContain(
+      `<xhtml:link rel="alternate" hreflang="nl" href="${ORIGIN}/terms?lang=nl"/>`
+    );
+    expect(body).not.toContain("geheim");
+  });
 });
 
 describe("/lists/$shareToken (SSR shared list)", () => {

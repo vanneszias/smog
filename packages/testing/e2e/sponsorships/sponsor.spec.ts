@@ -138,7 +138,7 @@ function card(page: Page, name: string) {
 
 /** The consent banner shows after hydration; decline it so it covers nothing. */
 async function declineConsent(page: Page): Promise<void> {
-  const decline = page.getByRole("button", { name: "Geen statistieken" });
+  const decline = page.getByRole("button", { name: "Niet toestaan" });
   try {
     await decline.click({ timeout: 3000 });
   } catch {
@@ -152,7 +152,10 @@ async function openWizard(page: Page, path = "/sponsor"): Promise<void> {
   await waitForApp(page);
   await declineConsent(page);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Steun een gebaar" })
+    page.getByRole("heading", {
+      level: 1,
+      name: "Word peter of meter van een gebaar",
+    })
   ).toBeVisible();
 }
 
@@ -481,13 +484,12 @@ test("the gesture CTA: free, being sponsored, sponsored (L-17)", async ({
   await page.goto(`/gestures/${FREE}`);
   await waitForApp(page);
   const cta = page.getByTestId("sponsor-cta");
-  await expect(cta.getByRole("link", { name: "Nu sponsoren" })).toHaveAttribute(
-    "href",
-    `/sponsor?gesture=${FREE}`
-  );
+  await expect(
+    cta.getByRole("link", { name: "Dit gebaar sponsoren" })
+  ).toHaveAttribute("href", `/sponsor?gesture=${FREE}`);
   await page.goto(`/gestures/${PENDING}`);
   await expect(cta).toContainText(
-    "Dit gebaar is al gekozen voor sponsoring en is nu niet beschikbaar."
+    "Iemand sponsort dit gebaar al. Kies gerust een ander gebaar."
   );
   await page.goto(`/gestures/${LIVE}`);
   await expect(cta).toContainText(
@@ -506,7 +508,7 @@ test("pays for 2 gestures with a logo and an invoice; the success page shows pai
   await fillDetails(page, { invoice: true, logo: true });
   await payAtMollie(page, "Pay");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Betaling geslaagd!" })
+    page.getByRole("heading", { level: 1, name: "Je betaling is gelukt" })
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Broer, Zus")).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
@@ -560,7 +562,9 @@ test("the re-edit link: a new name, sent for review", async ({ page }) => {
   await expect(frame.getByText("Nieuwe Naam")).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
   await page.getByRole("button", { name: "Ter controle verzenden" }).click();
-  await expect(page.getByRole("heading", { name: "Verzonden!" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Je aanpassing is verstuurd" })
+  ).toBeVisible();
   // Single use: the link is spent.
   await page.reload();
   await expect(
@@ -669,12 +673,12 @@ async function stubbedStates(
   await stubMuxStream(page);
 
   for (const [status, kind, title] of [
-    ["paid", "initial", "Betaling geslaagd!"],
+    ["paid", "initial", "Je betaling is gelukt"],
     ["open", "initial", "Je betaling wordt verwerkt…"],
     ["failed", "initial", "De betaling is niet gelukt"],
     ["canceled", "initial", "De betaling is geannuleerd"],
     ["refund_needed", "initial", "We nemen contact met je op"],
-    ["paid", "renewal", "Je sponsoring is verlengd!"],
+    ["paid", "renewal", "Je sponsoring is verlengd"],
   ] as const) {
     // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
     await page.unroute("**/api/rpc/sponsorships/paymentStatus**");

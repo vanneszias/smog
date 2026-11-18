@@ -4,9 +4,9 @@ import { Logo } from "../../../../../ui-web/src/components/logo";
 import { classesOf, renderKit } from "../../../../support/ui-web/render";
 
 describe("Logo", () => {
-  test("is an image named by the a11y label", () => {
+  test("is an image named by the brand alone", () => {
     renderKit(<Logo tone="primary" />);
-    const logo = screen.getByRole("img", { name: "SMOG & Co logo" });
+    const logo = screen.getByRole("img", { name: "SMOG & Co" });
     expect(classesOf(logo)).toContain("text-primary");
     expect(logo.querySelector("svg")).not.toBeNull();
   });

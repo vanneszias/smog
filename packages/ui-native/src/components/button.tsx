@@ -1,27 +1,15 @@
 import { type ColorRole, tokens } from "@smog/styles/tokens";
 import { cva, type VariantProps } from "class-variance-authority";
-import {
-  type ReactElement,
-  type ReactNode,
-  type Ref,
-  useCallback,
-} from "react";
-import {
-  type GestureResponderEvent,
-  Pressable,
-  type PressableProps,
-  Text,
-  type View,
-} from "react-native";
+import type { ReactElement, ReactNode, Ref } from "react";
+import { Pressable, type PressableProps, Text, type View } from "react-native";
 import { cn } from "../lib/cn";
-import { hapticDanger } from "../lib/haptics";
 import { ICON_SIZE, renderIcon } from "../lib/icon";
 import { hitSlopFor, useColor } from "../lib/theme";
 import { Spinner } from "./spinner";
 import { type SurfaceTone, surfaceRoles, useSurface } from "./surface";
 
 export const buttonVariants = cva(
-  "flex-row items-center justify-center gap-2 rounded-md border active:opacity-80",
+  "flex-row items-center justify-center gap-2 rounded-pill border active:opacity-80",
   {
     defaultVariants: { size: "md", variant: "primary" },
     variants: {
@@ -32,6 +20,8 @@ export const buttonVariants = cva(
         sm: "min-h-8 px-3",
       },
       variant: {
+        // The orange "do it": a fill under dark ink, on any surface.
+        action: "border-transparent bg-highlight",
         danger: "border-transparent bg-destructive",
         ghost: "border-transparent bg-transparent",
         primary: "border-transparent bg-primary",
@@ -46,6 +36,7 @@ const buttonLabelVariants = cva("font-medium", {
   variants: {
     size: { lg: "text-body", md: "text-body", sm: "text-body-sm" },
     variant: {
+      action: "text-highlight-foreground",
       danger: "text-primary-foreground",
       ghost: "text-foreground",
       primary: "text-primary-foreground",
@@ -60,6 +51,7 @@ export type ButtonSize = NonNullable<ButtonVariantProps["size"]>;
 
 /** The colour of the label, for the icon and spinner next to it. */
 const LABEL_ROLE: Record<ButtonVariant, ColorRole> = {
+  action: "highlightForeground",
   danger: "primaryForeground",
   ghost: "foreground",
   primary: "primaryForeground",
@@ -77,14 +69,14 @@ interface ButtonColours {
 
 /**
  * Buttons on a green `Surface`: the primary action is the orange highlight
- * (green on green would vanish), the others are white. The danger variant
- * keeps its own colours.
+ * (green on green would vanish), the others are white. The danger and action
+ * variants keep their own colours (orange already reads on the deep green).
  */
 function onSurface(
   tone: SurfaceTone,
   variant: ButtonVariant
 ): ButtonColours | undefined {
-  if (tone === "default" || variant === "danger") {
+  if (tone === "default" || variant === "danger" || variant === "action") {
     return;
   }
   if (variant === "primary") {
@@ -97,10 +89,7 @@ function onSurface(
   const roles = surfaceRoles(tone);
   let container = "";
   if (variant === "secondary") {
-    container =
-      tone === "header"
-        ? "border-sidebar-foreground bg-transparent"
-        : "border-primary-foreground bg-transparent";
+    container = "border-sidebar-foreground bg-transparent";
   }
   return { container, label: roles.foregroundClass, role: roles.foreground };
 }
@@ -133,7 +122,7 @@ export interface ButtonProps
   ref?: Ref<View>;
 }
 
-/** The one button: `primary | secondary | ghost | danger` × `sm | md | lg`. */
+/** The one button: `primary | action | secondary | ghost | danger` × `sm | md | lg`. */
 export function Button({
   accessibilityState,
   children,
@@ -152,15 +141,6 @@ export function Button({
   const labelRole = colours.role;
   const labelColor = useColor(labelRole);
   const inactive = disabled || loading;
-  const handlePress = useCallback(
-    (event: GestureResponderEvent): void => {
-      if (resolvedVariant === "danger") {
-        hapticDanger();
-      }
-      onPress?.(event);
-    },
-    [onPress, resolvedVariant]
-  );
   let leading: ReactNode = null;
   if (loading) {
     leading = (
@@ -185,7 +165,7 @@ export function Button({
       )}
       disabled={inactive}
       hitSlop={hitSlopFor(CONTROL_HEIGHT[resolvedSize])}
-      onPress={handlePress}
+      onPress={onPress}
       {...props}
     >
       {leading}

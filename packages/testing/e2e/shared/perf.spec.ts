@@ -75,7 +75,7 @@ test.describe("layout shift", () => {
       // footer's padding under it. Keep observing from navigation, but wait
       // for the actual first-visit UI and fonts before the scripted scroll.
       await expect(
-        page.getByRole("region", { name: "Help SMOG verbeteren" })
+        page.getByRole("region", { name: "Help ons SMOG & Co beter maken" })
       ).toBeVisible();
       await page.evaluate(async () => {
         await document.fonts.ready;

@@ -20,9 +20,16 @@ export interface DialogContentProps
   description?: ReactNode;
   /** Hide the corner close button (the footer then needs a way out). */
   hideClose?: boolean;
+  /**
+   * No entrance or exit animation: tools opened many times a session or by a
+   * shortcut (the search palette) appear in the same frame.
+   */
+  instant?: boolean;
   /** The dialog's accessible name, shown as its heading. */
   title: ReactNode;
 }
+
+const INSTANT = "data-open:animate-none data-closed:animate-none";
 
 /** A centred modal: title, optional description, content and a close button. */
 export function DialogContent({
@@ -30,6 +37,7 @@ export function DialogContent({
   className,
   description,
   hideClose = false,
+  instant = false,
   onCloseAutoFocus,
   onOpenAutoFocus,
   title,
@@ -41,13 +49,14 @@ export function DialogContent({
   return (
     <DialogPrimitive.Portal container={container}>
       <DialogPrimitive.Overlay
-        className={overlayClasses}
+        className={cn(overlayClasses, instant && INSTANT)}
         data-slot="dialog-overlay"
       />
       <DialogPrimitive.Content
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 flex max-h-5/6 w-11/12 max-w-reading -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-4xl bg-popover p-6 text-popover-foreground shadow-2 outline-none ring-1 ring-foreground/10",
+          "fixed top-1/2 left-1/2 z-50 flex max-h-5/6 w-11/12 max-w-reading -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto overscroll-contain rounded-4xl bg-popover p-6 text-popover-foreground shadow-2 outline-none ring-1 ring-foreground/10",
           "data-closed:animate-pop-out data-open:animate-pop-in motion-reduce:animate-none",
+          instant && INSTANT,
           className
         )}
         data-slot="dialog-content"

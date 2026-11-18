@@ -37,7 +37,7 @@ export const styles = {
   /** A tinted box (details, next steps, the invoice). */
   box: {
     backgroundColor: color.primarySubtle,
-    borderRadius: px(radius.md),
+    borderRadius: px(radius.lg),
     margin: `${px(spacing["4"])} 0`,
     padding: `${px(spacing["4"])} ${px(spacing["5"])}`,
   },
@@ -49,15 +49,16 @@ export const styles = {
     margin: `0 0 ${px(spacing["2"])}`,
   },
   brand: {
-    color: color.primaryForeground,
+    color: color.sidebarForeground,
     fontSize: px(fontSize["title-3"].size),
     fontWeight: fontWeight.semibold,
     margin: "0",
     textAlign: "center",
   },
+  /** The brand pill (clients without `border-radius` show a rectangle). */
   button: {
     backgroundColor: color.primary,
-    borderRadius: px(radius.md),
+    borderRadius: px(radius.pill),
     color: color.primaryForeground,
     display: "inline-block",
     fontSize: px(fontSize.body.size),
@@ -69,7 +70,7 @@ export const styles = {
   },
   code: {
     backgroundColor: color.surfaceSunken,
-    borderRadius: px(radius.md),
+    borderRadius: px(radius.lg),
     color: color.foreground,
     fontFamily: "ui-monospace, Menlo, Consolas, monospace",
     fontSize: px(fontSize["title-1"].size),
@@ -82,7 +83,7 @@ export const styles = {
   container: {
     backgroundColor: color.card,
     border: `1px solid ${color.border}`,
-    borderRadius: px(radius.lg),
+    borderRadius: px(radius.card),
     margin: "0 auto",
     maxWidth: px(EMAIL_WIDTH),
     overflow: "hidden",
@@ -94,8 +95,9 @@ export const styles = {
     lineHeight: px(fontSize["body-sm"].lineHeight),
     margin: `${px(spacing["3"])} 0`,
   },
+  /** The deep green band of the site's header, with the white logo. */
   header: {
-    backgroundColor: color.primary,
+    backgroundColor: color.sidebar,
     padding: `${px(spacing["6"])} ${px(spacing["8"])}`,
     textAlign: "center",
   },
@@ -133,7 +135,7 @@ export const styles = {
    */
   logo: {
     border: "0",
-    color: color.primaryForeground,
+    color: color.sidebarForeground,
     display: "block",
     fontSize: px(fontSize["title-3"].size),
     fontWeight: fontWeight.semibold,
@@ -195,6 +197,14 @@ export const styles = {
     fontSize: px(fontSize.body.size),
     lineHeight: px(fontSize.body.lineHeight),
     margin: `${px(spacing["1"])} 0`,
+  },
+  /** The approved tagline under the logo, in the header's secondary text. */
+  tagline: {
+    color: color.sidebarForegroundMuted,
+    fontSize: px(fontSize["body-sm"].size),
+    lineHeight: px(fontSize["body-sm"].lineHeight),
+    margin: `${px(spacing["3"])} 0 0`,
+    textAlign: "center",
   },
   text: {
     color: color.foreground,

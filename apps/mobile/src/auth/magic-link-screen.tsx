@@ -74,7 +74,7 @@ function Screen({
   return (
     <View className="flex-1 bg-background">
       <Surface className="gap-3 rounded-b-3xl px-4 pt-2 pb-8" tone="primary">
-        <Logo color="primaryForeground" decorative size="lg" tone="current" />
+        <Logo color="sidebarForeground" decorative size="lg" tone="current" />
         <Heading level={1}>{title}</Heading>
       </Surface>
       <View className="gap-6 px-4 py-6">{children}</View>

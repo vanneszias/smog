@@ -59,7 +59,7 @@ async function openEditor(page: Page): Promise<void> {
   await waitForApp(page);
   // The consent banner shows after hydration; answer it so it covers nothing.
   await page
-    .getByRole("button", { name: "Geen statistieken" })
+    .getByRole("button", { name: "Niet toestaan" })
     .click({ timeout: 5000 })
     .catch(() => undefined);
 }

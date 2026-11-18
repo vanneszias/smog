@@ -54,7 +54,8 @@ describe("renderWebThemeCss", () => {
     expect(theme).toContain("--color-popover: #FFFFFF;");
     expect(theme).toContain("--color-primary: #00805F;");
     expect(dark).toContain("--color-primary: #2BB38A;");
-    expect(dark).toContain("--color-background: #0C110E;");
+    expect(dark).toContain("--color-background: #0C1513;");
+    expect(dark).toContain("--color-sidebar: #0E2E29;");
     expect(dark).toContain("color-scheme: dark;");
   });
 
@@ -88,12 +89,19 @@ describe("renderWebThemeCss", () => {
   it("emits radius, type, shadow, motion and breakpoints", () => {
     expect(css).toContain("--radius-md: 0.625rem;");
     expect(css).toContain("--radius-full: 9999px;");
+    expect(css).toContain("--radius-pill: 9999px;");
+    expect(css).toContain("--radius-card: 1.25rem;");
     expect(css).toContain("--text-title-1: 1.75rem;");
     expect(css).toContain("--text-title-1--line-height: 2.125rem;");
     expect(css).toContain("--text-body-sm: 0.875rem;");
     expect(css).toContain("--font-weight-semibold: 600;");
     expect(css).toMatch(SHADOW_1);
     expect(css).toContain("--ease-standard: cubic-bezier(0.2, 0, 0, 1);");
+    expect(css).toContain("--ease-enter: cubic-bezier(0.23, 1, 0.32, 1);");
+    expect(css).toContain("--ease-move: cubic-bezier(0.77, 0, 0.175, 1);");
+    expect(css).toContain("--ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);");
+    expect(css).toContain("--duration-gesture: 640ms;");
+    expect(css).toContain("--motion-press-scale: 0.97;");
     expect(css).toContain("--duration-fast: 120ms;");
     expect(css).toContain("--duration-slow: 320ms;");
     expect(css).toContain("--motion-pop-scale: 1.25;");
@@ -104,10 +112,29 @@ describe("renderWebThemeCss", () => {
   it("grows the display size from md", () => {
     expect(css).toContain("@media (width >= 48rem)");
     expect(css).toContain("--text-display: 3.5rem;");
+    expect(css).toContain("--text-display--letter-spacing: -0.028em;");
   });
 
-  it("turns durations off for reduced motion", () => {
-    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+  it("tunes Figtree: tracking tightens and leading falls as the size grows", () => {
+    expect(css).toContain("--text-display--letter-spacing: -0.022em;");
+    expect(css).toContain("--text-display--line-height: 2.75rem;");
+    expect(css).toContain("--text-body--letter-spacing: 0;");
+    expect(css).toContain("--text-caption--letter-spacing: 0.012em;");
+    expect(css).toContain("--text-lead: 1.125rem;");
+    expect(css).toContain("--text-lead--line-height: 1.75rem;");
+    expect(css).toContain("--font-weight-bold: 700;");
+  });
+
+  it("turns durations and delays off for reduced motion", () => {
+    const reduced = css.slice(
+      css.indexOf("@media (prefers-reduced-motion: reduce)")
+    );
+    expect(reduced).toContain("--duration-gesture: 0ms;");
+    expect(reduced).toContain("--duration-slow: 0ms;");
+    // A zeroed duration with a delay still holds the first keyframe: the
+    // delays go too, so nothing waits invisible and then snaps in.
+    expect(reduced).toContain("animation-delay: 0ms !important;");
+    expect(reduced).toContain("transition-delay: 0ms !important;");
   });
 
   it("writes no value that is not a token", () => {
@@ -131,7 +158,10 @@ interface Preset {
     extend: {
       borderRadius: Record<string, string>;
       fontFamily: Record<string, string[]>;
-      fontSize: Record<string, [string, { lineHeight: string }]>;
+      fontSize: Record<
+        string,
+        [string, { letterSpacing: string; lineHeight: string }]
+      >;
       lineHeight: Record<string, string>;
       spacing: Record<string, string>;
     };
@@ -184,7 +214,8 @@ describe("renderNativeTailwindConfig", () => {
       body: "24px",
       "body-sm": "20px",
       caption: "16px",
-      display: "48px",
+      display: "44px",
+      lead: "28px",
       "title-1": "34px",
       "title-2": "28px",
       "title-3": "24px",
@@ -195,9 +226,16 @@ describe("renderNativeTailwindConfig", () => {
     expect(preset.theme.extend.spacing["4"]).toBe("16px");
     expect(preset.theme.extend.spacing.touch).toBe("44px");
     expect(preset.theme.extend.borderRadius.lg).toBe("14px");
+    expect(preset.theme.extend.borderRadius.pill).toBe("9999px");
+    expect(preset.theme.extend.borderRadius.card).toBe("20px");
     expect(preset.theme.extend.fontSize.body).toEqual([
       "16px",
-      { lineHeight: "24px" },
+      { letterSpacing: "0px", lineHeight: "24px" },
+    ]);
+    // Tracking tightens with size: -0.022em of 40 pt.
+    expect(preset.theme.extend.fontSize.display).toEqual([
+      "40px",
+      { letterSpacing: "-0.88px", lineHeight: "44px" },
     ]);
   });
 });

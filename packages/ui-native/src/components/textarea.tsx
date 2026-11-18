@@ -38,7 +38,8 @@ export function Textarea({
     <View
       className={cn(
         fieldVariants({ invalid: field.invalid }),
-        "items-stretch",
+        // Several lines: the web's softer field corner, not a pill.
+        "items-stretch rounded-2xl",
         disabled && "opacity-50",
         containerClassName
       )}

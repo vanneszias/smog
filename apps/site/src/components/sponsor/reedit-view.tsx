@@ -12,6 +12,7 @@ import {
   Button,
   EmptyState,
   Field,
+  HAND,
   Heading,
   Input,
   Text,
@@ -49,7 +50,7 @@ interface EditableLink {
 }
 
 /**
- * "Sent!": the form is gone, so its h1 takes the focus and is read out
+ * "Your changes have been sent": the form is gone, so its h1 takes the focus and is read out
  * (review I-4).
  */
 function Submitted(): ReactNode {
@@ -71,7 +72,7 @@ function Submitted(): ReactNode {
           </Button>
         }
         description={t("sponsor.edit.submitted.description")}
-        illustration={1}
+        illustration={HAND.welcome}
         level={1}
         title={t("sponsor.edit.submitted.title")}
       />

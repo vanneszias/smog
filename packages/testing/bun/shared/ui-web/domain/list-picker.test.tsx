@@ -50,7 +50,7 @@ describe("ListPicker", () => {
     renderKit(
       <ListPicker lists={[]} onCreate={onCreate} onToggle={noop} open />
     );
-    expect(screen.getByText("You don't have any lists yet.")).toBeDefined();
+    expect(screen.getByText("You don’t have any lists yet.")).toBeDefined();
     const create = screen.getByRole("button", { name: "Create" });
     expect(create.hasAttribute("disabled")).toBe(true);
     const input = screen.getByRole("textbox", { name: "New list" });

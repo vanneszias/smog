@@ -109,15 +109,13 @@ describe("app.config", () => {
     ]);
   });
 
-  it("falls back to the staging workers.dev host", () => {
+  it("falls back to the staging host", () => {
     delete process.env.EXPO_PUBLIC_SITE_HOST;
     const config = load();
-    expect(config.ios?.associatedDomains).toEqual([
-      "applinks:smog-site-staging.zias.workers.dev",
-    ]);
+    expect(config.ios?.associatedDomains).toEqual(["applinks:smog.zias.be"]);
   });
 
-  it("uses the generated brand assets on the brand green", () => {
+  it("uses the generated brand assets: the icon on the brand green, the splash on the header green", () => {
     const config = load();
     expect(config.icon).toBe("./assets/icon.png");
     expect(config.ios?.icon).toBe("./assets/smog.icon");
@@ -129,8 +127,14 @@ describe("app.config", () => {
     const splash = config.plugins?.find(
       (plugin) => Array.isArray(plugin) && plugin[0] === "expo-splash-screen"
     );
+    // The splash is the header's deep green in each theme, so a launch
+    // flows into Home's hero (owner decision, identity overhaul).
     expect(splash?.[1]).toMatchObject({
-      backgroundColor: tokens.color.brand.green,
+      backgroundColor: tokens.chrome.themeColor.light,
+      dark: {
+        backgroundColor: tokens.chrome.themeColor.dark,
+        image: "./assets/splash-icon.png",
+      },
       image: "./assets/splash-icon.png",
     });
     for (const asset of [
@@ -225,13 +229,13 @@ describe("eas.json profiles", () => {
       variant: "development",
     },
     {
-      api: "https://smog-site-staging.zias.workers.dev",
+      api: "https://smog.zias.be",
       applicationId: "be.zias.smog.staging",
       appName: "SMOG Staging",
       channel: "staging",
       devTools: true,
       environment: "preview",
-      host: "smog-site-staging.zias.workers.dev",
+      host: "smog.zias.be",
       name: "staging",
       runtime: "staging",
       scheme: "smog-staging",

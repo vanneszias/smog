@@ -19,7 +19,7 @@ describe("CourseBanner", () => {
   test("renders the message with its phrase linked to the course", () => {
     renderKit(<CourseBanner courseUrl={COURSE_URL} messageIndex={2} />);
     const banner = screen.getByRole("status");
-    expect(banner.textContent).toContain("Important notice");
+    expect(banner.textContent).toContain("Good to know");
     expect(banner.textContent).toContain(
       "Would you like to take a SMOG course or introductory session? Find a course."
     );
@@ -40,7 +40,9 @@ describe("CourseBanner", () => {
     renderKit(<CourseBanner courseUrl={COURSE_URL} messageIndex={4} />);
     expect(screen.queryByRole("link")).toBeNull();
     expect(
-      screen.getByText("The gestures are protected. Don't invent others.")
+      screen.getByText(
+        "SMOG gestures are fixed and protected. Make them as shown in the video and don’t invent your own versions. That way they stay the same for everyone."
+      )
     ).toBeDefined();
   });
 
@@ -56,6 +58,7 @@ describe("CourseBanner", () => {
         const hasLink = screen.queryByRole("link") !== null;
         expect(text).not.toContain("gesture.videoComplete");
         expect(text).not.toContain("<course>");
+        expect(text).not.toContain("<email>");
         unmount();
         return hasLink;
       });
@@ -64,6 +67,18 @@ describe("CourseBanner", () => {
     for (const locale of LOCALES) {
       expect(linked(locale)).toEqual(nl);
     }
+  });
+
+  test("the contact address opens a mail", () => {
+    renderKit(
+      <CourseBanner
+        contactEmail="info@smog.vlaanderen"
+        courseUrl={COURSE_URL}
+        messageIndex={7}
+      />
+    );
+    const link = screen.getByRole("link", { name: "info@smog.vlaanderen" });
+    expect(link.getAttribute("href")).toBe("mailto:info@smog.vlaanderen");
   });
 
   test("onDismiss adds a close button", async () => {
