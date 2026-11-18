@@ -12,9 +12,13 @@ import { seoHead, shellHead } from "@/lib/head";
 /** `/privacy` or `/terms`. */
 export type LegalHeadKind = "privacy" | "terms";
 
-/** `/privacy?lang=nl`: the Dutch text in place, whatever the site language. */
+/**
+ * `/privacy?text=nl`: the Dutch text in place, whatever the site language.
+ * (`?lang` is the page's language on every public page,
+ * `lib/page-language.ts`; this one keeps the page as it is.)
+ */
 export interface LegalSearch {
-  lang?: "nl";
+  text?: "nl";
 }
 
 /** A page's title and description in one language. */
@@ -26,11 +30,11 @@ interface LegalMeta {
 /** What the route loader derives: title and description per language it loaded. */
 export type LegalMetaByLocale = Readonly<Record<string, LegalMeta>>;
 
-/** Keeps only `lang=nl` (review I2: reading Dutch changes no setting). */
+/** Keeps only `text=nl` (review I2: reading Dutch changes no setting). */
 export function validateLegalSearch(
   search: Record<string, unknown>
 ): LegalSearch {
-  return search.lang === "nl" ? { lang: "nl" } : {};
+  return search.text === "nl" ? { text: "nl" } : {};
 }
 
 /**

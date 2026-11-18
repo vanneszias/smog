@@ -4,11 +4,13 @@ import {
   createI18n,
   DEFAULT_LOCALE,
   intlTag,
+  type LanguageInfo,
   LOCALES,
   type Locale,
   type Translate,
   type TranslationKey,
 } from "@smog/i18n";
+import { languageUrl } from "./page-language";
 import { siteOrigin } from "./site-url";
 
 interface MatchWithData {
@@ -16,7 +18,11 @@ interface MatchWithData {
 }
 
 interface ShellHead {
+  /** The enabled languages, in menu order. */
+  languages: readonly LanguageInfo[];
   locale: Locale;
+  /** The language the URL's `?lang` set, or null (`Shell.pageLang`). */
+  pageLang: Locale | null;
   /** `SITE_URL` without a trailing slash. */
   siteUrl: string;
   t: Translate;
@@ -39,7 +45,21 @@ export function shellHead(matches: readonly MatchWithData[]): ShellHead {
     "siteUrl" in shell && typeof shell.siteUrl === "string"
       ? siteOrigin(shell.siteUrl)
       : "";
-  return { locale, siteUrl, t: createI18n(locale, overlay).t };
+  const languages =
+    "languages" in shell && Array.isArray(shell.languages)
+      ? (shell.languages as LanguageInfo[])
+      : [];
+  const pageLang =
+    "pageLang" in shell && typeof shell.pageLang === "string"
+      ? shell.pageLang
+      : null;
+  return {
+    languages,
+    locale,
+    pageLang,
+    siteUrl,
+    t: createI18n(locale, overlay).t,
+  };
 }
 
 /**
@@ -125,6 +145,30 @@ function ogLocale(locale: Locale): string {
 }
 
 /**
+ * The page in every enabled language (`hreflang` alternates, each
+ * `?lang=<code>`) and the bare URL, which negotiates, as `x-default`. Every
+ * variant lists the same set, so the cluster is reciprocal.
+ */
+function languageAlternates(
+  siteUrl: string,
+  path: string,
+  languages: readonly LanguageInfo[]
+) {
+  return [
+    ...languages.map((language) => ({
+      href: languageUrl(siteUrl, path, language.code),
+      hrefLang: language.code,
+      rel: "alternate",
+    })),
+    {
+      href: languageUrl(siteUrl, path, null),
+      hrefLang: "x-default",
+      rel: "alternate",
+    },
+  ];
+}
+
+/**
  * The `@id`s of the site's identity graph: the organisation and the website
  * are described once, on the home page, and every other block points at
  * them.
@@ -167,13 +211,17 @@ export function seoHead(
     type = "website",
   }: SeoOptions
 ) {
-  const { locale, siteUrl, t } = shellHead(matches);
+  const { languages, locale, pageLang, siteUrl, t } = shellHead(matches);
   const appName = t("common.appName");
   const fullTitle = title ? `${title} · ${appName}` : appName;
-  const url = `${siteUrl}${path}`;
+  // Self-referencing: `?lang=fr` is its own canonical, the bare URL its own.
+  const url = languageUrl(siteUrl, path, pageLang);
   const share = image ?? shareCard(siteUrl, locale, t);
   return {
-    links: [{ href: url, rel: "canonical" }],
+    links: [
+      { href: url, rel: "canonical" },
+      ...languageAlternates(siteUrl, path, languages),
+    ],
     meta: [
       { title: fullTitle },
       { content: description, name: "description" },
@@ -189,6 +237,8 @@ export function seoHead(
       { content: appName, property: "og:site_name" },
       // The site is Belgian: nl_BE, en_BE, fr_BE (a language added in the
       // admin has the form its `Intl` tag gives, `de_BE`).
+      // The `og:locale:alternate` tags are the root document's
+      // (`OgLocaleAlternates`): `head()` keeps one meta per property.
       { content: ogLocale(locale), property: "og:locale" },
       { content: "summary_large_image", name: "twitter:card" },
       { content: share.alt, name: "twitter:image:alt" },

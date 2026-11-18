@@ -31,6 +31,7 @@ import {
   Outlet,
   Scripts,
   useRouter,
+  useRouterState,
 } from "@tanstack/react-router";
 import { type ReactNode, useMemo, useState } from "react";
 import { Footer } from "@/components/app-shell/footer";
@@ -48,6 +49,11 @@ import {
   MONITORING_ENVIRONMENT_META,
   MonitoringUser,
 } from "@/lib/monitoring";
+import {
+  isLanguagePage,
+  LANG_PARAM,
+  pageLanguageParam,
+} from "@/lib/page-language";
 import { SYSTEM_THEME_SCRIPT, type Theme } from "@/lib/preferences";
 import { ThemeProvider, useSystemDark } from "@/lib/theme";
 import {
@@ -89,8 +95,17 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   // (the language menu, a sign-in with a saved language) loads it before the
   // new shell swaps in, so no render sees an empty catalogue. A no-op on the
   // server, which has all three, and for a language already loaded.
-  loader: async (): Promise<Shell> => {
-    const shell = await getShell();
+  // A public page's `?lang` sets the language (`lib/page-language.ts`); the
+  // loader keeps it while the visitor moves on (`staleTime` below) and
+  // reads it again only when the shell is invalidated.
+  loader: async ({
+    location,
+  }: {
+    location: { pathname: string; search: Record<string, unknown> };
+  }): Promise<Shell> => {
+    const shell = await getShell({
+      data: { lang: pageLanguageParam(location) },
+    });
     await ensureCatalogues(shell.locale);
     return shell;
   },
@@ -244,6 +259,7 @@ function RootDocument({ children }: { children: ReactNode }): ReactNode {
         ) : null}
         <ThemeColor authShell={authShell} theme={theme} />
         <HeadContent />
+        <OgLocaleAlternates languages={shell.languages} locale={shell.locale} />
       </head>
       <body>
         <I18nextProvider i18n={i18n}>
@@ -278,6 +294,36 @@ function RootDocument({ children }: { children: ReactNode }): ReactNode {
       </body>
     </html>
   );
+}
+
+/**
+ * `og:locale:alternate`, one per other enabled language, on the public pages
+ * (`lib/page-language.ts`), whose head (`seoHead`) gives `og:locale` and the
+ * `hreflang` alternates. Rendered here, not in `head()`, which keeps one meta
+ * per property.
+ */
+function OgLocaleAlternates({
+  languages,
+  locale,
+}: {
+  languages: readonly LanguageInfo[];
+  locale: Locale;
+}): ReactNode {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  if (!isLanguagePage(pathname)) {
+    return null;
+  }
+  return languages
+    .filter((language) => language.code !== locale)
+    .map((language) => (
+      <meta
+        content={language.intlTag.replaceAll("-", "_")}
+        key={language.code}
+        property="og:locale:alternate"
+      />
+    ));
 }
 
 /**
@@ -320,6 +366,16 @@ function ThemeColor({
   );
 }
 
+/** The address without its `?lang`, or null when it has none. */
+function withoutPageLanguage(href: string): string | null {
+  const url = new URL(href, "http://local");
+  if (!url.searchParams.has(LANG_PARAM)) {
+    return null;
+  }
+  url.searchParams.delete(LANG_PARAM);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 /**
  * The language: this browser's `locale` cookie, and signed in also the
  * account's (`user.locale`, the language of our emails) through
@@ -345,6 +401,12 @@ function SiteLocaleProvider({
         const save = async (): Promise<void> => {
           await Promise.all([
             saveLocale({ data: next }).then(async () => {
+              // A `?lang` in the address would outrank the new cookie: the
+              // choice drops it, so a reload keeps the chosen language.
+              const href = withoutPageLanguage(router.state.location.href);
+              if (href) {
+                await router.navigate({ href, replace: true });
+              }
               // Cached gestures are in the old language: drop them (active
               // ones refetch), then run the loaders again with the new cookie.
               await queryClient.resetQueries({ predicate: isLocalizedQuery });

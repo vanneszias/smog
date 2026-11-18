@@ -17,7 +17,7 @@ const OPEN_IN_APP = "Heb je de SMOG & Co-app?";
 const IPHONE = devices["iPhone 15"].userAgent;
 const SIGN_IN_URL = /\/sign-in\?redirect=%2Faccount$/;
 const DUTCH_TITLE = "Privacybeleid";
-const DUTCH_TERMS = /\/terms\?lang=nl$/;
+const DUTCH_TERMS = /\/terms\?text=nl$/;
 const RIGHTS_ANCHOR = /#rights$/;
 const DIEREN_FILTER = /\/gestures\?category=dieren$/;
 const APP_STORE_LINK = /App Store/;

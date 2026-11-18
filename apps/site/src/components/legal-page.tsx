@@ -139,7 +139,7 @@ function Block({
 /**
  * For en and fr: "This translation is for convenience; the Dutch version
  * prevails", with a link to the Dutch text on the same page
- * (`?lang=nl`), or back to the translation while the Dutch text shows.
+ * (`?text=nl`), or back to the translation while the Dutch text shows.
  * It only changes the URL: never the site language or the account's
  * (review I2).
  */
@@ -178,7 +178,7 @@ function TranslationNotice({
       {dutch ? null : (
         <Button asChild size="md" variant="secondary">
           {/* The label is Dutch, like the text it opens (review M1). */}
-          <Link lang="nl" search={{ lang: "nl" }} to={to}>
+          <Link lang="nl" search={{ text: "nl" }} to={to}>
             {t("legal.readDutch", { lng: LEGAL_CANONICAL_LOCALE })}
           </Link>
         </Button>
@@ -268,7 +268,7 @@ export function LegalDocumentView({
  * text of the visitor's language (`texts`, from D1 through
  * `getLegalTexts`, the shipped text when D1 has no usable row). Dutch
  * prevails, so every other language carries a translation notice, and
- * `?lang=nl` shows the Dutch text in place (the article gets `lang="nl"`;
+ * `?text=nl` shows the Dutch text in place (the article gets `lang="nl"`;
  * the site language stays).
  */
 export function LegalPage({
@@ -281,7 +281,7 @@ export function LegalPage({
   texts: LegalTexts;
 }): ReactNode {
   const { locale } = useLocale();
-  const dutch = search.lang === LEGAL_CANONICAL_LOCALE;
+  const dutch = search.text === LEGAL_CANONICAL_LOCALE;
   const asked = dutch ? LEGAL_CANONICAL_LOCALE : locale;
   const text: LegalText | undefined =
     texts[asked] ?? texts[LEGAL_CANONICAL_LOCALE];

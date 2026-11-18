@@ -89,10 +89,10 @@ describe("/privacy and /terms (spec §9, inventory P-07, P-08, R-16)", () => {
     expect(fr.body).toContain("la version néerlandaise prévaut");
   });
 
-  it("shows the Dutch text in place for ?lang=nl, changing no setting (review I2)", async () => {
+  it("shows the Dutch text in place for ?text=nl, changing no setting (review I2)", async () => {
     const en = await page("/terms", "en");
-    expect(en.body).toContain('href="/terms?lang=nl"');
-    const { body, response } = await page("/privacy?lang=nl", "en");
+    expect(en.body).toContain('href="/terms?text=nl"');
+    const { body, response } = await page("/privacy?text=nl", "en");
     expect(response.status).toBe(200);
     expect(response.headers.get("set-cookie")).toBeNull();
     // The site stays English; only the legal text is Dutch.
@@ -101,7 +101,7 @@ describe("/privacy and /terms (spec §9, inventory P-07, P-08, R-16)", () => {
     expect(body).toContain("You’re reading the Dutch version, which prevails.");
     expect(body).toContain('href="/privacy"');
     // Dutch readers never see the switch.
-    const nl = await page("/privacy?lang=nl", "nl");
+    const nl = await page("/privacy?text=nl", "nl");
     expect(nl.body).not.toContain(NOTICE);
   });
 
@@ -182,10 +182,10 @@ describe("legal texts from D1 (phase 10b task 7)", () => {
     );
   });
 
-  it("an edit of the Dutch text shows for ?lang=nl on another language's page", async () => {
+  it("an edit of the Dutch text shows for ?text=nl on another language's page", async () => {
     try {
       await publishRow("terms", "nl", 4, edited, "2026-11-16");
-      const { body } = await page("/terms?lang=nl", "en");
+      const { body } = await page("/terms?text=nl", "en");
       expect(body).toMatch(LANG_NL_ARTICLE);
       expect(body).toMatch(EDITED_H1);
       expect(body).toContain("Laatst bijgewerkt op 16 november 2026");
