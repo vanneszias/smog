@@ -131,10 +131,7 @@ const SKIPPED_DIRS = new Set([
   ".expo",
 ]);
 /** Applied migrations (never edited) and the tests' own fixtures. */
-const SKIPPED_PATHS = [
-  "packages/db/migrations",
-  "packages/testing",
-];
+const SKIPPED_PATHS = ["packages/db/migrations", "packages/testing"];
 
 function scan(path: string, found: string[]): void {
   for (const entry of readdirSync(path, { withFileTypes: true })) {

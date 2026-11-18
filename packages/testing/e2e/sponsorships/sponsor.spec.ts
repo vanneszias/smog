@@ -562,7 +562,9 @@ test("the re-edit link: a new name, sent for review", async ({ page }) => {
   await expect(frame.getByText("Nieuwe Naam")).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
   await page.getByRole("button", { name: "Ter controle verzenden" }).click();
-  await expect(page.getByRole("heading", { name: "Je aanpassing is verstuurd" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Je aanpassing is verstuurd" })
+  ).toBeVisible();
   // Single use: the link is spent.
   await page.reload();
   await expect(
