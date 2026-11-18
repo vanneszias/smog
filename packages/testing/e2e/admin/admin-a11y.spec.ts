@@ -221,9 +221,9 @@ test.describe("admin keyboard", () => {
     // a frame after the resize; until then its trigger folds the desktop rail
     // instead of opening the sheet. The desktop panel (the only sidebar with a
     // `data-state`) leaves the DOM once the phone sheet takes its place.
-    await expect(
-      page.locator('[data-slot="sidebar"][data-state]')
-    ).toHaveCount(0);
+    await expect(page.locator('[data-slot="sidebar"][data-state]')).toHaveCount(
+      0
+    );
     const opener = page.getByRole("button", { name: "Beheermenu openen" });
     await opener.focus();
     await page.keyboard.press("Enter");
