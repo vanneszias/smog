@@ -217,6 +217,13 @@ test.describe("admin keyboard", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Logboek");
 
     await page.setViewportSize({ height: 844, width: 390 });
+    // The sidebar learns it is on a phone from a `matchMedia` change event,
+    // a frame after the resize; until then its trigger folds the desktop rail
+    // instead of opening the sheet. The desktop panel (the only sidebar with a
+    // `data-state`) leaves the DOM once the phone sheet takes its place.
+    await expect(
+      page.locator('[data-slot="sidebar"][data-state]')
+    ).toHaveCount(0);
     const opener = page.getByRole("button", { name: "Beheermenu openen" });
     await opener.focus();
     await page.keyboard.press("Enter");
