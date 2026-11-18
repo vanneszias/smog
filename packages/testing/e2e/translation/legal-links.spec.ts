@@ -274,9 +274,11 @@ test.describe("screenshots", () => {
           ]);
           await page.goto("/");
           await waitForApp(page);
-          await expect(
-            page.getByRole("region", { name: APP_BANNER })
-          ).toBeVisible();
+          // The banner on a phone, the home's App section from `md`: one
+          // region with this name, never both.
+          const app = page.getByRole("region", { name: APP_BANNER });
+          await expect(app).toBeVisible();
+          await expect(app).toHaveCount(1);
           await settleForShot(page);
           if (SCREENSHOTS) {
             await page.screenshot({

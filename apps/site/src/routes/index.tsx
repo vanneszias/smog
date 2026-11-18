@@ -333,8 +333,10 @@ function Home(): ReactNode {
         <About />
         <App />
         <Sponsor />
-        {/* The one banner slot: it mounts after hydration, below the fold (review M6). */}
-        <SiteAppBanner />
+        {/* The one banner slot: it mounts after hydration, below the fold
+            (review M6). Phones only: from `md` the App section above says
+            the same, and two regions with one name would repeat it. */}
+        <SiteAppBanner className="md:hidden" />
       </Page>
     </>
   );
