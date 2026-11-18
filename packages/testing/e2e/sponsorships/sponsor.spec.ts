@@ -489,7 +489,7 @@ test("the gesture CTA: free, being sponsored, sponsored (L-17)", async ({
   ).toHaveAttribute("href", `/sponsor?gesture=${FREE}`);
   await page.goto(`/gestures/${PENDING}`);
   await expect(cta).toContainText(
-    "Dit gebaar is al gekozen voor sponsoring en is nu niet beschikbaar."
+    "Iemand sponsort dit gebaar al. Kies gerust een ander gebaar."
   );
   await page.goto(`/gestures/${LIVE}`);
   await expect(cta).toContainText(

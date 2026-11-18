@@ -284,6 +284,6 @@ test.describe("app shell", () => {
     const background = await page
       .getByRole("banner")
       .evaluate((header) => getComputedStyle(header).backgroundColor);
-    expect(background).toBe("rgb(0, 107, 80)");
+    expect(background).toBe("rgb(9, 86, 76)");
   });
 });

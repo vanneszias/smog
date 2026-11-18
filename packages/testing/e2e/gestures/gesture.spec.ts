@@ -64,6 +64,6 @@ test("answers an unknown gesture with the 404 page", async ({ page }) => {
   const response = await page.goto("/gestures/bestaat-niet");
   expect(response?.status()).toBe(404);
   await expect(
-    page.getByRole("link", { name: "Naar de startpagina" })
+    page.getByRole("link", { exact: true, name: "Naar de startpagina" })
   ).toBeVisible();
 });

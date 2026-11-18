@@ -47,7 +47,9 @@ export function GestureActions({
   }, [gesture.name, t, toast, url]);
 
   return (
-    <div className="flex items-center gap-2">
+    // Wraps at 320 px and under text spacing (WCAG 1.4.10, 1.4.12): the
+    // labelled save button leaves no room for the QR code on one row.
+    <div className="flex flex-wrap items-center gap-2">
       <FavoriteButton
         active={heart.active}
         className="border-muted-foreground bg-card hover:bg-muted"

@@ -72,7 +72,7 @@ test.describe("legal pages", () => {
       page.getByRole("heading", { level: 1, name: "Servicevoorwaarden" })
     ).toBeVisible();
     await expect(page.getByRole("note")).toContainText(
-      "You are reading the Dutch version"
+      "You’re reading the Dutch version"
     );
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     const cookies = await page.context().cookies();
@@ -274,9 +274,11 @@ test.describe("screenshots", () => {
           ]);
           await page.goto("/");
           await waitForApp(page);
-          await expect(
-            page.getByRole("region", { name: APP_BANNER })
-          ).toBeVisible();
+          // The banner on a phone, the home's App section from `md`: one
+          // region with this name, never both.
+          const app = page.getByRole("region", { name: APP_BANNER });
+          await expect(app).toBeVisible();
+          await expect(app).toHaveCount(1);
           await settleForShot(page);
           if (SCREENSHOTS) {
             await page.screenshot({
