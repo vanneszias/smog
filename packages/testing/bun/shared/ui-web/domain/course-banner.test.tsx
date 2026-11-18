@@ -41,7 +41,7 @@ describe("CourseBanner", () => {
     expect(screen.queryByRole("link")).toBeNull();
     expect(
       screen.getByText(
-        "SMOG gestures are fixed and protected. Make them as shown in the video, so everyone who knows SMOG understands you."
+        "SMOG gestures are fixed and protected. Make them as shown in the video and don’t invent your own versions. That way they stay the same for everyone."
       )
     ).toBeDefined();
   });

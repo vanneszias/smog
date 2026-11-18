@@ -237,7 +237,7 @@ test.describe("the fragment link", () => {
     );
     await page.keyboard.press("Enter");
     await expect(
-      page.getByRole("heading", { name: "Verzonden!" })
+      page.getByRole("heading", { name: "Je aanpassing is verstuurd" })
     ).toBeFocused();
   });
 });

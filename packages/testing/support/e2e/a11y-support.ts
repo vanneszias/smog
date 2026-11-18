@@ -399,7 +399,7 @@ export async function overlay(
 }
 
 /** The consent banner's region name (Dutch, the default language). */
-export const CONSENT_REGION = "Help SMOG & Co beter maken";
+export const CONSENT_REGION = "Help ons SMOG & Co beter maken";
 
 /**
  * The open consent banner floats over the page (issue #8): at the end of

@@ -138,7 +138,7 @@ function card(page: Page, name: string) {
 
 /** The consent banner shows after hydration; decline it so it covers nothing. */
 async function declineConsent(page: Page): Promise<void> {
-  const decline = page.getByRole("button", { name: "Liever niet" });
+  const decline = page.getByRole("button", { name: "Niet toestaan" });
   try {
     await decline.click({ timeout: 3000 });
   } catch {
@@ -508,7 +508,7 @@ test("pays for 2 gestures with a logo and an invoice; the success page shows pai
   await fillDetails(page, { invoice: true, logo: true });
   await payAtMollie(page, "Pay");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Betaling geslaagd!" })
+    page.getByRole("heading", { level: 1, name: "Je betaling is gelukt" })
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Broer, Zus")).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
@@ -562,7 +562,7 @@ test("the re-edit link: a new name, sent for review", async ({ page }) => {
   await expect(frame.getByText("Nieuwe Naam")).toBeVisible();
   expect(await blockingViolations(page)).toEqual([]);
   await page.getByRole("button", { name: "Ter controle verzenden" }).click();
-  await expect(page.getByRole("heading", { name: "Verzonden!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Je aanpassing is verstuurd" })).toBeVisible();
   // Single use: the link is spent.
   await page.reload();
   await expect(
@@ -671,12 +671,12 @@ async function stubbedStates(
   await stubMuxStream(page);
 
   for (const [status, kind, title] of [
-    ["paid", "initial", "Betaling geslaagd!"],
+    ["paid", "initial", "Je betaling is gelukt"],
     ["open", "initial", "Je betaling wordt verwerkt…"],
     ["failed", "initial", "De betaling is niet gelukt"],
     ["canceled", "initial", "De betaling is geannuleerd"],
     ["refund_needed", "initial", "We nemen contact met je op"],
-    ["paid", "renewal", "Je sponsoring is verlengd!"],
+    ["paid", "renewal", "Je sponsoring is verlengd"],
   ] as const) {
     // biome-ignore lint/performance/noAwaitInLoops: one page at a time.
     await page.unroute("**/api/rpc/sponsorships/paymentStatus**");

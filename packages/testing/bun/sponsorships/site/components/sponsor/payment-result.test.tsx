@@ -44,7 +44,7 @@ describe("the payment's return page (S-14)", () => {
       api: { "sponsorships/paymentStatus": view() },
     });
     expect(
-      await screen.findByRole("heading", { name: "Payment successful!" })
+      await screen.findByRole("heading", { name: "Your payment went through" })
     ).toBeDefined();
     expect(screen.getByText("Broer, Zus")).toBeDefined();
     expect(screen.getByText("Bakkerij Jansen")).toBeDefined();
@@ -104,13 +104,13 @@ describe("the payment's return page (S-14)", () => {
     // The attempt counter is not live: it would speak every 2 s.
     expect(live.textContent).not.toContain("Attempt");
     await waitFor(() =>
-      expect(live.textContent).toContain("Payment successful!")
+      expect(live.textContent).toContain("Your payment went through")
     );
     // The same region, never remounted, and the result's h1 has focus.
     expect(screen.getByTestId("payment-status-live")).toBe(live);
     const heading = screen.getByRole("heading", {
       level: 1,
-      name: "Payment successful!",
+      name: "Your payment went through",
     });
     await waitFor(() => expect(document.activeElement).toBe(heading));
   });
@@ -148,7 +148,7 @@ describe("the payment's return page (S-14)", () => {
       },
     });
     expect(
-      await screen.findByRole("heading", { name: "Payment successful!" })
+      await screen.findByRole("heading", { name: "Your payment went through" })
     ).toBeDefined();
   });
 
@@ -193,7 +193,7 @@ describe("the payment's return page (S-14)", () => {
     });
     expect(
       await screen.findByRole("heading", {
-        name: "Your sponsorship is renewed!",
+        name: "Your sponsorship is renewed",
       })
     ).toBeDefined();
     expect(

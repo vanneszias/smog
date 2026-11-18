@@ -369,7 +369,7 @@ The copy is part of the identity. AGENTS.md ("Product terminology", "Brand voice
 - **Warm, direct, concrete.** Talk to one person about one thing they are doing: finding a gesture, saving it, preparing a lesson. Use the words people use about speaking and gestures, not product or technical words.
 - **One register per language.** Dutch says "je", French says "vous", English uses contractions ("you're", "don't") and American spelling ("favorite", "organization", "canceled", "catalog").
 - **Short and plain.** One idea per sentence, about twenty words at most. Keep a separable verb together ("Met de video's herhaal je" rather than "Fris ... op"). No brackets inside a sentence ("bestaat niet (meer)"): say it as a sentence.
-- **Honest.** The videos are a memory aid alongside a SMOG course or initiation, never a course. Promise nothing that is not true today: no review deadline, no claim about what a sponsorship funds until the owner states it.
+- **Honest.** The videos are a memory aid alongside a SMOG course or initiation, never a course. Promise nothing that is not true today: no review deadline, and about the money only what the owner stated: a sponsorship pays for building and running SMOG & Co (the website, the app and the vzw behind them).
 - **Calm.** No urgency ("Nu", "Now"), no pressure to convert, no slogans beside the approved tagline.
 
 ### Names
@@ -407,7 +407,7 @@ Translators find the short form of this list on the strings screen of the transl
 
 - **Sentence case everywhere**, in all three languages: titles, buttons, navigation, labels. Only names take capitals (SMOG, SMOG & Co, Google, Apple).
 - **Full stops** end sentences, not buttons, labels, titles or list items.
-- **Exclamation marks**: none in the interface. At most one per payment or thank-you moment ("Bedankt om SMOG & Co te steunen!").
+- **Exclamation marks**: none in the interface, in subjects or in preheaders. The sponsor's whole journey has one, the closing thanks of the email that says the name is online ("Bedankt om SMOG & Co te steunen!").
 - **No em dash** anywhere. A colon introduces what follows, parentheses hold an aside, a hyphen is an empty value.
 - **Typography** (enforced by `typography.test.ts`): the curly apostrophe `’` (`video’s`, `don’t`, `l’appareil`); quotes `“ ”` in Dutch and English, `« »` with a narrow no-break space inside in French; the ellipsis character `…`, never three dots; a no-break space between a number and its unit (`2 MB`, `4 s`); in French a no-break space before `: ; ? !`.
 
@@ -415,7 +415,7 @@ Translators find the short form of this list on the strings screen of the transl
 
 - **Verb and object, saying what happens**: "Bekijk het gebaar", "Dit gebaar sponsoren", "Lijst maken". The same act keeps the same verb across the product.
 - **Links say where they go**: "Bekijk het cursusaanbod" goes to the course page; never "klik hier" or a phrase that promises another page.
-- **A choice reads as an answer**: "Statistieken toestaan" beside "Liever niet".
+- **A choice reads as an answer**, and a refusal is as plain as the yes: "Statistieken toestaan" beside "Niet toestaan".
 
 ### Errors and states
 

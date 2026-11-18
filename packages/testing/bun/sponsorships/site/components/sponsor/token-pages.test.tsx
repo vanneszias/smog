@@ -220,7 +220,7 @@ describe("the re-edit page (S-19)", () => {
     // Announced: the new h1 takes the focus the form had (review I-4).
     const sent = await screen.findByRole("heading", {
       level: 1,
-      name: "Sent!",
+      name: "Your changes have been sent",
     });
     await waitFor(() => expect(document.activeElement).toBe(sent));
     expect(

@@ -516,7 +516,7 @@
       "1": "These videos support what you learn in a SMOG course or introductory session. They don’t replace it. <course>Find a course</course>.",
       "2": "Would you like to take a SMOG course or introductory session? <course>Find a course</course>.",
       "3": "A SMOG course also explains the theory behind the gestures. <course>About the courses</course>.",
-      "4": "SMOG gestures are fixed and protected. Make them as shown in the video, so everyone who knows SMOG understands you.",
+      "4": "SMOG gestures are fixed and protected. Make them as shown in the video and don’t invent your own versions. That way they stay the same for everyone.",
       "5": "Take a SMOG course or introductory session to learn the gestures. Then use these videos as a memory aid.",
       "6": "A SMOG course also tells you how SMOG began. <course>Find a course</course>.",
       "7": "Got a question about SMOG? Email us at <email>info@smog.vlaanderen</email>."
@@ -752,7 +752,7 @@
       },
       "sponsorshipReceived": {
         "subject": "We’ve received your sponsorship",
-        "preheader": "Thank you! Here’s what happens next.",
+        "preheader": "Thank you. Here’s what happens next.",
         "heading": "Sponsorship received",
         "body": "Thank you for sponsoring {{gesture}}. The end of the video will show the name {{displayName}}.",
         "nextTitle": "What happens next?",
@@ -761,7 +761,7 @@
         "footer": "You get this email because you recently submitted a sponsorship through SMOG\u00a0&\u00a0Co."
       },
       "paymentConfirmed": {
-        "subject": "Payment confirmed. Thank you!",
+        "subject": "Payment confirmed, thank you",
         "preheader": "We’ve received your payment of {{amount}}.",
         "heading": "Payment confirmed",
         "body": "Thank you, we’ve received your payment.",
@@ -1007,11 +1007,11 @@
     "about": "About the app"
   },
   "consent": {
-    "title": "Help make SMOG\u00a0&\u00a0Co better",
+    "title": "Help us improve SMOG\u00a0&\u00a0Co",
     "description": "With your permission we keep limited usage statistics to make SMOG\u00a0&\u00a0Co better. We don’t use them for advertising and don’t follow you in other apps or on other websites.",
     "privacyLink": "Read the privacy policy",
     "allow": "Allow statistics",
-    "decline": "No thanks",
+    "decline": "Don’t allow",
     "toggle": "Usage statistics",
     "toggleDescription": "Share limited usage statistics to help make SMOG\u00a0&\u00a0Co better.",
     "saved": "Your choice has been saved.",
@@ -2894,11 +2894,11 @@
         "checkAgain": "Check again"
       },
       "paid": {
-        "title": "Payment successful!",
+        "title": "Your payment went through",
         "description": "Thank you for supporting SMOG\u00a0&\u00a0Co."
       },
       "renewed": {
-        "title": "Your sponsorship is renewed!",
+        "title": "Your sponsorship is renewed",
         "description": "Your name stays at the end of the video until {{date}}."
       },
       "failed": {
@@ -2964,8 +2964,8 @@
       "noPayment": "You do not have to pay again. We check the change before it goes online.",
       "submit": "Send for review",
       "submitted": {
-        "title": "Sent!",
-        "description": "We check your changes before they go online. You do not have to pay again."
+        "title": "Your changes have been sent",
+        "description": "We check your changes before they go online. You don’t have to pay again."
       },
       "failed": "We couldn’t send your change. Try again."
     },

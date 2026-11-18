@@ -521,7 +521,7 @@
       "1": "Ces vidéos accompagnent ce que vous apprenez dans un cours ou une initiation SMOG. Elles ne le remplacent pas. <course>Trouver un cours</course>.",
       "2": "Vous souhaitez suivre un cours ou une initiation SMOG\u202f? <course>Trouver un cours</course>.",
       "3": "Un cours SMOG explique aussi la théorie derrière les gestes. <course>En savoir plus sur les cours</course>.",
-      "4": "Les gestes SMOG sont fixés et protégés. Faites-les comme dans la vidéo, pour que toute personne qui connaît SMOG vous comprenne.",
+      "4": "Les gestes SMOG sont fixés et protégés. Faites-les comme dans la vidéo, sans inventer vos propres versions. Ainsi, ils restent les mêmes pour tout le monde.",
       "5": "Suivez un cours ou une initiation SMOG pour apprendre les gestes. Utilisez ensuite ces vidéos comme aide-mémoire.",
       "6": "Un cours SMOG raconte aussi comment SMOG est né. <course>Trouver un cours</course>.",
       "7": "Une question sur SMOG ? Écrivez-nous à <email>info@smog.vlaanderen</email>."
@@ -760,7 +760,7 @@
       },
       "sponsorshipReceived": {
         "subject": "Nous avons bien reçu votre parrainage",
-        "preheader": "Merci\u00a0! Voici la suite.",
+        "preheader": "Merci. Voici la suite.",
         "heading": "Parrainage reçu",
         "body": "Merci de parrainer {{gesture}}. La fin de la vidéo affichera le nom {{displayName}}.",
         "nextTitle": "Et maintenant\u00a0?",
@@ -769,7 +769,7 @@
         "footer": "Vous recevez cet e-mail parce que vous avez récemment soumis un parrainage via SMOG\u00a0&\u00a0Co."
       },
       "paymentConfirmed": {
-        "subject": "Paiement confirmé. Merci\u00a0!",
+        "subject": "Paiement confirmé, merci",
         "preheader": "Nous avons bien reçu votre paiement de {{amount}}.",
         "heading": "Paiement confirmé",
         "body": "Merci, nous avons bien reçu votre paiement.",
@@ -1020,7 +1020,7 @@
     "description": "Avec votre accord, nous collectons des statistiques d’utilisation limitées pour améliorer SMOG\u00a0&\u00a0Co. Nous ne les utilisons pas pour la publicité et ne vous suivons pas dans d’autres applications ni sur d’autres sites.",
     "privacyLink": "Lire la politique de confidentialité",
     "allow": "Autoriser les statistiques",
-    "decline": "Non merci",
+    "decline": "Ne pas autoriser",
     "toggle": "Statistiques d’utilisation",
     "toggleDescription": "Partagez des statistiques d’utilisation limitées pour aider à améliorer SMOG\u00a0&\u00a0Co.",
     "saved": "Votre choix a été enregistré.",
@@ -2940,11 +2940,11 @@
         "checkAgain": "Vérifier à nouveau"
       },
       "paid": {
-        "title": "Paiement réussi\u00a0!",
+        "title": "Votre paiement est passé",
         "description": "Merci de soutenir SMOG\u00a0&\u00a0Co."
       },
       "renewed": {
-        "title": "Votre parrainage est prolongé\u00a0!",
+        "title": "Votre parrainage est prolongé",
         "description": "Votre nom reste à la fin de la vidéo jusqu’au {{date}}."
       },
       "failed": {
@@ -3011,7 +3011,7 @@
       "noPayment": "Vous n’avez pas à payer à nouveau. Nous vérifions la modification avant sa mise en ligne.",
       "submit": "Envoyer pour vérification",
       "submitted": {
-        "title": "Envoyé\u00a0!",
+        "title": "Vos modifications sont envoyées",
         "description": "Nous vérifions vos modifications avant leur mise en ligne. Vous n’avez pas à payer à nouveau."
       },
       "failed": "Nous n’avons pas pu envoyer votre modification. Réessayez."

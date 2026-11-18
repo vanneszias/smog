@@ -14,7 +14,7 @@ describe("ConsentBanner", () => {
       />
     );
     const region = screen.getByRole("region", {
-      name: "Help make SMOG\u00a0&\u00a0Co better",
+      name: "Help us improve SMOG\u00a0&\u00a0Co",
     });
     expect(region.textContent).toContain("limited usage statistics");
     const link = screen.getByRole("link", { name: "Read the privacy policy" });
@@ -22,7 +22,7 @@ describe("ConsentBanner", () => {
     expect(
       screen.getByRole("button", { name: "Allow statistics" })
     ).toBeDefined();
-    expect(screen.getByRole("button", { name: "No thanks" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Don’t allow" })).toBeDefined();
   });
 
   test("the buttons report the choice", async () => {
@@ -31,7 +31,7 @@ describe("ConsentBanner", () => {
     renderKit(
       <ConsentBanner onAllow={onAllow} onDecline={onDecline} privacyHref="/p" />
     );
-    await userEvent.click(screen.getByRole("button", { name: "No thanks" }));
+    await userEvent.click(screen.getByRole("button", { name: "Don’t allow" }));
     expect(onDecline).toHaveBeenCalledTimes(1);
     await userEvent.click(
       screen.getByRole("button", { name: "Allow statistics" })
@@ -47,7 +47,7 @@ describe("ConsentBanner", () => {
       screen.getByRole("button", { name: "Allow statistics" })
     );
     const decline = classesOf(
-      screen.getByRole("button", { name: "No thanks" })
+      screen.getByRole("button", { name: "Don’t allow" })
     );
     const sizes = (list: string[]): string[] =>
       list.filter((name) => name.startsWith("h-") || name.startsWith("min-h"));
@@ -63,7 +63,7 @@ describe("ConsentBanner", () => {
         privacyHref="/p"
       />
     );
-    for (const name of ["Allow statistics", "No thanks"]) {
+    for (const name of ["Allow statistics", "Don’t allow"]) {
       const button = screen.getByRole("button", { name });
       expect(button.hasAttribute("disabled")).toBe(true);
     }
@@ -93,9 +93,9 @@ describe("ConsentBanner", () => {
     );
     expect(
       screen.getByRole("region", {
-        name: "Help SMOG\u00a0&\u00a0Co beter maken",
+        name: "Help ons SMOG\u00a0&\u00a0Co beter maken",
       })
     ).toBeDefined();
-    expect(screen.getByRole("button", { name: "Liever niet" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Niet toestaan" })).toBeDefined();
   });
 });

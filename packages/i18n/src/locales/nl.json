@@ -516,7 +516,7 @@
       "1": "Deze video’s ondersteunen wat je in een SMOG-cursus of initiatie leert. Ze vervangen die niet. <course>Bekijk het cursusaanbod</course>.",
       "2": "Wil je een SMOG-cursus of initiatie volgen? <course>Bekijk het cursusaanbod</course>.",
       "3": "In een SMOG-cursus leer je ook de theorie achter de gebaren. <course>Meer over de cursussen</course>.",
-      "4": "De SMOG-gebaren liggen vast en zijn beschermd. Maak ze zoals in de video, dan begrijpt iedereen die SMOG kent je.",
+      "4": "De SMOG-gebaren liggen vast en zijn beschermd. Maak ze zoals in de video en verzin er geen eigen versie van. Zo blijven ze voor iedereen dezelfde.",
       "5": "Volg een SMOG-cursus of initiatie om de gebaren te leren. Gebruik deze video’s daarna als geheugensteun.",
       "6": "In een SMOG-cursus hoor je ook hoe SMOG is ontstaan. <course>Bekijk het cursusaanbod</course>.",
       "7": "Heb je een vraag over SMOG? Mail ons op <email>info@smog.vlaanderen</email>."
@@ -752,7 +752,7 @@
       },
       "sponsorshipReceived": {
         "subject": "We hebben je sponsoring ontvangen",
-        "preheader": "Bedankt! Zo gaat het nu verder.",
+        "preheader": "Bedankt. Zo gaat het nu verder.",
         "heading": "Sponsoring ontvangen",
         "body": "Bedankt om {{gesture}} te sponsoren. Aan het einde van de video komt de naam {{displayName}}.",
         "nextTitle": "Wat gebeurt er nu?",
@@ -761,7 +761,7 @@
         "footer": "Je krijgt deze e-mail omdat je onlangs een sponsoring hebt ingediend via SMOG\u00a0&\u00a0Co."
       },
       "paymentConfirmed": {
-        "subject": "Betaling bevestigd. Bedankt!",
+        "subject": "Betaling bevestigd, bedankt",
         "preheader": "We hebben je betaling van {{amount}} ontvangen.",
         "heading": "Betaling bevestigd",
         "body": "Bedankt, we hebben je betaling goed ontvangen.",
@@ -1007,11 +1007,11 @@
     "about": "Over de app"
   },
   "consent": {
-    "title": "Help SMOG\u00a0&\u00a0Co beter maken",
+    "title": "Help ons SMOG\u00a0&\u00a0Co beter maken",
     "description": "Met je toestemming houden we beperkte gebruiksstatistieken bij om SMOG\u00a0&\u00a0Co beter te maken. We gebruiken ze niet voor reclame en volgen je niet in andere apps of op andere websites.",
     "privacyLink": "Lees het privacybeleid",
     "allow": "Statistieken toestaan",
-    "decline": "Liever niet",
+    "decline": "Niet toestaan",
     "toggle": "Gebruiksstatistieken",
     "toggleDescription": "Deel beperkte gebruiksstatistieken om SMOG\u00a0&\u00a0Co beter te maken.",
     "saved": "Je keuze is bewaard.",
@@ -2894,11 +2894,11 @@
         "checkAgain": "Opnieuw controleren"
       },
       "paid": {
-        "title": "Betaling geslaagd!",
+        "title": "Je betaling is gelukt",
         "description": "Bedankt voor je steun aan SMOG\u00a0&\u00a0Co."
       },
       "renewed": {
-        "title": "Je sponsoring is verlengd!",
+        "title": "Je sponsoring is verlengd",
         "description": "Je naam blijft tot {{date}} aan het einde van de video staan."
       },
       "failed": {
@@ -2964,7 +2964,7 @@
       "noPayment": "Je hoeft niet opnieuw te betalen. We controleren de aanpassing voordat ze online gaat.",
       "submit": "Ter controle verzenden",
       "submitted": {
-        "title": "Verzonden!",
+        "title": "Je aanpassing is verstuurd",
         "description": "We controleren je aanpassing voor ze online gaat. Je hoeft niet opnieuw te betalen."
       },
       "failed": "We konden je aanpassing niet verzenden. Probeer het opnieuw."

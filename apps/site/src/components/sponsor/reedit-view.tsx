@@ -50,7 +50,7 @@ interface EditableLink {
 }
 
 /**
- * "Sent!": the form is gone, so its h1 takes the focus and is read out
+ * "Your changes have been sent": the form is gone, so its h1 takes the focus and is read out
  * (review I-4).
  */
 function Submitted(): ReactNode {

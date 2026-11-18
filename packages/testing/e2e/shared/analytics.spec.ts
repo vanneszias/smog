@@ -153,7 +153,7 @@ test("a guest never inherits the yes an account left on the device", async ({
   await page.reload();
   // The guest is asked for their own decision, and nothing is sent.
   await expect(
-    page.getByRole("region", { name: "Help SMOG & Co beter maken" })
+    page.getByRole("region", { name: "Help ons SMOG & Co beter maken" })
   ).toBeVisible();
   await browse(page);
   expect(relay.requests).toHaveLength(0);

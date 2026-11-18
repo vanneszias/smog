@@ -140,7 +140,7 @@ describe("consent sheet", () => {
     const sheet = within(await screen.findByTestId("consent-banner"));
     expect(
       sheet.getByRole("header", {
-        name: "Help make SMOG\u00a0&\u00a0Co better",
+        name: "Help us improve SMOG\u00a0&\u00a0Co",
       })
     ).toBeOnTheScreen();
     await fireEvent.press(

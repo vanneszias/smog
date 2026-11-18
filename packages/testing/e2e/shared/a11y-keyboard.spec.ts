@@ -421,11 +421,11 @@ test.describe("keyboard: guests", () => {
       await page.goto("/privacy");
       await waitForApp(page);
       const banner = page.getByRole("region", {
-        name: "Help SMOG & Co beter maken",
+        name: "Help ons SMOG & Co beter maken",
       });
       await expect(banner).toBeVisible();
       const decline = banner.getByRole("button", {
-        name: "Liever niet",
+        name: "Niet toestaan",
       });
       await tabTo(page, decline, 60);
       await page.keyboard.press("Enter");
@@ -660,7 +660,7 @@ test.describe("keyboard: focus is always visible", () => {
           return hit !== null && (node === hit || node.contains(hit));
         });
       const decline = banner.getByRole("button", {
-        name: "Liever niet",
+        name: "Niet toestaan",
       });
       const allow = banner.getByRole("button", {
         name: "Statistieken toestaan",

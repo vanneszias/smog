@@ -38,8 +38,8 @@ const EMAIL = /^E-mail$/;
  */
 
 const IPHONE = devices["iPhone 15"].userAgent;
-const CONSENT = "Help SMOG & Co beter maken";
-const DECLINE = "Liever niet";
+const CONSENT = "Help ons SMOG & Co beter maken";
+const DECLINE = "Niet toestaan";
 /** The body of a test: the page, and where its findings go. */
 type Body = (page: Page, found: Finding[]) => Promise<void>;
 
