@@ -20,16 +20,21 @@ import { UserMenu } from "./user-menu";
 const SMALL_LOGO =
   "block aspect-[2666.67/578.88] h-6 bg-current mask-[url(/brand/logo-small.svg)] mask-contain mask-center mask-no-repeat";
 
-/** The search trigger from `md`: a pill that names the `/` shortcut. */
+/**
+ * The search trigger from `lg`: a pill that names the `/` shortcut. Between
+ * `md` and `lg` the sections and the sign-in button take the row, so the
+ * trigger stays an icon there (at 768 px the pill pushed the row 31 px past
+ * the screen in Dutch, more in French).
+ */
 const SEARCH_PILL =
-  "relative hidden h-11 min-w-40 items-center gap-2 rounded-full border border-sidebar-border bg-sidebar-accent px-4 text-sidebar-foreground text-body-sm outline-none transition duration-fast ease-standard hover:bg-sidebar-accent/80 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar motion-reduce:transition-none md:inline-flex lg:min-w-72";
+  "relative hidden h-11 min-w-40 items-center gap-2 rounded-full border border-sidebar-border bg-sidebar-accent px-4 text-sidebar-foreground text-body-sm outline-none transition duration-fast ease-standard hover:bg-sidebar-accent/80 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar motion-reduce:transition-none lg:inline-flex lg:min-w-72";
 
 /**
  * The site header on the green surface (phase 10a): the logo (reversed),
  * the sections (Gestures, My space), the search trigger (the command
  * palette, also `/`) and one user and settings menu with the language and
- * the theme. Below `md` the sections move into a sheet and the search
- * trigger shrinks to its icon.
+ * the theme. Below `md` the sections move into a sheet; below `lg` the search
+ * trigger is its icon.
  *
  * The page runs under the notch (`viewport-fit=cover`): the header pads
  * itself by the safe-area insets, so its green fills the strip under the
@@ -119,7 +124,7 @@ export function Header(): ReactNode {
           </button>
           <IconButton
             aria-keyshortcuts="/"
-            className={cn("md:hidden", GREEN_ICON_BUTTON)}
+            className={cn("lg:hidden", GREEN_ICON_BUTTON)}
             icon={<Search />}
             label={t("common.search")}
             onClick={palette.open}
