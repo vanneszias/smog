@@ -72,7 +72,7 @@ test.describe("legal pages", () => {
       page.getByRole("heading", { level: 1, name: "Servicevoorwaarden" })
     ).toBeVisible();
     await expect(page.getByRole("note")).toContainText(
-      "You are reading the Dutch version"
+      "You’re reading the Dutch version"
     );
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     const cookies = await page.context().cookies();
