@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "@jest/globals";
+import { tokens } from "@smog/styles/tokens";
+import { HEADING_MAX_FONT_SCALE } from "../../../../ui-native/src/lib/heading-scale";
 
 /**
  * Lint-style tests over the kit's sources, for what a rendered tree cannot
@@ -71,11 +73,37 @@ describe("dynamic type", () => {
     ).toEqual([]);
   });
 
-  it("never switches font scaling off or caps it", () => {
+  it("never switches font scaling off, and limits it only on headings", () => {
+    // `Heading` applies `lib/heading-scale.ts`; nothing else may.
     const offenders = sources()
+      .filter(({ file }) => file !== "components/text.tsx")
       .filter(({ text }) => FONT_SCALING.test(text))
       .map(({ file }) => file);
     expect(offenders).toEqual([]);
+    const text = sources().find(({ file }) => file === "components/text.tsx");
+    expect(text?.text).not.toContain("allowFontScaling");
+  });
+
+  it("lets a heading grow to at least twice its size (WCAG 1.4.4), the largest least", () => {
+    expect(Object.keys(HEADING_MAX_FONT_SCALE).sort()).toEqual([
+      "display",
+      "title-1",
+      "title-2",
+    ]);
+    for (const limit of Object.values(HEADING_MAX_FONT_SCALE)) {
+      expect(limit).toBeGreaterThanOrEqual(2);
+    }
+    const { fontSize } = tokens;
+    // At the limit the steps keep their order, above the body text at iOS's
+    // largest accessibility size (a font scale of about 3.1).
+    const largest = (step: keyof typeof HEADING_MAX_FONT_SCALE): number =>
+      fontSize[step].size * HEADING_MAX_FONT_SCALE[step];
+    expect(largest("display")).toBeGreaterThan(largest("title-1"));
+    expect(largest("title-1")).toBeGreaterThan(largest("title-2"));
+    expect(largest("title-2")).toBeGreaterThan(fontSize["title-3"].size * 3.1);
+    expect(fontSize["title-3"].size * 3.1).toBeGreaterThan(
+      fontSize.body.size * 3.1
+    );
   });
 
   it("cuts text off only through useLineLimit (large text wraps)", () => {

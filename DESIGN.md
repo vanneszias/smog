@@ -266,6 +266,7 @@ In dark mode a level-1 raised card has no shadow; it is drawn with a border on `
 - **Use the named steps.** `display` for the one big statement of a screen (the home hero, a status page), bold, growing to `display-md` from the `md` breakpoint on the web; `lead` for the line under a display title; `title-1` to `title-3` for headings, semibold; `body` for running text and controls; `body-sm` for secondary text and dense rows; `caption` only for text that repeats something said elsewhere.
 - Body text is never below 16 px, and anything a person must read to act (hints, errors, legal lines, step names) never below 14 px. Weights below regular are not used.
 - Paragraphs avoid a lone last word (`text-pretty` on the web `Text`); headings balance their lines.
+- **Text size on native.** Every text follows the system text size. The display and the two largest titles stop at twice their size or a little more (2, 2.1, 2.6 times), the way the platforms' own large text grows less than body text, so at iOS's largest accessibility sizes a heading still reads as words and stays above the body text; body, lead, small text and `title-3` never stop. Layouts wrap and grow rather than cut text off (`useLineLimit`).
 - On native every text carries a weight class (`font-regular`, `font-medium`, `font-semibold`, `font-bold`); without one it renders in the system font.
 
 ## Layout

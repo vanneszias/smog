@@ -2,6 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { ReactElement, Ref } from "react";
 import { Text as RNText, type TextProps as RNTextProps } from "react-native";
 import { cn } from "../lib/cn";
+import { headingMaxFontScale } from "../lib/heading-scale";
 import { toneText } from "../lib/theme";
 import { surfaceRoles, useSurface } from "./surface";
 
@@ -94,7 +95,12 @@ export interface HeadingProps
   ref?: Ref<RNText>;
 }
 
-/** A heading (`accessibilityRole="header"`); `size` defaults from `level`. */
+/**
+ * A heading (`accessibilityRole="header"`); `size` defaults from `level`.
+ * The display and the two largest titles stop growing at twice their size
+ * or more (`lib/heading-scale.ts`), where the platforms' own large text
+ * stops; everything else scales with the system text size.
+ */
 export function Heading({
   className,
   level = 2,
@@ -103,17 +109,16 @@ export function Heading({
   ...props
 }: HeadingProps): ReactElement {
   const onSurface = useSurfaceText(tone);
+  const step = size ?? SIZE_FOR_LEVEL[level];
   return (
     <RNText
       accessibilityRole="header"
       className={cn(
-        headingVariants({
-          size: size ?? SIZE_FOR_LEVEL[level],
-          tone: tone ?? "default",
-        }),
+        headingVariants({ size: step, tone: tone ?? "default" }),
         onSurface,
         className
       )}
+      maxFontSizeMultiplier={headingMaxFontScale(step)}
       {...props}
     />
   );

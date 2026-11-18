@@ -427,6 +427,30 @@ describe("reduced motion", () => {
 });
 
 describe("dynamic type", () => {
+  it("limits only the display and the two largest titles, never below twice their size", async () => {
+    await renderKit(
+      <>
+        <kit.Heading level={1} size="display">
+          Display
+        </kit.Heading>
+        <kit.Heading level={1}>Title one</kit.Heading>
+        <kit.Heading size="title-2">Title two</kit.Heading>
+        <kit.Heading size="title-3">Title three</kit.Heading>
+        <kit.Text size="lead">Lead</kit.Text>
+        <kit.Text>Body</kit.Text>
+      </>
+    );
+    const limit = (text: string): unknown =>
+      screen.getByText(text).props.maxFontSizeMultiplier;
+    expect(limit("Display")).toBe(2);
+    expect(limit("Title one")).toBe(2.1);
+    expect(limit("Title two")).toBe(2.6);
+    expect(limit("Title three")).toBeUndefined();
+    expect(limit("Lead")).toBeUndefined();
+    expect(limit("Body")).toBeUndefined();
+    expect(screen.getByText("Body").props.allowFontScaling).not.toBe(false);
+  });
+
   async function lines(fontScale: number): Promise<unknown[]> {
     const window = Dimensions.get("window");
     Dimensions.set({ window: { ...window, fontScale } });
