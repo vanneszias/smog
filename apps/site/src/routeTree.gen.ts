@@ -35,6 +35,7 @@ import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as ApiCspReportRouteImport } from './routes/api/csp-report'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiMonitoringRouteImport } from './routes/api/monitoring'
 import { Route as DevE2eSeedRouteImport } from './routes/dev/e2e-seed'
 import { Route as DevMailRouteImport } from './routes/dev/mail'
 import { Route as DevMailDotjsonRouteImport } from './routes/dev/mail[.]json'
@@ -203,6 +204,11 @@ const ApiCspReportRoute = ApiCspReportRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMonitoringRoute = ApiMonitoringRouteImport.update({
+  id: '/api/monitoring',
+  path: '/api/monitoring',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DevE2eSeedRoute = DevE2eSeedRouteImport.update({
@@ -430,6 +436,7 @@ export interface FileRoutesByFullPath {
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/monitoring': typeof ApiMonitoringRoute
   '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
@@ -496,6 +503,7 @@ export interface FileRoutesByTo {
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/monitoring': typeof ApiMonitoringRoute
   '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
@@ -564,6 +572,7 @@ export interface FileRoutesById {
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/monitoring': typeof ApiMonitoringRoute
   '/dev/e2e-seed': typeof DevE2eSeedRoute
   '/dev/mail': typeof DevMailRoute
   '/dev/mail.json': typeof DevMailDotjsonRoute
@@ -633,6 +642,7 @@ export interface FileRouteTypes {
     | '/api/analytics'
     | '/api/csp-report'
     | '/api/health'
+    | '/api/monitoring'
     | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
@@ -699,6 +709,7 @@ export interface FileRouteTypes {
     | '/api/analytics'
     | '/api/csp-report'
     | '/api/health'
+    | '/api/monitoring'
     | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
@@ -766,6 +777,7 @@ export interface FileRouteTypes {
     | '/api/analytics'
     | '/api/csp-report'
     | '/api/health'
+    | '/api/monitoring'
     | '/dev/e2e-seed'
     | '/dev/mail'
     | '/dev/mail.json'
@@ -828,6 +840,7 @@ export interface RootRouteChildren {
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   ApiCspReportRoute: typeof ApiCspReportRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiMonitoringRoute: typeof ApiMonitoringRoute
   DevE2eSeedRoute: typeof DevE2eSeedRoute
   DevMailRoute: typeof DevMailRoute
   DevMailDotjsonRoute: typeof DevMailDotjsonRoute
@@ -1039,6 +1052,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/monitoring': {
+      id: '/api/monitoring'
+      path: '/api/monitoring'
+      fullPath: '/api/monitoring'
+      preLoaderRoute: typeof ApiMonitoringRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dev/e2e-seed': {
@@ -1383,6 +1403,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   ApiCspReportRoute: ApiCspReportRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiMonitoringRoute: ApiMonitoringRoute,
   DevE2eSeedRoute: DevE2eSeedRoute,
   DevMailRoute: DevMailRoute,
   DevMailDotjsonRoute: DevMailDotjsonRoute,

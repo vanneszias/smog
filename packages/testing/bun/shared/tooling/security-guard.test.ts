@@ -92,6 +92,10 @@ export const ROUTE_LIMITS: Readonly<Record<string, Entry>> = {
     none: true,
   },
   "api/logos/upload.$key.ts": { limiter: "RL_SPONSOR", source: LOGO },
+  "api/monitoring.ts": {
+    limiter: "RL_ANALYTICS",
+    source: "apps/site/src/routes/api/monitoring.ts",
+  },
   "api/openapi/$.ts": {
     limiter: "RL_API",
     source: RPC_HANDLER,

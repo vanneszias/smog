@@ -54,6 +54,7 @@ import {
   reconcileCacheLanguage,
 } from "@/lib/query-persist";
 import { setRequestedLocale } from "@/lib/request-locale";
+import { MonitoringUser } from "@/monitoring";
 
 export interface AppClients {
   /** Consent-gated; tests leave it out (a no-op). */
@@ -233,6 +234,7 @@ export function AppProviders({
           <AuthStateProvider useSession={clients.useSession}>
             <PurgeOtherUsers />
             <PurgeRestoredQueries />
+            <MonitoringUser />
             <LocalStoreProvider store={clients.store}>
               <MobileAnalyticsProvider value={clients.analytics}>
                 <PreferencesRoot>{children}</PreferencesRoot>

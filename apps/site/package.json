@@ -23,6 +23,8 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "@sentry/cloudflare": "11.10.0",
+    "@sentry/react": "11.10.0",
     "@smog/account": "workspace:*",
     "@smog/admin": "workspace:*",
     "@smog/analytics": "workspace:*",
@@ -62,6 +64,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "catalog:",
     "@pdf-lib/fontkit": "1.1.1",
+    "@sentry/vite-plugin": "11.10.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",

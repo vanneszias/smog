@@ -99,6 +99,15 @@ const SPLASH = tokens.chrome.themeColor;
 const DEFAULT_SITE_HOST = "smog.zias.be";
 /** Site paths the app opens itself instead of the browser. */
 const APP_LINK_PATH_PREFIXES = ["/gestures/", "/lists/"] as const;
+/**
+ * The self-hosted Rustrak that receives the app's errors and its debug
+ * files (docs/ERROR_MONITORING.md). Rustrak ignores the organization; the
+ * project is its id.
+ */
+const RUSTRAK_URL = "https://error.zias.be/";
+const RUSTRAK_ORGANIZATION = "rustrak";
+const RUSTRAK_PROJECT = "2";
+
 /** Exact site paths the app opens (the magic-link hand-off, phase 4 task 5). */
 const APP_LINK_PATHS = ["/magic-link/app"] as const;
 
@@ -197,6 +206,17 @@ export default function createConfig({ config }: ConfigContext): ExpoConfig {
       ],
       "./plugins/with-screen-capture-permissions.js",
       "./plugins/with-ios-scenes.js",
+      // Error monitoring (docs/ERROR_MONITORING.md): the native SDK, and the
+      // upload of source maps, dSYMs and ProGuard mappings to our Rustrak
+      // (never sentry.io) when an EAS build has SENTRY_AUTH_TOKEN.
+      [
+        "@sentry/react-native/expo",
+        {
+          organization: RUSTRAK_ORGANIZATION,
+          project: RUSTRAK_PROJECT,
+          url: RUSTRAK_URL,
+        },
+      ],
     ],
     runtimeVersion: { policy: "fingerprint" },
     scheme: identity.scheme,

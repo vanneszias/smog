@@ -288,6 +288,12 @@ A translator or an admin (`requireRole("translator")`; `admin` passes, a user or
 - It logs one line per body, `[csp] violation { directive, blocked, document, source, line, disposition, count }` (the first violation and a count). URLs are reduced to origin plus path: no userinfo, query or fragment, and a token-shaped segment (after `/lists/`, `/api/auth/reset-password/`, `/api/logos/upload/`, any 32+ hex or 20+ base64url non-slug segment) becomes `:token`, because re-edit and renewal URLs carry raw tokens. The sample, policy, referrer and user agent are never kept. **No relay to OpenPanel** (spec §12: consented events only).
 - On staging the reports reach the Worker only once Cloudflare Access bypasses `/api/csp-report` (`docs/deployment.md`, the Access bypass list). After the launch watch the `[csp]` lines (`docs/cutover-runbook.md`, After cutover).
 
+### `POST /api/monitoring`
+
+- The browser's error-monitoring tunnel (`apps/site/src/server/monitoring-tunnel.ts`, `docs/ERROR_MONITORING.md`): the Sentry browser SDK posts its envelopes here (`tunnel`), and the Worker forwards them to Rustrak. The page's CSP stays `connect-src 'self'`, ad blockers do not drop the reports, and Rustrak sees the Worker's address, never the visitor's.
+- In order: without `SENTRY_DSN` an empty `204` (nothing read); a foreign request (`isForeignRequest`) `403`; `RL_ANALYTICS` with the key `monitoring:<ip>`: `429` with `Retry-After: 60`; the body through `readCappedBody` at 256 KiB: `413` over it; an envelope whose header line names no DSN `400`, another DSN than this env's `403`; then the envelope goes to that DSN's envelope endpoint (`/api/<project>/envelope/`, the key in the query) with only `content-type` and `content-length`. Rustrak unreachable is `502`.
+- The answer is empty (`no-store`) with Rustrak's status and only its `retry-after` and `x-sentry-rate-limits` headers. Nothing is logged: the body is the browser's report. Not exempt from maintenance.
+
 ### Users
 
 | Procedure | Input | Output | Audit |
@@ -511,6 +517,7 @@ The four Workers Rate Limiting bindings (`ratelimits` in `wrangler.jsonc`; stagi
 | `api/auth/$.ts` | `/api/auth/*` | `RL_AUTH` on POSTs except `sign-out` and `get-session` | `auth:<ip>` |
 | `api/analytics.ts` | `/api/analytics` | `RL_ANALYTICS` | `analytics:<ip>` |
 | `api/csp-report.ts` | `/api/csp-report` | `RL_ANALYTICS` | `csp:<ip>` |
+| `api/monitoring.ts` | `POST /api/monitoring` (the browser's error-monitoring tunnel) | `RL_ANALYTICS` | `monitoring:<ip>` |
 | `api/audio/$.ts` | `GET /api/audio/<gestureId>/<locale>/<uuid>` | `RL_API` | `<ip>:audio` |
 | `api/audio/upload/$.ts` | `PUT /api/audio/upload/<gestureId>/<locale>/<uuid>` | `RL_API` | `<ip>:audio-upload` |
 | `api/teacher/drawings/$.ts` | `GET /api/teacher/drawings/<gestureId>/<step>` (teacher, translator or admin session) | `RL_API` | `<ip>:teacher-drawing` |

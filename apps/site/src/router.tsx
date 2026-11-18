@@ -11,6 +11,7 @@ import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query
 import { getGlobalStartContext } from "@tanstack/react-start";
 import { RouteError } from "@/components/learning/page";
 import { createAppApiClient } from "@/lib/api";
+import { setMonitoringRouter } from "@/lib/monitoring";
 import { routeTree } from "./routeTree.gen";
 
 /** What every loader and component gets from the router. */
@@ -66,6 +67,10 @@ function createAppRouter() {
     // The root document mounts the provider inside <html> (with the rpc one).
     wrapQueryClient: false,
   });
+  if (!import.meta.env.SSR) {
+    // Navigation transactions named by route (lib/monitoring.ts).
+    setMonitoringRouter(router);
+  }
   return router;
 }
 

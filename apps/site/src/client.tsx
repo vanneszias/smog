@@ -2,6 +2,7 @@ import { ensureCatalogues } from "@smog/i18n";
 import { StartClient } from "@tanstack/react-start/client";
 import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
+import { hydrationErrorOptions, startMonitoring } from "@/lib/monitoring";
 
 /**
  * The browser entry (Start's default plus one step): the page is rendered in
@@ -9,7 +10,8 @@ import { hydrateRoot } from "react-dom/client";
  * be in memory before hydration (phase 10b task 7b; the entry carries none).
  * The server-rendered page is on screen meanwhile, so nothing flashes; a
  * failed load is logged and hydration goes on (the keys would show, which is
- * why it is loud).
+ * why it is loud). Error monitoring starts first, when the page asks for it
+ * (`lib/monitoring.ts`; the SDK loads lazily alongside).
  */
 const LEGAL_PATH = /^\/(?:privacy|terms)\/?$/;
 
@@ -19,6 +21,7 @@ function catalogueLocales(lang: string, pathname: string): string[] {
 }
 
 async function hydrate(): Promise<void> {
+  startMonitoring();
   try {
     await Promise.all(
       catalogueLocales(document.documentElement.lang, location.pathname).map(
@@ -33,7 +36,8 @@ async function hydrate(): Promise<void> {
       document,
       <StrictMode>
         <StartClient />
-      </StrictMode>
+      </StrictMode>,
+      hydrationErrorOptions()
     );
   });
 }

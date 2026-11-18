@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   ENVIRONMENTS,
+  monitoringDsn,
   OPENPANEL_DEFAULT_API_URL,
   optionalValue,
 } from "./worker";
@@ -16,6 +17,11 @@ export const mobileEnvSchema = z.object({
    */
   EXPO_PUBLIC_OPENPANEL_CLIENT_ID: optionalValue,
   EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET: optionalValue,
+  /**
+   * The Rustrak DSN (docs/ERROR_MONITORING.md); public, it ships in the
+   * binary. Without it the app reports no errors.
+   */
+  EXPO_PUBLIC_SENTRY_DSN: monitoringDsn,
   EXPO_PUBLIC_SITE_HOST: z.hostname(),
 });
 

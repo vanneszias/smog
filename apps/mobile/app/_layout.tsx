@@ -5,7 +5,11 @@ import { setOptions as setSplashOptions } from "expo-splash-screen";
 import type { ReactElement } from "react";
 import { AccessibilityInfo } from "react-native";
 import { AppShell } from "@/app-shell";
+import { initMonitoring, wrapRoot } from "@/monitoring";
 import { AppProviders } from "@/providers";
+
+// Before the first render, so a crash at launch is reported too.
+initMonitoring();
 
 // The splash cross-fades into Home's green hero instead of cutting (iOS;
 // Android keeps its system exit). Not under reduced motion: no motion at all.
@@ -27,10 +31,14 @@ AccessibilityInfo.isReduceMotionEnabled()
  */
 export const unstable_settings = { initialRouteName: "(tabs)" };
 
-export default function RootLayout(): ReactElement {
+function RootLayout(): ReactElement {
   return (
     <AppProviders>
       <AppShell />
     </AppProviders>
   );
 }
+
+// Sentry's root wrapper (touch breadcrumbs, the app-start span) only when
+// monitoring runs.
+export default wrapRoot(RootLayout);

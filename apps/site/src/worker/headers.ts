@@ -117,6 +117,8 @@ export interface CspOptions {
 }
 
 export interface RespondOptions extends CspOptions {
+  /** Hands an escaping exception to error monitoring (`worker/monitoring.ts`). */
+  onError?: (error: unknown) => void;
   /** The id the `[error] fetch` line carries (`cf-ray`); generated if unset. */
   requestId?: string;
   /** The request's URL, for `Reporting-Endpoints` (its origin). */
@@ -264,7 +266,7 @@ export function withSecurityHeaders(
 export async function respondSecurely(
   environment: Environment,
   handle: (nonce: string) => Promise<Response> | Response,
-  { connectSrc = [], requestId, requestUrl }: RespondOptions = {}
+  { connectSrc = [], onError, requestId, requestUrl }: RespondOptions = {}
 ): Promise<Response> {
   const nonce = createNonce();
   let response: Response;
@@ -273,6 +275,7 @@ export async function respondSecurely(
   } catch (error) {
     // The name and a redacted message only (`@smog/utils` log helpers).
     logUnhandledError("fetch", error, requestId ?? crypto.randomUUID());
+    onError?.(error);
     response = new Response("Internal Server Error", {
       headers: {
         "cache-control": "no-store",

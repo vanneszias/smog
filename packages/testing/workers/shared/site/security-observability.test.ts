@@ -8,7 +8,9 @@ import {
  * Phase 9 task 8 (ruling 14): `queue` and `scheduled` get the same
  * top-level backstop `fetch` has in `respondSecurely`: one `[error]` line
  * with the name and a redacted message, then the error goes on (the queue
- * retries, the cron run shows as failed). No external error reporter.
+ * retries, the cron run shows as failed). Error monitoring (Rustrak,
+ * `worker/monitoring.ts`) sees the same errors through `withSentry`; this
+ * line stays the record in the Workers logs.
  */
 
 describe("the top-level queue and scheduled handlers", () => {

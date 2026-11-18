@@ -1,4 +1,4 @@
-import { readCappedBody } from "@smog/utils";
+import { readCappedBody, redactUrlPath } from "@smog/utils";
 
 /**
  * `POST /api/csp-report` (phase 8 ruling 11, carry 17): where browsers
@@ -50,20 +50,6 @@ const KEYWORD = /^[a-z][a-z-]{0,31}$/;
 const DIRECTIVE = /^[a-z][a-z-]{0,39}$/;
 const WHITESPACE = /\s+/;
 const WEB_SCHEMES = new Set(["http:", "https:", "ws:", "wss:"]);
-/** A segment that looks like a minted token (`newToken`: 43 base64url). */
-const TOKEN_LIKE = /^[A-Za-z0-9_-]{20,}$/;
-/** Slugs and UUIDs stay readable: lower case, digits and single hyphens. */
-const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-/** 32+ hex characters: a migrated share token (U-20) or a digest, never a slug. */
-const HEX_TOKEN = /^[0-9a-f]{32,}$/i;
-const REPEATED_SLASHES = /\/{2,}/g;
-/** Paths whose next segment is a capability, whatever it looks like. */
-const TOKEN_PREFIXES = [
-  "/lists/",
-  "/api/auth/reset-password/",
-  "/api/logos/upload/",
-];
-const TOKEN_MARK = ":token";
 
 export interface CspViolation {
   blocked: string | null;
@@ -72,33 +58,6 @@ export interface CspViolation {
   document: string | null;
   line: number | null;
   source: string | null;
-}
-
-function isTokenSegment(segment: string): boolean {
-  return (
-    HEX_TOKEN.test(segment) || (TOKEN_LIKE.test(segment) && !SLUG.test(segment))
-  );
-}
-
-/**
- * The path with its token segments masked. Repeated slashes are collapsed
- * and the prefixes compared case-insensitively first: the router matches
- * `/Lists/<token>` and `//lists/<token>` too.
- */
-function redactPath(pathname: string): string {
-  const path = pathname.replace(REPEATED_SLASHES, "/");
-  const lower = path.toLowerCase();
-  for (const prefix of TOKEN_PREFIXES) {
-    if (lower.startsWith(prefix) && path.length > prefix.length) {
-      const rest = path.slice(prefix.length);
-      const slash = rest.indexOf("/");
-      return `${path.slice(0, prefix.length)}${TOKEN_MARK}${slash === -1 ? "" : redactPath(rest.slice(slash))}`;
-    }
-  }
-  return path
-    .split("/")
-    .map((segment) => (isTokenSegment(segment) ? TOKEN_MARK : segment))
-    .join("/");
 }
 
 /**
@@ -129,7 +88,7 @@ export function redactReportUrl(value: unknown): string | null {
     }
     return url.protocol;
   }
-  return `${url.origin}${redactPath(url.pathname)}`.slice(0, MAX_URL_LENGTH);
+  return `${url.origin}${redactUrlPath(url.pathname)}`.slice(0, MAX_URL_LENGTH);
 }
 
 function directiveOf(value: unknown): string | null {

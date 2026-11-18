@@ -1,8 +1,10 @@
 const path = require("node:path");
-const { getDefaultConfig } = require("expo/metro-config");
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const { withNativeWind } = require("nativewind/metro");
 
-const config = getDefaultConfig(__dirname);
+// Expo's default config plus Sentry's debug ids, which tie the uploaded
+// source maps to the bundle (docs/ERROR_MONITORING.md).
+const config = getSentryExpoConfig(__dirname);
 
 // Absolute paths, so the config also loads from the repo root (knip, turbo).
 module.exports = withNativeWind(config, {

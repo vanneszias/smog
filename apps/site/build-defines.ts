@@ -12,3 +12,12 @@ import { SYSTEM_THEME_SCRIPT } from "./src/lib/preferences";
 export const THEME_SCRIPT_HASH_DEFINE = JSON.stringify(
   createHash("sha256").update(SYSTEM_THEME_SCRIPT).digest("base64")
 );
+
+/**
+ * `__SMOG_RELEASE__`: the commit this build is made from, for the release
+ * of error monitoring (docs/ERROR_MONITORING.md): `SENTRY_RELEASE` when the
+ * deploy job sets it, else CI's `GITHUB_SHA`, else empty (no release).
+ */
+export const RELEASE_DEFINE = JSON.stringify(
+  process.env.SENTRY_RELEASE || process.env.GITHUB_SHA || ""
+);
