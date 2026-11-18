@@ -45,7 +45,7 @@ test.describe("legal pages", () => {
       page.getByRole("heading", { level: 1, name: DUTCH_TITLE })
     ).toBeVisible();
     await expect(page.getByRole("note")).toHaveCount(0);
-    await page.getByRole("link", { name: "Uw rechten" }).click();
+    await page.getByRole("link", { name: "Je rechten" }).click();
     await expect(page).toHaveURL(RIGHTS_ANCHOR);
     await expect(
       page.getByRole("group", { name: "Je keuze voor statistieken" })

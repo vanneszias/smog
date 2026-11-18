@@ -6,14 +6,14 @@ export const en: LegalTexts = {
     sections: [
       {
         blocks: [
-          'This privacy policy describes how SMOG & CO vzw processes personal data when you use the SMOG&Co website, mobile app, accounts, shared lists, sponsorship and related support (together: the "Service").',
+          'This privacy policy describes how SMOG\u00a0&\u00a0Co vzw processes personal data when you use the SMOG\u00a0&\u00a0Co website, mobile app, accounts, shared lists, sponsorship and related support (together: the "Service").',
         ],
         id: "scope",
         title: "Scope",
       },
       {
         blocks: [
-          "SMOG & CO vzw, Arthur Goemaerelei 66, 2018 Antwerp, Belgium, company number 1009 954 991, is the data controller. You can send privacy questions to [info@smog.vlaanderen](mailto:info@smog.vlaanderen).",
+          "SMOG\u00a0&\u00a0Co vzw, Arthur Goemaerelei 66, 2018 Antwerp, Belgium, company number 1009 954 991, is the data controller. You can send privacy questions to [info@smog.vlaanderen](mailto:info@smog.vlaanderen).",
         ],
         id: "controller",
         title: "Data controller",
@@ -26,7 +26,7 @@ export const en: LegalTexts = {
               "**Use without an account:** favorites, lists, recent searches, preferences and your analytics choice stay on your device. They do not leave your device unless, after signing in, you choose to import them into your account, except for the optional analytics below (for example which gesture you viewed or saved).",
               "**Learning features:** favorite gestures, lists, list descriptions, share links and their rights (view or edit). Recent search terms stay locally on your device.",
               "**Sponsorship:** contact name, sponsor or company name, email, chosen gestures, display name, optional logo, preview of the name and logo with the gesture video, status, payment reference and term.",
-              "**Invoicing:** invoice name, VAT or company number and invoice email address when you ask for an invoice. Mollie processes the payment details; SMOG&Co does not receive full card or bank details.",
+              "**Invoicing:** invoice name, VAT or company number and invoice email address when you ask for an invoice. Mollie processes the payment details; SMOG\u00a0&\u00a0Co vzw does not receive full card or bank details.",
               "**Technical data:** IP address, device, browser and app details, security logs, error information and data needed to deliver video and network traffic. When you sign in, sign up, reset your password or use other forms (such as asking for a sign-in code or link), Cloudflare Turnstile checks that the request comes from a human.",
               "**Consent history:** when you are signed in, we keep your analytics choices (yes or no, time and policy version), so we can show which choice applies.",
               "**Optional analytics:** only with consent: screen path, platform, limited event data, gesture IDs, result and category counts, the length of a search and completed playback, with your IP address and browser or app details (see Analytics and identification). We do not send search terms, names or email addresses and do not record sessions.",
@@ -57,7 +57,7 @@ export const en: LegalTexts = {
             list: [
               "**Cloudflare:** hosting of the website and the API (Workers), the database (D1), file storage such as sponsor logos (R2), temporary data (KV), queues (Queues), sending email (Email) and abuse prevention (Turnstile). [Privacy policy](https://www.cloudflare.com/privacypolicy/)",
               "**Better Auth:** open-source sign-in software that we run ourselves inside our Cloudflare environment. No data goes to a separate provider for it.",
-              "**Mux:** storage, processing and streaming of gesture videos. The player shows the sponsor name and any logo over the end of that video; no separate sponsor video is created. [Privacy policy](https://www.mux.com/privacy)",
+              "**Mux:** storage, processing and streaming of gesture videos. The player shows the sponsor name and any logo as an end card over the end of the gesture's own video; no separate sponsor video is created. [Privacy policy](https://www.mux.com/privacy)",
               "**Mollie:** hosted payment processing and payment status. [Privacy policy](https://www.mollie.com/legal/privacy)",
               "**Expo:** distribution and updates of the mobile app. [Privacy policy](https://expo.dev/privacy)",
               "**Google and Apple:** when you choose to sign in with your Google or Apple account. If you have a Google profile picture, your browser fetches it directly from Google each time it is shown, so Google sees your IP address and browser details. [Google](https://policies.google.com/privacy) · [Apple](https://www.apple.com/legal/privacy/)",
@@ -78,7 +78,7 @@ export const en: LegalTexts = {
       },
       {
         blocks: [
-          "SMOG & Co does not track users across apps or websites of other companies. We do not use analytics data for targeted advertising or advertising measurement and do not share analytics data with data brokers.",
+          "SMOG\u00a0&\u00a0Co does not track users across apps or websites of other companies. We do not use analytics data for targeted advertising or advertising measurement and do not share analytics data with data brokers.",
         ],
         id: "no-tracking",
         title: "No tracking or advertising",
@@ -160,7 +160,7 @@ export const en: LegalTexts = {
         blocks: [
           {
             lines: [
-              "SMOG & CO vzw",
+              "SMOG\u00a0&\u00a0Co vzw",
               "Arthur Goemaerelei 66, 2018 Antwerp, Belgium",
               "Email: [info@smog.vlaanderen](mailto:info@smog.vlaanderen)",
               "Phone: +32 3 216 29 90",
@@ -179,7 +179,7 @@ export const en: LegalTexts = {
     sections: [
       {
         blocks: [
-          'These terms apply to the SMOG&Co website, mobile app, accounts, lists, sponsorship and related services (the "Service"), offered by SMOG & CO vzw, Arthur Goemaerelei 66, 2018 Antwerp, Belgium, company number 1009 954 991. By using the Service you agree to these terms. Mandatory consumer law always continues to apply.',
+          'These terms apply to the SMOG\u00a0&\u00a0Co website, mobile app, accounts, lists, sponsorship and related services (the "Service"), offered by SMOG\u00a0&\u00a0Co vzw, Arthur Goemaerelei 66, 2018 Antwerp, Belgium, company number 1009 954 991. By using the Service you agree to these terms. Mandatory consumer law always continues to apply.',
         ],
         id: "provider",
         title: "Application and provider",
@@ -217,7 +217,7 @@ export const en: LegalTexts = {
       },
       {
         blocks: [
-          "The Service, software, texts, design and gesture videos are owned by SMOG&Co or its licensors. You get a limited, revocable, non-exclusive and non-transferable licence for personal and educational use. Normal browser or app caching is allowed; downloading, republishing, modifying, commercially exploiting or making a derived video product requires prior permission, except where the law expressly allows it.",
+          "The Service, software, texts, design and gesture videos are owned by SMOG\u00a0&\u00a0Co vzw or its licensors. You get a limited, revocable, non-exclusive and non-transferable licence for personal and educational use. Normal browser or app caching is allowed; downloading, republishing, modifying, commercially exploiting or making a derived video product requires prior permission, except where the law expressly allows it.",
         ],
         id: "ip",
         title: "Intellectual property",
@@ -226,11 +226,11 @@ export const en: LegalTexts = {
         blocks: [
           {
             list: [
-              "A sponsorship shows the chosen sponsor name, text and optional logo over the end of one or more gesture videos for the term shown. The gesture video itself does not change.",
+              "A sponsorship shows the chosen sponsor name, text and optional logo as an end card over the end of one or more gestures' own videos for the term shown. The gesture video itself does not change.",
               "The price, term and any logo surcharge are shown before payment. The server checks the amount due. A sponsorship request only counts as paid once Mollie confirms the payment.",
-              "SMOG&Co reviews the sponsorship before publication and may refuse content that is unlawful, misleading, harmful, inappropriate or technically unusable. If we refuse it, we contact you about changes or an appropriate handling of the payment.",
-              "You guarantee that you hold the necessary rights and permissions for names, brands, logos, text and other submitted content. For carrying out the sponsorship, you grant SMOG&Co a non-exclusive licence to process, render, host and show that content.",
-              "The preview and video display may be adjusted technically for format, legibility and streaming. The player shows the sponsor name and any logo; no separate sponsor video is created. A re-edit link provided by SMOG&Co is personal, valid for 7 days and may not be shared.",
+              "SMOG\u00a0&\u00a0Co vzw reviews the sponsorship before publication and may refuse content that is unlawful, misleading, harmful, inappropriate or technically unusable. If we refuse it, we contact you about changes or an appropriate handling of the payment.",
+              "You guarantee that you hold the necessary rights and permissions for names, brands, logos, text and other submitted content. For carrying out the sponsorship, you grant SMOG\u00a0&\u00a0Co vzw a non-exclusive licence to process, host and show that content.",
+              "The preview and video display may be adjusted technically for format, legibility and streaming. The player shows the sponsor name and any logo as an end card over the gesture's video; no separate sponsor video is created. A re-edit link provided by SMOG\u00a0&\u00a0Co vzw is personal, valid for 7 days and may not be shared.",
               "About 30 days before the end of the term you receive an email with a link to renew the sponsorship. A renewal is a new payment for one more year at the price then shown; a sponsorship is never renewed automatically.",
               "Unpaid requests may be cancelled after 24 hours. For cancellation, a refund or a wrong payment, contact us; statutory consumer rights continue to apply.",
             ],
@@ -262,14 +262,14 @@ export const en: LegalTexts = {
       },
       {
         blocks: [
-          "As far as the law allows, SMOG&Co is not liable for indirect damage, consequential damage or loss that was not reasonably foreseeable. Nothing in these terms limits liability that cannot be excluded by law, including liability for intent or gross negligence where the applicable law provides so. Consumers keep their mandatory legal remedies.",
+          "As far as the law allows, SMOG\u00a0&\u00a0Co vzw is not liable for indirect damage, consequential damage or loss that was not reasonably foreseeable. Nothing in these terms limits liability that cannot be excluded by law, including liability for intent or gross negligence where the applicable law provides so. Consumers keep their mandatory legal remedies.",
         ],
         id: "liability",
         title: "Liability",
       },
       {
         blocks: [
-          "You remain responsible for content you submit. As far as the law allows, a business user compensates SMOG&Co for third-party claims that arise directly from intentionally unlawful use or from submitted sponsorship content for which that user does not hold the required rights. This clause does not limit statutory consumer protection.",
+          "You remain responsible for content you submit. As far as the law allows, a business user compensates SMOG\u00a0&\u00a0Co vzw for third-party claims that arise directly from intentionally unlawful use or from submitted sponsorship content for which that user does not hold the required rights. This clause does not limit statutory consumer protection.",
         ],
         id: "indemnity",
         title: "User content and indemnity",
@@ -299,7 +299,7 @@ export const en: LegalTexts = {
         blocks: [
           {
             lines: [
-              "SMOG & CO vzw",
+              "SMOG\u00a0&\u00a0Co vzw",
               "Arthur Goemaerelei 66, 2018 Antwerp, Belgium",
               "Email: [info@smog.vlaanderen](mailto:info@smog.vlaanderen)",
               "Phone: +32 3 216 29 90",

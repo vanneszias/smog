@@ -227,8 +227,8 @@ describe("the legal texts (spec §9, inventory P-07, P-08)", () => {
       },
       nl: {
         cookie: "tijdens onderhoud een technische cookie voor beheerders",
-        fetched: "die uw browser rechtstreeks bij Google ophaalt",
-        recipient: "Google ziet dan uw IP-adres",
+        fetched: "die je browser rechtstreeks bij Google ophaalt",
+        recipient: "Google ziet dan je IP-adres",
         wrong: "profielfoto van Google of Apple",
       },
     } as const;

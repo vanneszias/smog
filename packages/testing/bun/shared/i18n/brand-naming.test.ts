@@ -6,9 +6,9 @@ import { LOCALES, resources } from "../../../../i18n/src/index";
 /**
  * One naming system (DESIGN.md, "Voice and words"): SMOG is the method,
  * SMOG & Co is the product and the organisation, always with spaces and a
- * lower-case "o". The legal texts (`packages/i18n/src/legal`, the
- * `legal_text` migrations) keep their wording until the owner confirms the
- * legal entity's spelling, so they are not scanned.
+ * lower-case "o". The shipped legal texts (`packages/i18n/src/legal`) say
+ * "SMOG & Co vzw" since version 3 and are scanned like every other file; the
+ * migrations are not, since an applied migration is never edited.
  */
 
 interface Tree {
@@ -130,9 +130,8 @@ const SKIPPED_DIRS = new Set([
   ".wrangler",
   ".expo",
 ]);
-/** Wording the owner has not signed off yet, and the tests' own fixtures. */
+/** Applied migrations (never edited) and the tests' own fixtures. */
 const SKIPPED_PATHS = [
-  "packages/i18n/src/legal",
   "packages/db/migrations",
   "packages/testing",
 ];
