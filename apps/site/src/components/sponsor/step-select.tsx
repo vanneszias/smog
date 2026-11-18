@@ -557,7 +557,7 @@ export function StepSelect({
           {t("sponsor.select.title")}
         </Heading>
         <Text className="max-w-reading" size="lead" tone="muted">
-          {t("sponsor.select.description")}
+          {t("sponsor.select.description")} {t("sponsor.story.funds")}
         </Text>
       </div>
       <SponsorStory sample={items?.[0]} />

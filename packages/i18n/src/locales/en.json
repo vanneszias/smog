@@ -2745,6 +2745,7 @@
       "where": "Your name shows at the end of the video for {{duration}}, over the gesture itself.",
       "review": "We check your sponsorship before it goes online. You get an email as soon as it’s online.",
       "expiry": "After a year your name goes. The gesture and its video stay.",
+      "funds": "Your contribution pays for building and running SMOG\u00a0&\u00a0Co: the website, the app and the nonprofit behind them.",
       "sampleName": "Your name",
       "sampleLabel": "Example: your name at the end of a gesture’s video"
     },

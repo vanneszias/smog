@@ -249,7 +249,7 @@ function Sponsor(): ReactNode {
         {t("home.sponsorTitle")}
       </Heading>
       <Text className="max-w-reading text-sidebar-foreground-muted">
-        {t("home.sponsorBody")}
+        {t("home.sponsorBody")} {t("sponsor.story.funds")}
       </Text>
       <Button asChild className={FOCUS_ON_GREEN} size="lg" variant="action">
         <Link to="/sponsor">{t("home.sponsorAction")}</Link>

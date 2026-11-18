@@ -2787,6 +2787,7 @@
       "where": "Votre nom s’affiche à la fin de la vidéo pendant {{duration}}, sur le geste lui-même.",
       "review": "Nous vérifions votre parrainage avant sa mise en ligne. Vous recevez un e-mail dès qu’il est en ligne.",
       "expiry": "Après un an, votre nom disparaît. Le geste et sa vidéo restent.",
+      "funds": "Votre contribution finance la création et le fonctionnement de SMOG\u00a0&\u00a0Co\u00a0: le site, l’application et l’asbl qui les porte.",
       "sampleName": "Votre nom",
       "sampleLabel": "Exemple\u00a0: votre nom à la fin de la vidéo d’un geste"
     },
